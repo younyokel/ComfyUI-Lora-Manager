@@ -173,10 +173,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.querySelector('.progress-bar');
     const loadingStatus = document.querySelector('.loading-status');
     
-    // Show loading overlay initially
-    loadingOverlay.style.display = 'flex';
+    // 默认隐藏 loading overlay
+    loadingOverlay.style.display = 'none';
     
-    // Listen for progress updates
+    const api = new EventTarget();
+    window.api = api;
+
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+    
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === 'lora-scan-progress') {
+            // 当收到扫描进度消息时显示 overlay
+            loadingOverlay.style.display = 'flex';
+            api.dispatchEvent(new CustomEvent('lora-scan-progress', { detail: data }));
+        }
+    };
+    
     api.addEventListener("lora-scan-progress", (event) => {
         const data = event.detail;
         const progress = (data.value / data.max) * 100;
@@ -186,9 +199,12 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingStatus.textContent = data.status;
         
         if (data.value === data.max) {
-            // Hide loading overlay when scan is complete
+            // 确保在扫描完成时隐藏 overlay
             setTimeout(() => {
                 loadingOverlay.style.display = 'none';
+                // 重置进度条
+                progressBar.style.width = '0%';
+                progressBar.setAttribute('aria-valuenow', 0);
             }, 500);
         }
     });

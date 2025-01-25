@@ -14,6 +14,15 @@
     <!-- 添加模态窗口 -->
     <div id="loraModal" class="modal"></div>
     
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-status">Scanning Loras...</div>
+            <div class="progress-container">
+                <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <!-- 控制栏 -->
@@ -39,34 +48,33 @@
         <div class="card-grid" id="loraGrid">
             {% for lora in loras %}
             <!-- 在卡片部分更新元数据展示 -->
-            <div class="lora-card" data-folder="{{ lora.folder }}" data-name="{{ lora.name }}" data-date="{{ lora.modified }}"
-                data-size="{{ lora.size }}" data-meta="{{ lora.meta | default({}) | tojson | forceescape }}">
+            <div class="lora-card" data-name="{{ lora.model_name }}" data-file_name="{{ lora.file_name }}" data-meta="{{ lora.civitai | default({}) | tojson | forceescape }}">
                 <div class="card-preview">
                     <img src="{{ lora.preview_url or '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
                     <div class="card-header">
-                        <span class="base-model-label" title="{{ lora.meta.base_model if lora.meta else 'Unknown' }}">
-                            {{ lora.meta.base_model if lora.meta and lora.meta.base_model else 'Unknown' }}
+                        <span class="base-model-label" title="{{ lora.base_model }}">
+                            {{ lora.base_model }}
                         </span>
                         <div class="card-actions">
                             <i class="fas fa-globe" 
                                title="View on Civitai"
-                               onclick="event.stopPropagation(); openCivitai('{{ lora.name }}')"></i>
+                               onclick="event.stopPropagation(); openCivitai('{{ lora.file_name }}')"></i>
                             <i class="fas fa-copy" 
                                title="Copy Model Name"
-                               onclick="event.stopPropagation(); navigator.clipboard.writeText(this.closest('.lora-card').dataset.name)"></i>
+                               onclick="event.stopPropagation(); navigator.clipboard.writeText(this.closest('.lora-card').dataset.file_name)"></i>
                             <i class="fas fa-trash" 
                                title="Delete Model"
-                               onclick="event.stopPropagation(); deleteModel('{{ lora.name }}')"></i>
+                               onclick="event.stopPropagation(); deleteModel('{{ lora.file_name }}')"></i>
                         </div>
                     </div>
                     <div class="card-footer">
                         <div class="model-info">
-                            <span class="model-name">{{ lora.name }}</span>
+                            <span class="model-name">{{ lora.model_name }}</span>
                         </div>
                         <div class="card-actions">
                             <i class="fas fa-image" 
                                title="Replace Preview Image"
-                               onclick="event.stopPropagation(); replacePreview('{{ lora.name }}')"></i>
+                               onclick="event.stopPropagation(); replacePreview('{{ lora.file_name }}')"></i>
                         </div>
                     </div>
                 </div>
