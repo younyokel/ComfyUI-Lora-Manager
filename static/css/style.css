@@ -27,22 +27,25 @@ body {
 /* 文件夹标签样式 */
 .folder-tags {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     overflow-x: auto;
-    padding: 10px 0;
+    padding: 4px 0;
+    flex-wrap: wrap;
 }
 
 .tag {
-    padding: 6px 12px;
-    border-radius: 20px;
-    background: #e0e0e0;
     cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.3s;
+    padding: 2px 8px;
+    margin: 2px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    display: inline-block;
+    line-height: 1.2;
+    font-size: 14px;
 }
 
 .tag.active {
-    background: var(--primary-color);
+    background-color: #007bff;
     color: white;
 }
 

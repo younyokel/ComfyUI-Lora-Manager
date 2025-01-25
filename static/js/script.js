@@ -17,22 +17,6 @@ function sortCards(sortBy) {
     cards.forEach(card => grid.appendChild(card));
 }
 
-// 文件夹筛选
-document.querySelectorAll('.tag').forEach(tag => {
-    tag.addEventListener('click', () => {
-        document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
-        tag.classList.add('active');
-        const folder = tag.dataset.folder;
-        filterByFolder(folder);
-    });
-});
-
-function filterByFolder(folder) {
-    document.querySelectorAll('.lora-card').forEach(card => {
-        card.style.display = card.dataset.folder === folder ? 'block' : 'none';
-    });
-}
-
 // 刷新功能
 async function refreshLoras() {
     try {
@@ -209,6 +193,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function toggleFolder(element) {
+    // Remove active class from all tags if clicking already active tag
+    if (element.classList.contains('active')) {
+        document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
+        // Show all cards
+        document.querySelectorAll('.lora-card').forEach(card => card.style.display = '');
+    } else {
+        // Remove active class from all tags
+        document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
+        // Add active class to clicked tag
+        element.classList.add('active');
+        // Hide all cards first
+        document.querySelectorAll('.lora-card').forEach(card => {
+            if (card.getAttribute('data-folder') === element.getAttribute('data-folder')) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+}
 
 // 主题切换
 function toggleTheme() {

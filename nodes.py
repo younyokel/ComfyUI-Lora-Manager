@@ -71,6 +71,11 @@ class LorasEndpoint:
                 
                 # Convert to dict for API response
                 lora_data = metadata.to_dict()
+                # Get relative path and remove filename to get just the folder structure
+                rel_path = os.path.relpath(file_path, self.loras_root)
+                folder = os.path.dirname(rel_path)
+                # Ensure forward slashes for consistency across platforms
+                lora_data['folder'] = folder.replace(os.path.sep, '/')
                 
                 loras.append(lora_data)
             
@@ -98,7 +103,10 @@ class LorasEndpoint:
             
             # Format the data for the template
             formatted_loras = [self.format_lora(l) for l in data]
-            
+            folders = sorted(list(set(l['folder'] for l in data)))
+
+            print("folders:",folders)
+
             # Debug logging
             if formatted_loras:
                 print(f"Sample lora data: {formatted_loras[0]}")
@@ -107,11 +115,13 @@ class LorasEndpoint:
                 
             context = {
                 "loras": formatted_loras,
+                "folders": folders,
                 # Only set single lora if we're viewing details
                 "lora": formatted_loras[0] if formatted_loras else {
                     "model_name": "",
                     "file_name": "",
                     "preview_url": "",
+                    "folder": "",
                     "civitai": {
                         "id": "",
                         "model": "",
@@ -148,6 +158,8 @@ class LorasEndpoint:
                 "model_name": lora["model_name"],
                 "file_name": lora["file_name"],   
                 "preview_url": lora["preview_url"],
+                "base_model": lora["base_model"],
+                "folder": lora["folder"],
                 "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
             }
         except Exception as e:
@@ -156,7 +168,9 @@ class LorasEndpoint:
             return {
                 "model_name": lora.get("model_name", "Unknown"),
                 "file_name": lora.get("file_name", ""),   
-                "preview_url": lora.get("preview_url", ""),
+                "preview_url": lora.get("preview_url", ""), 
+                "base_model": lora.get("base_model", ""),
+                "folder": lora.get("folder", ""),
                 "civitai": {
                     "id": "",
                     "modelId": "",
