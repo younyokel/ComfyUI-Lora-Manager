@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LoRA Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/loras_static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <img src="/loras_static/images/theme-toggle.svg" alt="Theme">
+    </div>
+    
+    <!-- 添加模态窗口 -->
+    <div id="loraModal" class="modal"></div>
+    
+
+    <div class="container">
+        <!-- 控制栏 -->
+        <div class="controls">
+            <div class="folder-tags">
+                {% for folder in folders %}
+                <div class="tag" data-folder="{{ folder }}">{{ folder }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="actions">
+                <select id="sortSelect">
+                    <option value="name">Name</option>
+                    <option value="date">Date</option>
+                    <option value="size">Size</option>
+                </select>
+                <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
+                <button onclick="fetchCivitai()" class="secondary"><i class="fas fa-download"></i> Fetch</button>
+            </div>
+        </div>
+
+        <!-- Lora卡片容器 -->
+        <div class="card-grid" id="loraGrid">
+            {% for lora in loras %}
+            <!-- 在卡片部分更新元数据展示 -->
+            <div class="lora-card" data-folder="{{ lora.folder }}" data-name="{{ lora.name }}" data-date="{{ lora.modified }}"
+                data-size="{{ lora.size }}" data-meta="{{ lora.meta | default({}) | tojson | forceescape }}">
+                <div class="card-preview">
+                    <img src="{{ lora.preview_url or '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
+                    <div class="card-header">
+                        <span class="base-model-label" title="{{ lora.meta.base_model if lora.meta else 'Unknown' }}">
+                            {{ lora.meta.base_model if lora.meta and lora.meta.base_model else 'Unknown' }}
+                        </span>
+                        <div class="card-actions">
+                            <i class="fas fa-globe" 
+                               title="View on Civitai"
+                               onclick="event.stopPropagation(); openCivitai('{{ lora.name }}')"></i>
+                            <i class="fas fa-copy" 
+                               title="Copy Model Name"
+                               onclick="event.stopPropagation(); navigator.clipboard.writeText(this.closest('.lora-card').dataset.name)"></i>
+                            <i class="fas fa-trash" 
+                               title="Delete Model"
+                               onclick="event.stopPropagation(); deleteModel('{{ lora.name }}')"></i>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="model-info">
+                            <span class="model-name">{{ lora.name }}</span>
+                        </div>
+                        <div class="card-actions">
+                            <i class="fas fa-image" 
+                               title="Replace Preview Image"
+                               onclick="event.stopPropagation(); replacePreview('{{ lora.name }}')"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="/loras_static/js/script.js"></script>
+</body>
+</html>
