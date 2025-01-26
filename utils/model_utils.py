@@ -6,7 +6,7 @@ BASE_MODEL_MAPPING = {
     "sd-v2-1": "SD2.1",
     "sdxl": "SDXL",
     "sd-v2": "SD2.0",
-    "flux1": "Flux1.D",
+    "flux1": "Flux.1 D",
 }
 
 def determine_base_model(version_string: Optional[str]) -> str:

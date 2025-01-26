@@ -161,6 +161,7 @@ class LorasEndpoint:
                 "folder": lora["folder"],
                 "sha256": lora["sha256"],
                 "file_path": lora["file_path"],
+                "modified": lora["modified"],
                 "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
             }
         except Exception as e:
@@ -174,6 +175,7 @@ class LorasEndpoint:
                 "folder": lora.get("folder", ""),
                 "sha256": lora.get("sha256", ""),
                 "file_path": lora.get("file_path", ""),
+                "modified": lora.get("modified", ""),
                 "civitai": {
                     "id": "",
                     "modelId": "",
@@ -289,14 +291,17 @@ class LorasEndpoint:
                 # 更新模型名称（优先使用CivitAI名称）
                 if 'model' in civitai_metadata:
                     local_metadata['model_name'] = civitai_metadata['model'].get('name', local_metadata.get('model_name'))
+                # update base model
+                local_metadata['base_model'] = civitai_metadata.get('baseModel')
                 
                 # 4. 下载预览图
-                first_image = next((img for img in civitai_metadata.get('images', []) if img.get('type') == 'image'), None)
-                if first_image:
-                    preview_extension = os.path.splitext(first_image['url'])[-1]  # Get the image file extension
+                first_preview = next((img for img in civitai_metadata.get('images', [])), None)
+                if first_preview:
+                    
+                    preview_extension = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]  # Get the file extension
                     preview_filename = os.path.splitext(os.path.basename(data['file_path']))[0] + preview_extension
                     preview_path = os.path.join(os.path.dirname(data['file_path']), preview_filename)
-                    await client.download_preview_image(first_image['url'], preview_path)
+                    await client.download_preview_image(first_preview['url'], preview_path)
                     # 存储相对路径，使用正斜杠格式
                     local_metadata['preview_url'] = os.path.relpath(preview_path, self.loras_root).replace(os.sep, '/')
 

@@ -37,7 +37,6 @@
                 <select id="sortSelect">
                     <option value="name">Name</option>
                     <option value="date">Date</option>
-                    <option value="size">Size</option>
                 </select>
                 <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
                 <button onclick="fetchCivitai()" class="secondary"><i class="fas fa-download"></i> Fetch</button>
@@ -54,9 +53,17 @@
                  data-name="{{ lora.model_name }}"
                  data-file_name="{{ lora.file_name }}"
                  data-folder="{{ lora.folder }}"
+                 data-modified="{{ lora.modified }}"
                  data-meta="{{ lora.civitai | default({}) | tojson | forceescape }}">
                 <div class="card-preview">
-                    <img src="{{ ('/loras_static/previews/' + lora.preview_url) if lora.preview_url else '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
+                    {% if lora.preview_url.endswith('.mp4') or lora.preview_url.endswith('.webm') %}
+                        <video controls>
+                            <source src="{{ '/loras_static/previews/' + lora.preview_url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <img src="{{ ('/loras_static/previews/' + lora.preview_url) if lora.preview_url else '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
+                    {% endif %}
                     <div class="card-header">
                         <span class="base-model-label" title="{{ lora.base_model }}">
                             {{ lora.base_model }}
@@ -89,6 +96,6 @@
         </div>
     </div>
 
-    <script src="/loras_static/js/script.js"></script>
+    <script src="/loras_static/js/script.js" defer></script>
 </body>
 </html>

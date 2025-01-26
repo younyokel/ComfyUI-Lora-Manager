@@ -2,15 +2,13 @@
 function sortCards(sortBy) {
     const grid = document.getElementById('loraGrid');
     const cards = Array.from(grid.children);
-    
+
     cards.sort((a, b) => {
         switch(sortBy) {
             case 'name':
                 return a.dataset.name.localeCompare(b.dataset.name);
             case 'date':
-                return new Date(b.dataset.date) - new Date(a.dataset.date);
-            case 'size':
-                return parseFloat(b.dataset.size) - parseFloat(a.dataset.size);
+                return b.dataset.modified - a.dataset.modified;
         }
     });
     
@@ -19,13 +17,59 @@ function sortCards(sortBy) {
 
 // 刷新功能
 async function refreshLoras() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loraGrid = document.getElementById('loraGrid');
+    const currentSort = document.getElementById('sortSelect').value;
+    const activeFolder = document.querySelector('.tag.active')?.dataset.folder;
+
     try {
+        // Show loading overlay
+        loadingOverlay.style.display = 'flex';
+        
+        // Fetch new data
         const response = await fetch('/loras?refresh=true');
-        if (response.ok) {
-            location.reload();
+        if (!response.ok) throw new Error('Refresh failed');
+        
+        // Parse the HTML response
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(await response.text(), 'text/html');
+        
+        // Get the new lora cards
+        const newLoraGrid = doc.getElementById('loraGrid');
+        
+        // Update the grid content
+        loraGrid.innerHTML = newLoraGrid.innerHTML;
+        
+        // Re-attach click listeners to new cards
+        document.querySelectorAll('.lora-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const meta = JSON.parse(card.dataset.meta || '{}');
+                if (Object.keys(meta).length > 0) {
+                    showModal(meta);
+                }
+            });
+        });
+        
+        // Re-apply current sorting
+        sortCards(currentSort);
+        
+        // Re-apply current folder filter if any
+        if (activeFolder) {
+            document.querySelectorAll('.lora-card').forEach(card => {
+                if (card.getAttribute('data-folder') === activeFolder) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
+        
     } catch (error) {
         console.error('Refresh failed:', error);
+        alert('Failed to refresh loras');
+    } finally {
+        // Hide loading overlay
+        loadingOverlay.style.display = 'none';
     }
 }
 
@@ -94,9 +138,15 @@ async function deleteModel(fileName) {
 }
 
 // 初始化排序
-document.getElementById('sortSelect').addEventListener('change', (e) => {
+document.getElementById('sortSelect')?.addEventListener('change', (e) => {
     sortCards(e.target.value);
 });
+
+// 立即执行初始排序
+const sortSelect = document.getElementById('sortSelect');
+if (sortSelect) {
+    sortCards(sortSelect.value);
+}
 
 // 添加搜索功能
 document.getElementById('searchInput')?.addEventListener('input', (e) => {
@@ -123,9 +173,9 @@ function showModal(lora) {
   const modal = document.getElementById('loraModal');
   modal.innerHTML = `
     <div class="modal-content">
-      <h2>${lora.name}</h2>
+      <h2>${lora.model.name}</h2>
       <div class="carousel">
-        ${lora.images.map(img => `<img src="${img}" alt="Preview">`).join('')}
+        ${lora.images.map(img => `<img src="${img.url}" alt="Preview">`).join('')}
       </div>
       <div class="description">${lora.description}</div>
       <button class="close" onclick="closeModal()">&times;</button>
