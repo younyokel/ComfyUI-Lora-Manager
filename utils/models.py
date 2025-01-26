@@ -13,6 +13,7 @@ class LoraMetadata:
     sha256: str                 # SHA256 hash of the file
     base_model: str             # Base model (SD1.5/SD2.1/SDXL/etc.)
     preview_url: str            # Preview image URL
+    from_civitai: bool = True  # Whether the lora is from Civitai
     civitai: Optional[Dict] = None  # Civitai API data if available
 
     @classmethod
@@ -33,4 +34,6 @@ class LoraMetadata:
 
     def update_civitai_info(self, civitai_data: Dict) -> None:
         """Update Civitai information"""
-        self.civitai = civitai_data 
+        self.civitai = civitai_data
+
+     

@@ -162,6 +162,7 @@ class LorasEndpoint:
                 "sha256": lora["sha256"],
                 "file_path": lora["file_path"],
                 "modified": lora["modified"],
+                "from_civitai": lora.get("from_civitai", True),
                 "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
             }
         except Exception as e:
@@ -176,6 +177,7 @@ class LorasEndpoint:
                 "sha256": lora.get("sha256", ""),
                 "file_path": lora.get("file_path", ""),
                 "modified": lora.get("modified", ""),
+                "from_civitai": lora.get("from_civitai", True),
                 "civitai": {
                     "id": "",
                     "modelId": "",
@@ -268,24 +270,31 @@ class LorasEndpoint:
             client = CivitaiClient()
             
             try:
+                metadata_path = os.path.splitext(data['file_path'])[0] + '.metadata.json'
+
+                local_metadata = {}
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        local_metadata = json.load(f)
+
+
+                if not local_metadata.get('from_civitai', True):
+                    return web.json_response(
+                        {"success": True, "Notice": "Not from CivitAI"}, 
+                        status=200
+                    )
+
                 # 1. 获取CivitAI元数据
                 civitai_metadata = await client.get_model_by_hash(data["sha256"])
                 if not civitai_metadata:
+                    local_metadata['from_civitai'] = False
+                    with open(metadata_path, 'w', encoding='utf-8') as f:
+                        json.dump(local_metadata, f, indent=2, ensure_ascii=False)
                     return web.json_response(
                         {"success": False, "error": "Not found on CivitAI"}, 
                         status=404
                     )
 
-                # 2. 读取/创建本地元数据文件
-                metadata_path = os.path.splitext(data['file_path'])[0] + '.metadata.json'
-                
-                # 合并元数据
-                local_metadata = {}
-                if os.path.exists(metadata_path):
-                    with open(metadata_path, 'r', encoding='utf-8') as f:
-                        local_metadata = json.load(f)
-                        
-                # 3. 更新元数据字段
                 local_metadata['civitai']=civitai_metadata
                 
                 # 更新模型名称（优先使用CivitAI名称）

@@ -164,8 +164,10 @@ let currentImageIndex = 0;
 
 document.querySelectorAll('.lora-card').forEach(card => {
   card.addEventListener('click', () => {
-    currentLora = JSON.parse(card.dataset.meta);
-    showModal(currentLora);
+    if (card.dataset.meta && Object.keys(JSON.parse(card.dataset.meta)).length > 0) {
+      currentLora = JSON.parse(card.dataset.meta);
+      showModal(currentLora);
+    }
   });
 });
 
@@ -175,9 +177,9 @@ function showModal(lora) {
     <div class="modal-content">
       <h2>${lora.model.name}</h2>
       <div class="carousel">
-        ${lora.images.map(img => `<img src="${img.url}" alt="Preview">`).join('')}
+        ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
       </div>
-      <div class="description">${lora.description}</div>
+      <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
       <button class="close" onclick="closeModal()">&times;</button>
     </div>
   `;

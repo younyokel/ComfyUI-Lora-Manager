@@ -22,6 +22,7 @@ async def get_file_info(file_path: str) -> LoraMetadata:
         modified=os.path.getmtime(file_path),
         sha256=await calculate_sha256(file_path),
         base_model="Unknown",  # Will be updated later
+        from_civitai=True,
         preview_url="",
     )
 

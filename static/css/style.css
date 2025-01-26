@@ -245,6 +245,12 @@ body.modal-open {
     object-fit: contain;
 }
 
+.carousel video {
+    scroll-snap-align: start;
+    max-height: 60vh;
+    object-fit: contain;
+}
+
 /* 主题切换按钮 */
 .theme-toggle {
     position: fixed;

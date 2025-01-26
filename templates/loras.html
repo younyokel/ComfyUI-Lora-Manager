@@ -70,8 +70,9 @@
                         </span>
                         <div class="card-actions">
                             <i class="fas fa-globe" 
-                               title="View on Civitai"
-                               onclick="event.stopPropagation(); openCivitai('{{ lora.model_name }}')"></i>
+                               title="{% if lora.from_civitai %}View on Civitai{% else %}Not available from Civitai{% endif %}"
+                               {% if lora.from_civitai %}onclick="event.stopPropagation(); openCivitai('{{ lora.model_name }}')"{% endif %}
+                               {% if not lora.from_civitai %}style="opacity: 0.5; cursor: not-allowed"{% endif %}></i>
                             <i class="fas fa-copy" 
                                title="Copy Model Name"
                                onclick="event.stopPropagation(); navigator.clipboard.writeText(this.closest('.lora-card').dataset.file_name)"></i>
