@@ -5,11 +5,11 @@ from pathlib import Path
 from aiohttp import web
 from server import PromptServer
 import jinja2
-from flask import jsonify, request
 from safetensors import safe_open
 from .utils.file_utils import get_file_info, save_metadata, load_metadata, update_civitai_metadata
 from .utils.lora_metadata import extract_lora_metadata
 from typing import Dict, Optional
+from .services.civitai_client import CivitaiClient
 
 class LorasEndpoint:
     def __init__(self):
@@ -33,7 +33,8 @@ class LorasEndpoint:
             web.get('/loras', instance.handle_loras_request),
             web.static('/loras_static/previews', instance.loras_root),
             web.static('/loras_static', static_path),
-            web.post('/api/delete_model', instance.delete_model)
+            web.post('/api/delete_model', instance.delete_model),
+            web.post('/api/fetch-civitai', instance.fetch_civitai)
         ])
     
     def send_progress(self, current, total, status="Scanning"):
@@ -105,8 +106,6 @@ class LorasEndpoint:
             formatted_loras = [self.format_lora(l) for l in data]
             folders = sorted(list(set(l['folder'] for l in data)))
 
-            print("folders:",folders)
-
             # Debug logging
             if formatted_loras:
                 print(f"Sample lora data: {formatted_loras[0]}")
@@ -160,6 +159,8 @@ class LorasEndpoint:
                 "preview_url": lora["preview_url"],
                 "base_model": lora["base_model"],
                 "folder": lora["folder"],
+                "sha256": lora["sha256"],
+                "file_path": lora["file_path"],
                 "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
             }
         except Exception as e:
@@ -171,6 +172,8 @@ class LorasEndpoint:
                 "preview_url": lora.get("preview_url", ""), 
                 "base_model": lora.get("base_model", ""),
                 "folder": lora.get("folder", ""),
+                "sha256": lora.get("sha256", ""),
+                "file_path": lora.get("file_path", ""),
                 "civitai": {
                     "id": "",
                     "modelId": "",
@@ -251,6 +254,72 @@ class LorasEndpoint:
                 pass
             except Exception as e:
                 print(f"Error downloading preview image: {str(e)}")
+
+    async def fetch_civitai(self, request):
+        print("Received fetch-civitai request")  # Debug log
+        try:
+            data = await request.json()
+            print(f"Request data: {data}")  # Debug log
+            client = CivitaiClient()
+            
+            try:
+                # 1. 获取CivitAI元数据
+                civitai_metadata = await client.get_model_by_hash(data["sha256"])
+                if not civitai_metadata:
+                    return web.json_response(
+                        {"success": False, "error": "Not found on CivitAI"}, 
+                        status=404
+                    )
+
+                # 2. 读取/创建本地元数据文件
+                metadata_path = os.path.splitext(data['file_path'])[0] + '.metadata.json'
+                
+                # 合并元数据
+                local_metadata = {}
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        local_metadata = json.load(f)
+                        
+                # 3. 更新元数据字段
+                local_metadata['civitai']=civitai_metadata
+                
+                # 更新模型名称（优先使用CivitAI名称）
+                if 'model' in civitai_metadata:
+                    local_metadata['model_name'] = civitai_metadata['model'].get('name', local_metadata.get('model_name'))
+                
+                # 4. 下载预览图
+                first_image = next((img for img in civitai_metadata.get('images', []) if img.get('type') == 'image'), None)
+                if first_image:
+                    preview_extension = os.path.splitext(first_image['url'])[-1]  # Get the image file extension
+                    preview_filename = os.path.splitext(os.path.basename(data['file_path']))[0] + preview_extension
+                    preview_path = os.path.join(os.path.dirname(data['file_path']), preview_filename)
+                    await client.download_preview_image(first_image['url'], preview_path)
+                    # 存储相对路径，使用正斜杠格式
+                    local_metadata['preview_url'] = os.path.relpath(preview_path, self.loras_root).replace(os.sep, '/')
+
+                # 5. 保存更新后的元数据
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+
+                return web.json_response({
+                    "success": True
+                })
+                
+            except Exception as e:
+                print(f"Error in fetch_civitai: {str(e)}")  # Debug log
+                return web.json_response({
+                    "success": False,
+                    "error": str(e)
+                }, status=500)
+            finally:
+                await client.close()
+                
+        except Exception as e:
+            print(f"Error processing request: {str(e)}")  # Debug log
+            return web.json_response({
+                "success": False,
+                "error": f"Request processing error: {str(e)}"
+            }, status=400)
 
 # 注册路由
 LorasEndpoint.add_routes()

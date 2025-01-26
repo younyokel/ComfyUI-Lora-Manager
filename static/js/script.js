@@ -57,7 +57,7 @@ async function deleteModel(modelName) {
     event.stopPropagation();
     
     // Get the folder from the card's data attributes
-    const card = document.querySelector(`.lora-card[data-name="${modelName}"]`);
+    const card = document.querySelector(`.lora-card[data-file_name="${modelName}"]`);
     const folder = card ? card.dataset.folder : null;
     
     // Show confirmation dialog
@@ -246,6 +246,80 @@ function preloadImages(urls) {
     urls.forEach(url => {
         new Image().src = url;
     });
+}
+
+// 新增 fetchCivitai 函数
+async function fetchCivitai() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const progressBar = document.querySelector('.progress-bar');
+    const loadingStatus = document.querySelector('.loading-status');
+    const loraCards = document.querySelectorAll('.lora-card');
+    
+    // 显示进度条
+    loadingOverlay.style.display = 'flex';
+    loadingStatus.textContent = 'Fetching metadata...';
+    
+    try {
+        // Iterate through all lora cards
+        for(let i = 0; i < loraCards.length; i++) {
+            const card = loraCards[i];
+            // Skip if already has metadata
+            if (card.dataset.meta && Object.keys(JSON.parse(card.dataset.meta)).length > 0) {
+                continue;
+            }
+            
+            // Make sure these data attributes exist on your lora-card elements
+            const sha256 = card.dataset.sha256;
+            const filePath = card.dataset.filepath;
+            
+            // Add validation
+            if (!sha256 || !filePath) {
+                console.warn(`Missing data for card ${card.dataset.name}:`, { sha256, filePath });
+                continue;
+            }
+            
+            // Update progress
+            const progress = (i / loraCards.length * 100).toFixed(1);
+            progressBar.style.width = `${progress}%`;
+            loadingStatus.textContent = `Processing (${i+1}/${loraCards.length}) ${card.dataset.name}`;
+            
+            // Call backend API
+            const response = await fetch('/api/fetch-civitai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sha256: sha256,
+                    file_path: filePath
+                })
+            });
+            
+            // if(!response.ok) {
+            //     const errorText = await response.text();
+            //     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            // }
+            
+            // // Optional: Update the card with new metadata
+            // const result = await response.json();
+            // if (result.success && result.metadata) {
+            //     card.dataset.meta = JSON.stringify(result.metadata);
+            //     // Update card display if needed
+            // }
+        }
+        
+        // Completion handling
+        progressBar.style.width = '100%';
+        loadingStatus.textContent = 'Metadata update complete';
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            // Optionally reload the page to show updated data
+            window.location.reload();
+        }, 2000);
+        
+    } catch (error) {
+        console.warn('Error fetching metadata:', error);
+    }
 }
 
 initTheme();

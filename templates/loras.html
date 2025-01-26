@@ -48,9 +48,15 @@
         <div class="card-grid" id="loraGrid">
             {% for lora in loras %}
             <!-- 在卡片部分更新元数据展示 -->
-            <div class="lora-card" data-name="{{ lora.model_name }}" data-file_name="{{ lora.file_name }}" data-folder="{{ lora.folder }}" data-meta="{{ lora.civitai | default({}) | tojson | forceescape }}">
+            <div class="lora-card" 
+                 data-sha256="{{ lora.sha256 }}"
+                 data-filepath="{{ lora.file_path }}"
+                 data-name="{{ lora.model_name }}"
+                 data-file_name="{{ lora.file_name }}"
+                 data-folder="{{ lora.folder }}"
+                 data-meta="{{ lora.civitai | default({}) | tojson | forceescape }}">
                 <div class="card-preview">
-                    <img src="{{ lora.preview_url or '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
+                    <img src="{{ ('/loras_static/previews/' + lora.preview_url) if lora.preview_url else '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
                     <div class="card-header">
                         <span class="base-model-label" title="{{ lora.base_model }}">
                             {{ lora.base_model }}
