@@ -30,9 +30,9 @@ async function refreshLoras() {
 }
 
 // 占位功能函数
-function openCivitai(loraName) {
+function openCivitai(modelName) {
     // 从卡片的data-meta属性中获取civitai ID
-    const loraCard = document.querySelector(`.lora-card[data-name="${loraName}"]`);
+    const loraCard = document.querySelector(`.lora-card[data-name="${modelName}"]`);
     if (!loraCard) return;
     
     const metaData = JSON.parse(loraCard.dataset.meta);
@@ -48,7 +48,7 @@ function openCivitai(loraName) {
         window.open(url, '_blank');
     } else {
         // 如果没有ID，尝试使用名称搜索
-        window.open(`https://civitai.com/models?query=${encodeURIComponent(loraName)}`, '_blank');
+        window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
     }
 }
 
