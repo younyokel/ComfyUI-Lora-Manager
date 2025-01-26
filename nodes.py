@@ -190,9 +190,9 @@ class LorasEndpoint:
     async def delete_model(self, request):
         try:
             data = await request.json()
-            model_name = data.get('model_name')
+            file_name = data.get('file_name')
             folder = data.get('folder')  # 从请求中获取folder信息
-            if not model_name:
+            if not file_name:
                 return web.Response(text='Model name is required', status=400)
 
             # 构建完整的目录路径
@@ -201,10 +201,13 @@ class LorasEndpoint:
                 target_dir = os.path.join(self.loras_root, folder)
 
             # List of file patterns to delete
-            required_file = f"{model_name}.safetensors"  # 主文件必须存在
+            required_file = f"{file_name}.safetensors"  # 主文件必须存在
             optional_files = [  # 这些文件可能不存在
-                f"{model_name}.civitai.info",
-                f"{model_name}.preview.png"
+                f"{file_name}.metadata.json",
+                f"{file_name}.preview.png",
+                f"{file_name}.preview.jpg",
+                f"{file_name}.preview.jpeg",
+                f"{file_name}.preview.webp"
             ]
             
             deleted_files = []

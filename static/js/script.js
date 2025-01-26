@@ -52,16 +52,16 @@ function openCivitai(modelName) {
     }
 }
 
-async function deleteModel(modelName) {
+async function deleteModel(fileName) {
     // Prevent event bubbling
     event.stopPropagation();
     
     // Get the folder from the card's data attributes
-    const card = document.querySelector(`.lora-card[data-file_name="${modelName}"]`);
+    const card = document.querySelector(`.lora-card[data-file_name="${fileName}"]`);
     const folder = card ? card.dataset.folder : null;
     
     // Show confirmation dialog
-    const confirmed = confirm(`Are you sure you want to delete "${modelName}" and all associated files?`);
+    const confirmed = confirm(`Are you sure you want to delete "${fileName}" and all associated files?`);
     
     if (confirmed) {
         try {
@@ -71,7 +71,7 @@ async function deleteModel(modelName) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ 
-                    model_name: modelName,
+                    file_name: fileName,
                     folder: folder
                 })
             });
