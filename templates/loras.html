@@ -57,7 +57,7 @@
                  data-meta="{{ lora.civitai | default({}) | tojson | forceescape }}">
                 <div class="card-preview">
                     {% if lora.preview_url.endswith('.mp4') or lora.preview_url.endswith('.webm') %}
-                        <video controls>
+                        <video controls autoplay muted loop>
                             <source src="{{ '/loras_static/previews/' + lora.preview_url }}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>

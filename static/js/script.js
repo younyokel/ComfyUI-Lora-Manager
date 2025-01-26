@@ -279,11 +279,6 @@ function initTheme() {
   document.body.dataset.theme = savedTheme;
 }
 
-// 检测系统主题
-window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
-  document.body.dataset.theme = e.matches ? 'dark' : 'light';
-});
-
 // 键盘导航
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
