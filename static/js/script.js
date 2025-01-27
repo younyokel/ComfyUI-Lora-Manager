@@ -369,4 +369,76 @@ async function fetchCivitai() {
     }
 }
 
+async function replacePreview(fileName, folder) {
+    // Get loading elements first
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingStatus = document.querySelector('.loading-status');
+    
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/mp4';  // Accept images and MP4 videos
+    
+    // Handle file selection
+    input.onchange = async function() {
+        if (!input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('file_name', fileName);
+        formData.append('folder', folder);
+        
+        try {
+            // Show loading overlay
+            loadingOverlay.style.display = 'flex';
+            loadingStatus.textContent = 'Uploading preview...';
+            
+            const response = await fetch('/api/replace_preview', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+            
+            // Update the preview image in the card
+            const card = document.querySelector(`.lora-card[data-file_name="${fileName}"]`);
+            const previewContainer = card.querySelector('.card-preview');
+            const oldPreview = previewContainer.querySelector('img, video');
+            
+            // Force reload the preview by adding a timestamp
+            const timestamp = new Date().getTime();
+            const baseName = fileName.split('.')[0];
+            const extension = file.type.startsWith('video/') ? '.preview.mp4' : '.preview.png';
+            const newPreviewPath = `/loras_static/previews/${folder}/${baseName}${extension}?t=${timestamp}`;
+            
+            // Create new preview element based on file type
+            if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.controls = true;
+                video.autoplay = true;
+                video.muted = true;
+                video.loop = true;
+                video.src = newPreviewPath;
+                oldPreview.replaceWith(video);
+            } else {
+                const img = document.createElement('img');
+                img.src = newPreviewPath;
+                oldPreview.replaceWith(img);
+            }
+            
+        } catch (error) {
+            console.error('Error uploading preview:', error);
+            alert('Failed to upload preview image');
+        } finally {
+            loadingOverlay.style.display = 'none';
+        }
+    };
+    
+    // Trigger file selection
+    input.click();
+}
+
 initTheme();

@@ -34,7 +34,8 @@ class LorasEndpoint:
             web.static('/loras_static/previews', instance.loras_root),
             web.static('/loras_static', static_path),
             web.post('/api/delete_model', instance.delete_model),
-            web.post('/api/fetch-civitai', instance.fetch_civitai)
+            web.post('/api/fetch-civitai', instance.fetch_civitai),
+            web.post('/api/replace_preview', instance.replace_preview),
         ])
     
     def send_progress(self, current, total, status="Scanning"):
@@ -106,12 +107,6 @@ class LorasEndpoint:
             formatted_loras = [self.format_lora(l) for l in data]
             folders = sorted(list(set(l['folder'] for l in data)))
 
-            # Debug logging
-            if formatted_loras:
-                print(f"Sample lora data: {formatted_loras[0]}")
-            else:
-                print("Warning: No loras found")
-                
             context = {
                 "loras": formatted_loras,
                 "folders": folders,
@@ -263,10 +258,8 @@ class LorasEndpoint:
                 print(f"Error downloading preview image: {str(e)}")
 
     async def fetch_civitai(self, request):
-        print("Received fetch-civitai request")  # Debug log
         try:
             data = await request.json()
-            print(f"Request data: {data}")  # Debug log
             client = CivitaiClient()
             
             try:
@@ -337,6 +330,68 @@ class LorasEndpoint:
                 "success": False,
                 "error": f"Request processing error: {str(e)}"
             }, status=400)
+
+    async def replace_preview(self, request):
+        try:
+            reader = await request.multipart()
+            
+            # Get the file field first
+            file_field = await reader.next()
+            if file_field.name != 'file':
+                raise ValueError("Expected 'file' field first")
+            file_data = await file_field.read()
+            
+            # Get the file name field
+            name_field = await reader.next()
+            if name_field.name != 'file_name':
+                raise ValueError("Expected 'file_name' field second")
+            file_name = (await name_field.read()).decode()
+
+            # Get the folder field
+            folder_field = await reader.next()
+            if folder_field.name != 'folder':
+                raise ValueError("Expected 'folder' field third")
+            folder = (await folder_field.read()).decode()
+            
+            # Get the content type from the file field headers
+            content_type = file_field.headers.get('Content-Type', '')
+
+            print(f"Received preview file: {file_name} ({content_type})")  # Debug log
+            
+            # Determine file extension based on content type
+            if content_type.startswith('video/'):
+                extension = '.preview.mp4'
+            else:
+                extension = '.preview.png'
+            
+            # Construct the preview file path
+            base_name = os.path.splitext(file_name)[0]  # Remove original extension
+            preview_name = base_name + extension
+            preview_path = os.path.join(self.loras_root, folder, preview_name)
+            
+            # Save the preview file
+            with open(preview_path, 'wb') as f:
+                f.write(file_data)
+            
+            # Update metadata if it exists
+            metadata_path = os.path.join(self.loras_root, folder, base_name + '.metadata.json')
+            if os.path.exists(metadata_path):
+                try:
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        metadata = json.load(f)
+                    # Update the preview_url to match the new file name
+                    metadata['preview_url'] = os.path.join(folder, preview_name).replace(os.sep, '/')
+                    with open(metadata_path, 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, indent=2, ensure_ascii=False)
+                except Exception as e:
+                    print(f"Error updating metadata: {str(e)}")
+                    # Continue even if metadata update fails
+            
+            return web.Response(status=200)
+            
+        except Exception as e:
+            print(f"Error replacing preview: {str(e)}")
+            return web.Response(text=str(e), status=500)
 
 # 注册路由
 LorasEndpoint.add_routes()
