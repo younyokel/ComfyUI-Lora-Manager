@@ -3,6 +3,23 @@
     --text-color: #333333;
     --card-bg: #ffffff;
     --border-color: #e0e0e0;
+
+    /* Color System */
+    --lora-accent: oklch(68% 0.28 256);
+    --lora-surface: oklch(100% 0 0 / 0.4);
+    --lora-border: oklch(90% 0.02 256 / 0.15);
+    --lora-text: oklch(95% 0.02 256);
+    --lora-error: oklch(75% 0.32 29);
+    
+    /* Spacing Scale */
+    --space-1: calc(8px * 1);
+    --space-2: calc(8px * 2);
+    --space-3: calc(8px * 3);
+    
+    /* Z-index Scale */
+    --z-base: 10;
+    --z-modal: 30;
+    --z-overlay: 50;
 }
 
 [data-theme="dark"] {
@@ -10,6 +27,11 @@
     --text-color: #e0e0e0;
     --card-bg: #2d2d2d;
     --border-color: #404040;
+
+    --lora-accent: oklch(68% 0.28 256);
+    --lora-surface: oklch(25% 0.02 256 / 0.85);
+    --lora-border: oklch(90% 0.02 256 / 0.15);
+    --lora-text: oklch(98% 0.02 256);
 }
 
 body {
@@ -53,24 +75,54 @@ body {
 /* 卡片网格布局 */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Adjusted from 320px */
+    gap: 12px; /* Reduced from var(--space-2) for tighter horizontal spacing */
+    margin-top: var(--space-2);
+    max-width: 1400px; /* Container width control */
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .lora-card {
-    background: var(--card-bg);
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    transition: transform 0.2s;
+    backdrop-filter: blur(16px);
+    transition: transform 160ms ease-out;
     aspect-ratio: 896/1152;
-    max-width: 240px;
+    max-width: 260px; /* Adjusted from 320px to fit 5 cards */
     margin: 0 auto;
 }
 
 .lora-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-2px);
+    background: oklch(100% 0 0 / 0.6);
+}
+
+.lora-card:focus-visible {
+    outline: 2px solid var(--lora-accent);
+    outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    
+    .lora-card {
+        max-width: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .card-grid {
+        grid-template-columns: minmax(260px, 1fr);
+    }
+    
+    .lora-card {
+        max-width: 100%;
+    }
 }
 
 /* Card Preview and Footer Overlay */
@@ -97,18 +149,20 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+    background: linear-gradient(transparent 15%, oklch(0% 0 0 / 0.75));
+    backdrop-filter: blur(8px);
     color: white;
-    padding: 15px;
+    padding: var(--space-1);
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    min-height: 80px;
+    min-height: 32px;
 }
 
 .model-name {
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 0.95em;
 }
 
 .model-meta {
@@ -121,20 +175,23 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.85), transparent);
+    background: linear-gradient(oklch(0% 0 0 / 0.75), transparent 85%);
+    backdrop-filter: blur(8px);
     color: white;
-    padding: 15px;
+    padding: var(--space-1);
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 1;
+    min-height: 20px;
 }
 
 .card-actions i {
-    margin-left: 10px;
+    margin-left: var(--space-1);
     cursor: pointer;
     color: white;
     transition: opacity 0.2s;
+    font-size: 0.9em;
 }
 
 .card-actions i:hover {
@@ -144,12 +201,16 @@ body {
 /* 响应式设计 */
 @media (max-width: 768px) {
     .card-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(260px, 1fr); /* Adjusted minimum size for mobile */
     }
 
     .controls {
         flex-direction: column;
         gap: 15px;
+    }
+    
+    .lora-card {
+        max-width: 100%; /* Allow cards to fill available space on mobile */
     }
 }
 
@@ -226,9 +287,10 @@ body.modal-open {
     position: relative;
     max-width: 800px;
     margin: 2rem auto;
-    background: var(--card-bg);
+    background: var(--lora-surface);
     border-radius: 12px;
-    padding: 20px;
+    padding: var(--space-3);
+    border: 1px solid var(--lora-border);
 }
 
 .carousel {
@@ -271,9 +333,10 @@ body.modal-open {
     color: white;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     background: rgba(255, 255, 255, 0.2);
-    padding: 2px 8px;
+    padding: 2px var(--space-1);
     border-radius: 4px;
     backdrop-filter: blur(2px);
+    font-size: 0.85em;
 }
 
 .loading-overlay {
@@ -282,18 +345,20 @@ body.modal-open {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: oklch(0% 0 0 / 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-overlay);
 }
 
 .loading-content {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 8px;
+    background: var(--lora-surface);
+    backdrop-filter: blur(24px);
+    padding: var(--space-3);
+    border-radius: 12px;
     text-align: center;
+    border: 1px solid var(--lora-border);
 }
 
 .loading-spinner {
@@ -320,12 +385,19 @@ body.modal-open {
 
 .progress-bar {
     width: 0%;
-    height: 20px;
-    background-color: #4CAF50;
-    transition: width 0.3s ease;
+    height: var(--space-2);
+    background-color: var(--lora-accent);
+    transition: width 200ms ease-out;
 }
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lora-card,
+    .progress-bar {
+        transition: none;
+    }
 }

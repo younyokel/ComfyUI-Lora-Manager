@@ -125,8 +125,6 @@ async function deleteModel(fileName) {
                 if (card) {
                     card.remove();
                 }
-                // Show success message
-                alert('Model deleted successfully');
             } else {
                 const error = await response.text();
                 alert(`Failed to delete model: ${error}`);
