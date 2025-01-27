@@ -418,3 +418,21 @@ body.modal-open {
     align-items: flex-end; /* 将图标靠下对齐 */
     align-self: flex-end; /* 将整个actions容器靠下对齐 */
 }
+
+.model-link {
+    margin-top: var(--space-1);
+}
+
+.model-link a {
+    color: #34b4eb;
+    text-decoration: none;
+    font-size: 1.3em;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.model-link a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}

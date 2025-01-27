@@ -178,6 +178,9 @@ function showModal(lora) {
         ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
       </div>
       <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
+      <div class="model-link">
+        <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
+      </div>
       <button class="close" onclick="closeModal()">&times;</button>
     </div>
   `;
@@ -268,14 +271,14 @@ function toggleFolder(element) {
 
 // 主题切换
 function toggleTheme() {
-  const theme = document.body.dataset.theme || 'light';
+  const theme = document.body.dataset.theme || 'dark';
   document.body.dataset.theme = theme === 'light' ? 'dark' : 'light';
   localStorage.setItem('theme', document.body.dataset.theme);
 }
 
 // 初始化主题
 function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'light';
+  const savedTheme = localStorage.getItem('theme') || 'dark';
   document.body.dataset.theme = savedTheme;
 }
 
