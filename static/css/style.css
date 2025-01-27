@@ -155,14 +155,19 @@ body {
     padding: var(--space-1);
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: flex-start;  /* Changed from flex-end to allow for text wrapping */
     min-height: 32px;
+    gap: var(--space-1);  /* Add gap between model info and actions */
 }
 
 .model-name {
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     font-size: 0.95em;
+    word-break: break-word;  /* Allow long words to break */
+    display: block;  /* Ensure the text wraps */
+    max-height: 2.8em;  /* Limit to roughly 2 lines */
+    overflow: hidden;
 }
 
 .model-meta {
@@ -217,6 +222,9 @@ body {
 /* 新增元数据相关样式 */
 .model-info {
     flex: 1;
+    min-width: 0;  /* Allow flex item to shrink below content size */
+    overflow: hidden;  /* Prevent content from spilling out */
+    padding-bottom: 4px; /* 为了与底部对齐的图标留出一些空间 */
 }
 
 .model-meta {
@@ -400,4 +408,13 @@ body.modal-open {
     .progress-bar {
         transition: none;
     }
+}
+
+.card-actions {
+    flex-shrink: 0;  /* Prevent actions from shrinking */
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    align-items: flex-end; /* 将图标靠下对齐 */
+    align-self: flex-end; /* 将整个actions容器靠下对齐 */
 }
