@@ -75,7 +75,7 @@ body {
 /* 卡片网格布局 */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Adjusted from 320px */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); /* Adjusted from 320px */
     gap: 12px; /* Reduced from var(--space-2) for tighter horizontal spacing */
     margin-top: var(--space-2);
     max-width: 1400px; /* Container width control */
