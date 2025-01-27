@@ -1,0 +1,14 @@
+[project]
+name = "lora-manager"
+description = "LoRA Manager for ComfyUI - An extension for managing LoRA models with previews and metadata integration."
+version = "0.5.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/willmiao/ComfyUI-Lora-Manager"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "willmiao"
+DisplayName = "ComfyUI-Lora-Manager"
+Icon = ""
