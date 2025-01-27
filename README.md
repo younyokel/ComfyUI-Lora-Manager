@@ -2,7 +2,7 @@
 
 Web-based management interface for local LoRA models in ComfyUI. Access at: `http://localhost:8188/loras`
 
-![Interface Preview](https://via.placeholder.com/800x400.png?text=LoRA+Management+Interface)
+![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/Screenshot%202025-01-27%20172349.png)
 
 ## Key Features
 
