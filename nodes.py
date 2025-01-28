@@ -54,10 +54,11 @@ class LorasEndpoint:
         loras = []
         for root, _, files in os.walk(self.loras_root):
             safetensors_files = [f for f in files if f.endswith('.safetensors')]
-            total_files = len(safetensors_files)
+            # total_files = len(safetensors_files)
             
             for idx, filename in enumerate(safetensors_files, 1):
-                self.send_progress(idx, total_files, f"Scanning: {filename}")
+                # self.send_progress(idx, total_files, f"Scanning: {filename}")
+                print(f"Scanning: {idx} {filename}")
                 
                 file_path = os.path.join(root, filename)
                 
@@ -81,7 +82,7 @@ class LorasEndpoint:
                 
                 loras.append(lora_data)
             
-        self.send_progress(total_files, total_files, "Scan completed")
+        # self.send_progress(total_files, total_files, "Scan completed")
         return loras
 
 
@@ -109,24 +110,7 @@ class LorasEndpoint:
 
             context = {
                 "loras": formatted_loras,
-                "folders": folders,
-                # Only set single lora if we're viewing details
-                "lora": formatted_loras[0] if formatted_loras else {
-                    "model_name": "",
-                    "file_name": "",
-                    "preview_url": "",
-                    "folder": "",
-                    "civitai": {
-                        "id": "",
-                        "model": "",
-                        "base_model": "",
-                        "trained_words": [],
-                        "creator": "",
-                        "downloads": 0,
-                        "images": [],
-                        "description": ""
-                    }
-                }
+                "folders": folders
             }
             
             template = self.template_env.get_template('loras.html')
@@ -147,44 +131,19 @@ class LorasEndpoint:
 
     def format_lora(self, lora):
         """格式化前端需要的数据结构"""
-        try:
-            return {
-                "model_name": lora["model_name"],
-                "file_name": lora["file_name"],   
-                "preview_url": lora["preview_url"],
-                "base_model": lora["base_model"],
-                "folder": lora["folder"],
-                "sha256": lora["sha256"],
-                "file_path": lora["file_path"],
-                "modified": lora["modified"],
-                "from_civitai": lora.get("from_civitai", True),
-                "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
-            }
-        except Exception as e:
-            print(f"Error formatting lora: {str(e)}")
-            print(f"Lora data: {lora}")
-            return {
-                "model_name": lora.get("model_name", "Unknown"),
-                "file_name": lora.get("file_name", ""),   
-                "preview_url": lora.get("preview_url", ""), 
-                "base_model": lora.get("base_model", ""),
-                "folder": lora.get("folder", ""),
-                "sha256": lora.get("sha256", ""),
-                "file_path": lora.get("file_path", ""),
-                "modified": lora.get("modified", ""),
-                "from_civitai": lora.get("from_civitai", True),
-                "civitai": {
-                    "id": "",
-                    "modelId": "",
-                    "model": "",
-                    "base_model": "",
-                    "trained_words": [],
-                    "creator": "",
-                    "downloads": 0,
-                    "images": [],
-                    "description": ""
-                }
-            }
+        return {
+            "model_name": lora["model_name"],
+            "file_name": lora["file_name"],   
+            "preview_url": lora["preview_url"],
+            "base_model": lora["base_model"],
+            "folder": lora["folder"],
+            "sha256": lora["sha256"],
+            "file_path": lora["file_path"],
+            "modified": lora["modified"],
+            "from_civitai": lora.get("from_civitai", True),
+            "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
+        }
+
 
     async def delete_model(self, request):
         try:
