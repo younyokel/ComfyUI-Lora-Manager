@@ -62,11 +62,11 @@ class LorasEndpoint:
                 file_path = os.path.join(root, filename)
                 
                 # Try to load existing metadata first
-                metadata = await load_metadata(file_path)
+                metadata = await load_metadata(file_path, self.loras_root)
                 
                 if metadata is None:
                     # Only get file info and extract metadata if no existing metadata
-                    metadata = await get_file_info(file_path)
+                    metadata = await get_file_info(file_path, self.loras_root)
                     base_model_info = await extract_lora_metadata(file_path)
                     metadata.base_model = base_model_info['base_model']
                     await save_metadata(file_path, metadata)
@@ -101,7 +101,7 @@ class LorasEndpoint:
         try:
             scan_start = time.time()
             data = await self.scan_loras()
-            print(f"Scanned {len(data)} loras in {time.time()-scan_start:.2f}s")
+            print(f"Lora Manager: Scanned {len(data)} loras in {time.time()-scan_start:.2f}s")
             
             # Format the data for the template
             formatted_loras = [self.format_lora(l) for l in data]
@@ -297,15 +297,17 @@ class LorasEndpoint:
                 local_metadata['base_model'] = civitai_metadata.get('baseModel')
                 
                 # 4. 下载预览图
-                first_preview = next((img for img in civitai_metadata.get('images', [])), None)
-                if first_preview:
-                    
-                    preview_extension = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]  # Get the file extension
-                    preview_filename = os.path.splitext(os.path.basename(data['file_path']))[0] + preview_extension
-                    preview_path = os.path.join(os.path.dirname(data['file_path']), preview_filename)
-                    await client.download_preview_image(first_preview['url'], preview_path)
-                    # 存储相对路径，使用正斜杠格式
-                    local_metadata['preview_url'] = os.path.relpath(preview_path, self.loras_root).replace(os.sep, '/')
+                # Check if existing preview is valid
+                if not local_metadata.get('preview_url') or not os.path.join(self.loras_root, local_metadata['preview_url'].replace('/', os.sep)):
+                    first_preview = next((img for img in civitai_metadata.get('images', [])), None)
+                    if first_preview:
+                        
+                        preview_extension = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]  # Get the file extension
+                        preview_filename = os.path.splitext(os.path.basename(data['file_path']))[0] + '.preview' + preview_extension
+                        preview_path = os.path.join(os.path.dirname(data['file_path']), preview_filename)
+                        await client.download_preview_image(first_preview['url'], preview_path)
+                        # 存储相对路径，使用正斜杠格式
+                        local_metadata['preview_url'] = os.path.relpath(preview_path, self.loras_root).replace(os.sep, '/')
 
                 # 5. 保存更新后的元数据
                 with open(metadata_path, 'w', encoding='utf-8') as f:
