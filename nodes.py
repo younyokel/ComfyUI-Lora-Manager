@@ -54,11 +54,10 @@ class LorasEndpoint:
         loras = []
         for root, _, files in os.walk(self.loras_root):
             safetensors_files = [f for f in files if f.endswith('.safetensors')]
-            # total_files = len(safetensors_files)
+            total_files = len(safetensors_files)
             
             for idx, filename in enumerate(safetensors_files, 1):
-                # self.send_progress(idx, total_files, f"Scanning: {filename}")
-                print(f"Scanning: {idx} {filename}")
+                self.send_progress(idx, total_files, f"Scanning: {filename}")
                 
                 file_path = os.path.join(root, filename)
                 
@@ -82,7 +81,7 @@ class LorasEndpoint:
                 
                 loras.append(lora_data)
             
-        # self.send_progress(total_files, total_files, "Scan completed")
+        self.send_progress(total_files, total_files, "Scan completed")
         return loras
 
 
