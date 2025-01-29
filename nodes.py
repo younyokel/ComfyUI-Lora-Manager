@@ -127,7 +127,19 @@ class LorasEndpoint:
                 content_type='text/html',
                 status=500
             )
-
+        
+    def filter_civitai_data(self, civitai_data):
+        if not civitai_data:
+            return {}
+            
+        required_fields = [
+            "id", "modelId", "name", "createdAt", "updatedAt", 
+            "publishedAt", "trainedWords", "baseModel", "description",
+            "model", "images"
+        ]
+    
+        return {k: civitai_data[k] for k in required_fields if k in civitai_data}
+    
     def format_lora(self, lora):
         """格式化前端需要的数据结构"""
         return {
@@ -140,7 +152,7 @@ class LorasEndpoint:
             "file_path": lora["file_path"],
             "modified": lora["modified"],
             "from_civitai": lora.get("from_civitai", True),
-            "civitai": lora.get("civitai", {}) or {}  # 确保当 civitai 为 None 时返回空字典
+            "civitai": self.filter_civitai_data(lora.get("civitai", {}))
         }
 
 

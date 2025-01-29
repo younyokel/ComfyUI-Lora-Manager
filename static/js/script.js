@@ -178,6 +178,15 @@ function showModal(lora) {
         ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
       </div>
       <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
+      <div class="trigger-words">
+        <strong>Trigger Words:</strong>
+        <span class="word-list">${lora.trainedWords ? lora.trainedWords.join(', ').toUpperCase() : 'N/A'}</span>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('${lora.trainedWords ? lora.trainedWords.join(', ').toUpperCase() : ''}')">
+            <svg width="16" height="16" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+            </svg>
+        </button>
+      </div>
       <div class="model-link">
         <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
       </div>
