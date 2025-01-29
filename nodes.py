@@ -255,8 +255,8 @@ class LorasEndpoint:
                 local_metadata['base_model'] = civitai_metadata.get('baseModel')
                 
                 # 4. 下载预览图
-                # Check if existing preview is valid
-                if not local_metadata.get('preview_url') or not os.path.join(self.loras_root, local_metadata['preview_url'].replace('/', os.sep)):
+                # Check if existing preview is valid and the file exists
+                if not local_metadata.get('preview_url') or not os.path.exists(os.path.join(self.loras_root, local_metadata['preview_url'].replace('/', os.sep))):
                     first_preview = next((img for img in civitai_metadata.get('images', [])), None)
                     if first_preview:
                         
