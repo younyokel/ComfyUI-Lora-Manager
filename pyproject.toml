@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-lora-manager"
 description = "LoRA Manager for ComfyUI - An extension for managing LoRA models with previews and metadata integration."
-version = "0.5.2"
+version = "0.5.3"
 license = {file = "LICENSE"}
 dependencies = ["aiohttp", "jinja2", "safetensors"]
 
