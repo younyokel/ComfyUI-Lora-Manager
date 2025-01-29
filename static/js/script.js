@@ -170,39 +170,41 @@ document.querySelectorAll('.lora-card').forEach(card => {
 });
 
 function showModal(lora) {
-  const modal = document.getElementById('loraModal');
-  modal.innerHTML = `
-    <div class="modal-content">
-      <h2>${lora.model.name}</h2>
-      <div class="carousel">
-        ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
-      </div>
-      <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
-      <div class="trigger-words">
-        <strong>Trigger Words:</strong>
-        <span class="word-list">${lora.trainedWords ? lora.trainedWords.join(', ').toUpperCase() : 'N/A'}</span>
-        <button class="copy-btn" onclick="navigator.clipboard.writeText('${lora.trainedWords ? lora.trainedWords.join(', ').toUpperCase() : ''}')">
+    const modal = document.getElementById('loraModal');
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>${lora.model.name}</h2>
+        <div class="carousel">
+          ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
+        </div>
+        <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
+        <div class="trigger-words">
+          <strong>Trigger Words:</strong>
+          <span class="word-list">${lora.trainedWords?.length ? lora.trainedWords.join(', ').toUpperCase() : 'N/A'}</span>
+          ${lora.trainedWords?.length ? `
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('${lora.trainedWords.join(', ').toUpperCase()}')">
             <svg width="16" height="16" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
             </svg>
-        </button>
+          </button>
+          ` : ''}
+        </div>
+        <div class="model-link">
+          <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
+        </div>
+        <button class="close" onclick="closeModal()">&times;</button>
       </div>
-      <div class="model-link">
-        <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
-      </div>
-      <button class="close" onclick="closeModal()">&times;</button>
-    </div>
-  `;
-  modal.style.display = 'block';
-  document.body.classList.add('modal-open');
+    `;
+    modal.style.display = 'block';
+    document.body.classList.add('modal-open');
 
-  // 添加点击事件监听器
-  modal.onclick = function(event) {
-    // 如果点击的是模态窗口的背景（不是内容区域），则关闭模态窗口
-    if (event.target === modal) {
-      closeModal();
-    }
-  };
+    // 添加点击事件监听器
+    modal.onclick = function (event) {
+        // 如果点击的是模态窗口的背景（不是内容区域），则关闭模态窗口
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
 }
 
 function closeModal() {
