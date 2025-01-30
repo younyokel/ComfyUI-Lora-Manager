@@ -1,13 +1,13 @@
-from .nodes import LorasEndpoint
+from .nodes.lora_gateway import LoRAGateway
 
 NODE_CLASS_MAPPINGS = {
-    "LorasEndpoint": LorasEndpoint
+    "LoRAGateway": LoRAGateway
+}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "LoRAGateway": "LoRAGateway"
 }
 
 WEB_DIRECTORY = "./js"
 
-# Add this init function to properly register routes
-def init():
-    LorasEndpoint.add_routes()
-
-__all__ = ['NODE_CLASS_MAPPINGS']
+__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']

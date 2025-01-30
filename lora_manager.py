@@ -11,6 +11,7 @@ from .utils.lora_metadata import extract_lora_metadata
 from typing import Dict, Optional
 from .services.civitai_client import CivitaiClient
 import folder_paths
+import logging
 
 class LorasEndpoint:
     def __init__(self):

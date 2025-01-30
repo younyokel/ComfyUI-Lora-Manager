@@ -292,19 +292,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
         }
     });
+
+    // Restore folder filter state
+    restoreFolderFilter();
+    
+    // Restore scroll position if exists
+    const savedScrollPos = localStorage.getItem('scrollPosition');
+    if (savedScrollPos !== null) {
+        window.scrollTo(0, parseInt(savedScrollPos));
+        localStorage.removeItem('scrollPosition');
+    }
 });
 
 function toggleFolder(element) {
-    // Remove active class from all tags if clicking already active tag
-    if (element.classList.contains('active')) {
-        document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
-        // Show all cards
-        document.querySelectorAll('.lora-card').forEach(card => card.style.display = '');
-    } else {
-        // Remove active class from all tags
-        document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
+    // Store the previous state
+    const wasActive = element.classList.contains('active');
+    
+    // Remove active class from all tags
+    document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
+    
+    if (!wasActive) {
         // Add active class to clicked tag
         element.classList.add('active');
+        // Store active folder in localStorage
+        localStorage.setItem('activeFolder', element.getAttribute('data-folder'));
         // Hide all cards first
         document.querySelectorAll('.lora-card').forEach(card => {
             if (card.getAttribute('data-folder') === element.getAttribute('data-folder')) {
@@ -313,6 +324,29 @@ function toggleFolder(element) {
                 card.style.display = 'none';
             }
         });
+    } else {
+        // Clear stored folder when deactivating
+        localStorage.removeItem('activeFolder');
+        // Show all cards
+        document.querySelectorAll('.lora-card').forEach(card => card.style.display = '');
+    }
+}
+
+// Add this function to restore folder filter state
+function restoreFolderFilter() {
+    const activeFolder = localStorage.getItem('activeFolder');
+    if (activeFolder !== null) {
+        const folderTag = document.querySelector(`.tag[data-folder="${activeFolder}"]`);
+        if (folderTag) {
+            folderTag.classList.add('active');
+            document.querySelectorAll('.lora-card').forEach(card => {
+                if (card.getAttribute('data-folder') === activeFolder) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
     }
 }
 
@@ -408,7 +442,10 @@ async function fetchCivitai() {
         loadingStatus.textContent = 'Metadata update complete';
         setTimeout(() => {
             loadingOverlay.style.display = 'none';
-            // Optionally reload the page to show updated data
+            // Store current scroll position
+            const scrollPos = window.scrollY;
+            localStorage.setItem('scrollPosition', scrollPos.toString());
+            // Reload the page
             window.location.reload();
         }, 2000);
         
