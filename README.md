@@ -6,6 +6,12 @@ A web-based management interface for organizing and managing your local LoRA mod
 
 ---
 
+## [Update 0.5.4] Support for Extra LoRA Paths via `extra_model_paths.yaml`
+
+- 🛠️ **Extra LoRA Paths**: Support for additional LoRA paths via extra_model_paths.yaml is now available, offering greater flexibility in managing LoRAs located outside the default directory.
+
+---
+
 ## [Update 0.5.3] Improved Preview Handling & Trigger Words Support
 
 - ✅ **Smarter Preview Image Handling**: The manager now automatically scans for and uses existing local preview images. If a local preview is found, it will not re-download one from CivitAI when fetching model details, saving time and bandwidth.
