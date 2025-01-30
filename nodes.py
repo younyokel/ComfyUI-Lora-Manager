@@ -49,28 +49,14 @@ class LorasEndpoint:
             web.post('/api/replace_preview', instance.replace_preview),
         ])
     
-    def send_progress(self, current, total, status="Scanning"):
-        """Send progress through websocket"""
-        try:
-            if hasattr(self.server, 'send_sync'):
-                self.server.send_sync("lora-scan-progress", {
-                    "value": current,
-                    "max": total,
-                    "status": status
-                })
-        except Exception as e:
-            print(f"Error sending progress: {str(e)}")
 
     async def scan_loras(self):
         loras = []
         for loras_root in self.loras_roots:
             for root, _, files in os.walk(loras_root):
                 safetensors_files = [f for f in files if f.endswith('.safetensors')]
-                total_files = len(safetensors_files)
                 
-                for idx, filename in enumerate(safetensors_files, 1):
-                    self.send_progress(idx, total_files, f"Scanning: {filename}")
-                    
+                for filename in safetensors_files:
                     file_path = os.path.join(root, filename).replace(os.sep, "/")
                     
                     # Try to load existing metadata first
@@ -93,7 +79,6 @@ class LorasEndpoint:
                     
                     loras.append(lora_data)
             
-        self.send_progress(total_files, total_files, "Scan completed")
         return loras
 
 
