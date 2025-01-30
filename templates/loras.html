@@ -27,6 +27,19 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal delete-modal">
+        <div class="modal-content delete-modal-content">
+            <h2>Delete Model</h2>
+            <p class="delete-message">Are you sure you want to delete this model and all associated files?</p>
+            <div class="delete-model-info"></div>
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+                <button class="delete-btn" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- 控制栏 -->
         <div class="controls">
@@ -61,11 +74,11 @@
                 <div class="card-preview">
                     {% if lora.preview_url.endswith('.mp4') or lora.preview_url.endswith('.webm') %}
                         <video controls autoplay muted loop>
-                            <source src="{{ '/loras_static/previews/' + lora.preview_url }}" type="video/mp4">
+                            <source src="{{ lora.preview_url }}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
                     {% else %}
-                        <img src="{{ ('/loras_static/previews/' + lora.preview_url) if lora.preview_url else '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
+                        <img src="{{ lora.preview_url if lora.preview_url else '/loras_static/images/no-preview.png' }}" alt="{{ lora.name }}">
                     {% endif %}
                     <div class="card-header">
                         <span class="base-model-label" title="{{ lora.base_model }}">
@@ -81,7 +94,7 @@
                                onclick="event.stopPropagation(); navigator.clipboard.writeText(this.closest('.lora-card').dataset.file_name)"></i>
                             <i class="fas fa-trash" 
                                title="Delete Model"
-                               onclick="event.stopPropagation(); deleteModel('{{ lora.file_name }}')"></i>
+                               onclick="event.stopPropagation(); deleteModel('{{ lora.file_path }}')"></i>
                         </div>
                     </div>
                     <div class="card-footer">
@@ -91,7 +104,7 @@
                         <div class="card-actions">
                             <i class="fas fa-image" 
                                title="Replace Preview Image"
-                               onclick="event.stopPropagation(); replacePreview('{{ lora.file_name }}', '{{ lora.folder }}')"></i>
+                               onclick="event.stopPropagation(); replacePreview('{{ lora.file_path }}')"></i>
                         </div>
                     </div>
                 </div>

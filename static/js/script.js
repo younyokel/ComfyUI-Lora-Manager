@@ -96,43 +96,76 @@ function openCivitai(modelName) {
     }
 }
 
-async function deleteModel(fileName) {
-    // Prevent event bubbling
-    event.stopPropagation();
-    
-    // Get the folder from the card's data attributes
-    const card = document.querySelector(`.lora-card[data-file_name="${fileName}"]`);
-    const folder = card ? card.dataset.folder : null;
-    
-    // Show confirmation dialog
-    const confirmed = confirm(`Are you sure you want to delete "${fileName}" and all associated files?`);
-    
-    if (confirmed) {
-        try {
-            const response = await fetch('/api/delete_model', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    file_name: fileName,
-                    folder: folder
-                })
-            });
+let pendingDeletePath = null;
 
-            if (response.ok) {
-                // Remove the card from UI
-                if (card) {
-                    card.remove();
-                }
-            } else {
-                const error = await response.text();
-                alert(`Failed to delete model: ${error}`);
-            }
-        } catch (error) {
-            alert(`Error deleting model: ${error}`);
+function showDeleteModal(filePath) {
+    event.stopPropagation();
+    pendingDeletePath = filePath;
+    
+    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const modelName = card.dataset.name;
+    const modal = document.getElementById('deleteModal');
+    const modelInfo = modal.querySelector('.delete-model-info');
+    
+    // Format the info with better structure
+    modelInfo.innerHTML = `
+        <strong>Model:</strong> ${modelName}
+        <br>
+        <strong>File:</strong> ${filePath}
+    `;
+    
+    modal.classList.add('show');  // Use class instead of style.display
+    document.body.classList.add('modal-open');
+
+    // Add click outside to close
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            closeDeleteModal();
         }
+    };
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.classList.remove('show');  // Use class instead of style.display
+    document.body.classList.remove('modal-open');
+    pendingDeletePath = null;
+}
+
+async function confirmDelete() {
+    if (!pendingDeletePath) return;
+    
+    const modal = document.getElementById('deleteModal');
+    const card = document.querySelector(`.lora-card[data-filepath="${pendingDeletePath}"]`);
+    
+    try {
+        const response = await fetch('/api/delete_model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                file_path: pendingDeletePath
+            })
+        });
+
+        if (response.ok) {
+            if (card) {
+                card.remove();
+            }
+            closeDeleteModal();
+        } else {
+            const error = await response.text();
+            alert(`Failed to delete model: ${error}`);
+        }
+    } catch (error) {
+        alert(`Error deleting model: ${error}`);
     }
+}
+
+// Replace the existing deleteModel function with this one
+async function deleteModel(filePath) {
+    showDeleteModal(filePath);
 }
 
 // 初始化排序
@@ -381,7 +414,7 @@ async function fetchCivitai() {
     }
 }
 
-async function replacePreview(fileName, folder) {
+async function replacePreview(filePath) {
     // Get loading elements first
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingStatus = document.querySelector('.loading-status');
@@ -397,9 +430,8 @@ async function replacePreview(fileName, folder) {
         
         const file = input.files[0];
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('file_name', fileName);
-        formData.append('folder', folder);
+        formData.append('preview_file', file);
+        formData.append('model_path', filePath);
         
         try {
             // Show loading overlay
@@ -414,17 +446,14 @@ async function replacePreview(fileName, folder) {
             if (!response.ok) {
                 throw new Error('Upload failed');
             }
+
+            const data = await response.json();
+            const newPreviewPath = `${data.preview_url}?t=${new Date().getTime()}`;
             
             // Update the preview image in the card
-            const card = document.querySelector(`.lora-card[data-file_name="${fileName}"]`);
+            const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
             const previewContainer = card.querySelector('.card-preview');
             const oldPreview = previewContainer.querySelector('img, video');
-            
-            // Force reload the preview by adding a timestamp
-            const timestamp = new Date().getTime();
-            const baseName = fileName.split('.')[0];
-            const extension = file.type.startsWith('video/') ? '.preview.mp4' : '.preview.png';
-            const newPreviewPath = `/loras_static/previews/${folder}/${baseName}${extension}?t=${timestamp}`;
             
             // Create new preview element based on file type
             if (file.type.startsWith('video/')) {

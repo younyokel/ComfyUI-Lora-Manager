@@ -12,7 +12,7 @@ async def calculate_sha256(file_path: str) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
-def _find_preview_file(base_name: str, dir_path: str, lora_root: str) -> str:
+def _find_preview_file(base_name: str, dir_path: str) -> str:
     """Find preview file for given base name in directory"""
     preview_patterns = [
         f"{base_name}.preview.png",
@@ -28,15 +28,15 @@ def _find_preview_file(base_name: str, dir_path: str, lora_root: str) -> str:
     for pattern in preview_patterns:
         full_pattern = os.path.join(dir_path, pattern)
         if os.path.exists(full_pattern):
-            return os.path.relpath(full_pattern, lora_root).replace("\\", "/")
+            return full_pattern.replace("\\", "/")
     return ""
 
-async def get_file_info(file_path: str, loras_root: str) -> LoraMetadata:
+async def get_file_info(file_path: str) -> LoraMetadata:
     """Get basic file information as LoraMetadata object"""
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     dir_path = os.path.dirname(file_path)
     
-    preview_path = _find_preview_file(base_name, dir_path, loras_root)
+    preview_url = _find_preview_file(base_name, dir_path)
     
     return LoraMetadata(
         file_name=base_name,
@@ -47,7 +47,7 @@ async def get_file_info(file_path: str, loras_root: str) -> LoraMetadata:
         sha256=await calculate_sha256(file_path),
         base_model="Unknown",  # Will be updated later
         from_civitai=True,
-        preview_url=preview_path,
+        preview_url=preview_url,
     )
 
 async def save_metadata(file_path: str, metadata: LoraMetadata) -> None:
@@ -59,7 +59,7 @@ async def save_metadata(file_path: str, metadata: LoraMetadata) -> None:
     except Exception as e:
         print(f"Error saving metadata to {metadata_path}: {str(e)}")
 
-async def load_metadata(file_path: str, loras_root: str) -> Optional[LoraMetadata]:
+async def load_metadata(file_path: str) -> Optional[LoraMetadata]:
     """Load metadata from .metadata.json file"""
     metadata_path = f"{os.path.splitext(file_path)[0]}.metadata.json"
     try:
@@ -67,11 +67,11 @@ async def load_metadata(file_path: str, loras_root: str) -> Optional[LoraMetadat
             with open(metadata_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 preview_url = data.get('preview_url', '')
-                preview_path = os.path.join(loras_root, preview_url) if preview_url else ''
-                if not preview_url or not os.path.exists(preview_path):
+                # preview_path = os.path.join(loras_root, preview_url) if preview_url else ''
+                if not preview_url or not os.path.exists(preview_url):
                     base_name = os.path.splitext(os.path.basename(file_path))[0]
                     dir_path = os.path.dirname(file_path)
-                    data['preview_url'] = _find_preview_file(base_name, dir_path, loras_root)
+                    data['preview_url'] = _find_preview_file(base_name, dir_path)
                     if data['preview_url']:
                         with open(metadata_path, 'w', encoding='utf-8') as f:
                             json.dump(data, f, indent=2, ensure_ascii=False)
