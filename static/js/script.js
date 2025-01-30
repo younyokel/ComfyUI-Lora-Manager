@@ -53,13 +53,16 @@ async function refreshLoras() {
         // Re-apply current sorting
         sortCards(currentSort);
         
-        // Re-apply current folder filter if any
-        if (activeFolder) {
+        // Modified folder filtering logic
+        if (activeFolder !== undefined) {  // Check if there's an active folder
             document.querySelectorAll('.lora-card').forEach(card => {
-                if (card.getAttribute('data-folder') === activeFolder) {
-                    card.style.display = '';
+                const cardFolder = card.getAttribute('data-folder');
+                // For empty folder (root directory), only show cards with empty folder path
+                if (activeFolder === '') {
+                    card.style.display = cardFolder === '' ? '' : 'none';
                 } else {
-                    card.style.display = 'none';
+                    // For other folders, show cards matching the folder path
+                    card.style.display = cardFolder === activeFolder ? '' : 'none';
                 }
             });
         }
