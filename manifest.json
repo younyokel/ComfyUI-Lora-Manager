@@ -1,7 +1,0 @@
-{
-    "name": "Loras Endpoint",
-    "version": "1.0.0",
-    "author": "Your Name",
-    "project": "https://github.com/your/repository",
-    "description": "Adds /loras endpoint to ComfyUI"
-}
