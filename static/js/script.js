@@ -99,38 +99,152 @@ function lazyLoadImages() {
     });
 }
 
-// 优化模态窗口
+// 优化模态窗口管理
 class ModalManager {
     constructor() {
-        this.modal = document.getElementById('loraModal');
+        this.modals = new Map();
         this.boundHandleEscape = this.handleEscape.bind(this);
-        this.boundHandleOutsideClick = this.handleOutsideClick.bind(this);
-    }
+        
+        // 注册所有模态窗口
+        this.registerModal('loraModal', {
+            element: document.getElementById('loraModal'),
+            onClose: () => {
+                this.getModal('loraModal').element.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
+        
+        this.registerModal('deleteModal', {
+            element: document.getElementById('deleteModal'),
+            onClose: () => {
+                this.getModal('deleteModal').element.classList.remove('show');
+                document.body.classList.remove('modal-open');
+                pendingDeletePath = null;
+            }
+        });
 
-    show(content) {
-        this.modal.innerHTML = content;
-        this.modal.style.display = 'block';
-        document.body.classList.add('modal-open');
+        // 添加全局事件监听
         document.addEventListener('keydown', this.boundHandleEscape);
-        this.modal.addEventListener('click', this.boundHandleOutsideClick);
     }
 
-    close() {
-        this.modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        document.removeEventListener('keydown', this.boundHandleEscape);
-        this.modal.removeEventListener('click', this.boundHandleOutsideClick);
+    registerModal(id, config) {
+        this.modals.set(id, {
+            element: config.element,
+            onClose: config.onClose,
+            isOpen: false
+        });
+
+        // 为每个模态窗口添加点击外部关闭事件
+        config.element.addEventListener('click', (e) => {
+            if (e.target === config.element) {
+                this.closeModal(id);
+            }
+        });
+    }
+
+    getModal(id) {
+        return this.modals.get(id);
+    }
+
+    showModal(id, content = null) {
+        const modal = this.getModal(id);
+        if (!modal) return;
+
+        if (content) {
+            modal.element.innerHTML = content;
+        }
+
+        if (id === 'loraModal') {
+            modal.element.style.display = 'block';
+        } else if (id === 'deleteModal') {
+            modal.element.classList.add('show');
+        }
+
+        modal.isOpen = true;
+        document.body.classList.add('modal-open');
+    }
+
+    closeModal(id) {
+        const modal = this.getModal(id);
+        if (!modal) return;
+
+        modal.onClose();
+        modal.isOpen = false;
     }
 
     handleEscape(e) {
-        if (e.key === 'Escape') this.close();
-    }
-
-    handleOutsideClick(e) {
-        if (e.target === this.modal) this.close();
+        if (e.key === 'Escape') {
+            // 关闭最后打开的模态窗口
+            for (const [id, modal] of this.modals) {
+                if (modal.isOpen) {
+                    this.closeModal(id);
+                    break;
+                }
+            }
+        }
     }
 }
- 
+
+// 创建全局 modalManager 实例
+const modalManager = new ModalManager();
+
+// 修改现有的 showModal 函数为 showLoraModal
+function showLoraModal(lora) {
+    const escapedWords = lora.trainedWords?.length ? 
+        lora.trainedWords.join(', ').toUpperCase().replace(/'/g, '\\\'') : '';
+        
+    const content = `
+      <div class="modal-content">
+        <h2>${lora.model.name}</h2>
+        <div class="carousel">
+          ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
+        </div>
+        <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
+        <div class="trigger-words">
+          <strong>Trigger Words:</strong>
+          <span class="word-list">${escapedWords || 'N/A'}</span>
+          ${escapedWords ? `
+          <button class="copy-btn" onclick="copyTriggerWords(\`${escapedWords}\`)">
+            <svg width="16" height="16" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+            </svg>
+          </button>
+          ` : ''}
+        </div>
+        <div class="model-link">
+          <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
+        </div>
+        <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
+      </div>
+    `;
+    
+    modalManager.showModal('loraModal', content);
+}
+
+// 修改现有的 showDeleteModal 函数
+function showDeleteModal(filePath) {
+    event.stopPropagation();
+    pendingDeletePath = filePath;
+    
+    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const modelName = card.dataset.name;
+    const modal = modalManager.getModal('deleteModal').element;
+    const modelInfo = modal.querySelector('.delete-model-info');
+    
+    modelInfo.innerHTML = `
+        <strong>Model:</strong> ${modelName}
+        <br>
+        <strong>File:</strong> ${filePath}
+    `;
+    
+    modalManager.showModal('deleteModal');
+}
+
+// 修改现有的 closeDeleteModal 函数
+function closeDeleteModal() {
+    modalManager.closeModal('deleteModal');
+}
+
 // 添加 toast 通知功能
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -160,7 +274,6 @@ function showToast(message, type = 'info') {
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     const wsClient = new WebSocketClient(`ws://${window.location.host}/ws`);
-    const modalManager = new ModalManager();
     
     // 优化搜索功能，添加防抖
     const debouncedSearch = debounce((term) => {
@@ -273,40 +386,6 @@ function openCivitai(modelName) {
 
 let pendingDeletePath = null;
 
-function showDeleteModal(filePath) {
-    event.stopPropagation();
-    pendingDeletePath = filePath;
-    
-    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-    const modelName = card.dataset.name;
-    const modal = document.getElementById('deleteModal');
-    const modelInfo = modal.querySelector('.delete-model-info');
-    
-    // Format the info with better structure
-    modelInfo.innerHTML = `
-        <strong>Model:</strong> ${modelName}
-        <br>
-        <strong>File:</strong> ${filePath}
-    `;
-    
-    modal.classList.add('show');  // Use class instead of style.display
-    document.body.classList.add('modal-open');
-
-    // Add click outside to close
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            closeDeleteModal();
-        }
-    };
-}
-
-function closeDeleteModal() {
-    const modal = document.getElementById('deleteModal');
-    modal.classList.remove('show');  // Use class instead of style.display
-    document.body.classList.remove('modal-open');
-    pendingDeletePath = null;
-}
-
 async function confirmDelete() {
     if (!pendingDeletePath) return;
     
@@ -372,7 +451,7 @@ document.querySelectorAll('.lora-card').forEach(card => {
   card.addEventListener('click', () => {
     if (card.dataset.meta && Object.keys(JSON.parse(card.dataset.meta)).length > 0) {
       currentLora = JSON.parse(card.dataset.meta);
-      showModal(currentLora);
+      showLoraModal(currentLora);
     }
   });
 });
@@ -397,46 +476,6 @@ document.querySelectorAll('.lora-card').forEach(card => {
         }
     });
 });
-
-function showModal(lora) {
-    const modal = document.getElementById('loraModal');
-    const escapedWords = lora.trainedWords?.length ? 
-        lora.trainedWords.join(', ').toUpperCase().replace(/'/g, '\\\'') : '';
-        
-    modal.innerHTML = `
-      <div class="modal-content">
-        <h2>${lora.model.name}</h2>
-        <div class="carousel">
-          ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
-        </div>
-        <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
-        <div class="trigger-words">
-          <strong>Trigger Words:</strong>
-          <span class="word-list">${escapedWords || 'N/A'}</span>
-          ${escapedWords ? `
-          <button class="copy-btn" onclick="copyTriggerWords(\`${escapedWords}\`)">
-            <svg width="16" height="16" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-            </svg>
-          </button>
-          ` : ''}
-        </div>
-        <div class="model-link">
-          <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
-        </div>
-        <button class="close" onclick="closeModal()">&times;</button>
-      </div>
-    `;
-    
-    modal.style.display = 'block';
-    document.body.classList.add('modal-open');
-
-    modal.onclick = function (event) {
-        if (event.target === modal) {
-            closeModal();
-        }
-    };
-}
 
 function copyTriggerWords(words) {
     if (!words) return;
@@ -584,7 +623,7 @@ function initTheme() {
 
 // 键盘导航
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+     if (e.key === 'Escape') modalManager.closeModal('loraModal');
 });
 
 // 图片预加载
