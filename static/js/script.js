@@ -130,6 +130,32 @@ class ModalManager {
         if (e.target === this.modal) this.close();
     }
 }
+ 
+// 添加 toast 通知功能
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    
+    // 移除任何现有的 toast
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    
+    document.body.appendChild(toast);
+
+    // 如果模态窗口打开，调整 toast 位置
+    if (document.body.classList.contains('modal-open')) {
+        toast.style.transform = 'translate(-50%, 50%)';  // 在屏幕中间显示
+    }
+
+    // 触发动画
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
+    });
+}
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
@@ -351,8 +377,32 @@ document.querySelectorAll('.lora-card').forEach(card => {
   });
 });
 
+// 更新卡片复制操作
+document.querySelectorAll('.lora-card').forEach(card => {
+    const copyBtn = card.querySelector('.fa-copy');
+    if (copyBtn) {
+        copyBtn.onclick = (event) => {
+            event.stopPropagation();
+            navigator.clipboard.writeText(card.dataset.file_name)
+                .then(() => showToast('Model name copied to clipboard', 'success'))
+                .catch(() => showToast('Failed to copy model name', 'error'));
+        };
+    }
+
+    // 为没有元数据的卡片添加点击反馈
+    card.addEventListener('click', () => {
+        const meta = JSON.parse(card.dataset.meta || '{}');
+        if (Object.keys(meta).length === 0) {
+            showToast('This model is not available on Civitai. No additional information to display.', 'info');
+        }
+    });
+});
+
 function showModal(lora) {
     const modal = document.getElementById('loraModal');
+    const escapedWords = lora.trainedWords?.length ? 
+        lora.trainedWords.join(', ').toUpperCase().replace(/'/g, '\\\'') : '';
+        
     modal.innerHTML = `
       <div class="modal-content">
         <h2>${lora.model.name}</h2>
@@ -362,9 +412,9 @@ function showModal(lora) {
         <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
         <div class="trigger-words">
           <strong>Trigger Words:</strong>
-          <span class="word-list">${lora.trainedWords?.length ? lora.trainedWords.join(', ').toUpperCase() : 'N/A'}</span>
-          ${lora.trainedWords?.length ? `
-          <button class="copy-btn" onclick="navigator.clipboard.writeText('${lora.trainedWords.join(', ').toUpperCase()}')">
+          <span class="word-list">${escapedWords || 'N/A'}</span>
+          ${escapedWords ? `
+          <button class="copy-btn" onclick="copyTriggerWords(\`${escapedWords}\`)">
             <svg width="16" height="16" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
             </svg>
@@ -377,24 +427,47 @@ function showModal(lora) {
         <button class="close" onclick="closeModal()">&times;</button>
       </div>
     `;
+    
     modal.style.display = 'block';
     document.body.classList.add('modal-open');
 
-    // 添加点击事件监听器
     modal.onclick = function (event) {
-        // 如果点击的是模态窗口的背景（不是内容区域），则关闭模态窗口
         if (event.target === modal) {
             closeModal();
         }
     };
 }
 
-function closeModal() {
-  const modal = document.getElementById('loraModal');
-  modal.style.display = 'none';
-  document.body.classList.remove('modal-open');
-  // 移除点击事件监听器
-  modal.onclick = null;
+function copyTriggerWords(words) {
+    if (!words) return;
+    
+    navigator.clipboard.writeText(words)
+         .then(() => {
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-success';
+            toast.textContent = 'Trigger words copied to clipboard';
+            document.body.appendChild(toast);
+            
+            // Force recalculation of toast position for modal context
+            toast.style.position = 'fixed';
+            toast.style.zIndex = '9999';  // 确保显示在最上层
+            toast.style.bottom = '50%';
+            toast.style.transform = 'translate(-50%, 50%)';
+            
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 2000);
+            });
+        })
+        .catch(() => {
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-error';
+            toast.textContent = 'Failed to copy trigger words';
+            // ... 相同的 toast 显示逻辑
+        });
 }
 
 // WebSocket handling for progress updates
@@ -512,8 +585,6 @@ function initTheme() {
 // 键盘导航
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
-    if (e.key === 'ArrowLeft') prevImage();
-    if (e.key === 'ArrowRight') nextImage();
 });
 
 // 图片预加载
@@ -569,18 +640,6 @@ async function fetchCivitai() {
                     file_path: filePath
                 })
             });
-            
-            // if(!response.ok) {
-            //     const errorText = await response.text();
-            //     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            // }
-            
-            // // Optional: Update the card with new metadata
-            // const result = await response.json();
-            // if (result.success && result.metadata) {
-            //     card.dataset.meta = JSON.stringify(result.metadata);
-            //     // Update card display if needed
-            // }
         }
         
         // Completion handling

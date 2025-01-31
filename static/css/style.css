@@ -609,3 +609,69 @@ body.modal-open {
 .close:hover {
     opacity: 1;
 }
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--lora-surface);
+    color: var(--text-color);
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: calc(var(--z-overlay) + 10); /* 确保 toast 显示在模态窗口之上 */
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    text-align: center;
+    max-width: 90%;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--lora-border);
+}
+
+/* 当模态窗口打开时的 toast 样式 */
+body.modal-open .toast {
+    bottom: 50% !important;  /* 强制覆盖默认位置 */
+    transform: translate(-50%, 50%) !important;  /* 强制覆盖默认变换 */
+    background: var(--lora-accent);
+    color: white;
+    z-index: 9999;  /* 确保显示在最上层 */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* 确保在模态窗口打开时，不同类型的 toast 依然可辨识 */
+body.modal-open .toast-success {
+    background: oklch(65% 0.2 142);  /* 绿色 */
+}
+
+body.modal-open .toast-error {
+    background: oklch(65% 0.2 29);   /* 红色 */
+}
+
+body.modal-open .toast-info {
+    background: oklch(65% 0.2 256);  /* 蓝色 */
+}
+
+.toast-success {
+    border-left: 4px solid #4caf50;
+}
+
+.toast-error {
+    border-left: 4px solid #f44336;
+}
+
+.toast-info {
+    border-left: 4px solid #2196f3;
+}
+
+/* Ensure toasts are visible in both themes */
+[data-theme="dark"] .toast {
+    background: var(--lora-surface);
+    color: var(--lora-text);
+}
