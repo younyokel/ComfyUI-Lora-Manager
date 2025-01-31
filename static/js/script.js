@@ -233,7 +233,7 @@ function showLoraModal(lora) {
                 `).join('')}
             </div>
         </div>
-    ` : '<div class="trigger-words-container">No trigger words available</div>';
+    ` : '<div class="trigger-words-container">No trigger words</div>';
     
     const content = `
         <div class="modal-content">
@@ -562,11 +562,17 @@ document.querySelectorAll('.lora-card').forEach(card => {
         };
     }
 
-    // 为没有元数据的卡片添加点击反馈
+    // 为卡片添加点击反馈，根据不同情况显示不同的提示
     card.addEventListener('click', () => {
         const meta = JSON.parse(card.dataset.meta || '{}');
+        const fromCivitai = card.dataset.from_civitai === 'True';
+
         if (Object.keys(meta).length === 0) {
-            showToast('This model is not available on Civitai. No additional information to display.', 'info');
+            if (fromCivitai) {
+                showToast('Model is available on Civitai. Please click "Fetch" to retrieve metadata.', 'info');
+            } else {
+                showToast('This model is not available on Civitai. No additional information to display.', 'info');
+            }
         }
     });
 });

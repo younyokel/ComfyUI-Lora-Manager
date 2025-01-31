@@ -93,6 +93,7 @@
                  data-file_name="{{ lora.file_name }}"
                  data-folder="{{ lora.folder }}"
                  data-modified="{{ lora.modified }}"
+                 data-from_civitai="{{ lora.from_civitai }}"
                  data-meta="{{ lora.civitai | default({}) | tojson | forceescape }}">
                 <div class="card-preview">
                     {% if lora.preview_url.endswith('.mp4') or lora.preview_url.endswith('.webm') %}
