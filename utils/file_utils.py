@@ -28,7 +28,7 @@ def _find_preview_file(base_name: str, dir_path: str) -> str:
     for pattern in preview_patterns:
         full_pattern = os.path.join(dir_path, pattern)
         if os.path.exists(full_pattern):
-            return full_pattern.replace("\\", "/")
+            return full_pattern.replace(os.sep, "/")
     return ""
 
 async def get_file_info(file_path: str) -> LoraMetadata:

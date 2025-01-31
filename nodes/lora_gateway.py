@@ -1,6 +1,3 @@
-from ..lora_manager import LorasEndpoint
-
-
 class LoRAGateway:
     """
     LoRA Gateway Node
@@ -16,9 +13,3 @@ class LoRAGateway:
     RETURN_TYPES = ()
     FUNCTION = "register_services"
     CATEGORY = "LoRA Management"
-
-    @classmethod
-    def register_services(cls):
-        # Service registration logic
-        LorasEndpoint.add_routes()
-        return ()
