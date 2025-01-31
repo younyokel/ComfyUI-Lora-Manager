@@ -567,6 +567,8 @@ body.modal-open {
 }
 
 .trigger-words {
+    display: flex;
+    gap: var(--space-2);
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
     border-radius: var(--border-radius-sm);
@@ -574,17 +576,94 @@ body.modal-open {
     margin: var(--space-2) 0;
 }
 
-.trigger-words strong {
-    display: block;
-    margin-bottom: var(--space-1);
-    color: var(--text-color);
+.trigger-words-categories {
+    flex: 0 0 200px;
+    border-right: 1px solid var(--lora-border);
+    padding-right: var(--space-2);
 }
 
-.word-list {
-    color: var(--lora-accent);
-    font-size: 1.1em;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+.trigger-category {
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: var(--border-radius-xs);
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 0.9em;
+    transition: background-color 0.2s;
+}
+
+.trigger-category:hover {
+    background: var(--lora-border);
+}
+
+.trigger-category.active {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.trigger-words-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.trigger-word-tag {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-xs);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85em;
+    color: var(--text-color);
+    position: relative;
+    gap: var(--space-1);
+}
+
+.trigger-word-tag:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
+}
+
+.trigger-word-tag:active {
+    transform: scale(0.98);
+}
+
+.trigger-word-content {
+    flex: 1;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.trigger-word-copy {
+    opacity: 0.5;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trigger-word-tag:hover .trigger-word-copy {
+    opacity: 0.8;
+}
+
+/* Update toast animation for trigger word copy */
+.toast.toast-copy {
+    background: var(--lora-accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 0.9em;
+    transform: translateX(-50%) translateY(20px);
+}
+
+.toast.toast-copy.show {
+    transform: translateX(-50%) translateY(0);
 }
 
 .copy-btn {
@@ -683,4 +762,76 @@ body.modal-open .toast-info {
 [data-theme="dark"] .toast {
     background: var(--lora-surface);
     color: var(--lora-text);
+}
+
+/* Updated Trigger Words Section */
+.trigger-words-container {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: var(--space-2) 0;
+    padding: var(--space-2);
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-sm);
+}
+
+.trigger-words-title {
+    font-size: 0.95em;
+    color: var(--text-color);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+}
+
+.trigger-words-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.trigger-word-tag {
+    display: inline-flex;
+    align-items: center;
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-xs);
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 8px;
+    max-width: 100%;
+}
+
+.trigger-word-content {
+    color: oklch(65% 0.2 256); /* Accent color for trigger words */
+    font-size: 0.85em;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.trigger-word-copy {
+    display: flex;
+    align-items: center;
+    color: var(--text-color);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+}
+
+.trigger-word-tag:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
+}
+
+.trigger-word-tag:hover .trigger-word-copy {
+    opacity: 0.8;
+}
+
+.trigger-word-tag:active {
+    transform: scale(0.98);
 }

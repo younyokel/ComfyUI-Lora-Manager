@@ -191,9 +191,18 @@ const modalManager = new ModalManager();
 // 修改现有的 showModal 函数为 showLoraModal
 function showLoraModal(lora) {
     const escapedWords = lora.trainedWords?.length ? 
-        lora.trainedWords.join(', ').toUpperCase().replace(/'/g, '\\\'') : '';
+        lora.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
+
+    // Organize trigger words by categories
+    const categories = {};
+    escapedWords.forEach(word => {
+        const category = word.includes(':') ? word.split(':')[0] : 'General';
+        if (!categories[category]) {
+            categories[category] = [];
+        }
+        categories[category].push(word);
+    });
         
-    // 添加图片加载策略
     const imageMarkup = lora.images.map(img => {
         if (img.type === 'video') {
             return `<video controls autoplay muted loop crossorigin="anonymous" referrerpolicy="no-referrer">
@@ -207,33 +216,103 @@ function showLoraModal(lora) {
                         loading="lazy">`;
         }
     }).join('');
+ 
+    const triggerWordsMarkup = escapedWords.length ? `
+        <div class="trigger-words-container">
+            <div class="trigger-words-title">Trigger Words</div>
+            <div class="trigger-words-tags">
+                ${escapedWords.map(word => `
+                    <div class="trigger-word-tag" onclick="copyTriggerWord('${word}')">
+                        <span class="trigger-word-content">${word}</span>
+                        <span class="trigger-word-copy">
+                            <svg width="14" height="14" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                            </svg>
+                        </span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    ` : '<div class="trigger-words-container">No trigger words available</div>';
     
     const content = `
-      <div class="modal-content">
-        <h2>${lora.model.name}</h2>
-        <div class="carousel">
-          ${imageMarkup}
+        <div class="modal-content">
+            <h2>${lora.model.name}</h2>
+            <div class="carousel">
+                ${imageMarkup}
+            </div>
+            <div class="description">About this version: ${lora.description || 'N/A'}</div>
+            ${triggerWordsMarkup}
+            <div class="model-link">
+                <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" 
+                   target="_blank">more details on CivitAI</a>
+            </div>
+            <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
         </div>
-        <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
-        <div class="trigger-words">
-          <strong>Trigger Words:</strong>
-          <span class="word-list">${escapedWords || 'N/A'}</span>
-          ${escapedWords ? `
-          <button class="copy-btn" onclick="copyTriggerWords(\`${escapedWords}\`)">
-            <svg width="16" height="16" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-            </svg>
-          </button>
-          ` : ''}
-        </div>
-        <div class="model-link">
-          <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" target="_blank">more details on CivitAI</a>
-        </div>
-        <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
-      </div>
     `;
     
     modalManager.showModal('loraModal', content);
+
+    // Add category switching event listeners
+    document.querySelectorAll('.trigger-category').forEach(category => {
+        category.addEventListener('click', function() {
+            const categoryName = this.dataset.category;
+            document.querySelectorAll('.trigger-category').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            
+            const wordsList = document.querySelector('.trigger-words-list');
+            wordsList.innerHTML = categories[categoryName].map(word => `
+                <div class="trigger-word-tag" onclick="copyTriggerWord('${word}')">
+                    <span class="trigger-word-content">${word}</span>
+                    <span class="trigger-word-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                        </svg>
+                    </span>
+                </div>
+            `).join('');
+        });
+    });
+}
+
+function copyTriggerWord(word) {
+    navigator.clipboard.writeText(word).then(() => {
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-copy';
+        toast.textContent = 'Copied!';
+        document.body.appendChild(toast);
+        
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 1000);
+        });
+    });
+}
+
+// Add new functions for trigger word handling
+function toggleTriggerWord(element) {
+    element.classList.toggle('selected');
+}
+
+function copySelectedTriggerWords() {
+    const selectedWords = Array.from(document.querySelectorAll('.trigger-word-tag.selected'))
+        .map(el => el.textContent.trim());
+    
+    if (selectedWords.length === 0) {
+        // If no words are selected, select and copy all words
+        const allWords = Array.from(document.querySelectorAll('.trigger-word-tag'))
+            .map(el => el.textContent.trim());
+        navigator.clipboard.writeText(allWords.join(', '))
+            .then(() => showToast(`Copied all ${allWords.length} trigger words to clipboard`, 'success'))
+            .catch(() => showToast('Failed to copy trigger words', 'error'));
+    } else {
+        navigator.clipboard.writeText(selectedWords.join(', '))
+            .then(() => showToast(`Copied ${selectedWords.length} selected trigger words to clipboard`, 'success'))
+            .catch(() => showToast('Failed to copy trigger words', 'error'));
+    }
 }
 
 // 修改现有的 showDeleteModal 函数
