@@ -4,7 +4,7 @@
     <title>LoRA Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/loras_static/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="icon" type="image/png" sizes="32x32" href="/loras_static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/loras_static/images/favicon-16x16.png">
     <link rel="manifest" href="/loras_static/images/site.webmanifest">
@@ -24,6 +24,14 @@
             performance.measure('page-load', 'page-start', 'page-end');
         });
     </script>
+    
+    <!-- 添加安全相关的 meta 标签 -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    
+    <!-- 添加资源加载策略 -->
+    <link rel="preconnect" href="https://civitai.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 </head>
 <body>
     <div class="theme-toggle" onclick="toggleTheme()">

@@ -193,11 +193,26 @@ function showLoraModal(lora) {
     const escapedWords = lora.trainedWords?.length ? 
         lora.trainedWords.join(', ').toUpperCase().replace(/'/g, '\\\'') : '';
         
+    // 添加图片加载策略
+    const imageMarkup = lora.images.map(img => {
+        if (img.type === 'video') {
+            return `<video controls autoplay muted loop crossorigin="anonymous" referrerpolicy="no-referrer">
+                     <source src="${img.url}" type="video/mp4">
+                     Your browser does not support the video tag.
+                   </video>`;
+        } else {
+            return `<img src="${img.url}" alt="Preview" 
+                        crossorigin="anonymous" 
+                        referrerpolicy="no-referrer" 
+                        loading="lazy">`;
+        }
+    }).join('');
+    
     const content = `
       <div class="modal-content">
         <h2>${lora.model.name}</h2>
         <div class="carousel">
-          ${lora.images.map(img => img.type === 'video' ? `<video controls autoplay muted loop><source src="${img.url}" type="video/mp4">Your browser does not support the video tag.</video>` : `<img src="${img.url}" alt="Preview">`).join('')}
+          ${imageMarkup}
         </div>
         <div class="description">About this version: ${lora.description ? lora.description : 'N/A'}</div>
         <div class="trigger-words">
