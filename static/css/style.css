@@ -20,6 +20,11 @@
     --z-base: 10;
     --z-modal: 30;
     --z-overlay: 50;
+
+    /* Border Radius */
+    --border-radius-base: 12px;
+    --border-radius-sm: 8px;
+    --border-radius-xs: 4px;
 }
 
 [data-theme="dark"] {
@@ -61,7 +66,7 @@ body {
     padding: 2px 8px;
     margin: 2px;
     border: 1px solid #ccc;
-    border-radius: 3px;
+    border-radius: var(--border-radius-xs);
     display: inline-block;
     line-height: 1.2;
     font-size: 14px;
@@ -86,7 +91,7 @@ body {
 .lora-card {
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
-    border-radius: 12px;
+    border-radius: var(--border-radius-base);
     backdrop-filter: blur(16px);
     transition: transform 160ms ease-out;
     aspect-ratio: 896/1152;
@@ -130,18 +135,22 @@ body {
     position: relative;
     width: 100%;
     height: 100%;
+    border-radius: var(--border-radius-base);
+    overflow: hidden;  /* 添加此行以限制子元素不超出边界 */
 }
 
 .card-preview img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: var(--border-radius-base);  /* 与容器相同的圆角 */
 }
 
 .card-preview video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: var(--border-radius-base);  /* 与容器相同的圆角 */
 }
 
 .card-footer {
@@ -237,7 +246,7 @@ body {
     display: inline-block;
     background: #f0f0f0;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--border-radius-xs);
     margin-right: 6px;
 }
 
@@ -296,7 +305,7 @@ body.modal-open {
     max-width: 800px;
     margin: 2rem auto;
     background: var(--lora-surface);
-    border-radius: 12px;
+    border-radius: var(--border-radius-base);
     padding: var(--space-3);
     border: 1px solid var(--lora-border);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -316,7 +325,7 @@ body.modal-open {
 .delete-model-info {
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
-    border-radius: 8px;
+    border-radius: var(--border-radius-sm);
     padding: var(--space-2);
     margin: var(--space-2) 0;
     color: var(--text-color);
@@ -355,7 +364,7 @@ body.modal-open {
     /* Update info display styling */
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
-    border-radius: 8px;
+    border-radius: var(--border-radius-sm);
     padding: var(--space-2);
     margin: var(--space-2) 0;
     color: var(--text-color);
@@ -451,7 +460,7 @@ body.modal-open {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     background: rgba(255, 255, 255, 0.2);
     padding: 2px var(--space-1);
-    border-radius: 4px;
+    border-radius: var(--border-radius-xs);
     backdrop-filter: blur(2px);
     font-size: 0.85em;
 }
@@ -473,7 +482,7 @@ body.modal-open {
     background: var(--lora-surface);
     backdrop-filter: blur(24px);
     padding: var(--space-3);
-    border-radius: 12px;
+    border-radius: var(--border-radius-base);
     text-align: center;
     border: 1px solid var(--lora-border);
 }
@@ -560,7 +569,7 @@ body.modal-open {
 .trigger-words {
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
-    border-radius: 8px;
+    border-radius: var(--border-radius-sm);
     padding: var(--space-2);
     margin: var(--space-2) 0;
 }
@@ -619,7 +628,7 @@ body.modal-open {
     background: var(--lora-surface);
     color: var(--text-color);
     padding: 12px 24px;
-    border-radius: 8px;
+    border-radius: var(--border-radius-sm);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: calc(var(--z-overlay) + 10); /* 确保 toast 显示在模态窗口之上 */
     opacity: 0;
