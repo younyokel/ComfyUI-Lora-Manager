@@ -1,19 +1,165 @@
-// 排序功能
+// 添加防抖函数
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// 优化排序功能
 function sortCards(sortBy) {
     const grid = document.getElementById('loraGrid');
-    const cards = Array.from(grid.children);
+    if (!grid) return;
 
-    cards.sort((a, b) => {
-        switch(sortBy) {
-            case 'name':
-                return a.dataset.name.localeCompare(b.dataset.name);
-            case 'date':
-                return b.dataset.modified - a.dataset.modified;
-        }
-    });
+    const fragment = document.createDocumentFragment();
+    const cards = Array.from(grid.children);
     
-    cards.forEach(card => grid.appendChild(card));
+    requestAnimationFrame(() => {
+        cards.sort((a, b) => {
+            if (sortBy === 'date') {
+                // 将字符串转换为浮点数进行比较
+                return parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified);
+            } else {
+                // 名称排序保持不变
+                return a.dataset.name.localeCompare(b.dataset.name);
+            }
+        }).forEach(card => fragment.appendChild(card));
+        
+        grid.appendChild(fragment);
+    });
 }
+
+// 改进WebSocket处理
+class WebSocketClient {
+    constructor(url, options = {}) {
+        this.url = url;
+        this.options = {
+            reconnectDelay: 1000,
+            maxReconnectAttempts: 5,
+            ...options
+        };
+        this.reconnectAttempts = 0;
+        this.connect();
+    }
+
+    connect() {
+        this.ws = new WebSocket(this.url);
+        this.ws.onopen = this.onOpen.bind(this);
+        this.ws.onclose = this.onClose.bind(this);
+        this.ws.onerror = this.onError.bind(this);
+        this.ws.onmessage = this.onMessage.bind(this);
+    }
+
+    onOpen() {
+        this.reconnectAttempts = 0;
+        console.log('WebSocket connected');
+    }
+
+    onClose() {
+        if (this.reconnectAttempts < this.options.maxReconnectAttempts) {
+            setTimeout(() => {
+                this.reconnectAttempts++;
+                this.connect();
+            }, this.options.reconnectDelay);
+        }
+    }
+
+    onError(error) {
+        console.error('WebSocket error:', error);
+    }
+
+    onMessage(event) {
+        try {
+            const data = JSON.parse(event.data);
+            window.api.dispatchEvent(new CustomEvent('lora-scan-progress', { detail: data }));
+        } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+        }
+    }
+}
+
+// 优化图片加载
+function lazyLoadImages() {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                }
+                observer.unobserve(img);
+            }
+        });
+    });
+
+    document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
+    });
+}
+
+// 优化模态窗口
+class ModalManager {
+    constructor() {
+        this.modal = document.getElementById('loraModal');
+        this.boundHandleEscape = this.handleEscape.bind(this);
+        this.boundHandleOutsideClick = this.handleOutsideClick.bind(this);
+    }
+
+    show(content) {
+        this.modal.innerHTML = content;
+        this.modal.style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.addEventListener('keydown', this.boundHandleEscape);
+        this.modal.addEventListener('click', this.boundHandleOutsideClick);
+    }
+
+    close() {
+        this.modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        document.removeEventListener('keydown', this.boundHandleEscape);
+        this.modal.removeEventListener('click', this.boundHandleOutsideClick);
+    }
+
+    handleEscape(e) {
+        if (e.key === 'Escape') this.close();
+    }
+
+    handleOutsideClick(e) {
+        if (e.target === this.modal) this.close();
+    }
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', () => {
+    const wsClient = new WebSocketClient(`ws://${window.location.host}/ws`);
+    const modalManager = new ModalManager();
+    
+    // 优化搜索功能，添加防抖
+    const debouncedSearch = debounce((term) => {
+        const cards = document.querySelectorAll('.lora-card');
+        requestAnimationFrame(() => {
+            cards.forEach(card => {
+                const match = card.dataset.name.toLowerCase().includes(term) ||
+                             card.dataset.folder.toLowerCase().includes(term);
+                card.style.display = match ? 'block' : 'none';
+            });
+        });
+    }, 250);
+
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+        debouncedSearch(e.target.value.toLowerCase());
+    });
+
+    // 初始化懒加载
+    lazyLoadImages();
+    
+    // 优化滚动性能
+    document.addEventListener('scroll', debounce(() => {
+        lazyLoadImages();
+    }, 100), { passive: true });
+});
 
 // 刷新功能
 async function refreshLoras() {

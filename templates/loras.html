@@ -8,6 +8,22 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/loras_static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/loras_static/images/favicon-16x16.png">
     <link rel="manifest" href="/loras_static/images/site.webmanifest">
+    
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="/loras_static/css/style.css" as="style">
+    <link rel="preload" href="/loras_static/js/script.js" as="script">
+    
+    <!-- 优化字体加载 -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- 添加性能监控 -->
+    <script>
+        performance.mark('page-start'); 
+        window.addEventListener('load', () => {
+            performance.mark('page-end');
+            performance.measure('page-load', 'page-start', 'page-end');
+        });
+    </script>
 </head>
 <body>
     <div class="theme-toggle" onclick="toggleTheme()">
@@ -62,7 +78,6 @@
         <!-- Lora卡片容器 -->
         <div class="card-grid" id="loraGrid">
             {% for lora in loras %}
-            <!-- 在卡片部分更新元数据展示 -->
             <div class="lora-card" 
                  data-sha256="{{ lora.sha256 }}"
                  data-filepath="{{ lora.file_path }}"
