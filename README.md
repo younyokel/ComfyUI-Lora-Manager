@@ -1,24 +1,34 @@
 # ComfyUI LoRA Manager
 
-A web-based management interface for organizing and managing your local LoRA models in ComfyUI. Access it via: `http://localhost:8188/loras`
+A web-based management interface designed to help you organize and manage your local LoRA models in ComfyUI. Access the interface at: `http://localhost:8188/loras`
 
 ![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/Screenshot%202025-01-27%20172349.png)
 
 ---
 
+## [Update 0.5.6] New Features and Optimizations
+
+- 🛠️ **Code Refactor**: The codebase has been restructured to improve readability and maintainability, making it easier to manage and extend in future updates.
+
+- 🚀 **Frontend Enhancements**: Significant performance improvements and refined user experience, including a more intuitive process for selecting and copying trigger words.
+
+- 🔘 **New Menu Button**: A button has been added to the ComfyUI menu. Clicking it will open the LoRA Manager interface in a new window for quicker access.
+
+---
+
 ## [Update 0.5.4] Support for Extra LoRA Paths via `extra_model_paths.yaml`
 
-- 🛠️ **Extra LoRA Paths**: Support for additional LoRA paths via extra_model_paths.yaml is now available, offering greater flexibility in managing LoRAs located outside the default directory.
+- 🛠️ **Extra LoRA Paths**: Additional flexibility has been introduced by supporting extra LoRA paths through the `extra_model_paths.yaml` file, allowing you to manage LoRAs from directories outside the default folder.
 
 ---
 
 ## [Update 0.5.3] Improved Preview Handling & Trigger Words Support
 
-- ✅ **Smarter Preview Image Handling**: The manager now automatically scans for and uses existing local preview images. If a local preview is found, it will not re-download one from CivitAI when fetching model details, saving time and bandwidth.
+- ✅ **Smarter Preview Image Handling**: The manager now automatically scans for and uses existing local preview images. If a local preview is found, it will not re-download one from CivitAI when fetching model details, saving both time and bandwidth.
 
-- 📝 **Trigger Words in LoRA Details**: Trigger words are now visible in the LoRA details window, making it easier to copy and use them for your workflows.
+- 📝 **Trigger Words in LoRA Details**: Trigger words are now directly visible in the LoRA details window, making it easier to copy and integrate them into your workflows.
 
-- ⚠️ **Note**: For automatic detection, ensure your existing local preview images are named in the following formats:
+- ⚠️ **Note**: For automatic detection, ensure your local preview images are named using one of the following formats:
   - `<lora-file-name>.[png|jpg|jpeg|mp4]`
   - `<lora-file-name>.preview.[png|jpg|jpeg|mp4]`
 
@@ -41,7 +51,7 @@ A web-based management interface for organizing and managing your local LoRA mod
 ### Option 1: **ComfyUI Manager** (Recommended)
 
 1. Open **ComfyUI**.
-2. Navigate to **Manager > Custom Node Manager**.
+2. Go to **Manager > Custom Node Manager**.
 3. Search for `lora-manager`.
 4. Click **Install**.
 
