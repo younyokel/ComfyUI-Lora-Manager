@@ -25,6 +25,12 @@ function sortCards(sortBy) {
     });
 }
 
+// 立即执行初始排序
+const sortSelect = document.getElementById('sortSelect');
+if (sortSelect) {
+    sortCards(sortSelect.value);
+}
+
 // Loading management
 class LoadingManager {
     constructor() {
