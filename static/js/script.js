@@ -1,4 +1,4 @@
-// 添加防抖函数
+// Debounce function
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -7,7 +7,7 @@ function debounce(func, wait) {
     };
 }
 
-// 优化排序功能
+// Sorting functionality
 function sortCards(sortBy) {
     const grid = document.getElementById('loraGrid');
     if (!grid) return;
@@ -16,90 +16,104 @@ function sortCards(sortBy) {
     const cards = Array.from(grid.children);
     
     requestAnimationFrame(() => {
-        cards.sort((a, b) => {
-            if (sortBy === 'date') {
-                // 将字符串转换为浮点数进行比较
-                return parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified);
-            } else {
-                // 名称排序保持不变
-                return a.dataset.name.localeCompare(b.dataset.name);
-            }
-        }).forEach(card => fragment.appendChild(card));
+        cards.sort((a, b) => sortBy === 'date' 
+            ? parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified)
+            : a.dataset.name.localeCompare(b.dataset.name)
+        ).forEach(card => fragment.appendChild(card));
         
         grid.appendChild(fragment);
     });
 }
 
-// 改进WebSocket处理
-class WebSocketClient {
-    constructor(url, options = {}) {
-        this.url = url;
-        this.options = {
-            reconnectDelay: 1000,
-            maxReconnectAttempts: 5,
-            ...options
-        };
-        this.reconnectAttempts = 0;
-        this.connect();
+// Loading management
+class LoadingManager {
+    constructor() {
+        this.overlay = document.getElementById('loading-overlay');
+        this.progressBar = this.overlay.querySelector('.progress-bar');
+        this.statusText = this.overlay.querySelector('.loading-status');
     }
 
-    connect() {
-        this.ws = new WebSocket(this.url);
-        this.ws.onopen = this.onOpen.bind(this);
-        this.ws.onclose = this.onClose.bind(this);
-        this.ws.onerror = this.onError.bind(this);
-        this.ws.onmessage = this.onMessage.bind(this);
+    show(message = 'Loading...', progress = 0) {
+        this.overlay.style.display = 'flex';
+        this.setProgress(progress);
+        this.setStatus(message);
     }
 
-    onOpen() {
-        this.reconnectAttempts = 0;
-        console.log('WebSocket connected');
+    hide() {
+        this.overlay.style.display = 'none';
+        this.reset();
     }
 
-    onClose() {
-        if (this.reconnectAttempts < this.options.maxReconnectAttempts) {
-            setTimeout(() => {
-                this.reconnectAttempts++;
-                this.connect();
-            }, this.options.reconnectDelay);
-        }
+    setProgress(percent) {
+        this.progressBar.style.width = `${percent}%`;
+        this.progressBar.setAttribute('aria-valuenow', percent);
     }
 
-    onError(error) {
-        console.error('WebSocket error:', error);
+    setStatus(message) {
+        this.statusText.textContent = message;
     }
 
-    onMessage(event) {
+    reset() {
+        this.setProgress(0);
+        this.setStatus('');
+    }
+
+    async showWithProgress(callback, options = {}) {
+        const { initialMessage = 'Processing...', completionMessage = 'Complete' } = options;
+        
         try {
-            const data = JSON.parse(event.data);
-            window.api.dispatchEvent(new CustomEvent('lora-scan-progress', { detail: data }));
-        } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
+            this.show(initialMessage);
+            await callback(this);
+            this.setProgress(100);
+            this.setStatus(completionMessage);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } finally {
+            this.hide();
         }
+    }
+
+    showSimpleLoading(message = 'Loading...') {
+        this.overlay.style.display = 'flex';
+        this.progressBar.style.display = 'none';
+        this.setStatus(message);
+    }
+
+    restoreProgressBar() {
+        this.progressBar.style.display = 'block';
     }
 }
 
-// 优化图片加载
-function lazyLoadImages() {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                if (img.dataset.src) {
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
-                }
-                observer.unobserve(img);
-            }
-        });
-    });
+const loadingManager = new LoadingManager();
 
-    document.querySelectorAll('img[data-src]').forEach(img => {
-        imageObserver.observe(img);
-    });
+// Media preview handling
+function createVideoPreview(url) {
+    const video = document.createElement('video');
+    video.controls = video.autoplay = video.muted = video.loop = true;
+    video.src = url;
+    return video;
 }
 
-// 优化模态窗口管理
+function createImagePreview(url) {
+    const img = document.createElement('img');
+    img.src = url;
+    return img;
+}
+
+function updatePreviewInCard(filePath, file, previewUrl) {
+    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const previewContainer = card?.querySelector('.card-preview');
+    const oldPreview = previewContainer?.querySelector('img, video');
+    
+    if (oldPreview) {
+        const newPreviewUrl = `${previewUrl}?t=${Date.now()}`;
+        const newPreview = file.type.startsWith('video/') 
+            ? createVideoPreview(newPreviewUrl)
+            : createImagePreview(newPreviewUrl);
+        oldPreview.replaceWith(newPreview);
+    }
+}
+
+// Modal management
 class ModalManager {
     constructor() {
         this.modals = new Map();
@@ -185,10 +199,71 @@ class ModalManager {
     }
 }
 
-// 创建全局 modalManager 实例
 const modalManager = new ModalManager();
 
-// 修改现有的 showModal 函数为 showLoraModal
+// Data management functions
+async function refreshLoras() {
+    const loraGrid = document.getElementById('loraGrid');
+    const currentSort = document.getElementById('sortSelect').value;
+    const activeFolder = document.querySelector('.tag.active')?.dataset.folder;
+
+    try {
+        loadingManager.showSimpleLoading('Refreshing loras...');
+        const response = await fetch('/loras?refresh=true');
+        if (!response.ok) throw new Error('Refresh failed');
+        
+        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        loraGrid.innerHTML = doc.getElementById('loraGrid').innerHTML;
+        
+        initializeLoraCards();
+        sortCards(currentSort);
+        if (activeFolder) filterByFolder(activeFolder);
+        
+        showToast('Refresh complete', 'success');
+    } catch (error) {
+        console.error('Refresh failed:', error);
+        showToast('Failed to refresh loras', 'error');
+    } finally {
+        loadingManager.hide();
+        loadingManager.restoreProgressBar();
+    }
+}
+
+async function fetchCivitai() {
+    const loraCards = document.querySelectorAll('.lora-card');
+    const totalCards = loraCards.length;
+
+    await loadingManager.showWithProgress(async (loading) => {
+        for (let i = 0; i < totalCards; i++) {
+            const card = loraCards[i];
+            if (card.dataset.meta?.length > 2) continue;
+            
+            const { sha256, filepath: filePath } = card.dataset;
+            if (!sha256 || !filePath) continue;
+
+            loading.setProgress((i / totalCards * 100).toFixed(1));
+            loading.setStatus(`Processing (${i+1}/${totalCards}) ${card.dataset.name}`);
+
+            try {
+                await fetch('/api/fetch-civitai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sha256, file_path: filePath })
+                });
+            } catch (error) {
+                console.error(`Failed to fetch ${card.dataset.name}:`, error);
+            }
+        }
+
+        localStorage.setItem('scrollPosition', window.scrollY.toString());
+        window.location.reload();
+    }, {
+        initialMessage: 'Fetching metadata...',
+        completionMessage: 'Metadata update complete'
+    });
+}
+
+// UI interaction functions
 function showLoraModal(lora) {
     const escapedWords = lora.trainedWords?.length ? 
         lora.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
@@ -275,210 +350,134 @@ function showLoraModal(lora) {
     });
 }
 
-function copyTriggerWord(word) {
-    navigator.clipboard.writeText(word).then(() => {
-        const toast = document.createElement('div');
-        toast.className = 'toast toast-copy';
-        toast.textContent = 'Copied!';
-        document.body.appendChild(toast);
-        
-        requestAnimationFrame(() => {
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 1000);
+function filterByFolder(folderPath) {
+    document.querySelectorAll('.lora-card').forEach(card => {
+        card.style.display = card.dataset.folder === folderPath ? '' : 'none';
+    });
+}
+
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    const searchHandler = debounce(term => {
+        document.querySelectorAll('.lora-card').forEach(card => {
+            card.style.display = [card.dataset.name, card.dataset.folder]
+                .some(text => text.toLowerCase().includes(term)) 
+                ? 'block' 
+                : 'none';
+        });
+    }, 250);
+
+    document.getElementById('searchInput')?.addEventListener('input', e => {
+        searchHandler(e.target.value.toLowerCase());
+    });
+
+    document.getElementById('sortSelect')?.addEventListener('change', e => {
+        sortCards(e.target.value);
+    });
+
+    lazyLoadImages();
+    restoreFolderFilter();
+    initializeLoraCards();
+    initTheme();
+});
+
+function initializeLoraCards() {
+    document.querySelectorAll('.lora-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const meta = JSON.parse(card.dataset.meta || '{}');
+            if (Object.keys(meta).length) {
+                showLoraModal(meta);
+            } else {
+                showToast(card.dataset.from_civitai === 'True'
+                    ? 'Click "Fetch" to retrieve metadata'
+                    : 'No CivitAI information available', 'info');
+            }
+        });
+
+        card.querySelector('.fa-copy')?.addEventListener('click', e => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(card.dataset.file_name)
+                .then(() => showToast('Model name copied', 'success'))
+                .catch(() => showToast('Copy failed', 'error'));
         });
     });
 }
 
-// Add new functions for trigger word handling
-function toggleTriggerWord(element) {
-    element.classList.toggle('selected');
-}
-
-function copySelectedTriggerWords() {
-    const selectedWords = Array.from(document.querySelectorAll('.trigger-word-tag.selected'))
-        .map(el => el.textContent.trim());
-    
-    if (selectedWords.length === 0) {
-        // If no words are selected, select and copy all words
-        const allWords = Array.from(document.querySelectorAll('.trigger-word-tag'))
-            .map(el => el.textContent.trim());
-        navigator.clipboard.writeText(allWords.join(', '))
-            .then(() => showToast(`Copied all ${allWords.length} trigger words to clipboard`, 'success'))
-            .catch(() => showToast('Failed to copy trigger words', 'error'));
-    } else {
-        navigator.clipboard.writeText(selectedWords.join(', '))
-            .then(() => showToast(`Copied ${selectedWords.length} selected trigger words to clipboard`, 'success'))
-            .catch(() => showToast('Failed to copy trigger words', 'error'));
-    }
-}
-
-// 修改现有的 showDeleteModal 函数
-function showDeleteModal(filePath) {
-    event.stopPropagation();
-    pendingDeletePath = filePath;
-    
-    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-    const modelName = card.dataset.name;
-    const modal = modalManager.getModal('deleteModal').element;
-    const modelInfo = modal.querySelector('.delete-model-info');
-    
-    modelInfo.innerHTML = `
-        <strong>Model:</strong> ${modelName}
-        <br>
-        <strong>File:</strong> ${filePath}
-    `;
-    
-    modalManager.showModal('deleteModal');
-}
-
-// 修改现有的 closeDeleteModal 函数
-function closeDeleteModal() {
-    modalManager.closeModal('deleteModal');
-}
-
-// 添加 toast 通知功能
+// Helper functions
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    
-    // 移除任何现有的 toast
-    document.querySelectorAll('.toast').forEach(t => t.remove());
-    
-    document.body.appendChild(toast);
+    document.body.append(toast);
 
-    // 如果模态窗口打开，调整 toast 位置
-    if (document.body.classList.contains('modal-open')) {
-        toast.style.transform = 'translate(-50%, 50%)';  // 在屏幕中间显示
-    }
-
-    // 触发动画
     requestAnimationFrame(() => {
         toast.classList.add('show');
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 2000);
+        setTimeout(() => toast.remove(), 2300);
     });
 }
 
-// 初始化
-document.addEventListener('DOMContentLoaded', () => {
-    const wsClient = new WebSocketClient(`ws://${window.location.host}/ws`);
-    
-    // 优化搜索功能，添加防抖
-    const debouncedSearch = debounce((term) => {
-        const cards = document.querySelectorAll('.lora-card');
-        requestAnimationFrame(() => {
-            cards.forEach(card => {
-                const match = card.dataset.name.toLowerCase().includes(term) ||
-                             card.dataset.folder.toLowerCase().includes(term);
-                card.style.display = match ? 'block' : 'none';
-            });
+function lazyLoadImages() {
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && entry.target.dataset.src) {
+                entry.target.src = entry.target.dataset.src;
+                observer.unobserve(entry.target);
+            }
         });
-    }, 250);
-
-    document.getElementById('searchInput')?.addEventListener('input', (e) => {
-        debouncedSearch(e.target.value.toLowerCase());
     });
 
-    // 初始化懒加载
-    lazyLoadImages();
-    
-    // 优化滚动性能
-    document.addEventListener('scroll', debounce(() => {
-        lazyLoadImages();
-    }, 100), { passive: true });
-});
+    document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img));
+}
 
-// 刷新功能
-async function refreshLoras() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const loraGrid = document.getElementById('loraGrid');
-    const currentSort = document.getElementById('sortSelect').value;
-    const activeFolder = document.querySelector('.tag.active')?.dataset.folder;
-
-    try {
-        // Show loading overlay
-        loadingOverlay.style.display = 'flex';
-        
-        // Fetch new data
-        const response = await fetch('/loras?refresh=true');
-        if (!response.ok) throw new Error('Refresh failed');
-        
-        // Parse the HTML response
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(await response.text(), 'text/html');
-        
-        // Get the new lora cards
-        const newLoraGrid = doc.getElementById('loraGrid');
-        
-        // Update the grid content
-        loraGrid.innerHTML = newLoraGrid.innerHTML;
-        
-        // Re-attach click listeners to new cards
-        document.querySelectorAll('.lora-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const meta = JSON.parse(card.dataset.meta || '{}');
-                if (Object.keys(meta).length > 0) {
-                    showModal(meta);
-                }
-            });
-        });
-        
-        // Re-apply current sorting
-        sortCards(currentSort);
-        
-        // Modified folder filtering logic
-        if (activeFolder !== undefined) {  // Check if there's an active folder
-            document.querySelectorAll('.lora-card').forEach(card => {
-                const cardFolder = card.getAttribute('data-folder');
-                // For empty folder (root directory), only show cards with empty folder path
-                if (activeFolder === '') {
-                    card.style.display = cardFolder === '' ? '' : 'none';
-                } else {
-                    // For other folders, show cards matching the folder path
-                    card.style.display = cardFolder === activeFolder ? '' : 'none';
-                }
-            });
-        }
-        
-    } catch (error) {
-        console.error('Refresh failed:', error);
-        alert('Failed to refresh loras');
-    } finally {
-        // Hide loading overlay
-        loadingOverlay.style.display = 'none';
+function restoreFolderFilter() {
+    const activeFolder = localStorage.getItem('activeFolder');
+    const folderTag = activeFolder && document.querySelector(`.tag[data-folder="${activeFolder}"]`);
+    if (folderTag) {
+        folderTag.classList.add('active');
+        filterByFolder(activeFolder);
     }
 }
 
-// 占位功能函数
-function openCivitai(modelName) {
-    // 从卡片的data-meta属性中获取civitai ID
-    const loraCard = document.querySelector(`.lora-card[data-name="${modelName}"]`);
-    if (!loraCard) return;
-    
-    const metaData = JSON.parse(loraCard.dataset.meta);
-    const civitaiId = metaData.modelId;  // 使用modelId作为civitai模型ID
-    const versionId = metaData.id;       // 使用id作为版本ID
-    
-    // 构建URL
-    if (civitaiId) {
-        let url = `https://civitai.com/models/${civitaiId}`;
-        if (versionId) {
-            url += `?modelVersionId=${versionId}`;
-        }
-        window.open(url, '_blank');
-    } else {
-        // 如果没有ID，尝试使用名称搜索
-        window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
-    }
+function initTheme() {
+    document.body.dataset.theme = localStorage.getItem('theme') || 'dark';
+}
+
+// Theme toggle
+function toggleTheme() {
+    const theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+    document.body.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
 }
 
 let pendingDeletePath = null;
+
+function toggleFolder(element) {
+    // Store the previous state
+    const wasActive = element.classList.contains('active');
+    
+    // Remove active class from all tags
+    document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
+    
+    if (!wasActive) {
+        // Add active class to clicked tag
+        element.classList.add('active');
+        // Store active folder in localStorage
+        localStorage.setItem('activeFolder', element.getAttribute('data-folder'));
+        // Hide all cards first
+        document.querySelectorAll('.lora-card').forEach(card => {
+            if (card.getAttribute('data-folder') === element.getAttribute('data-folder')) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    } else {
+        // Clear stored folder when deactivating
+        localStorage.removeItem('activeFolder');
+        // Show all cards
+        document.querySelectorAll('.lora-card').forEach(card => card.style.display = '');
+    }
+}
 
 async function confirmDelete() {
     if (!pendingDeletePath) return;
@@ -516,285 +515,64 @@ async function deleteModel(filePath) {
     showDeleteModal(filePath);
 }
 
-// 初始化排序
-document.getElementById('sortSelect')?.addEventListener('change', (e) => {
-    sortCards(e.target.value);
-});
-
-// 立即执行初始排序
-const sortSelect = document.getElementById('sortSelect');
-if (sortSelect) {
-    sortCards(sortSelect.value);
+function showDeleteModal(filePath) {
+    event.stopPropagation();
+    pendingDeletePath = filePath;
+    
+    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const modelName = card.dataset.name;
+    const modal = modalManager.getModal('deleteModal').element;
+    const modelInfo = modal.querySelector('.delete-model-info');
+    
+    modelInfo.innerHTML = `
+        <strong>Model:</strong> ${modelName}
+        <br>
+        <strong>File:</strong> ${filePath}
+    `;
+    
+    modalManager.showModal('deleteModal');
 }
 
-// 添加搜索功能
-document.getElementById('searchInput')?.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    document.querySelectorAll('.lora-card').forEach(card => {
-        const match = card.dataset.name.toLowerCase().includes(term) ||
-                      card.dataset.folder.toLowerCase().includes(term);
-        card.style.display = match ? 'block' : 'none';
-    });
-});
-
-// 模态窗口管理
-let currentLora = null;
-let currentImageIndex = 0;
-
-document.querySelectorAll('.lora-card').forEach(card => {
-  card.addEventListener('click', () => {
-    if (card.dataset.meta && Object.keys(JSON.parse(card.dataset.meta)).length > 0) {
-      currentLora = JSON.parse(card.dataset.meta);
-      showLoraModal(currentLora);
-    }
-  });
-});
-
-// 更新卡片复制操作
-document.querySelectorAll('.lora-card').forEach(card => {
-    const copyBtn = card.querySelector('.fa-copy');
-    if (copyBtn) {
-        copyBtn.onclick = (event) => {
-            event.stopPropagation();
-            navigator.clipboard.writeText(card.dataset.file_name)
-                .then(() => showToast('Model name copied to clipboard', 'success'))
-                .catch(() => showToast('Failed to copy model name', 'error'));
-        };
-    }
-
-    // 为卡片添加点击反馈，根据不同情况显示不同的提示
-    card.addEventListener('click', () => {
-        const meta = JSON.parse(card.dataset.meta || '{}');
-        const fromCivitai = card.dataset.from_civitai === 'True';
-
-        if (Object.keys(meta).length === 0) {
-            if (fromCivitai) {
-                showToast('Model is available on Civitai. Please click "Fetch" to retrieve metadata.', 'info');
-            } else {
-                showToast('This model is not available on Civitai. No additional information to display.', 'info');
-            }
-        }
-    });
-});
-
-function copyTriggerWords(words) {
-    if (!words) return;
-    
-    navigator.clipboard.writeText(words)
-         .then(() => {
-            const toast = document.createElement('div');
-            toast.className = 'toast toast-success';
-            toast.textContent = 'Trigger words copied to clipboard';
-            document.body.appendChild(toast);
-            
-            // Force recalculation of toast position for modal context
-            toast.style.position = 'fixed';
-            toast.style.zIndex = '9999';  // 确保显示在最上层
-            toast.style.bottom = '50%';
-            toast.style.transform = 'translate(-50%, 50%)';
-            
-            requestAnimationFrame(() => {
-                toast.classList.add('show');
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 300);
-                }, 2000);
-            });
-        })
-        .catch(() => {
-            const toast = document.createElement('div');
-            toast.className = 'toast toast-error';
-            toast.textContent = 'Failed to copy trigger words';
-            // ... 相同的 toast 显示逻辑
-        });
-}
-
-// WebSocket handling for progress updates
-document.addEventListener('DOMContentLoaded', function() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const progressBar = document.querySelector('.progress-bar');
-    const loadingStatus = document.querySelector('.loading-status');
-    
-    // 默认隐藏 loading overlay
-    loadingOverlay.style.display = 'none';
-    
-    const api = new EventTarget();
-    window.api = api;
-
-    const ws = new WebSocket(`ws://${window.location.host}/ws`);
-    
-    ws.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'lora-scan-progress') {
-            // 当收到扫描进度消息时显示 overlay
-            loadingOverlay.style.display = 'flex';
-            api.dispatchEvent(new CustomEvent('lora-scan-progress', { detail: data }));
-        }
-    };
-    
-    api.addEventListener("lora-scan-progress", (event) => {
-        const data = event.detail;
-        const progress = (data.value / data.max) * 100;
+function copyTriggerWord(word) {
+    navigator.clipboard.writeText(word).then(() => {
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-copy';
+        toast.textContent = 'Copied!';
+        document.body.appendChild(toast);
         
-        progressBar.style.width = `${progress}%`;
-        progressBar.setAttribute('aria-valuenow', progress);
-        loadingStatus.textContent = data.status;
-        
-        if (data.value === data.max) {
-            // 确保在扫描完成时隐藏 overlay
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
             setTimeout(() => {
-                loadingOverlay.style.display = 'none';
-                // 重置进度条
-                progressBar.style.width = '0%';
-                progressBar.setAttribute('aria-valuenow', 0);
-            }, 500);
-        }
-    });
-
-    // Restore folder filter state
-    restoreFolderFilter();
-    
-    // Restore scroll position if exists
-    const savedScrollPos = localStorage.getItem('scrollPosition');
-    if (savedScrollPos !== null) {
-        window.scrollTo(0, parseInt(savedScrollPos));
-        localStorage.removeItem('scrollPosition');
-    }
-});
-
-function toggleFolder(element) {
-    // Store the previous state
-    const wasActive = element.classList.contains('active');
-    
-    // Remove active class from all tags
-    document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
-    
-    if (!wasActive) {
-        // Add active class to clicked tag
-        element.classList.add('active');
-        // Store active folder in localStorage
-        localStorage.setItem('activeFolder', element.getAttribute('data-folder'));
-        // Hide all cards first
-        document.querySelectorAll('.lora-card').forEach(card => {
-            if (card.getAttribute('data-folder') === element.getAttribute('data-folder')) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
-            }
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 1000);
         });
-    } else {
-        // Clear stored folder when deactivating
-        localStorage.removeItem('activeFolder');
-        // Show all cards
-        document.querySelectorAll('.lora-card').forEach(card => card.style.display = '');
-    }
-}
-
-// Add this function to restore folder filter state
-function restoreFolderFilter() {
-    const activeFolder = localStorage.getItem('activeFolder');
-    if (activeFolder !== null) {
-        const folderTag = document.querySelector(`.tag[data-folder="${activeFolder}"]`);
-        if (folderTag) {
-            folderTag.classList.add('active');
-            document.querySelectorAll('.lora-card').forEach(card => {
-                if (card.getAttribute('data-folder') === activeFolder) {
-                    card.style.display = '';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-    }
-}
-
-// 主题切换
-function toggleTheme() {
-  const theme = document.body.dataset.theme || 'dark';
-  document.body.dataset.theme = theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem('theme', document.body.dataset.theme);
-}
-
-// 初始化主题
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.body.dataset.theme = savedTheme;
-}
-
-// 键盘导航
-document.addEventListener('keydown', (e) => {
-     if (e.key === 'Escape') modalManager.closeModal('loraModal');
-});
-
-// 图片预加载
-function preloadImages(urls) {
-    urls.forEach(url => {
-        new Image().src = url;
     });
 }
 
-// 新增 fetchCivitai 函数
-async function fetchCivitai() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const progressBar = document.querySelector('.progress-bar');
-    const loadingStatus = document.querySelector('.loading-status');
-    const loraCards = document.querySelectorAll('.lora-card');
+function closeDeleteModal() {
+    modalManager.closeModal('deleteModal');
+}
+
+function openCivitai(modelName) {
+    // 从卡片的data-meta属性中获取civitai ID
+    const loraCard = document.querySelector(`.lora-card[data-name="${modelName}"]`);
+    if (!loraCard) return;
     
-    // 显示进度条
-    loadingOverlay.style.display = 'flex';
-    loadingStatus.textContent = 'Fetching metadata...';
+    const metaData = JSON.parse(loraCard.dataset.meta);
+    const civitaiId = metaData.modelId;  // 使用modelId作为civitai模型ID
+    const versionId = metaData.id;       // 使用id作为版本ID
     
-    try {
-        // Iterate through all lora cards
-        for(let i = 0; i < loraCards.length; i++) {
-            const card = loraCards[i];
-            // Skip if already has metadata
-            if (card.dataset.meta && Object.keys(JSON.parse(card.dataset.meta)).length > 0) {
-                continue;
-            }
-            
-            // Make sure these data attributes exist on your lora-card elements
-            const sha256 = card.dataset.sha256;
-            const filePath = card.dataset.filepath;
-            
-            // Add validation
-            if (!sha256 || !filePath) {
-                console.warn(`Missing data for card ${card.dataset.name}:`, { sha256, filePath });
-                continue;
-            }
-            
-            // Update progress
-            const progress = (i / loraCards.length * 100).toFixed(1);
-            progressBar.style.width = `${progress}%`;
-            loadingStatus.textContent = `Processing (${i+1}/${loraCards.length}) ${card.dataset.name}`;
-            
-            // Call backend API
-            const response = await fetch('/api/fetch-civitai', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    sha256: sha256,
-                    file_path: filePath
-                })
-            });
+    // 构建URL
+    if (civitaiId) {
+        let url = `https://civitai.com/models/${civitaiId}`;
+        if (versionId) {
+            url += `?modelVersionId=${versionId}`;
         }
-        
-        // Completion handling
-        progressBar.style.width = '100%';
-        loadingStatus.textContent = 'Metadata update complete';
-        setTimeout(() => {
-            loadingOverlay.style.display = 'none';
-            // Store current scroll position
-            const scrollPos = window.scrollY;
-            localStorage.setItem('scrollPosition', scrollPos.toString());
-            // Reload the page
-            window.location.reload();
-        }, 2000);
-        
-    } catch (error) {
-        console.warn('Error fetching metadata:', error);
+        window.open(url, '_blank');
+    } else {
+        // 如果没有ID，尝试使用名称搜索
+        window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
     }
 }
 
@@ -865,5 +643,3 @@ async function replacePreview(filePath) {
     // Trigger file selection
     input.click();
 }
-
-initTheme();
