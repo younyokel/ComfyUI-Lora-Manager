@@ -485,6 +485,7 @@ body.modal-open {
     border-radius: var(--border-radius-base);
     text-align: center;
     border: 1px solid var(--lora-border);
+    width: min(400px, 90vw); /* 固定最大宽度，但保持响应式 */
 }
 
 .loading-spinner {
@@ -499,14 +500,20 @@ body.modal-open {
 
 .loading-status {
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-color); /* 使用主题文本颜色 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    padding: 0 var(--space-2);
 }
 
 .progress-container {
-    width: 300px;
-    background-color: #f0f0f0;
+    width: 280px; /* 固定进度条宽度 */
+    background-color: var(--lora-border); /* 使用主题边框颜色 */
     border-radius: 4px;
     overflow: hidden;
+    margin: 0 auto; /* 居中显示 */
 }
 
 .progress-bar {
