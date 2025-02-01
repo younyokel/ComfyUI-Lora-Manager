@@ -9,7 +9,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoRAGateway": "LoRAGateway"
 }
 
-WEB_DIRECTORY = "./js"
+WEB_DIRECTORY = "./web/comfyui"
 
 # Register routes on import
 LoraManager.add_routes()
