@@ -12,9 +12,10 @@ class Config:
 
     def _init_lora_paths(self) -> List[str]:
         """Initialize and validate LoRA paths from ComfyUI settings"""
-        paths = [path.replace(os.sep, "/") 
+        paths = list(set(path.replace(os.sep, "/") 
                 for path in folder_paths.get_folder_paths("loras") 
-                if os.path.exists(path)]
+                if os.path.exists(path)))
+        print("Found LoRA roots:", "\n - " + "\n - ".join(paths))
         
         if not paths:
             raise ValueError("No valid loras folders found in ComfyUI configuration")
