@@ -832,10 +832,57 @@ async function replacePreview(filePath) {
 
 // Fetch CivitAI metadata for all loras
 async function fetchCivitai() {
+    let ws = null;
+    
     await state.loadingManager.showWithProgress(async (loading) => {
         try {
-            loading.setStatus('Fetching metadata for all loras...');
+            // 建立 WebSocket 连接
+            ws = new WebSocket(`ws://${window.location.host}/ws/fetch-progress`);
             
+            // 等待操作完成的 Promise
+            const operationComplete = new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    switch(data.status) {
+                        case 'started':
+                            loading.setStatus('Starting metadata fetch...');
+                            break;
+                            
+                        case 'processing':
+                            const percent = ((data.processed / data.total) * 100).toFixed(1);
+                            loading.setProgress(percent);
+                            loading.setStatus(
+                                `Processing (${data.processed}/${data.total}) ${data.current_name}`
+                            );
+                            break;
+                            
+                        case 'completed':
+                            loading.setProgress(100);
+                            loading.setStatus(
+                                `Completed: Updated ${data.success} of ${data.processed} loras`
+                            );
+                            resolve();  // 完成操作
+                            break;
+                            
+                        case 'error':
+                            reject(new Error(data.error));
+                            break;
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    reject(new Error('WebSocket error: ' + error.message));
+                };
+            });
+            
+            // 等待 WebSocket 连接建立
+            await new Promise((resolve, reject) => {
+                ws.onopen = resolve;
+                ws.onerror = reject;
+            });
+            
+            // 发起获取请求
             const response = await fetch('/api/fetch-all-civitai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
@@ -845,8 +892,8 @@ async function fetchCivitai() {
                 throw new Error('Failed to fetch metadata');
             }
             
-            const result = await response.json();
-            showToast(result.message, 'success');
+            // 等待操作完成
+            await operationComplete;
             
             // 重置并重新加载当前视图
             await resetAndReload();
@@ -854,9 +901,14 @@ async function fetchCivitai() {
         } catch (error) {
             console.error('Error fetching metadata:', error);
             showToast('Failed to fetch metadata: ' + error.message, 'error');
+        } finally {
+            // 关闭 WebSocket 连接
+            if (ws) {
+                ws.close();
+            }
         }
     }, {
-        initialMessage: 'Starting metadata fetch...',
+        initialMessage: 'Connecting...',
         completionMessage: 'Metadata update complete'
     });
 }
