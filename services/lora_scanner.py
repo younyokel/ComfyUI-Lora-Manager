@@ -19,6 +19,37 @@ class LoraCache:
     folders: List[str]
     timestamp: float
 
+    def update_preview_url(self, file_path: str, preview_url: str) -> bool:
+        """Update preview_url for a specific lora in all cached data
+        
+        Args:
+            file_path: The file path of the lora to update
+            preview_url: The new preview URL
+            
+        Returns:
+            bool: True if the update was successful, False if the lora wasn't found
+        """
+        # Update in raw_data
+        for item in self.raw_data:
+            if item['file_path'] == file_path:
+                item['preview_url'] = preview_url
+                break
+        else:
+            return False  # Lora not found
+            
+        # Update in sorted lists (references to the same dict objects)
+        for item in self.sorted_by_name:
+            if item['file_path'] == file_path:
+                item['preview_url'] = preview_url
+                break
+                
+        for item in self.sorted_by_date:
+            if item['file_path'] == file_path:
+                item['preview_url'] = preview_url
+                break
+                
+        return True
+
 class LoraScanner:
     """Service for scanning and managing LoRA files"""
 
@@ -134,3 +165,18 @@ class LoraScanner:
         lora_data['folder'] = folder.replace(os.path.sep, '/')
         
         return lora_data
+
+    async def update_preview_in_cache(self, file_path: str, preview_url: str) -> bool:
+        """Update preview URL in cache for a specific lora
+        
+        Args:
+            file_path: The file path of the lora to update
+            preview_url: The new preview URL
+            
+        Returns:
+            bool: True if the update was successful, False if cache doesn't exist or lora wasn't found
+        """
+        if self._cache is None:
+            return False
+            
+        return self._cache.update_preview_url(file_path, preview_url)

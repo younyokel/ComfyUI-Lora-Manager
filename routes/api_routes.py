@@ -84,6 +84,9 @@ class ApiRoutes:
             preview_path = await self._save_preview_file(model_path, preview_data, content_type)
             await self._update_preview_metadata(model_path, preview_path)
             
+            # Update preview URL in scanner cache
+            await self.scanner.update_preview_in_cache(model_path, preview_path)
+            
             return web.json_response({
                 "success": True,
                 "preview_url": config.get_preview_static_url(preview_path)
