@@ -207,66 +207,250 @@ class ModalManager {
 
 const modalManager = new ModalManager();
 
-// Data management functions
-async function refreshLoras() {
-    const loraGrid = document.getElementById('loraGrid');
-    const currentSort = document.getElementById('sortSelect').value;
-    const activeFolder = document.querySelector('.tag.active')?.dataset.folder;
+// State management
+let state = {
+    currentPage: 1,
+    isLoading: false,
+    hasMore: true,
+    sortBy: 'name',
+    activeFolder: null,
+    loadingManager: null,
+    observer: null  // 添加 observer 到状态管理中
+};
 
+// Initialize loading manager
+document.addEventListener('DOMContentLoaded', () => {
+    state.loadingManager = new LoadingManager();
+    initializeInfiniteScroll();
+    initializeEventListeners();
+});
+
+// Initialize infinite scroll
+function initializeInfiniteScroll() {
+    // 如果已存在 observer，先断开连接
+    if (state.observer) {
+        state.observer.disconnect();
+    }
+
+    // Create intersection observer for infinite scroll
+    state.observer = new IntersectionObserver(
+        (entries) => {
+            const target = entries[0];
+            if (target.isIntersecting && !state.isLoading && state.hasMore) {
+                loadMoreLoras();
+            }
+        },
+        { threshold: 0.1 }
+    );
+
+    // Add sentinel element for infinite scroll
+    const existingSentinel = document.getElementById('scroll-sentinel');
+    if (existingSentinel) {
+        state.observer.observe(existingSentinel);
+    } else {
+        const sentinel = document.createElement('div');
+        sentinel.id = 'scroll-sentinel';
+        sentinel.style.height = '10px';
+        document.getElementById('loraGrid').appendChild(sentinel);
+        state.observer.observe(sentinel);
+    }
+}
+
+// Initialize event listeners
+function initializeEventListeners() {
+    // Sort select handler
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+        sortSelect.value = state.sortBy;
+        sortSelect.addEventListener('change', async (e) => {
+            state.sortBy = e.target.value;
+            await resetAndReload();
+        });
+    }
+
+    // Folder filter handler
+    document.querySelectorAll('.folder-tags .tag').forEach(tag => {
+        // 移除原有的 onclick 属性处理方式，改用事件监听器
+        tag.removeAttribute('onclick');
+        tag.addEventListener('click', toggleFolder);
+    });
+}
+
+// Load more loras
+async function loadMoreLoras() {
+    if (state.isLoading || !state.hasMore) return;
+    
+    state.isLoading = true;
     try {
-        loadingManager.showSimpleLoading('Refreshing loras...');
-        const response = await fetch('/loras?refresh=true');
-        if (!response.ok) throw new Error('Refresh failed');
+        // 构建请求参数
+        const params = new URLSearchParams({
+            page: state.currentPage,
+            page_size: 20,
+            sort_by: state.sortBy
+        });
         
-        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-        loraGrid.innerHTML = doc.getElementById('loraGrid').innerHTML;
+        // 只在有选中文件夹时添加 folder 参数
+        if (state.activeFolder !== null) {
+            params.append('folder', state.activeFolder);
+        }
+
+        console.log('Loading loras with params:', params.toString()); // 调试日志
+
+        const response = await fetch(`/api/loras?${params}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch loras: ${response.statusText}`);
+        }
         
-        initializeLoraCards();
-        sortCards(currentSort);
-        if (activeFolder) filterByFolder(activeFolder);
+        const data = await response.json();
+        console.log('Received data:', data); // 调试日志
         
+        if (data.items.length === 0 && state.currentPage === 1) {
+            // 如果是第一页且没有数据，显示提示
+            const grid = document.getElementById('loraGrid');
+            grid.innerHTML = '<div class="no-results">No loras found in this folder</div>';
+            state.hasMore = false;
+        } else if (data.items.length > 0) {
+            state.hasMore = state.currentPage < data.total_pages;
+            state.currentPage++;
+            appendLoraCards(data.items);
+            
+            // 确保 sentinel 元素被观察
+            const sentinel = document.getElementById('scroll-sentinel');
+            if (sentinel && state.observer) {
+                state.observer.observe(sentinel);
+            }
+        } else {
+            state.hasMore = false;
+        }
+        
+    } catch (error) {
+        console.error('Error loading loras:', error);
+        showToast('Failed to load loras: ' + error.message, 'error');
+    } finally {
+        state.isLoading = false;
+    }
+}
+
+// Reset and reload
+async function resetAndReload() {
+    console.log('Resetting with state:', { ...state }); // 调试日志
+    
+    state.currentPage = 1;
+    state.hasMore = true;
+    state.isLoading = false;
+    
+    const grid = document.getElementById('loraGrid');
+    grid.innerHTML = ''; // 清空网格
+    
+    // 添加 sentinel
+    const sentinel = document.createElement('div');
+    sentinel.id = 'scroll-sentinel';
+    grid.appendChild(sentinel);
+    
+    // 重新初始化无限滚动
+    initializeInfiniteScroll();
+    
+    await loadMoreLoras();
+}
+
+// Append lora cards
+function appendLoraCards(loras) {
+    const grid = document.getElementById('loraGrid');
+    const sentinel = document.getElementById('scroll-sentinel');
+    
+    loras.forEach(lora => {
+        const card = createLoraCard(lora);
+        grid.insertBefore(card, sentinel);
+    });
+}
+
+// Create lora card
+function createLoraCard(lora) {
+    const card = document.createElement('div');
+    card.className = 'lora-card';
+    card.dataset.sha256 = lora.sha256;
+    card.dataset.filepath = lora.file_path;
+    card.dataset.name = lora.model_name;
+    card.dataset.file_name = lora.file_name;
+    card.dataset.folder = lora.folder;
+    card.dataset.modified = lora.modified;
+    card.dataset.from_civitai = lora.from_civitai;
+    card.dataset.meta = JSON.stringify(lora.civitai || {});
+
+    card.innerHTML = `
+        <div class="card-preview">
+            ${lora.preview_url.endsWith('.mp4') ? 
+                `<video controls autoplay muted loop>
+                    <source src="${lora.preview_url}" type="video/mp4">
+                </video>` :
+                `<img src="${lora.preview_url || '/loras_static/images/no-preview.png'}" alt="${lora.model_name}">`
+            }
+            <div class="card-header">
+                <span class="base-model-label" title="${lora.base_model}">
+                    ${lora.base_model}
+                </span>
+                <div class="card-actions">
+                    <i class="fas fa-globe" 
+                       title="${lora.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
+                       ${lora.from_civitai ? 
+                           `onclick="event.stopPropagation(); openCivitai('${lora.model_name}')"` : 
+                           'style="opacity: 0.5; cursor: not-allowed"'}>
+                    </i>
+                    <i class="fas fa-copy" 
+                       title="Copy Model Name"
+                       onclick="event.stopPropagation(); navigator.clipboard.writeText('${lora.file_name}')">
+                    </i>
+                    <i class="fas fa-trash" 
+                       title="Delete Model"
+                       onclick="event.stopPropagation(); deleteModel('${lora.file_path}')">
+                    </i>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="model-info">
+                    <span class="model-name">${lora.model_name}</span>
+                </div>
+                <div class="card-actions">
+                    <i class="fas fa-image" 
+                       title="Replace Preview Image"
+                       onclick="event.stopPropagation(); replacePreview('${lora.file_path}')">
+                    </i>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add click handler for showing modal
+    card.addEventListener('click', () => {
+        const meta = JSON.parse(card.dataset.meta || '{}');
+        if (Object.keys(meta).length) {
+            showLoraModal(meta);
+        } else {
+            showToast(
+                card.dataset.from_civitai === 'true' ?
+                'Click "Fetch" to retrieve metadata' :
+                'No CivitAI information available',
+                'info'
+            );
+        }
+    });
+
+    return card;
+}
+
+// Refresh loras
+async function refreshLoras() {
+    try {
+        state.loadingManager.showSimpleLoading('Refreshing loras...');
+        await resetAndReload();
         showToast('Refresh complete', 'success');
     } catch (error) {
         console.error('Refresh failed:', error);
         showToast('Failed to refresh loras', 'error');
     } finally {
-        loadingManager.hide();
-        loadingManager.restoreProgressBar();
+        state.loadingManager.hide();
+        state.loadingManager.restoreProgressBar();
     }
-}
-
-async function fetchCivitai() {
-    const loraCards = document.querySelectorAll('.lora-card');
-    const totalCards = loraCards.length;
-
-    await loadingManager.showWithProgress(async (loading) => {
-        for (let i = 0; i < totalCards; i++) {
-            const card = loraCards[i];
-            if (card.dataset.meta?.length > 2) continue;
-            
-            const { sha256, filepath: filePath } = card.dataset;
-            if (!sha256 || !filePath) continue;
-
-            loading.setProgress((i / totalCards * 100).toFixed(1));
-            loading.setStatus(`Processing (${i+1}/${totalCards}) ${card.dataset.name}`);
-
-            try {
-                await fetch('/api/fetch-civitai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sha256, file_path: filePath })
-                });
-            } catch (error) {
-                console.error(`Failed to fetch ${card.dataset.name}:`, error);
-            }
-        }
-
-        localStorage.setItem('scrollPosition', window.scrollY.toString());
-        window.location.reload();
-    }, {
-        initialMessage: 'Fetching metadata...',
-        completionMessage: 'Metadata update complete'
-    });
 }
 
 // UI interaction functions
@@ -457,32 +641,28 @@ function toggleTheme() {
 
 let pendingDeletePath = null;
 
-function toggleFolder(element) {
-    // Store the previous state
-    const wasActive = element.classList.contains('active');
+function toggleFolder(tag) {
+    // 确保 tag 是 DOM 元素
+    const tagElement = (tag instanceof HTMLElement) ? tag : this;
+    const folder = tagElement.dataset.folder;
+    const wasActive = tagElement.classList.contains('active');
     
-    // Remove active class from all tags
-    document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
+    // 清除所有标签的激活状态
+    document.querySelectorAll('.folder-tags .tag').forEach(t => {
+        t.classList.remove('active');
+    });
     
     if (!wasActive) {
-        // Add active class to clicked tag
-        element.classList.add('active');
-        // Store active folder in localStorage
-        localStorage.setItem('activeFolder', element.getAttribute('data-folder'));
-        // Hide all cards first
-        document.querySelectorAll('.lora-card').forEach(card => {
-            if (card.getAttribute('data-folder') === element.getAttribute('data-folder')) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
-            }
-        });
+        // 激活当前标签
+        tagElement.classList.add('active');
+        state.activeFolder = folder;
     } else {
-        // Clear stored folder when deactivating
-        localStorage.removeItem('activeFolder');
-        // Show all cards
-        document.querySelectorAll('.lora-card').forEach(card => card.style.display = '');
+        // 取消激活
+        state.activeFolder = null;
     }
+    
+    // 重置并重新加载数据
+    resetAndReload();
 }
 
 async function confirmDelete() {

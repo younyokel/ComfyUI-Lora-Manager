@@ -48,18 +48,27 @@ class LoraRoutes:
     async def handle_loras_page(self, request: web.Request) -> web.Response:
         """Handle GET /loras request"""
         try:
-            # Scan for loras
-            loras = await self.scanner.scan_all_loras()
+            # Get cached data
+            cache = await self.scanner.get_cached_data()
             
-            # Format data for template
-            formatted_loras = [self.format_lora_data(l) for l in loras]
-            folders = sorted(list(set(l['folder'] for l in loras)))
+            # Format initial data (first page only)
+            initial_data = await self.scanner.get_paginated_data(
+                page=1,
+                page_size=20,
+                sort_by='name'
+            )
+            
+            formatted_loras = [
+                self.format_lora_data(l) 
+                for l in initial_data['items']
+            ]
             
             # Render template
             template = self.template_env.get_template('loras.html')
             rendered = template.render(
                 loras=formatted_loras,
-                folders=folders
+                folders=cache.folders,
+                total_items=initial_data['total']
             )
             
             return web.Response(
