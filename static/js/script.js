@@ -829,3 +829,34 @@ async function replacePreview(filePath) {
     // Trigger file selection
     input.click();
 }
+
+// Fetch CivitAI metadata for all loras
+async function fetchCivitai() {
+    await state.loadingManager.showWithProgress(async (loading) => {
+        try {
+            loading.setStatus('Fetching metadata for all loras...');
+            
+            const response = await fetch('/api/fetch-all-civitai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch metadata');
+            }
+            
+            const result = await response.json();
+            showToast(result.message, 'success');
+            
+            // 重置并重新加载当前视图
+            await resetAndReload();
+            
+        } catch (error) {
+            console.error('Error fetching metadata:', error);
+            showToast('Failed to fetch metadata: ' + error.message, 'error');
+        }
+    }, {
+        initialMessage: 'Starting metadata fetch...',
+        completionMessage: 'Metadata update complete'
+    });
+}

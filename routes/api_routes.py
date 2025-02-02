@@ -7,6 +7,7 @@ from ..services.civitai_client import CivitaiClient
 from ..utils.file_utils import update_civitai_metadata, load_metadata
 from ..config import config
 from ..services.lora_scanner import LoraScanner
+from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class ApiRoutes:
         app.router.add_post('/api/fetch-civitai', routes.fetch_civitai)
         app.router.add_post('/api/replace_preview', routes.replace_preview)
         app.router.add_get('/api/loras', routes.get_loras)
+        app.router.add_post('/api/fetch-all-civitai', routes.fetch_all_civitai)
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
@@ -303,7 +305,6 @@ class ApiRoutes:
             first_preview = next((img for img in civitai_metadata.get('images', [])), None)
             if first_preview:
                 preview_ext = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]
-                # Fix: Get base name without .metadata.json
                 base_name = os.path.splitext(os.path.splitext(os.path.basename(metadata_path))[0])[0]
                 preview_filename = base_name + '.preview' + preview_ext
                 preview_path = os.path.join(os.path.dirname(metadata_path), preview_filename)
@@ -314,3 +315,101 @@ class ApiRoutes:
         # Save updated metadata
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+
+    async def fetch_all_civitai(self, request: web.Request) -> web.Response:
+        """Fetch CivitAI metadata for all loras in the background"""
+        try:
+            # 获取所有 lora 数据（使用 scanner 的缓存）
+            cache = await self.scanner.get_cached_data()
+            total = len(cache.raw_data)
+            processed = 0
+            success = 0
+            needs_resort = False  # 标记是否需要重新排序
+            
+            for lora in cache.raw_data:
+                if not lora.get('sha256') or lora.get('civitai') or not lora.get('from_civitai', True):
+                    continue
+                    
+                try:
+                    original_name = lora.get('model_name')
+                    if await self._fetch_and_update_single_lora(
+                        sha256=lora['sha256'],
+                        file_path=lora['file_path'],
+                        lora=lora  # 直接传入缓存中的 lora 对象
+                    ):
+                        success += 1
+                        # 检查 model_name 是否发生变化
+                        if original_name != lora.get('model_name'):
+                            needs_resort = True
+                    processed += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error fetching CivitAI data for {lora['file_path']}: {e}")
+            
+            # 只在需要时进行一次排序
+            if needs_resort:
+                cache.sorted_by_name = sorted(cache.raw_data, key=itemgetter('model_name'))
+                    
+            return web.json_response({
+                "success": True,
+                "message": f"Successfully updated {success} of {processed} processed loras (total: {total})"
+            })
+            
+        except Exception as e:
+            logger.error(f"Error in fetch_all_civitai: {e}")
+            return web.Response(
+                text=str(e),
+                status=500
+            )
+
+    async def _fetch_and_update_single_lora(self, sha256: str, file_path: str, lora: dict) -> bool:
+        """Fetch and update metadata for a single lora without sorting
+        
+        Args:
+            sha256: SHA256 hash of the lora file
+            file_path: Path to the lora file
+            lora: The lora object in cache to update
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        client = CivitaiClient()
+        try:
+            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+            
+            # Check if model is from CivitAI
+            local_metadata = await self._load_local_metadata(metadata_path)
+
+            # Fetch metadata
+            civitai_metadata = await client.get_model_by_hash(sha256)
+            if not civitai_metadata:
+                # Mark as not from CivitAI if not found
+                local_metadata['from_civitai'] = False
+                lora['from_civitai'] = False
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+                return False
+
+            # Update metadata
+            await self._update_model_metadata(
+                metadata_path, 
+                local_metadata, 
+                civitai_metadata, 
+                client
+            )
+            
+            # Update cache object directly
+            lora.update({
+                'model_name': local_metadata.get('model_name'),
+                'preview_url': local_metadata.get('preview_url'),
+                'from_civitai': True,
+                'civitai': civitai_metadata
+            })
+                
+            return True
+
+        except Exception as e:
+            logger.error(f"Error fetching CivitAI data: {e}")
+            return False
+        finally:
+            await client.close()
