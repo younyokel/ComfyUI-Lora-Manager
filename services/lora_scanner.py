@@ -17,7 +17,6 @@ class LoraCache:
     sorted_by_name: List[Dict]
     sorted_by_date: List[Dict]
     folders: List[str]
-    timestamp: float
 
     def update_preview_url(self, file_path: str, preview_url: str) -> bool:
         """Update preview_url for a specific lora in all cached data
@@ -57,7 +56,6 @@ class LoraScanner:
         self._cache: Optional[LoraCache] = None
         self._initialization_lock = asyncio.Lock()
         self._initialization_task: Optional[asyncio.Task] = None
-        self.cache_ttl = 300  # 5 minutes cache TTL
 
     async def get_cached_data(self, force_refresh: bool = False) -> LoraCache:
         """Get cached LoRA data, refresh if needed"""
@@ -72,9 +70,7 @@ class LoraScanner:
                     logger.error(f"Cache initialization failed: {e}")
                     self._initialization_task = None
             
-            if (self._cache is None or 
-                force_refresh or 
-                current_time - self._cache.timestamp > self.cache_ttl):
+            if (self._cache is None or force_refresh):
                 
                 # 创建新的初始化任务
                 if not self._initialization_task or self._initialization_task.done():
@@ -95,19 +91,16 @@ class LoraScanner:
         # Scan for new data
         raw_data = await self.scan_all_loras()
         
-        # Create sorted views
-        sorted_by_name = sorted(raw_data, key=itemgetter('model_name'))
-        sorted_by_date = sorted(raw_data, key=itemgetter('modified'), reverse=True)
-        folders = sorted(list(set(l['folder'] for l in raw_data)))
-        
         # Update cache
         self._cache = LoraCache(
             raw_data=raw_data,
-            sorted_by_name=sorted_by_name,
-            sorted_by_date=sorted_by_date,
-            folders=folders,
-            timestamp=time.time()
+            sorted_by_name=[],
+            sorted_by_date=[],
+            folders=[]
         )
+        
+        # Call resort_cache to create sorted views
+        await self.resort_cache()
 
     async def get_paginated_data(self, 
                                 page: int, 
@@ -244,7 +237,7 @@ class LoraScanner:
             
         self._cache.sorted_by_name = sorted(
             self._cache.raw_data, 
-            key=itemgetter('model_name')
+            key=lambda x: x['model_name'].lower()  # 使用 lower() 来实现不区分大小写的排序
         )
         self._cache.sorted_by_date = sorted(
             self._cache.raw_data, 
