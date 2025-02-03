@@ -7,6 +7,7 @@ from ..services.lora_scanner import LoraScanner
 from ..config import config
 
 logger = logging.getLogger(__name__)
+logging.getLogger('asyncio').setLevel(logging.CRITICAL)
 
 class LoraRoutes:
     """Route handlers for LoRA management endpoints"""
