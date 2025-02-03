@@ -6,8 +6,7 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass
 from operator import itemgetter
 from ..config import config
-from ..utils.file_utils import load_metadata, get_file_info, save_metadata
-from ..utils.lora_metadata import extract_lora_metadata
+from ..utils.file_utils import load_metadata, get_file_info
 
 logger = logging.getLogger(__name__)
 
@@ -181,9 +180,6 @@ class LoraScanner:
         if metadata is None:
             # Create new metadata if none exists
             metadata = await get_file_info(file_path)
-            base_model_info = await extract_lora_metadata(file_path)
-            metadata.base_model = base_model_info['base_model']
-            await save_metadata(file_path, metadata)
         
         # Convert to dict and add folder info
         lora_data = metadata.to_dict()
@@ -207,3 +203,55 @@ class LoraScanner:
             return False
             
         return self._cache.update_preview_url(file_path, preview_url)
+
+    async def scan_single_lora(self, file_path: str) -> Optional[Dict]:
+        """Scan a single LoRA file and return its metadata"""
+        try:
+            if not os.path.exists(file_path):
+                return None
+                
+            # 获取基本文件信息
+            metadata = await get_file_info(file_path)
+            if not metadata:
+                return None
+                
+            # 计算相对于 lora_roots 的文件夹路径
+            folder = None
+            file_dir = os.path.dirname(file_path)
+            for root in config.loras_roots:
+                if file_dir.startswith(root):
+                    rel_path = os.path.relpath(file_dir, root)
+                    if rel_path == '.':
+                        folder = ''  # 根目录
+                    else:
+                        folder = rel_path.replace(os.sep, '/')
+                    break
+                    
+            # 确保 folder 字段存在
+            metadata_dict = metadata.to_dict()
+            metadata_dict['folder'] = folder or ''
+            
+            return metadata_dict
+            
+        except Exception as e:
+            logger.error(f"Error scanning {file_path}: {e}")
+            return None
+            
+    async def resort_cache(self):
+        """Resort cache data"""
+        if not self._cache:
+            return
+            
+        self._cache.sorted_by_name = sorted(
+            self._cache.raw_data, 
+            key=itemgetter('model_name')
+        )
+        self._cache.sorted_by_date = sorted(
+            self._cache.raw_data, 
+            key=itemgetter('modified'), 
+            reverse=True
+        )
+        # 更新文件夹列表
+        self._cache.folders = sorted(list(set(
+            l['folder'] for l in self._cache.raw_data
+        )))

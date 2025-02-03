@@ -4,6 +4,7 @@ from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
 from .services.lora_scanner import LoraScanner
+from .services.file_monitor import LoraFileMonitor
 
 class LoraManager:
     """Main entry point for LoRA Manager plugin"""
@@ -28,8 +29,18 @@ class LoraManager:
         LoraRoutes.setup_routes(app)
         ApiRoutes.setup_routes(app)
         
+        # Setup file monitoring
+        monitor = LoraFileMonitor(routes.scanner, config.loras_roots)
+        monitor.start()
+        
+        # Store monitor in app for cleanup
+        app['lora_monitor'] = monitor
+        
         # Schedule cache initialization using the application's startup handler
         app.on_startup.append(lambda app: cls._schedule_cache_init(routes.scanner))
+        
+        # Add cleanup
+        app.on_shutdown.append(cls._cleanup)
     
     @classmethod
     async def _schedule_cache_init(cls, scanner: LoraScanner):
@@ -48,3 +59,9 @@ class LoraManager:
             print("LoRA Manager: Cache initialization completed")
         except Exception as e:
             print(f"LoRA Manager: Error initializing cache: {e}")
+    
+    @classmethod
+    async def _cleanup(cls, app):
+        """Cleanup resources"""
+        if 'lora_monitor' in app:
+            app['lora_monitor'].stop()

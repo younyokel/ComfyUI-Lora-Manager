@@ -2,6 +2,8 @@ import os
 import hashlib
 import json
 from typing import Dict, Optional
+
+from .lora_metadata import extract_lora_metadata
 from .models import LoraMetadata
 
 async def calculate_sha256(file_path: str) -> str:
@@ -41,8 +43,8 @@ async def get_file_info(file_path: str) -> LoraMetadata:
     dir_path = os.path.dirname(file_path)
     
     preview_url = _find_preview_file(base_name, dir_path)
-    
-    return LoraMetadata(
+
+    metadata = LoraMetadata(
         file_name=base_name,
         model_name=base_name,
         file_path=normalize_path(file_path),
@@ -53,6 +55,13 @@ async def get_file_info(file_path: str) -> LoraMetadata:
         from_civitai=True,
         preview_url=normalize_path(preview_url),
     )
+
+    # create metadata file
+    base_model_info = await extract_lora_metadata(file_path)
+    metadata.base_model = base_model_info['base_model']
+    await save_metadata(file_path, metadata)
+    
+    return metadata
 
 async def save_metadata(file_path: str, metadata: LoraMetadata) -> None:
     """Save metadata to .metadata.json file"""
