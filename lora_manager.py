@@ -24,9 +24,8 @@ class LoraManager:
         
         # Setup feature routes
         routes = LoraRoutes()
-        api_routes = ApiRoutes()
         
-        LoraRoutes.setup_routes(app)
+        routes.setup_routes(app)
         ApiRoutes.setup_routes(app)
         
         # Setup file monitoring

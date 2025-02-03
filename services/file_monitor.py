@@ -1,10 +1,10 @@
+from operator import itemgetter
 import os
-import time
 import logging
 import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileDeletedEvent
-from typing import List, Set, Callable
+from typing import List
 from threading import Lock
 from .lora_scanner import LoraScanner
 
@@ -58,38 +58,52 @@ class LoraFileHandler(FileSystemEventHandler):
             
             if not changes:
                 return
-                
+            
+            
             logger.info(f"Processing {len(changes)} file changes")
-            
-            # 获取当前缓存
-            cache = await self.scanner.get_cached_data()
-            needs_resort = False
-            
-            for action, file_path in changes:
-                try:
-                    if action == 'add':
-                        # 扫描新文件
-                        lora_data = await self.scanner.scan_single_lora(file_path)
-                        if lora_data:
-                            cache.raw_data.append(lora_data)
+
+            async with self.scanner._cache._lock:
+                # 获取当前缓存
+                cache = await self.scanner.get_cached_data()
+
+                needs_resort = False
+                new_folders = set()  # 用于收集新的文件夹
+                
+                for action, file_path in changes:
+                    try:
+                        if action == 'add':
+                            # 扫描新文件
+                            lora_data = await self.scanner.scan_single_lora(file_path)
+                            if lora_data:
+                                cache.raw_data.append(lora_data)
+                                new_folders.add(lora_data['folder'])  # 收集新文件夹
+                                needs_resort = True
+                                
+                        elif action == 'remove':
+                            # 从缓存中移除
+                            cache.raw_data = [
+                                item for item in cache.raw_data 
+                                if item['file_path'] != file_path
+                            ]
                             needs_resort = True
                             
-                    elif action == 'remove':
-                        # 从缓存中移除
-                        cache.raw_data = [
-                            item for item in cache.raw_data 
-                            if item['file_path'] != file_path
-                        ]
-                        needs_resort = True
-                        
-                except Exception as e:
-                    logger.error(f"Error processing {action} for {file_path}: {e}")
-            
-            # 如果有变更，更新排序并重置缓存时间
-            if needs_resort:
-                await self.scanner.resort_cache()
-                # 更新缓存时间戳，确保下次获取时能得到最新数据
-                self.scanner._cache.last_update = time.time()
+                    except Exception as e:
+                        logger.error(f"Error processing {action} for {file_path}: {e}")
+                
+                if needs_resort:
+                    cache.sorted_by_name = sorted(
+                        self.scanner._cache.raw_data, 
+                        key=lambda x: x['model_name'].lower()  # Case-insensitive sort
+                    )
+                    cache.sorted_by_date = sorted(
+                        self.scanner._cache.raw_data, 
+                        key=itemgetter('modified'), 
+                        reverse=True
+                    )
+                    
+                    # 更新文件夹列表，包括新添加的文件夹
+                    all_folders = set(cache.folders) | new_folders
+                    cache.folders = sorted(list(all_folders))
                 
         except Exception as e:
             logger.error(f"Error in process_changes: {e}")

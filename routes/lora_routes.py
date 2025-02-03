@@ -51,7 +51,7 @@ class LoraRoutes:
             # Get cached data
             cache = await self.scanner.get_cached_data()
             
-            # Format initial data (first page only)
+            # Get initial data (first page only)
             initial_data = await self.scanner.get_paginated_data(
                 page=1,
                 page_size=20,
@@ -83,8 +83,6 @@ class LoraRoutes:
                 status=500
             )
 
-    @classmethod
-    def setup_routes(cls, app: web.Application):
+    def setup_routes(self, app: web.Application):
         """Register routes with the application"""
-        routes = cls()
-        app.router.add_get('/loras', routes.handle_loras_page)
+        app.router.add_get('/loras', self.handle_loras_page)
