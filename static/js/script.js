@@ -8,28 +8,7 @@ function debounce(func, wait) {
 }
 
 // Sorting functionality
-function sortCards(sortBy) {
-    const grid = document.getElementById('loraGrid');
-    if (!grid) return;
-
-    const fragment = document.createDocumentFragment();
-    const cards = Array.from(grid.children);
-    
-    requestAnimationFrame(() => {
-        cards.sort((a, b) => sortBy === 'date' 
-            ? parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified)
-            : a.dataset.name.localeCompare(b.dataset.name)
-        ).forEach(card => fragment.appendChild(card));
-        
-        grid.appendChild(fragment);
-    });
-}
-
-// 立即执行初始排序
-const sortSelect = document.getElementById('sortSelect');
-if (sortSelect) {
-    sortCards(sortSelect.value);
-}
+// function sortCards(sortBy) { ... }
 
 // Loading management
 class LoadingManager {
@@ -264,14 +243,12 @@ function initializeEventListeners() {
         sortSelect.value = state.sortBy;
         sortSelect.addEventListener('change', async (e) => {
             state.sortBy = e.target.value;
-            await resetAndReload();
+            await resetAndReload();  // 直接重新从后端加载已排序的数据
         });
     }
 
     // Folder filter handler
     document.querySelectorAll('.folder-tags .tag').forEach(tag => {
-        // 移除原有的 onclick 属性处理方式，改用事件监听器
-        tag.removeAttribute('onclick');
         tag.addEventListener('click', toggleFolder);
     });
 }
@@ -562,7 +539,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('sortSelect')?.addEventListener('change', e => {
-        sortCards(e.target.value);
+        // 移除这个函数
+        // sortCards(e.target.value);
     });
 
     lazyLoadImages();

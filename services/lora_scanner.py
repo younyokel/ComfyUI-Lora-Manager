@@ -13,11 +13,30 @@ logger = logging.getLogger(__name__)
 
 class LoraScanner:
     """Service for scanning and managing LoRA files"""
-
+    
+    _instance = None
+    _lock = asyncio.Lock()
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        self._cache: Optional[LoraCache] = None
-        self._initialization_lock = asyncio.Lock()
-        self._initialization_task: Optional[asyncio.Task] = None
+        # 确保初始化只执行一次
+        if not hasattr(self, '_initialized'):
+            self._cache: Optional[LoraCache] = None
+            self._initialization_lock = asyncio.Lock()
+            self._initialization_task: Optional[asyncio.Task] = None
+            self._initialized = True
+
+    @classmethod
+    async def get_instance(cls):
+        """Get singleton instance with async support"""
+        async with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
 
     async def get_cached_data(self, force_refresh: bool = False) -> LoraCache:
         """Get cached LoRA data, refresh if needed"""
