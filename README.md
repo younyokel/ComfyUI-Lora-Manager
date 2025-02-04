@@ -82,13 +82,11 @@ A web-based management interface designed to help you organize and manage your l
 
 ### Option 2: **Manual Installation**
 
-1. Clone the repository:
-
 ```bash
 git clone https://github.com/willmiao/ComfyUI-Lora-Manager.git
+cd ComfyUI-Lora-Manager
+pip install requirements.txt
 ```
-
-2. Follow the setup instructions in the repository for manual installation.
 
 ## Usage
 
