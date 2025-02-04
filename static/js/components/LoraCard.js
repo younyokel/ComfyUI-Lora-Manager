@@ -1,5 +1,6 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
+import { state } from '../state/index.js';
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');
@@ -13,16 +14,17 @@ export function createLoraCard(lora) {
     card.dataset.from_civitai = lora.from_civitai;
     card.dataset.meta = JSON.stringify(lora.civitai || {});
 
-    // Add timestamp to preview URL to prevent caching
-    const previewUrl = lora.preview_url ? `${lora.preview_url}?t=${Date.now()}` : '/loras_static/images/no-preview.png';
+    const version = state.previewVersions.get(lora.file_path);
+    const previewUrl = lora.preview_url || '/loras_static/images/no-preview.png';
+    const versionedPreviewUrl = version ? `${previewUrl}?t=${version}` : previewUrl;
 
     card.innerHTML = `
         <div class="card-preview">
             ${previewUrl.endsWith('.mp4') ? 
                 `<video controls autoplay muted loop>
-                    <source src="${previewUrl}" type="video/mp4">
+                    <source src="${versionedPreviewUrl}" type="video/mp4">
                 </video>` :
-                `<img src="${previewUrl}" alt="${lora.model_name}">`
+                `<img src="${versionedPreviewUrl}" alt="${lora.model_name}">`
             }
             <div class="card-header">
                 <span class="base-model-label" title="${lora.base_model}">
@@ -74,20 +76,6 @@ export function createLoraCard(lora) {
     });
 
     return card;
-}
-
-export function updatePreviewInCard(filePath, file, previewUrl) {
-    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-    const previewContainer = card?.querySelector('.card-preview');
-    const oldPreview = previewContainer?.querySelector('img, video');
-    
-    if (oldPreview) {
-        const newPreviewUrl = `${previewUrl}?t=${Date.now()}`;
-        const newPreview = file.type.startsWith('video/') 
-            ? createVideoPreview(newPreviewUrl)
-            : createImagePreview(newPreviewUrl);
-        oldPreview.replaceWith(newPreview);
-    }
 }
 
 export function showLoraModal(lora) {
@@ -195,16 +183,3 @@ export function initializeLoraCards() {
         });
     });
 }
-
-function createVideoPreview(url) {
-    const video = document.createElement('video');
-    video.controls = video.autoplay = video.muted = video.loop = true;
-    video.src = url;
-    return video;
-}
-
-function createImagePreview(url) {
-    const img = document.createElement('img');
-    img.src = url;
-    return img;
-} 

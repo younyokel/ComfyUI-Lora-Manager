@@ -163,11 +163,16 @@ export async function replacePreview(filePath) {
             }
 
             const data = await response.json();
-            const newPreviewPath = `${data.preview_url}?t=${new Date().getTime()}`;
             
+            // 更新预览版本
+            state.previewVersions.set(filePath, Date.now());
+            
+            // 更新卡片显示
             const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
             const previewContainer = card.querySelector('.card-preview');
             const oldPreview = previewContainer.querySelector('img, video');
+            
+            const previewUrl = `${data.preview_url}?t=${state.previewVersions.get(filePath)}`;
             
             if (file.type.startsWith('video/')) {
                 const video = document.createElement('video');
@@ -175,11 +180,11 @@ export async function replacePreview(filePath) {
                 video.autoplay = true;
                 video.muted = true;
                 video.loop = true;
-                video.src = newPreviewPath;
+                video.src = previewUrl;
                 oldPreview.replaceWith(video);
             } else {
                 const img = document.createElement('img');
-                img.src = newPreviewPath;
+                img.src = previewUrl;
                 oldPreview.replaceWith(img);
             }
             

@@ -2,7 +2,7 @@ import { debounce } from './utils/debounce.js';
 import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { state } from './state/index.js';
-import { createLoraCard, updatePreviewInCard, showLoraModal, initializeLoraCards } from './components/LoraCard.js';
+import { showLoraModal, initializeLoraCards } from './components/LoraCard.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
 import { showToast, lazyLoadImages, restoreFolderFilter, initTheme, toggleTheme, toggleFolder, copyTriggerWord } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';

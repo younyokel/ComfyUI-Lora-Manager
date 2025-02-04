@@ -5,5 +5,6 @@ export const state = {
     sortBy: 'name',
     activeFolder: null,
     loadingManager: null,
-    observer: null
+    observer: null,
+    previewVersions: new Map()
 }; 
