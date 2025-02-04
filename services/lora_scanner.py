@@ -42,6 +42,15 @@ class LoraScanner:
         """Get cached LoRA data, refresh if needed"""
         async with self._initialization_lock:
             
+            # 如果缓存未初始化但需要响应请求，返回空缓存
+            if self._cache is None and not force_refresh:
+                return LoraCache(
+                    raw_data=[],
+                    sorted_by_name=[],
+                    sorted_by_date=[],
+                    folders=[]
+                )
+
             # 如果正在初始化，等待完成
             if self._initialization_task and not self._initialization_task.done():
                 try:
@@ -120,12 +129,18 @@ class LoraScanner:
         """Scan all LoRA directories and return metadata"""
         all_loras = []
         
+        # 分目录异步扫描
+        scan_tasks = []
         for loras_root in config.loras_roots:
+            task = asyncio.create_task(self._scan_directory(loras_root))
+            scan_tasks.append(task)
+            
+        for task in scan_tasks:
             try:
-                loras = await self._scan_directory(loras_root)
+                loras = await task
                 all_loras.extend(loras)
             except Exception as e:
-                logger.error(f"Error scanning directory {loras_root}: {e}")
+                logger.error(f"Error scanning directory: {e}")
                 
         return all_loras
 
@@ -133,17 +148,32 @@ class LoraScanner:
         """Scan a single directory for LoRA files"""
         loras = []
         
-        for root, _, files in os.walk(root_path):
-            for filename in (f for f in files if f.endswith('.safetensors')):
-                try:
-                    file_path = os.path.join(root, filename).replace(os.sep, "/")
-                    lora_data = await self._process_lora_file(file_path, root_path)
-                    if lora_data:
-                        loras.append(lora_data)
-                except Exception as e:
-                    logger.error(f"Error processing {filename}: {e}")
-                    
+        # 使用异步安全的目录遍历方式
+        async def scan_recursive(path: str):
+            try:
+                with os.scandir(path) as it:
+                    entries = list(it)  # 同步获取目录条目
+                    for entry in entries:
+                        if entry.is_file() and entry.name.endswith('.safetensors'):
+                            file_path = entry.path.replace(os.sep, "/")
+                            await self._process_single_file(file_path, root_path, loras)
+                            await asyncio.sleep(0)  # 释放事件循环
+                        elif entry.is_dir():
+                            await scan_recursive(entry.path)
+            except Exception as e:
+                logger.error(f"Error scanning {path}: {e}")
+
+        await scan_recursive(root_path)
         return loras
+
+    async def _process_single_file(self, file_path: str, root_path: str, loras: list):
+        """处理单个文件并添加到结果列表"""
+        try:
+            result = await self._process_lora_file(file_path, root_path)
+            if result:
+                loras.append(result)
+        except Exception as e:
+            logger.error(f"Error processing {file_path}: {e}")
 
     async def _process_lora_file(self, file_path: str, root_path: str) -> Dict:
         """Process a single LoRA file and return its metadata"""
