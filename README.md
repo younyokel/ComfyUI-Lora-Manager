@@ -6,6 +6,18 @@ A web-based management interface designed to help you organize and manage your l
 
 ---
 
+## [Update 0.5.7] Performance Boost & Search Feature
+
+- 🚀 **Major Performance Improvements**:
+  - Implemented multi-layer caching and cache preloading
+  - Added file system monitoring with incremental updates
+  - Introduced pagination API with infinite scroll support
+  
+- 🔍 **Search Functionality**: New search feature to quickly find LoRA models
+- 🐛 **Bug Fixes**: Various stability and performance improvements
+
+---
+
 ## [Update 0.5.6] New Features and Optimizations
 
 - 🛠️ **Code Refactor**: The codebase has been restructured to improve readability and maintainability, making it easier to manage and extend in future updates.
@@ -36,13 +48,26 @@ A web-based management interface designed to help you organize and manage your l
 
 ## Key Features
 
-- **🔍 Automatic scanning & listing** of local LoRA models
-- **📂 Folder-based categorization** with support for nested directories
-- **🌐 Metadata retrieval** from CivitAI, including preview images
-- **🖼️ Manual preview replacement** with support for JPG, PNG, MP4, and WEBM formats
-- **📋 One-click filename copying** for easy workflow integration
-- **↕️ Sorting** by name or modification date
-- **🌓 Light/dark theme toggle** for user preference
+- 🚀 **High Performance**
+  - Fast model loading and browsing
+  - Smooth scrolling through large collections
+  - Real-time updates when files change
+  
+- 📂 **Easy Organization**
+  - Quick search to find models
+  - Folder-based categorization
+  - Sort by name or date
+  
+- 🌐 **Rich Model Details**
+  - Preview images and videos
+  - Model descriptions from CivitAI
+  - Trigger words at a glance
+  
+- 💻 **User Friendly**
+  - One-click access from ComfyUI menu
+  - Copy model names with single click
+  - Customizable light/dark theme
+  - Multi-folder support
 
 ---
 
