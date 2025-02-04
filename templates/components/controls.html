@@ -1,0 +1,16 @@
+<div class="controls">
+    <div class="folder-tags">
+        {% for folder in folders %}
+        <div class="tag" data-folder="{{ folder }}">{{ folder }}</div>
+        {% endfor %}
+    </div>
+    
+    <div class="actions">
+        <select id="sortSelect">
+            <option value="name">Name</option>
+            <option value="date">Date</option>
+        </select>
+        <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
+        <button onclick="fetchCivitai()" class="secondary"><i class="fas fa-download"></i> Fetch</button>
+    </div>
+</div> 
