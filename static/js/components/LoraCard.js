@@ -39,7 +39,7 @@ export function createLoraCard(lora) {
                     </i>
                     <i class="fas fa-copy" 
                        title="Copy Model Name"
-                       onclick="event.stopPropagation(); navigator.clipboard.writeText('${lora.file_name}')">
+                       onclick="event.stopPropagation(); navigator.clipboard.writeText('${lora.file_name}').then(() => showToast('Model name copied', 'success')).catch(() => showToast('Copy failed', 'error'))">
                     </i>
                     <i class="fas fa-trash" 
                        title="Delete Model"

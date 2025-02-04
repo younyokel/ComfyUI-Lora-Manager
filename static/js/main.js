@@ -24,6 +24,7 @@ window.confirmDelete = confirmDelete;
 window.closeDeleteModal = closeDeleteModal;
 window.refreshLoras = refreshLoras;
 window.openCivitai = openCivitai;
+window.showToast = showToast
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
