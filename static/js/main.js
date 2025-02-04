@@ -4,7 +4,7 @@ import { modalManager } from './managers/ModalManager.js';
 import { state } from './state/index.js';
 import { showLoraModal, initializeLoraCards } from './components/LoraCard.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
-import { showToast, lazyLoadImages, restoreFolderFilter, initTheme, toggleTheme, toggleFolder, copyTriggerWord } from './utils/uiHelpers.js';
+import { showToast, lazyLoadImages, restoreFolderFilter, initTheme, toggleTheme, toggleFolder, copyTriggerWord, openCivitai } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { SearchManager } from './utils/search.js';
@@ -23,6 +23,7 @@ window.state = state;
 window.confirmDelete = confirmDelete;
 window.closeDeleteModal = closeDeleteModal;
 window.refreshLoras = refreshLoras;
+window.openCivitai = openCivitai;
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
