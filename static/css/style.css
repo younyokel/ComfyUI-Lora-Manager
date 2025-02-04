@@ -842,3 +842,37 @@ body.modal-open .toast-info {
 .trigger-word-tag:active {
     transform: scale(0.98);
 }
+
+.initialization-notice {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-base);
+    text-align: center;
+}
+
+.notice-content {
+    max-width: 400px;
+}
+
+.notice-content h2 {
+    color: var(--text-color);
+    margin: var(--space-2) 0;
+    font-size: 1.5em;
+}
+
+.notice-content p {
+    color: var(--text-color);
+    opacity: 0.8;
+    margin: var(--space-1) 0;
+}
+
+/* 使用已有的loading-spinner样式 */
+.initialization-notice .loading-spinner {
+    margin-bottom: var(--space-2);
+}

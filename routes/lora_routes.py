@@ -49,12 +49,27 @@ class LoraRoutes:
     async def handle_loras_page(self, request: web.Request) -> web.Response:
         """Handle GET /loras request"""
         try:
-            # Get cached data for folders only
-            cache = await self.scanner.get_cached_data()
-            
-            # Render template with folders only
-            template = self.template_env.get_template('loras.html')
-            rendered = template.render(folders=cache.folders)
+            # 不等待缓存数据，直接检查缓存状态
+            is_initializing = (
+                self.scanner._cache is None or 
+                (hasattr(self.scanner, '_cache') and len(self.scanner._cache.raw_data) == 0)
+            )
+
+            if is_initializing:
+                # 如果正在初始化，返回一个只包含加载提示的页面
+                template = self.template_env.get_template('loras.html')
+                rendered = template.render(
+                    folders=[],  # 空文件夹列表
+                    is_initializing=True  # 新增标志
+                )
+            else:
+                # 正常流程
+                cache = await self.scanner.get_cached_data()
+                template = self.template_env.get_template('loras.html')
+                rendered = template.render(
+                    folders=cache.folders,
+                    is_initializing=False
+                )
             
             return web.Response(
                 text=rendered,
