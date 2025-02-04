@@ -107,6 +107,7 @@ class ApiRoutes:
             page_size = int(request.query.get('page_size', '20'))
             sort_by = request.query.get('sort_by', 'name')
             folder = request.query.get('folder')
+            search = request.query.get('search', '').lower()
             
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
@@ -119,12 +120,13 @@ class ApiRoutes:
                     'error': 'Invalid sort parameter'
                 }, status=400)
             
-            # Get paginated data
+            # Get paginated data with search
             result = await self.scanner.get_paginated_data(
                 page=page,
                 page_size=page_size,
                 sort_by=sort_by,
-                folder=folder
+                folder=folder,
+                search=search
             )
             
             # Format the response data
@@ -132,6 +134,10 @@ class ApiRoutes:
                 self._format_lora_response(item) 
                 for item in result['items']
             ]
+            
+            logger.info(f"API response - Total items: {result['total']}, "
+                       f"Page items: {len(formatted_items)}, "
+                       f"Total pages: {result['total_pages']}")
             
             return web.json_response({
                 'items': formatted_items,
@@ -141,13 +147,8 @@ class ApiRoutes:
                 'total_pages': result['total_pages']
             })
             
-        except ValueError as e:
-            return web.json_response({
-                'error': 'Invalid parameters'
-            }, status=400)
-            
         except Exception as e:
-            logger.error(f"Error fetching loras: {e}", exc_info=True)
+            logger.error(f"Error in get_loras: {str(e)}", exc_info=True)
             return web.json_response({
                 'error': 'Internal server error'
             }, status=500)

@@ -95,31 +95,39 @@ class LoraScanner:
                                 page: int, 
                                 page_size: int, 
                                 sort_by: str = 'date',
-                                folder: Optional[str] = None) -> Dict:
-        """Get paginated LoRA data"""
-        # 确保缓存已初始化
+                                folder: Optional[str] = None,
+                                search: Optional[str] = None) -> Dict:
+        """Get paginated LoRA data with search support"""
         cache = await self.get_cached_data()
 
-        # Select sorted data based on sort_by parameter
-        data = (cache.sorted_by_date if sort_by == 'date' 
-                else cache.sorted_by_name)
+        # 先获取基础数据集
+        data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
         
-        # Apply folder filter if specified
+        # 应用文件夹过滤
         if folder is not None:
             data = [item for item in data if item['folder'] == folder]
         
-        # Calculate pagination
+        # 应用搜索过滤（只匹配model_name）
+        if search:
+            search = search.lower().strip()
+            before_search = len(data)
+            data = [item for item in data 
+                    if search in item['model_name'].lower()]
+        
+        # 计算分页
         total_items = len(data)
         start_idx = (page - 1) * page_size
         end_idx = min(start_idx + page_size, total_items)
         
-        return {
+        result = {
             'items': data[start_idx:end_idx],
             'total': total_items,
             'page': page,
             'page_size': page_size,
             'total_pages': (total_items + page_size - 1) // page_size
         }
+        
+        return result
 
     def invalidate_cache(self):
         """Invalidate the current cache"""

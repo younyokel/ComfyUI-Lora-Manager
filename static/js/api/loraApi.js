@@ -199,13 +199,17 @@ export async function replacePreview(filePath) {
     input.click();
 }
 
-function appendLoraCards(loras) {
+export function appendLoraCards(loras) {
     const grid = document.getElementById('loraGrid');
     const sentinel = document.getElementById('scroll-sentinel');
     
     loras.forEach(lora => {
         const card = createLoraCard(lora);
-        grid.insertBefore(card, sentinel);
+        if (sentinel) {
+            grid.insertBefore(card, sentinel);
+        } else {
+            grid.appendChild(card);
+        }
     });
 }
 

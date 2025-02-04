@@ -7,6 +7,7 @@ import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReloa
 import { showToast, lazyLoadImages, restoreFolderFilter, initTheme, toggleTheme, toggleFolder, copyTriggerWord } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
+import { SearchManager } from './utils/search.js';
 
 // Export all functions that need global access
 window.loadMoreLoras = loadMoreLoras;
@@ -33,20 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreFolderFilter();
     initializeLoraCards();
     initTheme();
-
-    // Search handler
-    const searchHandler = debounce(term => {
-        document.querySelectorAll('.lora-card').forEach(card => {
-            card.style.display = [card.dataset.name, card.dataset.folder]
-                .some(text => text.toLowerCase().includes(term)) 
-                ? 'block' 
-                : 'none';
-        });
-    }, 250);
-
-    document.getElementById('searchInput')?.addEventListener('input', e => {
-        searchHandler(e.target.value.toLowerCase());
-    });
+    window.searchManager = new SearchManager();
 });
 
 // Initialize event listeners

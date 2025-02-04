@@ -876,3 +876,62 @@ body.modal-open .toast-info {
 .initialization-notice .loading-spinner {
     margin-bottom: var(--space-2);
 }
+
+/* Search Container Styles */
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: nowrap; /* 防止内容换行 */
+    width: 100%; /* 确保占满容器宽度 */
+}
+
+.search-container {
+    position: relative;
+    width: 250px;
+    margin-left: auto;
+    flex-shrink: 0; /* 防止搜索框被压缩 */
+}
+
+/* 调整搜索框样式以匹配其他控件 */
+.search-container input {
+    width: 100%;
+    padding: 6px 32px 6px 12px;
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-sm);
+    background: var(--lora-surface);
+    color: var(--text-color);
+    font-size: 0.9em;
+    height: 32px;
+    box-sizing: border-box; /* 确保padding不会增加总宽度 */
+}
+
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: oklch(var(--text-color) / 0.5);
+    pointer-events: none;
+    line-height: 1; /* 防止图标影响容器高度 */
+}
+
+@media (max-width: 768px) {
+    .actions {
+        flex-wrap: wrap;
+        gap: var(--space-1);
+    }
+    
+    .search-container {
+        width: 100%;
+        order: -1; /* 在移动端将搜索框移到顶部 */
+        margin-left: 0;
+    }
+}
