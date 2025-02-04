@@ -57,7 +57,7 @@ body {
     display: flex;
     gap: 4px;
     overflow-x: auto;
-    padding: 4px 0;
+    padding: 2px 0;
     flex-wrap: wrap;
 }
 
@@ -881,7 +881,7 @@ body.modal-open .toast-info {
 .controls {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: 8px;
     margin-bottom: var(--space-2);
 }
 
