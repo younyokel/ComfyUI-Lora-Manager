@@ -14,18 +14,19 @@ class LoraCache:
     def __post_init__(self):
         self._lock = asyncio.Lock()
 
-    async def resort(self):
+    async def resort(self, name_only: bool = False):
         """Resort all cached data views"""
         async with self._lock:
             self.sorted_by_name = sorted(
                 self.raw_data, 
                 key=lambda x: x['model_name'].lower()  # Case-insensitive sort
             )
-            self.sorted_by_date = sorted(
-                self.raw_data, 
-                key=itemgetter('modified'), 
-                reverse=True
-            )
+            if not name_only:
+                self.sorted_by_date = sorted(
+                    self.raw_data, 
+                    key=itemgetter('modified'), 
+                    reverse=True
+                )
             # Update folder list
             self.folders = sorted(list(set(
                 l['folder'] for l in self.raw_data

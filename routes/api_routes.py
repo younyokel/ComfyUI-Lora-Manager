@@ -368,7 +368,7 @@ class ApiRoutes:
                     logger.error(f"Error fetching CivitAI data for {lora['file_path']}: {e}")
             
             if needs_resort:
-                cache.sorted_by_name = sorted(cache.raw_data, key=itemgetter('model_name'))
+                await cache.resort(name_only=True)
             
             # 发送完成消息
             await ws_manager.broadcast({
