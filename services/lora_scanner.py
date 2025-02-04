@@ -91,28 +91,26 @@ class LoraScanner:
         # 确保缓存已初始化
         cache = await self.get_cached_data()
 
-        async with cache._lock:
+        # Select sorted data based on sort_by parameter
+        data = (cache.sorted_by_date if sort_by == 'date' 
+                else cache.sorted_by_name)
         
-            # Select sorted data based on sort_by parameter
-            data = (cache.sorted_by_date if sort_by == 'date' 
-                    else cache.sorted_by_name)
-            
-            # Apply folder filter if specified
-            if folder is not None:
-                data = [item for item in data if item['folder'] == folder]
-            
-            # Calculate pagination
-            total_items = len(data)
-            start_idx = (page - 1) * page_size
-            end_idx = min(start_idx + page_size, total_items)
-            
-            return {
-                'items': data[start_idx:end_idx],
-                'total': total_items,
-                'page': page,
-                'page_size': page_size,
-                'total_pages': (total_items + page_size - 1) // page_size
-            }
+        # Apply folder filter if specified
+        if folder is not None:
+            data = [item for item in data if item['folder'] == folder]
+        
+        # Calculate pagination
+        total_items = len(data)
+        start_idx = (page - 1) * page_size
+        end_idx = min(start_idx + page_size, total_items)
+        
+        return {
+            'items': data[start_idx:end_idx],
+            'total': total_items,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total_items + page_size - 1) // page_size
+        }
 
     def invalidate_cache(self):
         """Invalidate the current cache"""
@@ -176,8 +174,8 @@ class LoraScanner:
         """
         if self._cache is None:
             return False
-            
-        return self._cache.update_preview_url(file_path, preview_url)
+
+        return await self._cache.update_preview_url(file_path, preview_url)
 
     async def scan_single_lora(self, file_path: str) -> Optional[Dict]:
         """Scan a single LoRA file and return its metadata"""

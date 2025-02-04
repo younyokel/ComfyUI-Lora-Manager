@@ -4,7 +4,6 @@ import logging
 from aiohttp import web
 from typing import Dict, List
 from ..services.civitai_client import CivitaiClient
-from ..utils.file_utils import update_civitai_metadata, load_metadata
 from ..config import config
 from ..services.lora_scanner import LoraScanner
 from operator import itemgetter
