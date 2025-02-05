@@ -3,7 +3,12 @@ name = "comfyui-lora-manager"
 description = "LoRA Manager for ComfyUI - Access it at http://localhost:8188/loras for managing LoRA models with previews and metadata integration."
 version = "0.5.7"
 license = {file = "LICENSE"}
-dependencies = ["aiohttp", "jinja2", "safetensors"]
+dependencies = [
+    "aiohttp",
+    "jinja2", 
+    "safetensors",
+    "watchdog"
+]
 
 [project.urls]
 Repository = "https://github.com/willmiao/ComfyUI-Lora-Manager"
