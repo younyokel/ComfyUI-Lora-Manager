@@ -1025,9 +1025,9 @@ body.modal-open {
     }
     
     .corner-controls {
-        position: absolute; /* 改为相对于actions定位 */
-        top: 50%;
-        transform: translateY(-50%);
-        right: 0;
+        position: fixed; /* 改为固定定位 */
+        top: 20px;       /* 保持与桌面端一致的顶部间距 */
+        right: 20px;     /* 保持与桌面端一致的右侧间距 */
+        transform: none; /* 移除之前的位移变换 */
     }
 }
