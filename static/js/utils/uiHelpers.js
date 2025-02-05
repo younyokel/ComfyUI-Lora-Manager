@@ -66,18 +66,7 @@ export function toggleFolder(tag) {
 
 export function copyTriggerWord(word) {
     navigator.clipboard.writeText(word).then(() => {
-        const toast = document.createElement('div');
-        toast.className = 'toast toast-copy';
-        toast.textContent = 'Copied!';
-        document.body.appendChild(toast);
-        
-        requestAnimationFrame(() => {
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 1000);
-        });
+        showToast('Trigger word copied', 'success');
     });
 }
 

@@ -33,17 +33,13 @@ export function createLoraCard(lora) {
                 <div class="card-actions">
                     <i class="fas fa-globe" 
                        title="${lora.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
-                       ${lora.from_civitai ? 
-                           `onclick="event.stopPropagation(); openCivitai('${lora.model_name}')"` : 
-                           'style="opacity: 0.5; cursor: not-allowed"'}>
+                       ${!lora.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
                     </i>
                     <i class="fas fa-copy" 
-                       title="Copy Model Name"
-                       onclick="event.stopPropagation(); navigator.clipboard.writeText('${lora.file_name}').then(() => showToast('Model name copied', 'success')).catch(() => showToast('Copy failed', 'error'))">
+                       title="Copy Model Name">
                     </i>
                     <i class="fas fa-trash" 
-                       title="Delete Model"
-                       onclick="event.stopPropagation(); deleteModel('${lora.file_path}')">
+                       title="Delete Model">
                     </i>
                 </div>
             </div>
@@ -53,14 +49,14 @@ export function createLoraCard(lora) {
                 </div>
                 <div class="card-actions">
                     <i class="fas fa-image" 
-                       title="Replace Preview Image"
-                       onclick="event.stopPropagation(); replacePreview('${lora.file_path}')">
+                       title="Replace Preview Image">
                     </i>
                 </div>
             </div>
         </div>
     `;
 
+    // Main card click event
     card.addEventListener('click', () => {
         const meta = JSON.parse(card.dataset.meta || '{}');
         if (Object.keys(meta).length) {
@@ -73,6 +69,34 @@ export function createLoraCard(lora) {
                 'info'
             );
         }
+    });
+
+    // Copy button click event
+    card.querySelector('.fa-copy')?.addEventListener('click', e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(card.dataset.file_name)
+            .then(() => showToast('Model name copied', 'success'))
+            .catch(() => showToast('Copy failed', 'error'));
+    });
+
+    // Civitai button click event
+    if (lora.from_civitai) {
+        card.querySelector('.fa-globe')?.addEventListener('click', e => {
+            e.stopPropagation();
+            openCivitai(lora.model_name);
+        });
+    }
+
+    // Delete button click event
+    card.querySelector('.fa-trash')?.addEventListener('click', e => {
+        e.stopPropagation();
+        deleteModel(lora.file_path);
+    });
+
+    // Replace preview button click event
+    card.querySelector('.fa-image')?.addEventListener('click', e => {
+        e.stopPropagation();
+        replacePreview(lora.file_path);
     });
 
     return card;
@@ -140,46 +164,4 @@ export function showLoraModal(lora) {
     `;
     
     modalManager.showModal('loraModal', content);
-
-    document.querySelectorAll('.trigger-category').forEach(category => {
-        category.addEventListener('click', function() {
-            const categoryName = this.dataset.category;
-            document.querySelectorAll('.trigger-category').forEach(c => c.classList.remove('active'));
-            this.classList.add('active');
-            
-            const wordsList = document.querySelector('.trigger-words-list');
-            wordsList.innerHTML = categories[categoryName].map(word => `
-                <div class="trigger-word-tag" onclick="copyTriggerWord('${word}')">
-                    <span class="trigger-word-content">${word}</span>
-                    <span class="trigger-word-copy">
-                        <svg width="14" height="14" viewBox="0 0 24 24">
-                            <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                        </svg>
-                    </span>
-                </div>
-            `).join('');
-        });
-    });
-}
-
-export function initializeLoraCards() {
-    document.querySelectorAll('.lora-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const meta = JSON.parse(card.dataset.meta || '{}');
-            if (Object.keys(meta).length) {
-                showLoraModal(meta);
-            } else {
-                showToast(card.dataset.from_civitai === 'True'
-                    ? 'Click "Fetch" to retrieve metadata'
-                    : 'No CivitAI information available', 'info');
-            }
-        });
-
-        card.querySelector('.fa-copy')?.addEventListener('click', e => {
-            e.stopPropagation();
-            navigator.clipboard.writeText(card.dataset.file_name)
-                .then(() => showToast('Model name copied', 'success'))
-                .catch(() => showToast('Copy failed', 'error'));
-        });
-    });
 }
