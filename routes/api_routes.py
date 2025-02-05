@@ -135,10 +135,6 @@ class ApiRoutes:
                 for item in result['items']
             ]
             
-            logger.info(f"API response - Total items: {result['total']}, "
-                       f"Page items: {len(formatted_items)}, "
-                       f"Total pages: {result['total_pages']}")
-            
             return web.json_response({
                 'items': formatted_items,
                 'total': result['total'],
