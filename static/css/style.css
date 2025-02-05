@@ -441,13 +441,17 @@ body.modal-open {
 
 /* 主题切换按钮 */
 .theme-toggle {
-    position: static;  /* Override the fixed positioning */
-    width: 36px;      /* Match the size of other buttons */
-    height: 36px;     /* Match the size of other buttons */
-    display: flex;    /* Center the image */
+    position: static;
+    width: 36px;
+    height: 36px;
+    display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--border-color);
+    border-radius: 50%; /* 改为圆形 */
+    cursor: pointer;
+    background: var(--card-bg);
+    transition: all 0.2s ease;
 }
 
 .theme-toggle:hover {
@@ -459,6 +463,33 @@ body.modal-open {
     width: 20px;
     height: 20px;
 }
+
+/* ...existing code... */
+
+.theme-toggle .theme-icon {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    transition: opacity 0.2s ease;
+}
+
+.theme-toggle .light-icon {
+    opacity: 0;
+}
+
+.theme-toggle .dark-icon {
+    opacity: 1;
+}
+
+[data-theme="light"] .theme-toggle .light-icon {
+    opacity: 1;
+}
+
+[data-theme="light"] .theme-toggle .dark-icon {
+    opacity: 0;
+}
+
+/* ...existing code... */
 
 .base-model-label {
     max-width: 120px;
@@ -908,13 +939,18 @@ body.modal-open {
 .search-container input {
     width: 100%;
     padding: 6px 32px 6px 12px;
-    border: 1px solid var(--lora-border);
+    border: 1px solid oklch(65% 0.02 256); /* 更深的边框颜色，提高对比度 */
     border-radius: var(--border-radius-sm);
     background: var(--lora-surface);
     color: var(--text-color);
     font-size: 0.9em;
     height: 32px;
     box-sizing: border-box; /* 确保padding不会增加总宽度 */
+}
+
+.search-container input:focus {
+    outline: none;
+    border-color: var(--lora-accent);
 }
 
 .search-icon {
@@ -940,8 +976,6 @@ body.modal-open {
     }
 }
 
-/* ...existing code... */
-
 .corner-controls {
     position: fixed;
     top: 20px;
@@ -951,9 +985,10 @@ body.modal-open {
     z-index: var(--z-overlay);
 }
 
-.control-button {
-    cursor: pointer;
-    padding: 8px;
+.control-button,
+.theme-toggle {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -961,28 +996,38 @@ body.modal-open {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.control-button:hover {
+.control-button:hover,
+.theme-toggle:hover {
     background: var(--lora-accent);
     color: white;
     transform: translateY(-2px);
 }
 
 /* Add responsive adjustments */
+@media (max-width: 1024px) {
+    .search-container {
+        width: 200px; /* 减小搜索框宽度 */
+    }
+}
+
 @media (max-width: 768px) {
-    .corner-controls {
-        top: 10px;
-        right: 10px;
-        gap: 8px;
+    .actions {
+        position: relative;
+        padding-right: 130px; /* 为corner-controls预留空间 */
     }
     
-    .control-button,
-    .theme-toggle {
-        width: 32px;
-        height: 32px;
+    .search-container {
+        width: 100%;
+    }
+    
+    .corner-controls {
+        position: absolute; /* 改为相对于actions定位 */
+        top: 50%;
+        transform: translateY(-50%);
+        right: 0;
     }
 }
