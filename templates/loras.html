@@ -34,8 +34,16 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 </head>
 <body>
-    <div class="theme-toggle" onclick="toggleTheme()">
-        <img src="/loras_static/images/theme-toggle.svg" alt="Theme">
+    <div class="corner-controls">
+        <button class="control-button" onclick="toggleFolderTags()" title="Toggle folder tags">
+            <i class="fas fa-tags"></i>
+        </button>
+        <button class="control-button" onclick="openFeedback()" title="Report issues or request features">
+            <i class="fas fa-bug"></i>
+        </button>
+        <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+            <img src="/loras_static/images/theme-toggle.svg" alt="Theme">
+        </div>
     </div>
     
     {% include 'components/modals.html' %}

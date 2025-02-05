@@ -441,13 +441,23 @@ body.modal-open {
 
 /* 主题切换按钮 */
 .theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    background: var(--card-bg);
+    position: static;  /* Override the fixed positioning */
+    width: 36px;      /* Match the size of other buttons */
+    height: 36px;     /* Match the size of other buttons */
+    display: flex;    /* Center the image */
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+}
+
+.theme-toggle:hover {
+    background: var(--lora-accent);
+    transform: translateY(-2px);
+}
+
+.theme-toggle img {
+    width: 20px;
+    height: 20px;
 }
 
 .base-model-label {
@@ -927,5 +937,52 @@ body.modal-open {
         width: 100%;
         order: -1; /* 在移动端将搜索框移到顶部 */
         margin-left: 0;
+    }
+}
+
+/* ...existing code... */
+
+.corner-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: var(--z-overlay);
+}
+
+.control-button {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    transition: all 0.2s ease;
+}
+
+.control-button:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Add responsive adjustments */
+@media (max-width: 768px) {
+    .corner-controls {
+        top: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+    
+    .control-button,
+    .theme-toggle {
+        width: 32px;
+        height: 32px;
     }
 }

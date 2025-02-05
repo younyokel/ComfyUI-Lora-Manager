@@ -97,3 +97,27 @@ export function openCivitai(modelName) {
         window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
     }
 }
+
+export function toggleFolderTags() {
+    const folderTags = document.querySelector('.folder-tags');
+    if (!folderTags) return;
+    
+    const isHidden = folderTags.style.display === 'none';
+    folderTags.style.display = isHidden ? 'flex' : 'none';
+    
+    // Save preference
+    localStorage.setItem('folderTagsVisible', isHidden ? 'true' : 'false');
+}
+
+export function openFeedback() {
+    window.open('https://github.com/willmiao/ComfyUI-Lora-Manager/issues/new', '_blank');
+}
+
+// Add this to your existing initialization code
+export function initFolderTagsVisibility() {
+    const folderTags = document.querySelector('.folder-tags');
+    if (!folderTags) return;
+    
+    const isVisible = localStorage.getItem('folderTagsVisible') !== 'false';
+    folderTags.style.display = isVisible ? 'flex' : 'none';
+}
