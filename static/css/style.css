@@ -120,37 +120,20 @@ body {
     }
 }
 
-@media (max-width: 768px) {
-    .card-grid {
-        grid-template-columns: minmax(260px, 1fr);
-    }
-    
-    .lora-card {
-        max-width: 100%;
-    }
-}
-
 /* Card Preview and Footer Overlay */
 .card-preview {
     position: relative;
     width: 100%;
     height: 100%;
     border-radius: var(--border-radius-base);
-    overflow: hidden;  /* 添加此行以限制子元素不超出边界 */
+    overflow: hidden;
 }
 
-.card-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: var(--border-radius-base);  /* 与容器相同的圆角 */
-}
-
+.card-preview img,
 .card-preview video {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: var(--border-radius-base);  /* 与容器相同的圆角 */
 }
 
 .card-footer {
@@ -439,32 +422,10 @@ body.modal-open {
     object-fit: contain;
 }
 
-/* 主题切换按钮 */
-.theme-toggle {
-    position: static;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--border-color);
-    border-radius: 50%; /* 改为圆形 */
-    cursor: pointer;
-    background: var(--card-bg);
-    transition: all 0.2s ease;
-}
-
-.theme-toggle:hover {
-    background: var(--lora-accent);
-    transform: translateY(-2px);
-}
-
 .theme-toggle img {
     width: 20px;
     height: 20px;
 }
-
-/* ...existing code... */
 
 .theme-toggle .theme-icon {
     width: 20px;
@@ -488,8 +449,6 @@ body.modal-open {
 [data-theme="light"] .theme-toggle .dark-icon {
     opacity: 0;
 }
-
-/* ...existing code... */
 
 .base-model-label {
     max-width: 120px;
@@ -579,7 +538,6 @@ body.modal-open {
 .card-actions {
     flex-shrink: 0;  /* Prevent actions from shrinking */
     display: flex;
-    align-items: center;
     gap: var(--space-1);
     align-items: flex-end; /* 将图标靠下对齐 */
     align-self: flex-end; /* 将整个actions容器靠下对齐 */
@@ -633,30 +591,6 @@ body.modal-open {
     max-height: 300px;
 }
 
-.trigger-word-tag {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    background: var(--lora-surface);
-    border: 1px solid var(--lora-border);
-    border-radius: var(--border-radius-xs);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.85em;
-    color: var(--text-color);
-    position: relative;
-    gap: var(--space-1);
-}
-
-.trigger-word-tag:hover {
-    background: oklch(var(--lora-accent) / 0.1);
-    border-color: var(--lora-accent);
-}
-
-.trigger-word-tag:active {
-    transform: scale(0.98);
-}
-
 .trigger-word-content {
     flex: 1;
     word-break: break-word;
@@ -669,10 +603,6 @@ body.modal-open {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.trigger-word-tag:hover .trigger-word-copy {
-    opacity: 0.8;
 }
 
 /* Update toast animation for trigger word copy */
@@ -891,22 +821,6 @@ body.modal-open {
     text-align: center;
 }
 
-.notice-content {
-    max-width: 400px;
-}
-
-.notice-content h2 {
-    color: var(--text-color);
-    margin: var(--space-2) 0;
-    font-size: 1.5em;
-}
-
-.notice-content p {
-    color: var(--text-color);
-    opacity: 0.8;
-    margin: var(--space-1) 0;
-}
-
 /* 使用已有的loading-spinner样式 */
 .initialization-notice .loading-spinner {
     margin-bottom: var(--space-2);
@@ -963,19 +877,6 @@ body.modal-open {
     line-height: 1; /* 防止图标影响容器高度 */
 }
 
-@media (max-width: 768px) {
-    .actions {
-        flex-wrap: wrap;
-        gap: var(--space-1);
-    }
-    
-    .search-container {
-        width: 100%;
-        order: -1; /* 在移动端将搜索框移到顶部 */
-        margin-left: 0;
-    }
-}
-
 .corner-controls {
     position: fixed;
     top: 20px;
@@ -1016,16 +917,20 @@ body.modal-open {
 
 @media (max-width: 768px) {
     .actions {
+        flex-wrap: wrap;
+        gap: var(--space-1);
         position: relative;
         padding-right: 130px; /* 为corner-controls预留空间 */
     }
     
     .search-container {
         width: 100%;
+        order: -1; /* 在移动端将搜索框移到顶部 */
+        margin-left: 0;
     }
     
     .corner-controls {
-        position: fixed; /* 改为固定定位 */
+        position: static; 
         top: 20px;       /* 保持与桌面端一致的顶部间距 */
         right: 20px;     /* 保持与桌面端一致的右侧间距 */
         transform: none; /* 移除之前的位移变换 */
