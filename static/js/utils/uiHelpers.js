@@ -100,24 +100,23 @@ export function openCivitai(modelName) {
 
 export function toggleFolderTags() {
     const folderTags = document.querySelector('.folder-tags');
-    if (!folderTags) return;
+    const btn = document.querySelector('.toggle-folders-btn');
+    const isCollapsed = folderTags.classList.toggle('collapsed');
     
-    const isHidden = folderTags.style.display === 'none';
-    folderTags.style.display = isHidden ? 'flex' : 'none';
+    // 更新按钮提示文本
+    btn.title = isCollapsed ? 'Expand folder tags' : 'Collapse folder tags';
     
-    // Save preference
-    localStorage.setItem('folderTagsVisible', isHidden ? 'true' : 'false');
-}
-
-export function openFeedback() {
-    window.open('https://github.com/willmiao/ComfyUI-Lora-Manager/issues/new', '_blank');
+    // 保存状态到 localStorage
+    localStorage.setItem('folderTagsCollapsed', isCollapsed);
 }
 
 // Add this to your existing initialization code
 export function initFolderTagsVisibility() {
-    const folderTags = document.querySelector('.folder-tags');
-    if (!folderTags) return;
-    
-    const isVisible = localStorage.getItem('folderTagsVisible') !== 'false';
-    folderTags.style.display = isVisible ? 'flex' : 'none';
+    const isCollapsed = localStorage.getItem('folderTagsCollapsed') === 'true';
+    if (isCollapsed) {
+        const folderTags = document.querySelector('.folder-tags');
+        const btn = document.querySelector('.toggle-folders-btn');
+        folderTags.classList.add('collapsed');
+        btn.title = 'Expand folder tags';
+    }
 }

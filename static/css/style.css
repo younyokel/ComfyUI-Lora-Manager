@@ -886,7 +886,6 @@ body.modal-open {
     z-index: var(--z-overlay);
 }
 
-.control-button,
 .theme-toggle {
     width: 36px;
     height: 36px;
@@ -901,26 +900,16 @@ body.modal-open {
     transition: all 0.2s ease;
 }
 
-.control-button:hover,
 .theme-toggle:hover {
     background: var(--lora-accent);
     color: white;
     transform: translateY(-2px);
 }
 
-/* Add responsive adjustments */
-@media (max-width: 1024px) {
-    .search-container {
-        width: 200px; /* 减小搜索框宽度 */
-    }
-}
-
 @media (max-width: 768px) {
     .actions {
         flex-wrap: wrap;
         gap: var(--space-1);
-        position: relative;
-        padding-right: 130px; /* 为corner-controls预留空间 */
     }
     
     .search-container {
@@ -929,10 +918,97 @@ body.modal-open {
         margin-left: 0;
     }
     
+    /* Remove the previous corner-controls mobile styles */
     .corner-controls {
-        position: static; 
-        top: 20px;       /* 保持与桌面端一致的顶部间距 */
-        right: 20px;     /* 保持与桌面端一致的右侧间距 */
-        transform: none; /* 移除之前的位移变换 */
+        /* Keep the fixed positioning even on mobile */
+        position: fixed;
+        top: 20px;
+        right: 20px;
+    }
+}
+
+/* Folder Tags Container - New */
+.folder-tags-container {
+    position: relative;
+    width: 100%;
+}
+
+.folder-tags {
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+    max-height: 200px; /* 调整为合适的最大高度 */
+    opacity: 1;
+    overflow: hidden;
+}
+
+.folder-tags.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+}
+
+/* Toggle Folders Button - New */
+.toggle-folders-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.toggle-folders-btn:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.toggle-folders-btn i {
+    transition: transform 0.3s ease;
+}
+
+/* 折叠状态样式 */
+.folder-tags.collapsed + .toggle-folders-btn {
+    position: static;
+    margin-right: auto; /* 确保按钮在左侧 */
+    transform: translateY(0);
+}
+
+.folder-tags.collapsed + .toggle-folders-btn i {
+    transform: rotate(180deg);
+}
+
+/* Update corner controls */
+.corner-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: var(--z-overlay);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .folder-tags-container {
+        order: -1; /* 确保在移动端位于顶部 */
+    }
+    
+    .toggle-folders-btn {
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .folder-tags.collapsed + .toggle-folders-btn {
+        position: static;
+        transform: translateY(0);
     }
 }

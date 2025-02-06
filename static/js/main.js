@@ -14,7 +14,6 @@ import {
     copyTriggerWord,
     openCivitai,
     toggleFolderTags,
-    openFeedback,
     initFolderTagsVisibility 
 } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
@@ -38,7 +37,6 @@ window.refreshLoras = refreshLoras;
 window.openCivitai = openCivitai;
 window.showToast = showToast
 window.toggleFolderTags = toggleFolderTags;
-window.openFeedback = openFeedback;
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
