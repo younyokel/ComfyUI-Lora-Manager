@@ -1019,3 +1019,44 @@ body.modal-open {
         transform: none;
     }
 }
+
+/* Back to Top Button */
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    z-index: var(--z-overlay);
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.back-to-top:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Ensure the button doesn't overlap with other corner controls on mobile */
+@media (max-width: 768px) {
+    .back-to-top {
+        bottom: 60px; /* Give some extra space from bottom on mobile */
+    }
+}

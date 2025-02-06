@@ -14,7 +14,8 @@ import {
     copyTriggerWord,
     openCivitai,
     toggleFolderTags,
-    initFolderTagsVisibility 
+    initFolderTagsVisibility,
+    initBackToTop
 } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreFolderFilter();
     initTheme();
     initFolderTagsVisibility();
+    initBackToTop();
     window.searchManager = new SearchManager();
 });
 

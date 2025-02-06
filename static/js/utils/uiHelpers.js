@@ -120,3 +120,35 @@ export function initFolderTagsVisibility() {
         btn.title = 'Expand folder tags';
     }
 }
+
+export function initBackToTop() {
+    const button = document.createElement('button');
+    button.className = 'back-to-top';
+    button.innerHTML = '<i class="fas fa-chevron-up"></i>';
+    button.title = 'Back to top';
+    document.body.appendChild(button);
+
+    // Show/hide button based on scroll position
+    const toggleBackToTop = () => {
+        const scrollThreshold = window.innerHeight * 1.5;
+        if (window.scrollY > scrollThreshold) {
+            button.classList.add('visible');
+        } else {
+            button.classList.remove('visible');
+        }
+    };
+
+    // Smooth scroll to top
+    button.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+
+    // Listen for scroll events
+    window.addEventListener('scroll', toggleBackToTop);
+    
+    // Initial check
+    toggleBackToTop();
+}
