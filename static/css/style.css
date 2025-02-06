@@ -927,7 +927,7 @@ body.modal-open {
     }
 }
 
-/* Folder Tags Container - New */
+/* Folder Tags Container */
 .folder-tags-container {
     position: relative;
     width: 100%;
@@ -935,7 +935,7 @@ body.modal-open {
 
 .folder-tags {
     transition: max-height 0.3s ease, opacity 0.2s ease;
-    max-height: 200px; /* 调整为合适的最大高度 */
+    max-height: 200px;
     opacity: 1;
     overflow: hidden;
 }
@@ -944,13 +944,14 @@ body.modal-open {
     max-height: 0;
     opacity: 0;
     margin: 0;
+    padding-bottom: 0;
 }
 
-/* Toggle Folders Button - New */
+/* Toggle Folders Button */
 .toggle-folders-btn {
     position: absolute;
-    right: 0;
-    top: 0;
+    bottom: 0;      /* 固定在容器底部 */
+    right: 0;       /* 固定在容器右侧 */
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -999,16 +1000,22 @@ body.modal-open {
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .folder-tags-container {
-        order: -1; /* 确保在移动端位于顶部 */
+        order: -1;
     }
     
     .toggle-folders-btn {
-        top: 50%;
-        transform: translateY(-50%);
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        transform: none; /* 移除transform，防止hover时的位移 */
+    }
+    
+    .toggle-folders-btn:hover {
+        transform: none; /* 移动端下禁用hover效果 */
     }
     
     .folder-tags.collapsed + .toggle-folders-btn {
-        position: static;
-        transform: translateY(0);
+        position: relative;
+        transform: none;
     }
 }
