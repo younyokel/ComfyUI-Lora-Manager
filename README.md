@@ -6,6 +6,16 @@ A web-based management interface designed to help you organize and manage your l
 
 ---
 
+## [Update 0.5.8] UI Enhancements & Navigation Improvements
+
+- ✨ **Enhanced Navigation**:
+  - Added collapsible folder tags with persistent state
+  - Implemented "Back to Top" button for easier browsing
+  
+- 🎨 **UI Refinements**: Various visual improvements and interface optimizations
+
+---
+
 ## [Update 0.5.7] Performance Boost & Search Feature
 
 - 🚀 **Major Performance Improvements**:
