@@ -130,7 +130,7 @@ export function initBackToTop() {
 
     // Show/hide button based on scroll position
     const toggleBackToTop = () => {
-        const scrollThreshold = window.innerHeight * 1.5;
+        const scrollThreshold = window.innerHeight * 0.75;
         if (window.scrollY > scrollThreshold) {
             button.classList.add('visible');
         } else {
