@@ -19,6 +19,13 @@ export async function loadMoreLoras() {
             params.append('folder', state.activeFolder);
         }
 
+        // Add search parameters if there's a search term
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && searchInput.value.trim()) {
+            params.append('search', searchInput.value.trim());
+            params.append('fuzzy', 'true');
+        }
+
         console.log('Loading loras with params:', params.toString());
 
         const response = await fetch(`/api/loras?${params}`);
