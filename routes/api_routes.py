@@ -306,7 +306,7 @@ class ApiRoutes:
             if first_preview:
                 preview_ext = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]
                 base_name = os.path.splitext(os.path.splitext(os.path.basename(metadata_path))[0])[0]
-                preview_filename = base_name + '.preview' + preview_ext
+                preview_filename = base_name + preview_ext
                 preview_path = os.path.join(os.path.dirname(metadata_path), preview_filename)
                 
                 if await client.download_preview_image(first_preview['url'], preview_path):
