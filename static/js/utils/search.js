@@ -51,6 +51,7 @@ export class SearchManager {
             url.searchParams.set('page_size', '20');
             url.searchParams.set('sort_by', state.sortBy);
             url.searchParams.set('search', searchTerm);
+            url.searchParams.set('fuzzy', 'true');
 
             if (state.activeFolder) {
                 url.searchParams.set('folder', state.activeFolder);

@@ -8,6 +8,7 @@ from operator import itemgetter
 from ..config import config
 from ..utils.file_utils import load_metadata, get_file_info
 from .lora_cache import LoraCache
+from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -91,36 +92,81 @@ class LoraScanner:
         # Call resort_cache to create sorted views
         await self._cache.resort()
 
-    async def get_paginated_data(self, 
-                                page: int, 
-                                page_size: int, 
-                                sort_by: str = 'date',
-                                folder: Optional[str] = None,
-                                search: Optional[str] = None) -> Dict:
-        """Get paginated LoRA data with search support"""
+    def fuzzy_match(self, text: str, pattern: str, threshold: float = 0.7) -> bool:
+        """
+        Check if text matches pattern using fuzzy matching.
+        Returns True if similarity ratio is above threshold.
+        """
+        if not pattern or not text:
+            return False
+        
+        # Convert both to lowercase for case-insensitive matching
+        text = text.lower()
+        pattern = pattern.lower()
+        
+        # Split pattern into words
+        search_words = pattern.split()
+        
+        # Check each word
+        for word in search_words:
+            # First check if word is a substring (faster)
+            if word in text:
+                continue
+            
+            # If not found as substring, try fuzzy matching
+            # Check if any part of the text matches this word
+            found_match = False
+            for text_part in text.split():
+                ratio = SequenceMatcher(None, text_part, word).ratio()
+                if ratio >= threshold:
+                    found_match = True
+                    break
+                
+            if not found_match:
+                return False
+        
+        # All words found either as substrings or fuzzy matches
+        return True
+
+    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
+                               folder: str = None, search: str = None, fuzzy: bool = False):
         cache = await self.get_cached_data()
 
         # 先获取基础数据集
-        data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
+        filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
         
         # 应用文件夹过滤
         if folder is not None:
-            data = [item for item in data if item['folder'] == folder]
+            filtered_data = [item for item in filtered_data if item['folder'] == folder]
         
         # 应用搜索过滤（只匹配model_name）
         if search:
-            search = search.lower().strip()
-            before_search = len(data)
-            data = [item for item in data 
-                    if search in item['model_name'].lower()]
-        
+            if fuzzy:
+                filtered_data = [
+                    item for item in filtered_data 
+                    if any(
+                        self.fuzzy_match(str(value), search) 
+                        for value in [
+                            item.get('model_name', ''),
+                            item.get('base_model', '')
+                        ]
+                        if value
+                    )
+                ]
+            else:
+                # Original exact search logic
+                filtered_data = [
+                    item for item in filtered_data 
+                    if search in str(item.get('model_name', '')).lower()
+                ]
+
         # 计算分页
-        total_items = len(data)
+        total_items = len(filtered_data)
         start_idx = (page - 1) * page_size
         end_idx = min(start_idx + page_size, total_items)
         
         result = {
-            'items': data[start_idx:end_idx],
+            'items': filtered_data[start_idx:end_idx],
             'total': total_items,
             'page': page,
             'page_size': page_size,

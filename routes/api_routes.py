@@ -108,6 +108,7 @@ class ApiRoutes:
             sort_by = request.query.get('sort_by', 'name')
             folder = request.query.get('folder')
             search = request.query.get('search', '').lower()
+            fuzzy = request.query.get('fuzzy', 'false').lower() == 'true'
             
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
@@ -126,7 +127,8 @@ class ApiRoutes:
                 page_size=page_size,
                 sort_by=sort_by,
                 folder=folder,
-                search=search
+                search=search,
+                fuzzy=fuzzy
             )
             
             # Format the response data
