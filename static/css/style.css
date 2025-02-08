@@ -847,6 +847,9 @@ body.modal-open {
     width: 250px;
     margin-left: auto;
     flex-shrink: 0; /* 防止搜索框被压缩 */
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 /* 调整搜索框样式以匹配其他控件 */
@@ -869,12 +872,42 @@ body.modal-open {
 
 .search-icon {
     position: absolute;
-    right: 12px;
+    right: calc(32px + 8px); /* 调整位置，留出toggle按钮的空间 */
     top: 50%;
     transform: translateY(-50%);
     color: oklch(var(--text-color) / 0.5);
     pointer-events: none;
     line-height: 1; /* 防止图标影响容器高度 */
+}
+
+.search-mode-toggle {
+    background: var(--lora-surface);
+    border: 1px solid oklch(65% 0.02 256);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-mode-toggle:hover {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.search-mode-toggle.active {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.search-mode-toggle i {
+    font-size: 0.9em;
 }
 
 .corner-controls {
@@ -1049,7 +1082,7 @@ body.modal-open {
 }
 
 .back-to-top:hover {
-    background: var(--lora-accent);
+    background: var (--lora-accent);
     color: white;
     transform: translateY(-2px);
 }

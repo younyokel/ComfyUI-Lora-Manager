@@ -5,13 +5,51 @@ import { showToast } from './uiHelpers.js';
 
 export class SearchManager {
     constructor() {
+        // Initialize search manager
         this.searchInput = document.getElementById('searchInput');
+        this.searchModeToggle = document.getElementById('searchModeToggle');
         this.searchDebounceTimeout = null;
         this.currentSearchTerm = '';
         this.isSearching = false;
+        this.isRecursiveSearch = false;
+        
+        // Add this instance to state
+        state.searchManager = this;
         
         if (this.searchInput) {
             this.searchInput.addEventListener('input', this.handleSearch.bind(this));
+        }
+
+        if (this.searchModeToggle) {
+            // Initialize toggle state from localStorage or default to false
+            this.isRecursiveSearch = localStorage.getItem('recursiveSearch') === 'true';
+            this.updateToggleUI();
+
+            this.searchModeToggle.addEventListener('click', () => {
+                this.isRecursiveSearch = !this.isRecursiveSearch;
+                localStorage.setItem('recursiveSearch', this.isRecursiveSearch);
+                this.updateToggleUI();
+                
+                // Rerun search if there's an active search term
+                if (this.currentSearchTerm) {
+                    this.performSearch(this.currentSearchTerm);
+                }
+            });
+        }
+    }
+
+    updateToggleUI() {
+        if (this.searchModeToggle) {
+            this.searchModeToggle.classList.toggle('active', this.isRecursiveSearch);
+            this.searchModeToggle.title = this.isRecursiveSearch 
+                ? 'Recursive folder search (including subfolders)' 
+                : 'Current folder search only';
+            
+            // Update the icon to indicate the mode
+            const icon = this.searchModeToggle.querySelector('i');
+            if (icon) {
+                icon.className = this.isRecursiveSearch ? 'fas fa-folder-tree' : 'fas fa-folder';
+            }
         }
     }
 
@@ -53,8 +91,11 @@ export class SearchManager {
             url.searchParams.set('search', searchTerm);
             url.searchParams.set('fuzzy', 'true');
 
+            // Always send folder parameter if there is an active folder
             if (state.activeFolder) {
                 url.searchParams.set('folder', state.activeFolder);
+                // Add recursive parameter when recursive search is enabled
+                url.searchParams.set('recursive', this.isRecursiveSearch.toString());
             }
 
             const response = await fetch(url);
@@ -85,4 +126,4 @@ export class SearchManager {
             state.loadingManager.hide();
         }
     }
-} 
+}

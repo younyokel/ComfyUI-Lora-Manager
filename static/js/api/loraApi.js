@@ -15,8 +15,12 @@ export async function loadMoreLoras() {
             sort_by: state.sortBy
         });
         
+        // 使用 state 中的 searchManager 获取递归搜索状态
+        const isRecursiveSearch = state.searchManager?.isRecursiveSearch ?? false;
+        
         if (state.activeFolder !== null) {
             params.append('folder', state.activeFolder);
+            params.append('recursive', isRecursiveSearch.toString());
         }
 
         // Add search parameters if there's a search term
@@ -251,4 +255,4 @@ export async function refreshLoras() {
         state.loadingManager.hide();
         state.loadingManager.restoreProgressBar();
     }
-} 
+}

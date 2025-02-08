@@ -6,5 +6,6 @@ export const state = {
     activeFolder: null,
     loadingManager: null,
     observer: null,
-    previewVersions: new Map()
-}; 
+    previewVersions: new Map(),
+    searchManager: null  // 添加 searchManager
+};

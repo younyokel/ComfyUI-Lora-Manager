@@ -129,7 +129,19 @@ class LoraScanner:
         return True
 
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
-                               folder: str = None, search: str = None, fuzzy: bool = False):
+                               folder: str = None, search: str = None, fuzzy: bool = False,
+                               recursive: bool = False):
+        """Get paginated and filtered lora data
+        
+        Args:
+            page: Current page number (1-based)
+            page_size: Number of items per page
+            sort_by: Sort method ('name' or 'date')
+            folder: Filter by folder path
+            search: Search term
+            fuzzy: Use fuzzy matching for search
+            recursive: Include subfolders when folder filter is applied
+        """
         cache = await self.get_cached_data()
 
         # 先获取基础数据集
@@ -137,9 +149,20 @@ class LoraScanner:
         
         # 应用文件夹过滤
         if folder is not None:
-            filtered_data = [item for item in filtered_data if item['folder'] == folder]
+            if recursive:
+                # 递归模式：匹配所有以该文件夹开头的路径
+                filtered_data = [
+                    item for item in filtered_data 
+                    if item['folder'].startswith(folder + '/') or item['folder'] == folder
+                ]
+            else:
+                # 非递归模式：只匹配确切的文件夹
+                filtered_data = [
+                    item for item in filtered_data 
+                    if item['folder'] == folder
+                ]
         
-        # 应用搜索过滤（只匹配model_name）
+        # 应用搜索过滤
         if search:
             if fuzzy:
                 filtered_data = [

@@ -109,6 +109,7 @@ class ApiRoutes:
             folder = request.query.get('folder')
             search = request.query.get('search', '').lower()
             fuzzy = request.query.get('fuzzy', 'false').lower() == 'true'
+            recursive = request.query.get('recursive', 'false').lower() == 'true'
             
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
@@ -128,7 +129,8 @@ class ApiRoutes:
                 sort_by=sort_by,
                 folder=folder,
                 search=search,
-                fuzzy=fuzzy
+                fuzzy=fuzzy,
+                recursive=recursive  # 添加递归参数
             )
             
             # Format the response data
