@@ -41,6 +41,7 @@ class LoraManager:
         
         # Add cleanup
         app.on_shutdown.append(cls._cleanup)
+        app.on_shutdown.append(ApiRoutes.cleanup)
     
     @classmethod
     async def _schedule_cache_init(cls, scanner: LoraScanner):

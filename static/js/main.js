@@ -20,6 +20,7 @@ import {
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { SearchManager } from './utils/search.js';
+import { DownloadManager } from './managers/DownloadManager.js';
 
 // Export all functions that need global access
 window.loadMoreLoras = loadMoreLoras;
@@ -43,6 +44,7 @@ window.toggleFolderTags = toggleFolderTags;
 document.addEventListener('DOMContentLoaded', () => {
     state.loadingManager = new LoadingManager();
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
+    window.downloadManager = new DownloadManager();  // Move this after modalManager initialization
     initializeInfiniteScroll();
     initializeEventListeners();
     lazyLoadImages();
@@ -67,4 +69,4 @@ function initializeEventListeners() {
     document.querySelectorAll('.folder-tags .tag').forEach(tag => {
         tag.addEventListener('click', toggleFolder);
     });
-} 
+}

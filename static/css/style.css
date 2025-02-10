@@ -1063,7 +1063,7 @@ body.modal-open {
     border-radius: 50%;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    color: var(--text-color);
+    color: var (--text-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1092,4 +1092,66 @@ body.modal-open {
     .back-to-top {
         bottom: 60px; /* Give some extra space from bottom on mobile */
     }
+}
+
+/* Download Modal Styles */
+.download-step {
+    margin: var(--space-2) 0;
+}
+
+.input-group {
+    margin-bottom: var(--space-2);
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-color);
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.error-message {
+    color: var(--lora-error);
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+.version-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: var(--space-2) 0;
+}
+
+.version-item {
+    padding: var(--space-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.version-item:hover {
+    background: var(--lora-surface);
+}
+
+.version-item.selected {
+    border-color: var(--lora-accent);
+    background: oklch(var(--lora-accent) / 0.1);
+}
+
+.folder-browser {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    padding: var(--space-1);
+    max-height: 200px;
+    overflow-y: auto;
 }

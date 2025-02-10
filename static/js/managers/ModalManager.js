@@ -25,6 +25,15 @@ export class ModalManager {
             }
         });
 
+        // Add downloadModal registration
+        this.registerModal('downloadModal', {
+            element: document.getElementById('downloadModal'),
+            onClose: () => {
+                this.getModal('downloadModal').element.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
+
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
     }
@@ -56,10 +65,12 @@ export class ModalManager {
             modal.element.innerHTML = content;
         }
 
-        if (id === 'loraModal') {
-            modal.element.style.display = 'block';
-        } else if (id === 'deleteModal') {
+        // Update to handle different modal types
+        if (id === 'deleteModal') {
             modal.element.classList.add('show');
+        } else {
+            // For loraModal and downloadModal
+            modal.element.style.display = 'block';
         }
 
         modal.isOpen = true;
@@ -88,4 +99,4 @@ export class ModalManager {
 }
 
 // Create and export a singleton instance
-export const modalManager = new ModalManager(); 
+export const modalManager = new ModalManager();
