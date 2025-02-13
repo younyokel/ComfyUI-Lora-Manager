@@ -5,6 +5,7 @@ from typing import Dict, List
 import logging
 from ..services.lora_scanner import LoraScanner
 from ..config import config
+from ..services.settings_manager import settings  # Add this import
 
 logger = logging.getLogger(__name__)
 logging.getLogger('asyncio').setLevel(logging.CRITICAL)
@@ -60,7 +61,8 @@ class LoraRoutes:
                 template = self.template_env.get_template('loras.html')
                 rendered = template.render(
                     folders=[],  # 空文件夹列表
-                    is_initializing=True  # 新增标志
+                    is_initializing=True,  # 新增标志
+                    settings=settings  # Pass settings to template
                 )
             else:
                 # 正常流程
@@ -68,7 +70,8 @@ class LoraRoutes:
                 template = self.template_env.get_template('loras.html')
                 rendered = template.render(
                     folders=cache.folders,
-                    is_initializing=False
+                    is_initializing=False,
+                    settings=settings  # Pass settings to template
                 )
             
             return web.Response(

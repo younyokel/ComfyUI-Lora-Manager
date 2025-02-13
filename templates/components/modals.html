@@ -68,3 +68,31 @@
         </div>
     </div>
 </div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content settings-modal">
+        <button class="close" onclick="modalManager.closeModal('settingsModal')">&times;</button>
+        <h2>Settings</h2>
+        <div class="settings-form">
+            <div class="input-group">
+                <label for="civitaiApiKey">Civitai API Key:</label>
+                <div class="api-key-input">
+                    <input type="password" 
+                           id="civitaiApiKey" 
+                           placeholder="Enter your Civitai API key"
+                           value="{{ settings.get('civitai_api_key', '') }}" />
+                    <button class="toggle-visibility" onclick="toggleApiKeyVisibility(this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="input-help">
+                    Used for authentication when downloading models from Civitai
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="primary-btn" onclick="settingsManager.saveSettings()">Save</button>
+        </div>
+    </div>
+</div>

@@ -21,6 +21,7 @@ import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { SearchManager } from './utils/search.js';
 import { DownloadManager } from './managers/DownloadManager.js';
+import { SettingsManager, toggleApiKeyVisibility } from './managers/SettingsManager.js';
 
 // Export all functions that need global access
 window.loadMoreLoras = loadMoreLoras;
@@ -39,6 +40,8 @@ window.refreshLoras = refreshLoras;
 window.openCivitai = openCivitai;
 window.showToast = showToast
 window.toggleFolderTags = toggleFolderTags;
+window.settingsManager = new SettingsManager();
+window.toggleApiKeyVisibility = toggleApiKeyVisibility;
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

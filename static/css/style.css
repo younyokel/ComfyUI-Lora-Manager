@@ -1155,3 +1155,60 @@ body.modal-open {
     max-height: 200px;
     overflow-y: auto;
 }
+
+/* Settings styles */
+.settings-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-toggle:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.settings-modal {
+    max-width: 500px;
+}
+
+.api-key-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.api-key-input input {
+    padding-right: 40px;
+}
+
+.api-key-input .toggle-visibility {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.6;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.api-key-input .toggle-visibility:hover {
+    opacity: 1;
+}
+
+.input-help {
+    font-size: 0.85em;
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-top: 4px;
+}

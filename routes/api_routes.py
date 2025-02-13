@@ -8,6 +8,7 @@ from ..config import config
 from ..services.lora_scanner import LoraScanner
 from operator import itemgetter
 from ..services.websocket_manager import ws_manager
+from ..services.settings_manager import settings  # 添加这行
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class ApiRoutes:
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
         app.router.add_post('/api/download-lora', routes.download_lora)
+        app.router.add_post('/api/settings', routes.update_settings)
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
@@ -491,14 +493,28 @@ class ApiRoutes:
             )
 
             if result.get('success'):
-                # 更新缓存
-                await self.scanner.rescan_directory(save_dir)
+                # 更新缓存 - 使用正确的扫描方法
+                await self.scanner.scan_directory(save_dir)  # Changed from rescan_directory to scan_directory
                 return web.json_response(result)
             else:
                 return web.Response(status=500, text=result.get('error', 'Download failed'))
 
         except Exception as e:
             logger.error(f"Error downloading LoRA: {e}")
+            return web.Response(status=500, text=str(e))
+
+    async def update_settings(self, request: web.Request) -> web.Response:
+        """Update application settings"""
+        try:
+            data = await request.json()
+            
+            # Validate and update settings
+            if 'civitai_api_key' in data:
+                settings.set('civitai_api_key', data['civitai_api_key'])
+            
+            return web.json_response({'success': True})
+        except Exception as e:
+            logger.error(f"Error updating settings: {e}", exc_info=True)  # 添加 exc_info=True 以获取完整堆栈
             return web.Response(status=500, text=str(e))
 
     @classmethod

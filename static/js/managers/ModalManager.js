@@ -34,6 +34,15 @@ export class ModalManager {
             }
         });
 
+        // Add settingsModal registration
+        this.registerModal('settingsModal', {
+            element: document.getElementById('settingsModal'),
+            onClose: () => {
+                this.getModal('settingsModal').element.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
+
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
     }
