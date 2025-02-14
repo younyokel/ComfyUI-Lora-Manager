@@ -3,6 +3,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { createLoraCard } from '../components/LoraCard.js';
 import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 import { showDeleteModal } from '../utils/modalUtils.js';
+import { toggleFolder } from '../utils/uiHelpers.js';
 
 export async function loadMoreLoras(boolUpdateFolders = false) {
     if (state.isLoading || !state.hasMore) return;
@@ -88,17 +89,7 @@ function updateFolderTags(folders) {
     // Reattach click handlers
     const tags = folderTagsContainer.querySelectorAll('.tag');
     tags.forEach(tag => {
-        tag.addEventListener('click', function() {
-            const folder = this.dataset.folder;
-            // Remove active class from all tags
-            tags.forEach(t => t.classList.remove('active'));
-            // Add active class to clicked tag
-            this.classList.add('active');
-            // Update state and reload
-            state.activeFolder = folder;
-            state.currentPage = 1;
-            resetAndReload();
-        });
+        tag.addEventListener('click', toggleFolder);
     });
 }
 
