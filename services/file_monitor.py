@@ -25,14 +25,11 @@ class LoraFileHandler(FileSystemEventHandler):
 
     def _should_ignore(self, path: str) -> bool:
         """Check if path should be ignored"""
-        logger.info(f"Checking ignore for {path}")
-        logger.info(f"Ignore paths: {self._ignore_paths}")
         return path.replace(os.sep, '/') in self._ignore_paths
 
     def add_ignore_path(self, path: str, file_size: int = 0):
         """Add path to ignore list with dynamic timeout based on file size"""
         self._ignore_paths.add(path.replace(os.sep, '/'))
-        logger.info(f"Update ignore paths: {self._ignore_paths}")
         
         # Calculate timeout based on file size, with a minimum value
         # Assuming average download speed of 1MB/s

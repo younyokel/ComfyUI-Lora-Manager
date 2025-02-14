@@ -147,13 +147,17 @@ class ApiRoutes:
                 self._format_lora_response(item) 
                 for item in result['items']
             ]
+
+            # Get all available folders from cache
+            cache = await self.scanner.get_cached_data()
             
             return web.json_response({
                 'items': formatted_items,
                 'total': result['total'],
                 'page': result['page'],
                 'page_size': result['page_size'],
-                'total_pages': result['total_pages']
+                'total_pages': result['total_pages'],
+                'folders': cache.folders
             })
             
         except Exception as e:

@@ -7,7 +7,8 @@ BASE_MODEL_MAPPING = {
     "sdxl": "SDXL",
     "sd-v2": "SD2.0",
     "flux1": "Flux.1 D",
-    "Illustrious": "IL"
+    "illustrious": "IL",
+    "pony": "Pony"
 }
 
 def determine_base_model(version_string: Optional[str]) -> str:

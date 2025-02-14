@@ -194,7 +194,7 @@ export class DownloadManager {
             modalManager.closeModal('downloadModal');
             
             // Refresh the grid to show new model
-            window.refreshLoras();
+            window.refreshLoras(false);
         } catch (error) {
             showToast(error.message, 'error');
         }

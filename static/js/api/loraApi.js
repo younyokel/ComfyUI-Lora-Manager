@@ -4,7 +4,7 @@ import { createLoraCard } from '../components/LoraCard.js';
 import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 import { showDeleteModal } from '../utils/modalUtils.js';
 
-export async function loadMoreLoras() {
+export async function loadMoreLoras(boolUpdateFolders = false) {
     if (state.isLoading || !state.hasMore) return;
     
     state.isLoading = true;
@@ -56,6 +56,10 @@ export async function loadMoreLoras() {
         } else {
             state.hasMore = false;
         }
+
+        if (boolUpdateFolders && data.folders) {
+            updateFolderTags(data.folders);
+        }
         
     } catch (error) {
         console.error('Error loading loras:', error);
@@ -63,6 +67,39 @@ export async function loadMoreLoras() {
     } finally {
         state.isLoading = false;
     }
+}
+
+function updateFolderTags(folders) {
+    const folderTagsContainer = document.querySelector('.folder-tags');
+    if (!folderTagsContainer) return;
+
+    // Keep track of currently selected folder
+    const currentFolder = state.activeFolder;
+
+    // Create HTML for folder tags
+    const tagsHTML = folders.map(folder => {
+        const isActive = folder === currentFolder;
+        return `<div class="tag ${isActive ? 'active' : ''}" data-folder="${folder}">${folder}</div>`;
+    }).join('');
+
+    // Update the container
+    folderTagsContainer.innerHTML = tagsHTML;
+
+    // Reattach click handlers
+    const tags = folderTagsContainer.querySelectorAll('.tag');
+    tags.forEach(tag => {
+        tag.addEventListener('click', function() {
+            const folder = this.dataset.folder;
+            // Remove active class from all tags
+            tags.forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tag
+            this.classList.add('active');
+            // Update state and reload
+            state.activeFolder = folder;
+            state.currentPage = 1;
+            resetAndReload();
+        });
+    });
 }
 
 export async function fetchCivitai() {
@@ -224,7 +261,7 @@ export function appendLoraCards(loras) {
     });
 }
 
-export async function resetAndReload() {
+export async function resetAndReload(boolUpdateFolders = false) {
     console.log('Resetting with state:', { ...state });
     
     state.currentPage = 1;
@@ -240,14 +277,16 @@ export async function resetAndReload() {
     
     initializeInfiniteScroll();
     
-    await loadMoreLoras();
+    await loadMoreLoras(boolUpdateFolders);
 }
 
-export async function refreshLoras() {
+export async function refreshLoras(boolShowToast = true) {
     try {
         state.loadingManager.showSimpleLoading('Refreshing loras...');
-        await resetAndReload();
-        showToast('Refresh complete', 'success');
+        await resetAndReload(true);
+        if (boolShowToast){
+            showToast('Refresh complete', 'success');
+        } 
     } catch (error) {
         console.error('Refresh failed:', error);
         showToast('Failed to refresh loras', 'error');
