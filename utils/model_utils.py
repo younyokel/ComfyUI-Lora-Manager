@@ -7,6 +7,7 @@ BASE_MODEL_MAPPING = {
     "sdxl": "SDXL",
     "sd-v2": "SD2.0",
     "flux1": "Flux.1 D",
+    "flux.1 d": "Flux.1 D",
     "illustrious": "IL",
     "pony": "Pony"
 }

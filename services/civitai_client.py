@@ -59,8 +59,18 @@ class CivitaiClient:
             
         return headers
 
-    async def _download_file(self, url: str, save_dir: str, default_filename: str) -> Tuple[bool, str]:
-        """Download file with content-disposition support"""
+    async def _download_file(self, url: str, save_dir: str, default_filename: str, progress_callback=None) -> Tuple[bool, str]:
+        """Download file with content-disposition support and progress tracking
+
+        Args:
+            url: Download URL
+            save_dir: Directory to save the file
+            default_filename: Fallback filename if none provided in headers
+            progress_callback: Optional async callback function for progress updates (0-100)
+
+        Returns:
+            Tuple[bool, str]: (success, save_path or error message)
+        """
         session = await self.session
         try:
             headers = self._get_request_headers()
@@ -76,13 +86,23 @@ class CivitaiClient:
                 
                 save_path = os.path.join(save_dir, filename)
                 
-                # Stream download to file
+                # Get total file size for progress calculation
+                total_size = int(response.headers.get('content-length', 0))
+                current_size = 0
+
+                # Stream download to file with progress updates
                 with open(save_path, 'wb') as f:
-                    while True:
-                        chunk = await response.content.read(8192)
-                        if not chunk:
-                            break
-                        f.write(chunk)
+                    async for chunk in response.content.iter_chunked(8192):
+                        if chunk:
+                            f.write(chunk)
+                            current_size += len(chunk)
+                            if progress_callback and total_size:
+                                progress = (current_size / total_size) * 100
+                                await progress_callback(progress)
+                
+                # Ensure 100% progress is reported
+                if progress_callback:
+                    await progress_callback(100)
                         
                 return True, save_path
                 

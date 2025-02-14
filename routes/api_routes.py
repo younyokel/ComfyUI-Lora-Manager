@@ -480,10 +480,19 @@ class ApiRoutes:
         async with self._download_lock:
             try:
                 data = await request.json()
+                
+                # Create progress callback
+                async def progress_callback(progress):
+                    await ws_manager.broadcast({
+                        'status': 'progress',
+                        'progress': progress
+                    })
+                
                 result = await self.download_manager.download_from_civitai(
                     download_url=data.get('download_url'),
                     save_dir=data.get('lora_root'),
-                    relative_path=data.get('relative_path')
+                    relative_path=data.get('relative_path'),
+                    progress_callback=progress_callback  # Add progress callback
                 )
                 return web.json_response(result)
             except Exception as e:

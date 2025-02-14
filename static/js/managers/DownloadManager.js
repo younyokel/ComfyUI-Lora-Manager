@@ -1,5 +1,6 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
+import { LoadingManager } from './LoadingManager.js';
 
 export class DownloadManager {
     constructor() {
@@ -11,6 +12,9 @@ export class DownloadManager {
         // Add initialization check
         this.initialized = false;
         this.selectedFolder = '';
+
+        // Add LoadingManager instance
+        this.loadingManager = new LoadingManager();
     }
 
     showDownloadModal() {
@@ -45,6 +49,9 @@ export class DownloadManager {
         const errorElement = document.getElementById('urlError');
         
         try {
+            // Show loading while fetching versions
+            this.loadingManager.showSimpleLoading('Fetching model versions...');
+            
             const modelId = this.extractModelId(url);
             if (!modelId) {
                 throw new Error('Invalid Civitai URL format');
@@ -68,6 +75,9 @@ export class DownloadManager {
             this.showVersionStep();
         } catch (error) {
             errorElement.textContent = error.message;
+        } finally {
+            // Hide loading when done
+            this.loadingManager.hide();
         }
     }
 
@@ -155,9 +165,6 @@ export class DownloadManager {
             return;
         }
 
-        console.log('Selected folder:', this.selectedFolder); // Log selected folder
-        console.log('New folder:', newFolder); // Log new folder
-
         // Construct relative path
         let relativePath = '';
         if (this.selectedFolder) {
@@ -174,7 +181,20 @@ export class DownloadManager {
                 throw new Error('No download URL available');
             }
 
-            // 只传递必要参数
+            // Show loading with progress bar for download
+            this.loadingManager.show('Downloading LoRA...', 0);
+
+            // Setup WebSocket for progress updates
+            const ws = new WebSocket(`ws://${window.location.host}/ws/fetch-progress`);
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.status === 'progress') {
+                    this.loadingManager.setProgress(data.progress);
+                    this.loadingManager.setStatus(`Downloading: ${data.progress}%`);
+                }
+            };
+
+            // Start download
             const response = await fetch('/api/download-lora', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -195,8 +215,11 @@ export class DownloadManager {
             
             // Refresh the grid to show new model
             window.refreshLoras(false);
+
         } catch (error) {
             showToast(error.message, 'error');
+        } finally {
+            this.loadingManager.hide();
         }
     }
 
