@@ -26,12 +26,12 @@ class LoraManager:
         # Setup feature routes
         routes = LoraRoutes()
         
-        routes.setup_routes(app)
-        ApiRoutes.setup_routes(app)
-        
         # Setup file monitoring
         monitor = LoraFileMonitor(routes.scanner, config.loras_roots)
         monitor.start()
+        
+        routes.setup_routes(app)
+        ApiRoutes.setup_routes(app, monitor)
         
         # Store monitor in app for cleanup
         app['lora_monitor'] = monitor

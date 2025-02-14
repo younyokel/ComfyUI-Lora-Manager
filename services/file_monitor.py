@@ -19,9 +19,40 @@ class LoraFileHandler(FileSystemEventHandler):
         self.pending_changes = set()  # 待处理的变更
         self.lock = Lock()  # 线程安全锁
         self.update_task = None  # 异步更新任务
+        self._ignore_paths = set()  # Add ignore paths set
+        self._min_ignore_timeout = 5  # minimum timeout in seconds
+        self._download_speed = 1024 * 1024  # assume 1MB/s as base speed
+
+    def _should_ignore(self, path: str) -> bool:
+        """Check if path should be ignored"""
+        logger.info(f"Checking ignore for {path}")
+        logger.info(f"Ignore paths: {self._ignore_paths}")
+        return path.replace(os.sep, '/') in self._ignore_paths
+
+    def add_ignore_path(self, path: str, file_size: int = 0):
+        """Add path to ignore list with dynamic timeout based on file size"""
+        self._ignore_paths.add(path.replace(os.sep, '/'))
+        logger.info(f"Update ignore paths: {self._ignore_paths}")
+        
+        # Calculate timeout based on file size, with a minimum value
+        # Assuming average download speed of 1MB/s
+        timeout = max(
+            self._min_ignore_timeout,
+            (file_size / self._download_speed) * 1.5  # Add 50% buffer
+        )
+        
+        logger.debug(f"Adding {path} to ignore list for {timeout:.1f} seconds")
+        
+        asyncio.get_event_loop().call_later(
+            timeout,
+            self._ignore_paths.discard,
+            path
+        )
         
     def on_created(self, event):
         if event.is_directory or not event.src_path.endswith('.safetensors'):
+            return
+        if self._should_ignore(event.src_path):
             return
         logger.info(f"LoRA file created: {event.src_path}")
         self._schedule_update('add', event.src_path)
@@ -123,4 +154,4 @@ class LoraFileMonitor:
     def stop(self):
         """Stop monitoring"""
         self.observer.stop()
-        self.observer.join() 
+        self.observer.join()

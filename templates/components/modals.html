@@ -53,7 +53,12 @@
                 <div class="input-group">
                     <label>Target Folder:</label>
                     <div class="folder-browser" id="folderBrowser">
-                        <!-- Folder structure will be inserted here -->
+                        <!-- Folders will be dynamically inserted here -->
+                        {% for folder in folders %}
+                        <div class="folder-item" data-folder="{{ folder }}">
+                            {{ folder }}
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="input-group">

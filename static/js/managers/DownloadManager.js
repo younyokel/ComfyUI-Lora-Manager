@@ -10,6 +10,7 @@ export class DownloadManager {
         
         // Add initialization check
         this.initialized = false;
+        this.selectedFolder = '';
     }
 
     showDownloadModal() {
@@ -127,6 +128,9 @@ export class DownloadManager {
             loraRoot.innerHTML = data.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
+
+            // Initialize folder browser after loading roots
+            this.initializeFolderBrowser();
         } catch (error) {
             showToast(error.message, 'error');
         }
@@ -151,20 +155,33 @@ export class DownloadManager {
             return;
         }
 
+        console.log('Selected folder:', this.selectedFolder); // Log selected folder
+        console.log('New folder:', newFolder); // Log new folder
+
+        // Construct relative path
+        let relativePath = '';
+        if (this.selectedFolder) {
+            relativePath = this.selectedFolder;
+        }
+        if (newFolder) {
+            relativePath = relativePath ? 
+                `${relativePath}/${newFolder}` : newFolder;
+        }
+
         try {
             const downloadUrl = this.currentVersion.downloadUrl;
             if (!downloadUrl) {
                 throw new Error('No download URL available');
             }
 
+            // 只传递必要参数
             const response = await fetch('/api/download-lora', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     download_url: downloadUrl,
-                    version_info: this.currentVersion,
                     lora_root: loraRoot,
-                    new_folder: newFolder
+                    relative_path: relativePath
                 })
             });
 
@@ -181,5 +198,26 @@ export class DownloadManager {
         } catch (error) {
             showToast(error.message, 'error');
         }
+    }
+
+    // Add new method to handle folder selection
+    initializeFolderBrowser() {
+        // Update folder selection handling
+        const folderBrowser = document.getElementById('folderBrowser');
+        if (!folderBrowser) return;
+
+        // Update folder selection event handling
+        folderBrowser.addEventListener('click', (event) => {
+            const folderItem = event.target.closest('.folder-item');
+            if (!folderItem) return;
+
+            // Remove previous selection
+            folderBrowser.querySelectorAll('.folder-item').forEach(f => 
+                f.classList.remove('selected'));
+            
+            // Add selection to clicked folder
+            folderItem.classList.add('selected');
+            this.selectedFolder = folderItem.dataset.folder;
+        });
     }
 }

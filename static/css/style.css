@@ -1212,3 +1212,19 @@ body.modal-open {
     opacity: 0.8;
     margin-top: 4px;
 }
+
+.folder-item {
+    padding: 8px;
+    cursor: pointer;
+    border-radius: var(--border-radius-xs);
+    transition: background-color 0.2s;
+}
+
+.folder-item:hover {
+    background: var(--lora-surface);
+}
+
+.folder-item.selected {
+    background: oklch(var(--lora-accent) / 0.1);
+    border: 1px solid var(--lora-accent);
+}
