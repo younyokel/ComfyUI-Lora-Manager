@@ -97,16 +97,31 @@ export class DownloadManager {
         document.getElementById('versionStep').style.display = 'block';
         
         const versionList = document.getElementById('versionList');
-        versionList.innerHTML = this.versions.map(version => `
-            <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''}"
-                 onclick="downloadManager.selectVersion('${version.id}')">
-                <h3>${version.name}</h3>
-                <div class="version-info">
-                    ${version.baseModel ? `<div class="base-model">${version.baseModel}</div>` : ''}
-                    <div class="version-date">${new Date(version.createdAt).toLocaleDateString()}</div>
+        versionList.innerHTML = this.versions.map(version => {
+            // Find first image (skip videos)
+            const firstImage = version.images?.find(img => !img.url.endsWith('.mp4'));
+            const thumbnailUrl = firstImage ? firstImage.url : '/loras_static/images/no-preview.png';
+            const fileSize = (version.files[0]?.sizeKB / 1024).toFixed(2); // Convert to MB
+
+            return `
+                <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''}"
+                     onclick="downloadManager.selectVersion('${version.id}')">
+                    <div class="version-thumbnail">
+                        <img src="${thumbnailUrl}" alt="Version preview">
+                    </div>
+                    <div class="version-content">
+                        <h3>${version.name}</h3>
+                        <div class="version-info">
+                            ${version.baseModel ? `<div class="base-model">${version.baseModel}</div>` : ''}
+                        </div>
+                        <div class="version-meta">
+                            <span><i class="fas fa-calendar"></i> ${new Date(version.createdAt).toLocaleDateString()}</span>
+                            <span><i class="fas fa-file-archive"></i> ${fileSize} MB</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     selectVersion(versionId) {

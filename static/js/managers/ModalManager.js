@@ -54,12 +54,14 @@ export class ModalManager {
             isOpen: false
         });
 
-        // Add click outside to close for each modal
-        config.element.addEventListener('click', (e) => {
-            if (e.target === config.element) {
-                this.closeModal(id);
-            }
-        });
+        // Only add click outside handler if it's not the download modal
+        if (id !== 'downloadModal') {
+            config.element.addEventListener('click', (e) => {
+                if (e.target === config.element) {
+                    this.closeModal(id);
+                }
+            });
+        }
     }
 
     getModal(id) {
