@@ -1,6 +1,8 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
+import { state } from '../state/index.js';
+import { resetAndReload } from '../api/loraApi.js';
 
 export class DownloadManager {
     constructor() {
@@ -183,13 +185,13 @@ export class DownloadManager {
         }
 
         // Construct relative path
-        let relativePath = '';
+        let targetFolder = '';
         if (this.selectedFolder) {
-            relativePath = this.selectedFolder;
+            targetFolder = this.selectedFolder;
         }
         if (newFolder) {
-            relativePath = relativePath ? 
-                `${relativePath}/${newFolder}` : newFolder;
+            targetFolder = targetFolder ? 
+                `${targetFolder}/${newFolder}` : newFolder;
         }
 
         try {
@@ -218,7 +220,7 @@ export class DownloadManager {
                 body: JSON.stringify({
                     download_url: downloadUrl,
                     lora_root: loraRoot,
-                    relative_path: relativePath
+                    relative_path: targetFolder
                 })
             });
 
@@ -229,8 +231,9 @@ export class DownloadManager {
             showToast('Download completed successfully', 'success');
             modalManager.closeModal('downloadModal');
             
-            // Refresh the grid to show new model
-            window.refreshLoras(false);
+            // Update state and trigger reload with folder update
+            state.activeFolder = targetFolder;
+            await resetAndReload(true); // Pass true to update folders
 
         } catch (error) {
             showToast(error.message, 'error');

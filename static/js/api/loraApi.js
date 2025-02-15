@@ -86,10 +86,13 @@ function updateFolderTags(folders) {
     // Update the container
     folderTagsContainer.innerHTML = tagsHTML;
 
-    // Reattach click handlers
+    // Reattach click handlers and ensure the active tag is visible
     const tags = folderTagsContainer.querySelectorAll('.tag');
     tags.forEach(tag => {
         tag.addEventListener('click', toggleFolder);
+        if (tag.dataset.folder === currentFolder) {
+            tag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     });
 }
 
@@ -271,13 +274,11 @@ export async function resetAndReload(boolUpdateFolders = false) {
     await loadMoreLoras(boolUpdateFolders);
 }
 
-export async function refreshLoras(boolShowToast = true) {
+export async function refreshLoras() {
     try {
         state.loadingManager.showSimpleLoading('Refreshing loras...');
-        await resetAndReload(true);
-        if (boolShowToast){
-            showToast('Refresh complete', 'success');
-        } 
+        await resetAndReload();
+        showToast('Refresh complete', 'success');
     } catch (error) {
         console.error('Refresh failed:', error);
         showToast('Failed to refresh loras', 'error');
