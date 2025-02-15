@@ -120,7 +120,7 @@ class LoraFileHandler(FileSystemEventHandler):
                 
                 # 更新文件夹列表，包括新添加的文件夹
                 all_folders = set(cache.folders) | new_folders
-                cache.folders = sorted(list(all_folders))
+                cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
                 
         except Exception as e:
             logger.error(f"Error in process_changes: {e}")

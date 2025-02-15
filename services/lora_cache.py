@@ -28,9 +28,8 @@ class LoraCache:
                     reverse=True
                 )
             # Update folder list
-            self.folders = sorted(list(set(
-                l['folder'] for l in self.raw_data
-            )))
+            all_folders = set(l['folder'] for l in self.raw_data)
+            self.folders = sorted(list(all_folders), key=lambda x: x.lower())
 
     async def update_preview_url(self, file_path: str, preview_url: str) -> bool:
         """Update preview_url for a specific lora in all cached data

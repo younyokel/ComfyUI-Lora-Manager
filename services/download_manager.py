@@ -123,7 +123,7 @@ class DownloadManager:
             await cache.resort()
             all_folders = set(cache.folders)
             all_folders.add(relative_path)
-            cache.folders = sorted(list(all_folders))
+            cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
 
             # Report 100% completion
             if progress_callback:
