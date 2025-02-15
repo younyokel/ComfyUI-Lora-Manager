@@ -54,8 +54,8 @@ export class ModalManager {
             isOpen: false
         });
 
-        // Only add click outside handler if it's not the download modal
-        if (id !== 'downloadModal') {
+        // Only add click outside handler if it's the lora modal
+        if (id == 'loraModal') {
             config.element.addEventListener('click', (e) => {
                 if (e.target === config.element) {
                     this.closeModal(id);

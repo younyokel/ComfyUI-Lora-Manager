@@ -1251,6 +1251,73 @@ body.modal-open {
     max-width: 500px;
 }
 
+/* Settings Links */
+.settings-links {
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--lora-border);
+    display: flex;
+    gap: var(--space-2);
+    justify-content: center;
+}
+
+.settings-link {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    position: relative;
+}
+
+.settings-link:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.settings-link i {
+    font-size: 1.1em;
+}
+
+/* Tooltip styles */
+.settings-link::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+}
+
+.settings-link:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Responsive adjustment */
+@media (max-width: 480px) {
+    .settings-links {
+        flex-wrap: wrap;
+    }
+}
+
 .api-key-input {
     position: relative;
     display: flex;
