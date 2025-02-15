@@ -55,9 +55,11 @@
                     <div class="folder-browser" id="folderBrowser">
                         <!-- Folders will be dynamically inserted here -->
                         {% for folder in folders %}
-                        <div class="folder-item" data-folder="{{ folder }}">
-                            {{ folder }}
-                        </div>
+                            {% if folder %}
+                            <div class="folder-item" data-folder="{{ folder }}">
+                                {{ folder }}
+                            </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
                 </div>

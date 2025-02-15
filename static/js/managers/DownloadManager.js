@@ -42,6 +42,8 @@ export class DownloadManager {
         this.versions = [];
         this.modelInfo = null;
         this.modelVersionId = null;
+        // Add this line to reset selectedFolder
+        this.selectedFolder = '';  // Reset selectedFolder when starting new download
     }
 
     async validateAndFetchVersions() {
@@ -224,7 +226,6 @@ export class DownloadManager {
                 throw new Error(await response.text());
             }
 
-            const result = await response.json();
             showToast('Download completed successfully', 'success');
             modalManager.closeModal('downloadModal');
             
