@@ -1,3 +1,28 @@
+/* 强制显示滚动条，防止页面跳动 */
+html {
+    overflow-y: scroll;
+}
+
+/* 针对Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+/* 针对Webkit browsers (Chrome, Safari等) */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+
 :root {
     --bg-color: #ffffff;
     --text-color: #333333;
