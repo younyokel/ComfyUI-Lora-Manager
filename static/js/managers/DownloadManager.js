@@ -17,6 +17,7 @@ export class DownloadManager {
 
         // Add LoadingManager instance
         this.loadingManager = new LoadingManager();
+        this.folderClickHandler = null;  // Add this line
     }
 
     showDownloadModal() {
@@ -31,7 +32,10 @@ export class DownloadManager {
             this.initialized = true;
         }
         
-        modalManager.showModal('downloadModal');
+        modalManager.showModal('downloadModal', null, () => {
+            // Cleanup handler when modal closes
+            this.cleanupFolderBrowser();
+        });
         this.resetSteps();
     }
 
@@ -44,8 +48,14 @@ export class DownloadManager {
         this.versions = [];
         this.modelInfo = null;
         this.modelVersionId = null;
-        // Add this line to reset selectedFolder
-        this.selectedFolder = '';  // Reset selectedFolder when starting new download
+        
+        // Clear selected folder and remove selection from UI
+        this.selectedFolder = '';
+        const folderBrowser = document.getElementById('folderBrowser');
+        if (folderBrowser) {
+            folderBrowser.querySelectorAll('.folder-item').forEach(f => 
+                f.classList.remove('selected'));
+        }
     }
 
     async validateAndFetchVersions() {
@@ -244,22 +254,39 @@ export class DownloadManager {
 
     // Add new method to handle folder selection
     initializeFolderBrowser() {
-        // Update folder selection handling
         const folderBrowser = document.getElementById('folderBrowser');
         if (!folderBrowser) return;
 
-        // Update folder selection event handling
-        folderBrowser.addEventListener('click', (event) => {
+        // Cleanup existing handler if any
+        this.cleanupFolderBrowser();
+
+        // Create new handler
+        this.folderClickHandler = (event) => {
             const folderItem = event.target.closest('.folder-item');
             if (!folderItem) return;
 
-            // Remove previous selection
-            folderBrowser.querySelectorAll('.folder-item').forEach(f => 
-                f.classList.remove('selected'));
-            
-            // Add selection to clicked folder
-            folderItem.classList.add('selected');
-            this.selectedFolder = folderItem.dataset.folder;
-        });
+            if (folderItem.classList.contains('selected')) {
+                folderItem.classList.remove('selected');
+                this.selectedFolder = '';
+            } else {
+                folderBrowser.querySelectorAll('.folder-item').forEach(f => 
+                    f.classList.remove('selected'));
+                folderItem.classList.add('selected');
+                this.selectedFolder = folderItem.dataset.folder;
+            }
+        };
+
+        // Add the new handler
+        folderBrowser.addEventListener('click', this.folderClickHandler);
+    }
+
+    cleanupFolderBrowser() {
+        if (this.folderClickHandler) {
+            const folderBrowser = document.getElementById('folderBrowser');
+            if (folderBrowser) {
+                folderBrowser.removeEventListener('click', this.folderClickHandler);
+                this.folderClickHandler = null;
+            }
+        }
     }
 }

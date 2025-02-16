@@ -68,7 +68,7 @@ export class ModalManager {
         return this.modals.get(id);
     }
 
-    showModal(id, content = null) {
+    showModal(id, content = null, onCloseCallback = null) {
         const modal = this.getModal(id);
         if (!modal) return;
 
@@ -76,11 +76,14 @@ export class ModalManager {
             modal.element.innerHTML = content;
         }
 
-        // Update to handle different modal types
+        // Store callback
+        if (onCloseCallback) {
+            modal.onCloseCallback = onCloseCallback;
+        }
+
         if (id === 'deleteModal') {
             modal.element.classList.add('show');
         } else {
-            // For loraModal and downloadModal
             modal.element.style.display = 'block';
         }
 
@@ -94,6 +97,12 @@ export class ModalManager {
 
         modal.onClose();
         modal.isOpen = false;
+
+        // Execute onClose callback if exists
+        if (modal.onCloseCallback) {
+            modal.onCloseCallback();
+            modal.onCloseCallback = null;
+        }
     }
 
     handleEscape(e) {
