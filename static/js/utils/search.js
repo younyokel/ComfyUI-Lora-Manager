@@ -13,11 +13,18 @@ export class SearchManager {
         this.isSearching = false;
         this.isRecursiveSearch = false;
         
+        // Add clear button
+        this.createClearButton();
+        
         // Add this instance to state
         state.searchManager = this;
         
         if (this.searchInput) {
             this.searchInput.addEventListener('input', this.handleSearch.bind(this));
+            // Update clear button visibility on input
+            this.searchInput.addEventListener('input', () => {
+                this.updateClearButtonVisibility();
+            });
         }
 
         if (this.searchModeToggle) {
@@ -35,6 +42,35 @@ export class SearchManager {
                     this.performSearch(this.currentSearchTerm);
                 }
             });
+        }
+    }
+
+    createClearButton() {
+        // Create clear button
+        const clearButton = document.createElement('button');
+        clearButton.className = 'search-clear';
+        clearButton.innerHTML = '<i class="fas fa-times"></i>';
+        clearButton.title = 'Clear search';
+        
+        // Add click handler
+        clearButton.addEventListener('click', () => {
+            this.searchInput.value = '';
+            this.currentSearchTerm = '';
+            this.updateClearButtonVisibility();
+            resetAndReload();
+        });
+        
+        // Insert after search input
+        this.searchInput.parentNode.appendChild(clearButton);
+        this.clearButton = clearButton;
+        
+        // Set initial visibility
+        this.updateClearButtonVisibility();
+    }
+
+    updateClearButtonVisibility() {
+        if (this.clearButton) {
+            this.clearButton.classList.toggle('visible', this.searchInput.value.length > 0);
         }
     }
 

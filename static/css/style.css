@@ -854,7 +854,7 @@ body.modal-open {
 /* 调整搜索框样式以匹配其他控件 */
 .search-container input {
     width: 100%;
-    padding: 6px 32px 6px 12px;
+    padding: 6px 40px 6px 12px; /* 减小右侧padding */
     border: 1px solid oklch(65% 0.02 256); /* 更深的边框颜色，提高对比度 */
     border-radius: var(--border-radius-sm);
     background: var(--lora-surface);
@@ -871,12 +871,36 @@ body.modal-open {
 
 .search-icon {
     position: absolute;
-    right: calc(32px + 8px); /* 调整位置，留出toggle按钮的空间 */
+    right: 40px; /* 调整到toggle按钮左侧 */
     top: 50%;
     transform: translateY(-50%);
     color: oklch(var(--text-color) / 0.5);
     pointer-events: none;
     line-height: 1; /* 防止图标影响容器高度 */
+}
+
+/* 修改清空按钮样式 */
+.search-clear {
+    position: absolute;
+    right: 65px; /* 放到search-icon左侧 */
+    top: 50%;
+    transform: translateY(-50%);
+    color: oklch(var(--text-color) / 0.5);
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 4px 8px; /* 增加点击区域 */
+    display: none; /* 默认隐藏 */
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.search-clear:hover {
+    color: var(--lora-accent);
+}
+
+.search-clear.visible {
+    display: block;
 }
 
 .search-mode-toggle {
