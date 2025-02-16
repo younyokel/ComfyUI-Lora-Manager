@@ -46,6 +46,14 @@
         <!-- Step 3: Location Selection -->
         <div class="download-step" id="locationStep" style="display: none;">
             <div class="location-selection">
+                <!-- Move path preview to top -->
+                <div class="path-preview">
+                    <label>Download Location Preview:</label>
+                    <div class="path-display" id="targetPathDisplay">
+                        <span class="path-text">Select a LoRA root directory</span>
+                    </div>
+                </div>
+
                 <div class="input-group">
                     <label>Select LoRA Root:</label>
                     <select id="loraRoot"></select>
@@ -53,7 +61,6 @@
                 <div class="input-group">
                     <label>Target Folder:</label>
                     <div class="folder-browser" id="folderBrowser">
-                        <!-- Folders will be dynamically inserted here -->
                         {% for folder in folders %}
                             {% if folder %}
                             <div class="folder-item" data-folder="{{ folder }}">

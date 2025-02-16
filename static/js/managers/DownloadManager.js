@@ -18,6 +18,7 @@ export class DownloadManager {
         // Add LoadingManager instance
         this.loadingManager = new LoadingManager();
         this.folderClickHandler = null;  // Add this line
+        this.updateTargetPath = this.updateTargetPath.bind(this);
     }
 
     showDownloadModal() {
@@ -44,6 +45,13 @@ export class DownloadManager {
         document.getElementById('urlStep').style.display = 'block';
         document.getElementById('loraUrl').value = '';
         document.getElementById('urlError').textContent = '';
+        
+        // Clear new folder input
+        const newFolderInput = document.getElementById('newFolder');
+        if (newFolderInput) {
+            newFolderInput.value = '';
+        }
+        
         this.currentVersion = null;
         this.versions = [];
         this.modelInfo = null;
@@ -274,10 +282,23 @@ export class DownloadManager {
                 folderItem.classList.add('selected');
                 this.selectedFolder = folderItem.dataset.folder;
             }
+            
+            // Update path display after folder selection
+            this.updateTargetPath();
         };
 
         // Add the new handler
         folderBrowser.addEventListener('click', this.folderClickHandler);
+        
+        // Add event listeners for path updates
+        const loraRoot = document.getElementById('loraRoot');
+        const newFolder = document.getElementById('newFolder');
+        
+        loraRoot.addEventListener('change', this.updateTargetPath);
+        newFolder.addEventListener('input', this.updateTargetPath);
+        
+        // Update initial path
+        this.updateTargetPath();
     }
 
     cleanupFolderBrowser() {
@@ -288,5 +309,32 @@ export class DownloadManager {
                 this.folderClickHandler = null;
             }
         }
+        
+        // Remove path update listeners
+        const loraRoot = document.getElementById('loraRoot');
+        const newFolder = document.getElementById('newFolder');
+        
+        loraRoot.removeEventListener('change', this.updateTargetPath);
+        newFolder.removeEventListener('input', this.updateTargetPath);
+    }
+    
+    // Add new method to update target path
+    updateTargetPath() {
+        const pathDisplay = document.getElementById('targetPathDisplay');
+        const loraRoot = document.getElementById('loraRoot').value;
+        const newFolder = document.getElementById('newFolder').value.trim();
+        
+        let fullPath = loraRoot || 'Select a LoRA root directory';
+        
+        if (loraRoot) {
+            if (this.selectedFolder) {
+                fullPath += '/' + this.selectedFolder;
+            }
+            if (newFolder) {
+                fullPath += '/' + newFolder;
+            }
+        }
+
+        pathDisplay.innerHTML = `<span class="path-text">${fullPath}</span>`;
     }
 }

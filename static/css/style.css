@@ -1414,3 +1414,77 @@ body.modal-open {
     background: oklch(var(--lora-accent) / 0.1);
     border: 1px solid var(--lora-accent);
 }
+
+/* Path Preview Styles */
+.path-preview {
+    margin-bottom: var(--space-3);
+    padding: var(--space-2);
+    background: var(--bg-color);
+    border-radius: var(--border-radius-sm);
+    border: 1px dashed var(--border-color);
+}
+
+.path-preview label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.path-display {
+    padding: var(--space-1);
+    color: var(--text-color);
+    font-family: monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    opacity: 0.85;
+    background: var(--lora-surface);
+    border-radius: var(--border-radius-xs);
+}
+
+.path-text {
+    color: var(--text-color);
+}
+
+.path-preview {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-sm);
+}
+
+.path-preview label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.path-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: var(--space-1);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    color: var(--text-color);
+    font-family: monospace;
+    font-size: 0.9em;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.path-display i {
+    color: var(--lora-accent);
+    opacity: 0.8;
+}
+
+.path-text {
+    color: var(--text-color);
+    opacity: 0.9;
+}
