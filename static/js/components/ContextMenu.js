@@ -51,10 +51,6 @@ export class LoraContextMenu {
         this.currentCard = card;
         this.menu.style.display = 'block';
         
-        // 使用客户端坐标，考虑滚动位置
-        const scrollY = window.scrollY || window.pageYOffset;
-        const scrollX = window.scrollX || window.pageXOffset;
-        
         // 获取菜单尺寸
         const menuRect = this.menu.getBoundingClientRect();
         
@@ -62,7 +58,7 @@ export class LoraContextMenu {
         const viewportWidth = document.documentElement.clientWidth;
         const viewportHeight = document.documentElement.clientHeight;
         
-        // 根据鼠标位置和菜单尺寸计算最终位置
+        // 计算最终位置 - 使用 clientX/Y，不需要考虑滚动偏移
         let finalX = x;
         let finalY = y;
         
@@ -76,9 +72,9 @@ export class LoraContextMenu {
             finalY = y - menuRect.height;
         }
         
-        // 设置菜单位置，考虑滚动偏移
-        this.menu.style.left = `${finalX + scrollX}px`;
-        this.menu.style.top = `${finalY + scrollY}px`;
+        // 直接设置位置，因为 position: fixed 是相对于视口定位的
+        this.menu.style.left = `${finalX}px`;
+        this.menu.style.top = `${finalY}px`;
     }
 
     hideMenu() {
