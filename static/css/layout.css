@@ -1,0 +1,337 @@
+.container {
+    max-width: 1400px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: var(--space-2);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+.search-container {
+    position: relative;
+    width: 250px;
+    margin-left: auto;
+    flex-shrink: 0; /* 防止搜索框被压缩 */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 调整搜索框样式以匹配其他控件 */
+.search-container input {
+    width: 100%;
+    padding: 6px 40px 6px 12px; /* 减小右侧padding */
+    border: 1px solid oklch(65% 0.02 256); /* 更深的边框颜色，提高对比度 */
+    border-radius: var(--border-radius-sm);
+    background: var(--lora-surface);
+    color: var(--text-color);
+    font-size: 0.9em;
+    height: 32px;
+    box-sizing: border-box; /* 确保padding不会增加总宽度 */
+}
+
+.search-container input:focus {
+    outline: none;
+    border-color: var(--lora-accent);
+}
+
+.search-icon {
+    position: absolute;
+    right: 40px; /* 调整到toggle按钮左侧 */
+    top: 50%;
+    transform: translateY(-50%);
+    color: oklch(var(--text-color) / 0.5);
+    pointer-events: none;
+    line-height: 1; /* 防止图标影响容器高度 */
+}
+
+/* 修改清空按钮样式 */
+.search-clear {
+    position: absolute;
+    right: 65px; /* 放到search-icon左侧 */
+    top: 50%;
+    transform: translateY(-50%);
+    color: oklch(var(--text-color) / 0.5);
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 4px 8px; /* 增加点击区域 */
+    display: none; /* 默认隐藏 */
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.search-clear:hover {
+    color: var(--lora-accent);
+}
+
+.search-clear.visible {
+    display: block;
+}
+
+.search-mode-toggle {
+    background: var(--lora-surface);
+    border: 1px solid oklch(65% 0.02 256);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-mode-toggle:hover {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.search-mode-toggle.active {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.search-mode-toggle i {
+    font-size: 0.9em;
+}
+
+.corner-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: var(--z-overlay);
+}
+
+/* Folder Tags Container */
+.folder-tags-container {
+    position: relative;
+    width: 100%;
+}
+
+.folder-tags {
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+    max-height: 200px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.folder-tags.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding-bottom: 0;
+}
+
+/* Toggle Folders Button */
+.toggle-folders-btn {
+    position: absolute;
+    bottom: 0;      /* 固定在容器底部 */
+    right: 0;       /* 固定在容器右侧 */
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.toggle-folders-btn:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.toggle-folders-btn i {
+    transition: transform 0.3s ease;
+}
+
+/* 折叠状态样式 */
+.folder-tags.collapsed + .toggle-folders-btn {
+    position: static;
+    margin-right: auto; /* 确保按钮在左侧 */
+    transform: translateY(0);
+}
+
+.folder-tags.collapsed + .toggle-folders-btn i {
+    transform: rotate(180deg);
+}
+
+/* 文件夹标签样式 */
+.folder-tags {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 2px 0;
+    flex-wrap: wrap;
+}
+
+.tag {
+    cursor: pointer;
+    padding: 2px 8px;
+    margin: 2px;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius-xs);
+    display: inline-block;
+    line-height: 1.2;
+    font-size: 14px;
+}
+
+.tag.active {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Back to Top Button */
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var (--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    z-index: var(--z-overlay);
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.back-to-top:hover {
+    background: var (--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.theme-toggle img {
+    width: 20px;
+    height: 20px;
+}
+
+.theme-toggle .theme-icon {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    transition: opacity 0.2s ease;
+}
+
+.theme-toggle .light-icon {
+    opacity: 0;
+}
+
+.theme-toggle .dark-icon {
+    opacity: 1;
+}
+
+[data-theme="light"] .theme-toggle .light-icon {
+    opacity: 1;
+}
+
+[data-theme="light"] .theme-toggle .dark-icon {
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .actions {
+        flex-wrap: wrap;
+        gap: var(--space-1);
+    }
+
+    .controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .search-container {
+        width: 100%;
+        order: -1;
+        margin-left: 0;
+    }
+    
+    .folder-tags-container {
+        order: -1;
+    }
+    
+    .toggle-folders-btn {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        transform: none; /* 移除transform，防止hover时的位移 */
+    }
+    
+    .toggle-folders-btn:hover {
+        transform: none; /* 移动端下禁用hover效果 */
+    }
+    
+    .folder-tags.collapsed + .toggle-folders-btn {
+        position: relative;
+        transform: none;
+    }
+
+    .corner-controls {
+        /* Keep the fixed positioning even on mobile */
+        position: fixed;
+        top: 20px;
+        right: 20px;
+    }
+
+    .back-to-top {
+        bottom: 60px; /* Give some extra space from bottom on mobile */
+    }
+}

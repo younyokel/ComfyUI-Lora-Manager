@@ -1,0 +1,69 @@
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: oklch(0% 0 0 / 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: var(--z-overlay);
+}
+
+.loading-content {
+    background: var(--lora-surface);
+    backdrop-filter: blur(24px);
+    padding: var(--space-3);
+    border-radius: var(--border-radius-base);
+    text-align: center;
+    border: 1px solid var(--lora-border);
+    width: min(400px, 90vw); /* 固定最大宽度，但保持响应式 */
+}
+
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.loading-status {
+    margin-bottom: 1rem;
+    color: var(--text-color); /* 使用主题文本颜色 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    padding: 0 var(--space-2);
+}
+
+.progress-container {
+    width: 280px; /* 固定进度条宽度 */
+    background-color: var(--lora-border); /* 使用主题边框颜色 */
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto; /* 居中显示 */
+}
+
+.progress-bar {
+    width: 0%;
+    height: var(--space-2);
+    background-color: var(--lora-accent);
+    transition: width 200ms ease-out;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lora-card,
+    .progress-bar {
+        transition: none;
+    }
+}

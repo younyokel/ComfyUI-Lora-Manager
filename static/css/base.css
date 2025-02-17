@@ -1,0 +1,72 @@
+/* 强制显示滚动条，防止页面跳动 */
+html {
+    overflow-y: scroll;
+}
+
+/* 针对Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+/* 针对Webkit browsers (Chrome, Safari等) */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+
+:root {
+    --bg-color: #ffffff;
+    --text-color: #333333;
+    --card-bg: #ffffff;
+    --border-color: #e0e0e0;
+
+    /* Color System */
+    --lora-accent: oklch(68% 0.28 256);
+    --lora-surface: oklch(100% 0 0 / 0.95);
+    --lora-border: oklch(90% 0.02 256 / 0.15);
+    --lora-text: oklch(95% 0.02 256);
+    --lora-error: oklch(75% 0.32 29);
+    
+    /* Spacing Scale */
+    --space-1: calc(8px * 1);
+    --space-2: calc(8px * 2);
+    --space-3: calc(8px * 3);
+    
+    /* Z-index Scale */
+    --z-base: 10;
+    --z-modal: 1000;
+    --z-overlay: 2000;
+
+    /* Border Radius */
+    --border-radius-base: 12px;
+    --border-radius-sm: 8px;
+    --border-radius-xs: 4px;
+}
+
+[data-theme="dark"] {
+    --bg-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --card-bg: #2d2d2d;
+    --border-color: #404040;
+
+    --lora-accent: oklch(68% 0.28 256);
+    --lora-surface: oklch(25% 0.02 256 / 0.85);
+    --lora-border: oklch(90% 0.02 256 / 0.15);
+    --lora-text: oklch(98% 0.02 256);
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+}
