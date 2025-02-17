@@ -9,11 +9,16 @@
     background: rgba(0, 0, 0, 0.8);
     z-index: var(--z-modal);
     overflow-y: auto;  /* 允许模态窗口内容滚动 */
+    -webkit-overflow-scrolling: touch; /* 为iOS设备提供平滑滚动 */
 }
 
 /* 当模态窗口打开时，禁止body滚动 */
 body.modal-open {
     overflow: hidden;
+    height: 100vh;
+    position: fixed;
+    width: 100%;
+    padding-right: var(--scrollbar-width, 0px); /* 补偿滚动条消失导致的页面偏移 */
 }
 
 .modal-content {
@@ -25,6 +30,7 @@ body.modal-open {
     padding: var(--space-3);
     border: 1px solid var(--lora-border);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transform: translateZ(0); /* 创建新的堆叠上下文 */
 }
 
 /* Delete Modal specific styles */

@@ -32,6 +32,18 @@
     <!-- 添加资源加载策略 -->
     <link rel="preconnect" href="https://civitai.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
+    <script>
+        // 计算滚动条宽度并设置CSS变量
+        document.addEventListener('DOMContentLoaded', () => {
+            const scrollDiv = document.createElement('div');
+            scrollDiv.style.cssText = 'width:100px;height:100px;overflow:scroll;position:absolute;top:-9999px;';
+            document.body.appendChild(scrollDiv);
+            const scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
+            document.body.removeChild(scrollDiv);
+            document.documentElement.style.setProperty('--scrollbar-width', scrollbarWidth + 'px');
+        });
+    </script>
 </head>
 <body>
     <div class="corner-controls">
