@@ -1,6 +1,7 @@
 export class ModalManager {
     constructor() {
         this.modals = new Map();
+        this.scrollPosition = 0;
     }
 
     initialize() {
@@ -81,6 +82,9 @@ export class ModalManager {
             modal.onCloseCallback = onCloseCallback;
         }
 
+        // Store current scroll position before showing modal
+        this.scrollPosition = window.scrollY;
+
         if (id === 'deleteModal') {
             modal.element.classList.add('show');
         } else {
@@ -88,6 +92,7 @@ export class ModalManager {
         }
 
         modal.isOpen = true;
+        document.body.style.top = `-${this.scrollPosition}px`;
         document.body.classList.add('modal-open');
     }
 
@@ -97,6 +102,11 @@ export class ModalManager {
 
         modal.onClose();
         modal.isOpen = false;
+
+        // Remove fixed positioning and restore scroll position
+        document.body.classList.remove('modal-open');
+        document.body.style.top = '';
+        window.scrollTo(0, this.scrollPosition);
 
         // Execute onClose callback if exists
         if (modal.onCloseCallback) {

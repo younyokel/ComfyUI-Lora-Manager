@@ -14,8 +14,6 @@
 
 /* 当模态窗口打开时，禁止body滚动 */
 body.modal-open {
-    overflow: hidden;
-    height: 100vh;
     position: fixed;
     width: 100%;
     padding-right: var(--scrollbar-width, 0px); /* 补偿滚动条消失导致的页面偏移 */
