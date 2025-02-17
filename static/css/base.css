@@ -31,7 +31,7 @@ html {
 
     /* Color System */
     --lora-accent: oklch(68% 0.28 256);
-    --lora-surface: oklch(100% 0 0 / 0.95);
+    --lora-surface: oklch(100% 0 0 / 0.98);
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(95% 0.02 256);
     --lora-error: oklch(75% 0.32 29);
@@ -59,7 +59,7 @@ html {
     --border-color: #404040;
 
     --lora-accent: oklch(68% 0.28 256);
-    --lora-surface: oklch(25% 0.02 256 / 0.85);
+    --lora-surface: oklch(25% 0.02 256 / 0.98);
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(98% 0.02 256);
 }

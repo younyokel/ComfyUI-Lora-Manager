@@ -22,6 +22,7 @@ import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalU
 import { SearchManager } from './utils/search.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { SettingsManager, toggleApiKeyVisibility } from './managers/SettingsManager.js';
+import { LoraContextMenu } from './components/ContextMenu.js';
 
 // Export all functions that need global access
 window.loadMoreLoras = loadMoreLoras;
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFolderTagsVisibility();
     initBackToTop();
     window.searchManager = new SearchManager();
+    new LoraContextMenu();
 });
 
 // Initialize event listeners

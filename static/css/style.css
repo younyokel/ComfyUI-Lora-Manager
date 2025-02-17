@@ -9,6 +9,7 @@
 @import 'components/modal.css';
 @import 'components/toast.css';
 @import 'components/loading.css';
+@import 'components/menu.css';
 
 .initialization-notice {
     display: flex;
