@@ -4,12 +4,24 @@ import { showToast } from '../utils/uiHelpers.js';
 export class SettingsManager {
     constructor() {
         this.initialized = false;
+        this.isOpen = false;
     }
 
+    toggleSettings() {
+        if (this.isOpen) {
+            modalManager.closeModal('settingsModal');
+        } else {
+            modalManager.showModal('settingsModal');
+        }
+        this.isOpen = !this.isOpen;
+    }
+
+    /*
     showSettings() {
         console.log('Opening settings modal...'); // Debug log
         modalManager.showModal('settingsModal');
     }
+    */
 
     async saveSettings() {
         const apiKey = document.getElementById('civitaiApiKey').value;
