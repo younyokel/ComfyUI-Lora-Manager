@@ -23,19 +23,23 @@ export class LoraContextMenu {
             
             switch(action) {
                 case 'detail':
-                    this.currentCard.querySelector('.info-button').click();
+                    // Trigger the main card click which shows the modal
+                    this.currentCard.click();
                     break;
                 case 'civitai':
-                    this.currentCard.querySelector('.civitai-button').click();
+                    // Only trigger if the card is from civitai
+                    if (this.currentCard.dataset.from_civitai === 'true') {
+                        this.currentCard.querySelector('.fa-globe')?.click();
+                    }
                     break;
                 case 'copyname':
-                    this.currentCard.querySelector('.copy-button').click();
+                    this.currentCard.querySelector('.fa-copy')?.click();
                     break;
                 case 'preview':
-                    this.currentCard.querySelector('.preview-button').click();
+                    this.currentCard.querySelector('.fa-image')?.click();
                     break;
                 case 'delete':
-                    this.currentCard.querySelector('.delete-button').click();
+                    this.currentCard.querySelector('.fa-trash')?.click();
                     break;
                 case 'move':
                     // To be implemented
