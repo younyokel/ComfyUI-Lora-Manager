@@ -1,0 +1,143 @@
+/* 卡片网格布局 */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); /* Adjusted from 320px */
+    gap: 12px; /* Reduced from var(--space-2) for tighter horizontal spacing */
+    margin-top: var(--space-2);
+    max-width: 1400px; /* Container width control */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.lora-card {
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-base);
+    backdrop-filter: blur(16px);
+    transition: transform 160ms ease-out;
+    aspect-ratio: 896/1152;
+    max-width: 260px; /* Adjusted from 320px to fit 5 cards */
+    margin: 0 auto;
+}
+
+.lora-card:hover {
+    transform: translateY(-2px);
+    background: oklch(100% 0 0 / 0.6);
+}
+
+.lora-card:focus-visible {
+    outline: 2px solid var(--lora-accent);
+    outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+    
+    .lora-card {
+        max-width: 240px;
+    }
+}
+
+/* Card Preview and Footer Overlay */
+.card-preview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--border-radius-base);
+    overflow: hidden;
+}
+
+.card-preview img,
+.card-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent 15%, oklch(0% 0 0 / 0.75));
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: var(--space-1);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;  /* Changed from flex-end to allow for text wrapping */
+    min-height: 32px;
+    gap: var(--space-1);  /* Add gap between model info and actions */
+}
+
+.card-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(oklch(0% 0 0 / 0.75), transparent 85%);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: var(--space-1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1;
+    min-height: 20px;
+}
+
+.card-actions i {
+    margin-left: var(--space-1);
+    cursor: pointer;
+    color: white;
+    transition: opacity 0.2s;
+    font-size: 0.9em;
+}
+
+.card-actions i:hover {
+    opacity: 0.8;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .card-grid {
+        grid-template-columns: minmax(260px, 1fr); /* Adjusted minimum size for mobile */
+    }
+
+    .controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .lora-card {
+        max-width: 100%; /* Allow cards to fill available space on mobile */
+    }
+}
+
+.card-actions {
+    flex-shrink: 0;  /* Prevent actions from shrinking */
+    display: flex;
+    gap: var(--space-1);
+    align-items: flex-end; /* 将图标靠下对齐 */
+    align-self: flex-end; /* 将整个actions容器靠下对齐 */
+}
+
+.model-link {
+    margin-top: var(--space-1);
+}
+
+.model-link a {
+    color: var(--lora-accent);
+    text-decoration: none;
+    font-size: 1.1em;
+    transition: opacity 0.2s;
+    text-shadow: none;
+}
+
+.model-link a:hover {
+    opacity: 0.8;
+    text-decoration: none;
+}
