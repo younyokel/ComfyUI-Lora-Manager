@@ -106,62 +106,183 @@ export function showLoraModal(lora) {
     const escapedWords = lora.trainedWords?.length ? 
         lora.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
 
-    const categories = {};
-    escapedWords.forEach(word => {
-        const category = word.includes(':') ? word.split(':')[0] : 'General';
-        if (!categories[category]) {
-            categories[category] = [];
-        }
-        categories[category].push(word);
+    const content = `
+        <div class="modal-content">
+            <header class="modal-header">
+                <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
+                <h2>${lora.model.name}</h2>
+                <div class="modal-actions">
+                    ${lora.from_civitai ? 
+                        `<button class="fetch-btn" title="Refresh metadata from Civitai">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>` : 
+                        `<button class="fetch-btn" title="Fetch from Civitai">
+                            <i class="fas fa-cloud-download-alt"></i>
+                        </button>`
+                    }
+                </div>
+            </header>
+
+            <div class="modal-body">
+                <div class="info-section">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Version</label>
+                            <span>${lora.name || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>File Name</label>
+                            <span>${lora.file_name || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Location</label>
+                            <span class="file-path">${lora.file_path || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Base Model</label>
+                            <span>${lora.base_model || 'N/A'}</span>
+                        </div>
+                        <div class="info-item usage-tips">
+                            <label>Usage Tips</label>
+                            <div class="editable-field">
+                                <div class="usage-tips-content" contenteditable="true" spellcheck="false">${lora.usage_tips || 'Strength: 0.8'}</div>
+                                <button class="save-btn" onclick="saveUsageTips('${lora.file_path}')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="info-item notes">
+                            <label>Additional Notes</label>
+                            <div class="editable-field">
+                                <div class="notes-content" contenteditable="true" spellcheck="false">${lora.notes || 'Add your notes here...'}</div>
+                                <button class="save-btn" onclick="saveNotes('${lora.file_path}')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${renderTriggerWords(escapedWords)}
+                        <div class="info-item full-width">
+                            <label>About this version</label>
+                            <div class="description-text">${lora.description || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="showcase-section">
+                    <div class="scroll-indicator">
+                        <i class="fas fa-chevron-down"></i>
+                        Scroll for more examples
+                    </div>
+                    <div class="carousel">
+                        ${renderShowcaseImages(lora.images)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modalManager.showModal('loraModal', content);
+    setupEditableFields();
+}
+
+function setupEditableFields() {
+    const editableFields = document.querySelectorAll('.editable-field [contenteditable]');
+    
+    editableFields.forEach(field => {
+        field.addEventListener('focus', function() {
+            if (this.textContent === 'Add your notes here...' || 
+                this.textContent === 'Strength: 0.8') {
+                this.textContent = '';
+            }
+        });
+
+        field.addEventListener('blur', function() {
+            if (this.textContent.trim() === '') {
+                this.textContent = this.classList.contains('usage-tips-content') 
+                    ? 'Strength: 0.8' 
+                    : 'Add your notes here...';
+            }
+        });
     });
-        
-    const imageMarkup = lora.images.map(img => {
-        if (img.type === 'video') {
-            return `<video controls autoplay muted loop crossorigin="anonymous" referrerpolicy="no-referrer">
-                     <source src="${img.url}" type="video/mp4">
-                     Your browser does not support the video tag.
-                   </video>`;
-        } else {
-            return `<img src="${img.url}" alt="Preview" 
-                        crossorigin="anonymous" 
-                        referrerpolicy="no-referrer" 
-                        loading="lazy">`;
-        }
-    }).join('');
- 
-    const triggerWordsMarkup = escapedWords.length ? `
-        <div class="trigger-words-container">
-            <div class="trigger-words-title">Trigger Words</div>
+}
+
+// Add these functions to handle saving the editable fields
+window.saveUsageTips = async function(filePath) {
+    const content = document.querySelector('.usage-tips-content').textContent;
+    try {
+        await saveModelMetadata(filePath, { usage_tips: content });
+        showToast('Usage tips saved successfully', 'success');
+    } catch (error) {
+        showToast('Failed to save usage tips', 'error');
+    }
+};
+
+window.saveNotes = async function(filePath) {
+    const content = document.querySelector('.notes-content').textContent;
+    try {
+        await saveModelMetadata(filePath, { notes: content });
+        showToast('Notes saved successfully', 'success');
+    } catch (error) {
+        showToast('Failed to save notes', 'error');
+    }
+};
+
+async function saveModelMetadata(filePath, data) {
+    const response = await fetch('/loras/api/save-metadata', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            file_path: filePath,
+            ...data
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to save metadata');
+    }
+}
+
+function renderTriggerWords(words) {
+    if (!words.length) return '';
+    
+    return `
+        <div class="info-item full-width trigger-words">
+            <label>Trigger Words</label>
             <div class="trigger-words-tags">
-                ${escapedWords.map(word => `
+                ${words.map(word => `
                     <div class="trigger-word-tag" onclick="copyTriggerWord('${word}')">
                         <span class="trigger-word-content">${word}</span>
                         <span class="trigger-word-copy">
-                            <svg width="14" height="14" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                            </svg>
+                            <i class="fas fa-copy"></i>
                         </span>
                     </div>
                 `).join('')}
             </div>
         </div>
-    ` : '<div class="trigger-words-container">No trigger words</div>';
-    
-    const content = `
-        <div class="modal-content">
-            <h2>${lora.model.name}</h2>
-            <div class="carousel">
-                ${imageMarkup}
-            </div>
-            <div class="description">About this version: ${lora.description || 'N/A'}</div>
-            ${triggerWordsMarkup}
-            <div class="model-link">
-                <a href="https://civitai.com/models/${lora.modelId}?modelVersionId=${lora.id}" 
-                   target="_blank">more details on CivitAI</a>
-            </div>
-            <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
-        </div>
     `;
+}
+
+function renderShowcaseImages(images) {
+    if (!images?.length) return '';
     
-    modalManager.showModal('loraModal', content);
+    return images.map(img => {
+        if (img.type === 'video') {
+            return `
+                <video controls autoplay muted loop crossorigin="anonymous" referrerpolicy="no-referrer">
+                    <source src="${img.url}" type="video/mp4">
+                    Your browser does not support video playback
+                </video>
+            `;
+        }
+        return `
+            <img src="${img.url}" 
+                 alt="Preview" 
+                 crossorigin="anonymous" 
+                 referrerpolicy="no-referrer" 
+                 loading="lazy">
+        `;
+    }).join('');
 }

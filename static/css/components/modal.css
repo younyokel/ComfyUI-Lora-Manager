@@ -139,122 +139,10 @@ body.modal-open {
     opacity: 0.9;
 }
 
-.carousel {
-    display: grid;
-    grid-auto-flow: column;
-    gap: 1rem;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-}
-
-.carousel img {
-    scroll-snap-align: start;
-    max-height: 60vh;
-    object-fit: contain;
-}
-
-.carousel video {
-    scroll-snap-align: start;
-    max-height: 60vh;
-    object-fit: contain;
-}
-
 .modal-content h2 {
     color: var(--text-color);
     margin-bottom: var(--space-2);
     font-size: 1.5em;
-}
-
-.description {
-    color: var(--text-color);
-    margin: var(--space-2) 0;
-    line-height: 1.4;
-}
-
-.trigger-word-content {
-    flex: 1;
-    word-break: break-word;
-    line-height: 1.4;
-}
-
-.trigger-word-copy {
-    opacity: 0.5;
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Updated Trigger Words Section */
-.trigger-words-container {
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    align-items: flex-start;
-    gap: var(--space-2);
-    margin: var(--space-2) 0;
-    padding: var(--space-2);
-    background: var(--lora-surface);
-    border: 1px solid var(--lora-border);
-    border-radius: var(--border-radius-sm);
-}
-
-.trigger-words-title {
-    font-size: 0.95em;
-    color: var(--text-color);
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100%;
-}
-
-.trigger-words-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-.trigger-word-tag {
-    display: inline-flex;
-    align-items: center;
-    background: var(--lora-surface);
-    border: 1px solid var(--lora-border);
-    border-radius: var(--border-radius-xs);
-    padding: 6px 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    gap: 8px;
-    max-width: 100%;
-}
-
-.trigger-word-content {
-    color: oklch(65% 0.2 256); /* Accent color for trigger words */
-    font-size: 0.85em;
-    line-height: 1.4;
-    word-break: break-word;
-}
-
-.trigger-word-copy {
-    display: flex;
-    align-items: center;
-    color: var(--text-color);
-    opacity: 0.5;
-    flex-shrink: 0;
-    transition: opacity 0.2s;
-}
-
-.trigger-word-tag:hover {
-    background: oklch(var(--lora-accent) / 0.1);
-    border-color: var(--lora-accent);
-}
-
-.trigger-word-tag:hover .trigger-word-copy {
-    opacity: 0.8;
-}
-
-.trigger-word-tag:active {
-    transform: scale(0.98);
 }
 
 /* Download Modal Styles */
@@ -653,4 +541,222 @@ body.modal-open {
 .path-text {
     color: var(--text-color);
     opacity: 0.9;
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--lora-border);
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.info-item {
+    padding: var(--space-2);
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-sm);
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    display: block;
+    font-size: 0.85em;
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+.info-item span {
+    color: var(--text-color);
+    word-break: break-word;
+}
+
+.file-path {
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.description-text {
+    line-height: 1.5;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+/* Showcase Section */
+.showcase-section {
+    position: relative;
+    margin-top: var(--space-4);
+}
+
+.carousel {
+    display: flex;
+    flex-direction: column; /* 改为垂直布局 */
+    gap: var(--space-3);
+    overflow-y: auto; /* 垂直滚动 */
+}
+
+.carousel img,
+.carousel video {
+    width: 100%;
+    height: auto;
+    max-height: 70vh; /* 限制单张图片最大高度 */
+    object-fit: contain;
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: var(--space-2);
+    background: linear-gradient(to bottom, 
+        var(--lora-surface) 0%,
+        transparent 100%);
+    opacity: 0.8;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 1; /* 确保滚动提示在图片上层 */
+}
+
+/* Remove horizontal scrolling styles */
+.carousel {
+    scroll-snap-type: none;
+    grid-auto-flow: initial;
+    overflow-x: initial;
+}
+
+/* Update Trigger Words styles */
+.info-item.trigger-words {
+    padding: var(--space-2);
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-sm);
+}
+
+.trigger-words-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+    margin-top: var(--space-1);
+}
+
+.trigger-word-tag {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 6px;
+}
+
+/* Keep the existing trigger word tag hover and content styles */
+.trigger-word-tag:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
+}
+
+.trigger-word-content {
+    color: oklch(65% 0.2 256);
+    font-size: 0.85em;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.trigger-word-copy {
+    display: flex;
+    align-items: center;
+    color: var(--text-color);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+}
+
+/* Editable Fields */
+.editable-field {
+    position: relative;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.editable-field [contenteditable] {
+    flex: 1;
+    min-height: 24px;
+    padding: 4px 8px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    font-size: 0.9em;
+    line-height: 1.4;
+    color: var(--text-color);
+    transition: border-color 0.2s;
+    word-break: break-word;
+}
+
+.editable-field [contenteditable]:focus {
+    outline: none;
+    border-color: var(--lora-accent);
+    background: var(--bg-color);
+}
+
+.editable-field [contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-color);
+    opacity: 0.5;
+}
+
+.save-btn {
+    padding: 4px 8px;
+    background: var(--lora-accent);
+    border: none;
+    border-radius: var(--border-radius-xs);
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.save-btn:hover {
+    opacity: 0.9;
+}
+
+.save-btn i {
+    font-size: 0.9em;
+}
+
+/* Adjust info items for the new fields */
+.info-item.usage-tips,
+.info-item.notes {
+    grid-column: span 1;
+}
+
+@media (max-width: 640px) {
+    .info-item.usage-tips,
+    .info-item.notes {
+        grid-column: 1 / -1;
+    }
 }
