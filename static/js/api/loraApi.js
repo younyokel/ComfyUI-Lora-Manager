@@ -290,6 +290,7 @@ export async function refreshLoras() {
 
 export async function refreshSingleLoraMetadata(filePath) {
     try {
+        state.loadingManager.showSimpleLoading('Refreshing metadata...');
         const response = await fetch('/api/fetch-civitai', {
             method: 'POST',
             headers: {
@@ -314,5 +315,8 @@ export async function refreshSingleLoraMetadata(filePath) {
     } catch (error) {
         console.error('Error refreshing metadata:', error);
         showToast(error.message, 'error');
+    } finally {
+        state.loadingManager.hide();
+        state.loadingManager.restoreProgressBar();
     }
 }

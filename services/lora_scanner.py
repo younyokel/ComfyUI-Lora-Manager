@@ -369,7 +369,7 @@ class LoraScanner:
             if os.path.exists(source_metadata):
                 target_metadata = os.path.join(target_path, f"{base_name}.metadata.json")
                 shutil.move(source_metadata, target_metadata)
-                lora_data = await self._update_metadata_paths(target_metadata, target_lora)
+                metadata = await self._update_metadata_paths(target_metadata, target_lora)
             
             # Move preview file if exists
             preview_extensions = ['.preview.png', '.preview.jpeg', '.preview.jpg', '.preview.mp4',
@@ -382,7 +382,7 @@ class LoraScanner:
                     break
             
             # Update cache
-            await self.update_single_lora_cache(source_path, lora_data)
+            await self.update_single_lora_cache(source_path, target_lora, metadata)
             
             return True
             
@@ -390,14 +390,14 @@ class LoraScanner:
             logger.error(f"Error moving model: {e}", exc_info=True)
             return False
         
-    async def update_single_lora_cache(self, file_path: str, metadata: Dict) -> bool:
+    async def update_single_lora_cache(self, original_path: str, new_path: str, metadata: Dict) -> bool:
         cache = await self.get_cached_data()
         cache.raw_data = [
                         item for item in cache.raw_data 
-                        if item['file_path'] != file_path
+                        if item['file_path'] != original_path
                     ]
         if metadata:
-            metadata['folder'] = self._calculate_folder(file_path)
+            metadata['folder'] = self._calculate_folder(new_path)
             cache.raw_data.append(metadata)
             all_folders = set(cache.folders)
             all_folders.add(metadata['folder'])
