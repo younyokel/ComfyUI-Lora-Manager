@@ -22,11 +22,6 @@ export class LoraContextMenu {
         this.menu.addEventListener('click', (e) => {
             const menuItem = e.target.closest('.context-menu-item');
             if (!menuItem || !this.currentCard) return;
-            
-            // Don't process disabled items
-            if (menuItem.classList.contains('disabled')) {
-                return;
-            }
 
             const action = menuItem.dataset.action;
             if (!action) return;
@@ -39,7 +34,13 @@ export class LoraContextMenu {
                 case 'civitai':
                     // Only trigger if the card is from civitai
                     if (this.currentCard.dataset.from_civitai === 'true') {
-                        this.currentCard.querySelector('.fa-globe')?.click();
+                        if (this.currentCard.dataset.meta === '{}') {
+                            showToast('Please fetch metadata from CivitAI first', 'info');
+                        } else {
+                            this.currentCard.querySelector('.fa-globe')?.click();
+                        }
+                    } else {
+                        showToast('No CivitAI information available', 'info');
                     }
                     break;
                 case 'copyname':
@@ -66,11 +67,6 @@ export class LoraContextMenu {
     showMenu(x, y, card) {
         this.currentCard = card;
         this.menu.style.display = 'block';
-        
-        // Update civitai menu item state
-        const civitaiItem = this.menu.querySelector('[data-action="civitai"]');
-        const fromCivitai = card.dataset.from_civitai === 'true';
-        civitaiItem.classList.toggle('disabled', !fromCivitai);
 
         // 获取菜单尺寸
         const menuRect = this.menu.getBoundingClientRect();

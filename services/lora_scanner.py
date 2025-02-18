@@ -381,26 +381,31 @@ class LoraScanner:
                     shutil.move(source_preview, target_preview)
                     break
             
-            # Update cache folders
-            cache = await self.get_cached_data()
-            cache.raw_data = [
-                            item for item in cache.raw_data 
-                            if item['file_path'] != source_path
-                        ]
-            if lora_data:
-                cache.raw_data.append(lora_data)
-                all_folders = set(cache.folders)
-                all_folders.add(lora_data['folder'])
-                cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
-            
-            # Resort cache
-            await cache.resort()
+            # Update cache
+            await self.update_single_lora_cache(source_path, lora_data)
             
             return True
             
         except Exception as e:
             logger.error(f"Error moving model: {e}", exc_info=True)
             return False
+        
+    async def update_single_lora_cache(self, file_path: str, metadata: Dict) -> bool:
+        cache = await self.get_cached_data()
+        cache.raw_data = [
+                        item for item in cache.raw_data 
+                        if item['file_path'] != file_path
+                    ]
+        if metadata:
+            metadata['folder'] = self._calculate_folder(file_path)
+            cache.raw_data.append(metadata)
+            all_folders = set(cache.folders)
+            all_folders.add(metadata['folder'])
+            cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
+        
+        # Resort cache
+        await cache.resort()
+
 
     async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
         """Update file paths in metadata file"""
@@ -423,7 +428,6 @@ class LoraScanner:
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
 
-            metadata['folder'] = self._calculate_folder(lora_path)
             return metadata
                 
         except Exception as e:

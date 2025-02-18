@@ -330,6 +330,8 @@ class ApiRoutes:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(local_metadata, f, indent=2, ensure_ascii=False)
 
+        await self.scanner.update_single_lora_cache(local_metadata['file_path'], local_metadata) 
+
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:
         """Fetch CivitAI metadata for all loras in the background"""
         try:
