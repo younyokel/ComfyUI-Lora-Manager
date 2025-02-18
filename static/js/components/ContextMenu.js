@@ -42,8 +42,7 @@ export class LoraContextMenu {
                     this.currentCard.querySelector('.fa-trash')?.click();
                     break;
                 case 'move':
-                    // To be implemented
-                    console.log('Move to folder feature coming soon');
+                    moveManager.showMoveModal(this.currentCard.dataset.filepath);
                     break;
             }
             

@@ -23,6 +23,7 @@ import { SearchManager } from './utils/search.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { SettingsManager, toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { LoraContextMenu } from './components/ContextMenu.js';
+import { moveManager } from './managers/MoveManager.js';
 
 // Export all functions that need global access
 window.loadMoreLoras = loadMoreLoras;
@@ -43,6 +44,7 @@ window.showToast = showToast
 window.toggleFolderTags = toggleFolderTags;
 window.settingsManager = new SettingsManager();
 window.toggleApiKeyVisibility = toggleApiKeyVisibility;
+window.moveManager = moveManager;
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

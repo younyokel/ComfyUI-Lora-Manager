@@ -39,6 +39,7 @@ class ApiRoutes:
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
+        app.router.add_post('/api/move_model', routes.move_model)
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
@@ -512,6 +513,28 @@ class ApiRoutes:
         except Exception as e:
             logger.error(f"Error updating settings: {e}", exc_info=True)  # 添加 exc_info=True 以获取完整堆栈
             return web.Response(status=500, text=str(e))
+
+    async def move_model(self, request: web.Request) -> web.Response:
+        """Handle model move request"""
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            target_path = data.get('target_path')
+            
+            if not file_path or not target_path:
+                return web.Response(text='File path and target path are required', status=400)
+
+            # Call scanner to handle the move operation
+            success = await self.scanner.move_model(file_path, target_path)
+            
+            if success:
+                return web.json_response({'success': True})
+            else:
+                return web.Response(text='Failed to move model', status=500)
+                
+        except Exception as e:
+            logger.error(f"Error moving model: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
 
     @classmethod
     async def cleanup(cls):

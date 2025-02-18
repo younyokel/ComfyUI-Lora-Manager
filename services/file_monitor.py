@@ -57,6 +57,8 @@ class LoraFileHandler(FileSystemEventHandler):
     def on_deleted(self, event):
         if event.is_directory or not event.src_path.endswith('.safetensors'):
             return
+        if self._should_ignore(event.src_path):
+            return
         logger.info(f"LoRA file deleted: {event.src_path}")
         self._schedule_update('remove', event.src_path)
         
@@ -131,6 +133,7 @@ class LoraFileMonitor:
     
     def __init__(self, scanner: LoraScanner, roots: List[str]):
         self.scanner = scanner
+        scanner.set_file_monitor(self)
         self.roots = roots
         self.observer = Observer()
         # 获取当前运行的事件循环
