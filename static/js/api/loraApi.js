@@ -287,3 +287,32 @@ export async function refreshLoras() {
         state.loadingManager.restoreProgressBar();
     }
 }
+
+export async function refreshSingleLoraMetadata(filePath) {
+    try {
+        const response = await fetch('/api/fetch-civitai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ file_path: filePath })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to refresh metadata');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Metadata refreshed successfully', 'success');
+            // Reload the current view to show updated data
+            await resetAndReload();
+        } else {
+            throw new Error(data.error || 'Failed to refresh metadata');
+        }
+    } catch (error) {
+        console.error('Error refreshing metadata:', error);
+        showToast(error.message, 'error');
+    }
+}

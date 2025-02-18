@@ -71,11 +71,9 @@ class ApiRoutes:
             
             # Check if model is from CivitAI
             local_metadata = await self._load_local_metadata(metadata_path)
-            if not local_metadata.get('from_civitai', True):
-                return web.json_response({"success": True, "notice": "Not from CivitAI"})
 
             # Fetch and update metadata
-            civitai_metadata = await self.civitai_client.get_model_by_hash(data["sha256"])
+            civitai_metadata = await self.civitai_client.get_model_by_hash(local_metadata["sha256"])
             if not civitai_metadata:
                 return await self._handle_not_found_on_civitai(metadata_path, local_metadata)
 

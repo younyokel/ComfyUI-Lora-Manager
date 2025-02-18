@@ -1,3 +1,5 @@
+import { refreshSingleLoraMetadata } from '../api/loraApi.js';
+
 export class LoraContextMenu {
     constructor() {
         this.menu = document.getElementById('loraContextMenu');
@@ -18,8 +20,16 @@ export class LoraContextMenu {
         });
 
         this.menu.addEventListener('click', (e) => {
-            const action = e.target.closest('.context-menu-item')?.dataset.action;
-            if (!action || !this.currentCard) return;
+            const menuItem = e.target.closest('.context-menu-item');
+            if (!menuItem || !this.currentCard) return;
+            
+            // Don't process disabled items
+            if (menuItem.classList.contains('disabled')) {
+                return;
+            }
+
+            const action = menuItem.dataset.action;
+            if (!action) return;
             
             switch(action) {
                 case 'detail':
@@ -44,6 +54,9 @@ export class LoraContextMenu {
                 case 'move':
                     moveManager.showMoveModal(this.currentCard.dataset.filepath);
                     break;
+                case 'refresh-metadata':
+                    refreshSingleLoraMetadata(this.currentCard.dataset.filepath);
+                    break;
             }
             
             this.hideMenu();
@@ -54,6 +67,11 @@ export class LoraContextMenu {
         this.currentCard = card;
         this.menu.style.display = 'block';
         
+        // Update civitai menu item state
+        const civitaiItem = this.menu.querySelector('[data-action="civitai"]');
+        const fromCivitai = card.dataset.from_civitai === 'true';
+        civitaiItem.classList.toggle('disabled', !fromCivitai);
+
         // 获取菜单尺寸
         const menuRect = this.menu.getBoundingClientRect();
         
