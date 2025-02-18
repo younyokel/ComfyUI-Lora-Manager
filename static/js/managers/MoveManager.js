@@ -100,6 +100,12 @@ class MoveManager {
             targetPath = `${targetPath}/${newFolder}`;
         }
 
+        // show toast if current path is same as target path
+        if (this.currentFilePath.substring(0, this.currentFilePath.lastIndexOf('/')) === targetPath) {
+            showToast('Model is already in the selected folder', 'info');
+            return;
+        }
+
         try {
             const response = await fetch('/api/move_model', {
                 method: 'POST',
