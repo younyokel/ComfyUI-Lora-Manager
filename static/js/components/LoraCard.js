@@ -1,5 +1,6 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
+import { resetAndReload } from '../api/loraApi.js';
 import { state } from '../state/index.js';
 
 export function createLoraCard(lora) {
@@ -201,6 +202,13 @@ window.saveUsageTips = async function(filePath) {
     const content = document.querySelector('.usage-tips-content').textContent;
     try {
         await saveModelMetadata(filePath, { usage_tips: content });
+
+        // Update the corresponding lora card's dataset
+        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        if (loraCard) {
+            loraCard.dataset.usage_tips = content;
+        }
+
         showToast('Usage tips saved successfully', 'success');
     } catch (error) {
         showToast('Failed to save usage tips', 'error');
@@ -211,13 +219,20 @@ window.saveNotes = async function(filePath) {
     const content = document.querySelector('.notes-content').textContent;
     try {
         await saveModelMetadata(filePath, { notes: content });
+
+        // Update the corresponding lora card's dataset
+        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        if (loraCard) {
+            loraCard.dataset.notes = content;
+        }
+        
         showToast('Notes saved successfully', 'success');
     } catch (error) {
         showToast('Failed to save notes', 'error');
     }
 };
 
-async function  saveModelMetadata(filePath, data) {
+async function saveModelMetadata(filePath, data) {
     const response = await fetch('/loras/api/save-metadata', {
         method: 'POST',
         headers: {
