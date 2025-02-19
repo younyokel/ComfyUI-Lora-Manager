@@ -50,6 +50,8 @@ html {
     --border-radius-base: 12px;
     --border-radius-sm: 8px;
     --border-radius-xs: 4px;
+
+    --scrollbar-width: 8px; /* 添加滚动条宽度变量 */
 }
 
 [data-theme="dark"] {

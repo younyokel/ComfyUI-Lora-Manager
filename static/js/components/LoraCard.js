@@ -113,16 +113,6 @@ export function showLoraModal(lora) {
             <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
             <header class="modal-header">
                 <h2>${lora.model_name}</h2>
-                <div class="modal-actions">
-                    ${lora.from_civitai ? 
-                        `<button class="fetch-btn" title="Refresh metadata from Civitai">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>` : 
-                        `<button class="fetch-btn" title="Fetch from Civitai">
-                            <i class="fas fa-cloud-download-alt"></i>
-                        </button>`
-                    }
-                </div>
             </header>
 
             <div class="modal-body">
@@ -391,7 +381,7 @@ export function setupShowcaseScroll() {
                 event.preventDefault();
             }
         }
-    });
+    }, { passive: false }); // Add passive: false option here
 
     // Keep the existing scroll tracking code
     const modalContent = document.querySelector('.modal-content');

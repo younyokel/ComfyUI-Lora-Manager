@@ -1,4 +1,4 @@
-/* 模态窗口样式 */
+/* 修改 modal 基础样式 */
 .modal {
     display: none;
     position: fixed;
@@ -8,8 +8,7 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.8);
     z-index: var(--z-modal);
-    overflow-y: auto;  /* 允许模态窗口内容滚动 */
-    -webkit-overflow-scrolling: touch; /* 为iOS设备提供平滑滚动 */
+    overflow: hidden; /* 改为 hidden，防止双滚动条 */
 }
 
 /* 当模态窗口打开时，禁止body滚动 */
@@ -19,18 +18,26 @@ body.modal-open {
     padding-right: var(--scrollbar-width, 0px); /* 补偿滚动条消失导致的页面偏移 */
 }
 
+/* 修改 modal-content 样式 */
 .modal-content {
     position: relative;
     max-width: 800px;
+    height: auto;
+    max-height: 90vh;
     margin: 2rem auto;
     background: var(--lora-surface);
     border-radius: var(--border-radius-base);
     padding: var(--space-3);
     border: 1px solid var(--lora-border);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    transform: translateZ(0); /* 创建新的堆叠上下文 */
-    max-height: 90vh; /* 限制最大高度为视窗高度的90% */
-    overflow-y: auto; /* 添加垂直滚动条 */
+    overflow-y: auto;
+    overflow-x: hidden; /* 防止水平滚动条 */
+}
+
+/* 当 modal 打开时锁定 body */
+body.modal-open {
+    overflow: hidden !important; /* 覆盖 base.css 中的 scroll */
+    padding-right: var(--scrollbar-width, 8px); /* 使用滚动条宽度作为补偿 */
 }
 
 /* Delete Modal specific styles */
