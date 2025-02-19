@@ -40,6 +40,7 @@ class ApiRoutes:
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
+        app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
@@ -177,6 +178,8 @@ class ApiRoutes:
             "file_path": lora["file_path"].replace(os.sep, "/"),
             "modified": lora["modified"],
             "from_civitai": lora.get("from_civitai", True),
+            "usage_tips": lora.get("usage_tips", ""),
+            "notes": lora.get("notes", ""),
             "civitai": self._filter_civitai_data(lora.get("civitai", {}))
         }
 
@@ -541,3 +544,40 @@ class ApiRoutes:
         """Add cleanup method for application shutdown"""
         if hasattr(cls, '_instance'):
             await cls._instance.civitai_client.close()
+
+    async def save_metadata(self, request: web.Request) -> web.Response:
+        """Handle saving metadata updates"""
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            if not file_path:
+                return web.Response(text='File path is required', status=400)
+
+            # Remove file path from data to avoid saving it
+            metadata_updates = {k: v for k, v in data.items() if k != 'file_path'}
+            
+            # Get metadata file path
+            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+            
+            # Load existing metadata
+            if os.path.exists(metadata_path):
+                with open(metadata_path, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+            else:
+                metadata = {}
+
+            # Update metadata with new values
+            metadata.update(metadata_updates)
+
+            # Save updated metadata
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+            # Update cache
+            await self.scanner.update_single_lora_cache(file_path, file_path, metadata)
+
+            return web.json_response({'success': True})
+
+        except Exception as e:
+            logger.error(f"Error saving metadata: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)

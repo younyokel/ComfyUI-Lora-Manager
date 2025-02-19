@@ -13,6 +13,8 @@ export function createLoraCard(lora) {
     card.dataset.modified = lora.modified;
     card.dataset.from_civitai = lora.from_civitai;
     card.dataset.base_model = lora.base_model;
+    card.dataset.usage_tips = lora.usage_tips;
+    card.dataset.notes = lora.notes;
     card.dataset.meta = JSON.stringify(lora.civitai || {});
 
     const version = state.previewVersions.get(lora.file_path);
@@ -61,13 +63,15 @@ export function createLoraCard(lora) {
     card.addEventListener('click', () => {
         const loraMeta = {
             sha256: card.dataset.sha256,
-            file_path: card.dataset.filepath.replace(/[^/]+$/, ''), // Extract directory path
+            file_path: card.dataset.filepath,
             model_name: card.dataset.name,
             file_name: card.dataset.file_name,
             folder: card.dataset.folder,
             modified: card.dataset.modified,
             from_civitai: card.dataset.from_civitai === 'true',
             base_model: card.dataset.base_model,
+            usage_tips: card.dataset.usage_tips,
+            notes: card.dataset.notes,
             civitai: JSON.parse(card.dataset.meta || '{}')
         };
         showLoraModal(loraMeta);
@@ -105,8 +109,8 @@ export function createLoraCard(lora) {
 }
 
 export function showLoraModal(lora) {
-    const escapedWords = lora.trainedWords?.length ? 
-        lora.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
+    const escapedWords = lora.civitai?.trainedWords?.length ? 
+        lora.civitai.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
 
     const content = `
         <div class="modal-content">
@@ -128,7 +132,7 @@ export function showLoraModal(lora) {
                         </div>
                         <div class="info-item">
                             <label>Location</label>
-                            <span class="file-path">${lora.file_path || 'N/A'}</span>
+                            <span class="file-path">${lora.file_path.replace(/[^/]+$/, '') || 'N/A'}</span>
                         </div>
                         <div class="info-item">
                             <label>Base Model</label>
@@ -213,7 +217,7 @@ window.saveNotes = async function(filePath) {
     }
 };
 
-async function saveModelMetadata(filePath, data) {
+async function  saveModelMetadata(filePath, data) {
     const response = await fetch('/loras/api/save-metadata', {
         method: 'POST',
         headers: {
