@@ -1,5 +1,16 @@
 # Update History
 
+---
+
+## [Update 0.5.9] Enhanced Search Capabilities
+
+- 🔍 **Advanced Search Features**:
+  - Implemented fuzzy search for more flexible model finding
+  - Added recursive search toggle functionality
+  - Support for searching in current folder only or all subfolders
+
+---
+
 ## [Update 0.5.8] UI Enhancements & Navigation Improvements
 
 - ✨ **Enhanced Navigation**:

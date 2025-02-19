@@ -6,12 +6,20 @@ A web-based management interface designed to help you organize and manage your l
 
 ---
 
-## [Update 0.5.9] Enhanced Search Capabilities
+## [Update 0.7.0] Major Features Enhancement
 
-- 🔍 **Advanced Search Features**:
-  - Implemented fuzzy search for more flexible model finding
-  - Added recursive search toggle functionality
-  - Support for searching in current folder only or all subfolders
+- 🚀 **Direct CivitAI Integration**:
+  - Download LoRAs directly from CivitAI URLs
+  - Version selection support for model downloads
+  - Choose target folder for downloads
+- 📋 **New Context Menu Features**:
+  - Right-click menu for quick actions
+  - Force refresh CivitAI data
+  - Move LoRAs between folders
+- 📝 **Enhanced Model Details**:
+  - Save personal usage tips
+  - Add custom notes for each LoRA
+  - Improved performance for details window
 
 [View Update History](./update_logs.md)
 
@@ -24,20 +32,22 @@ A web-based management interface designed to help you organize and manage your l
   - Smooth scrolling through large collections
   - Real-time updates when files change
   
-- 📂 **Easy Organization**
-  - Quick search to find models
+- 📂 **Advanced Organization**
+  - Quick search with fuzzy matching
   - Folder-based categorization
+  - Move LoRAs between folders
   - Sort by name or date
   
-- 🌐 **Rich Model Details**
+- 🌐 **Rich Model Integration**
+  - Direct download from CivitAI
   - Preview images and videos
-  - Model descriptions from CivitAI
+  - Model descriptions and version selection
   - Trigger words at a glance
   
 - 💻 **User Friendly**
   - One-click access from ComfyUI menu
-  - Copy model names with single click
-  - Customizable light/dark theme
+  - Context menu for quick actions
+  - Custom notes and usage tips
   - Multi-folder support
 
 ---
@@ -61,12 +71,15 @@ pip install requirements.txt
 
 ## Usage
 
-1. Once installed, access the LoRA manager at [http://localhost:8188/loras](http://localhost:8188/loras).
+1. There are two ways to access the LoRA manager:
+   - Click the "Launch LoRA Manager" button in the ComfyUI menu
+   - Visit http://localhost:8188/loras directly
 2. From the interface, you can:
-   - Browse and organize your LoRA models.
-   - Automatically fetch or manually set preview images.
-   - View and copy trigger words associated with each LoRA.
-   - Toggle between light and dark themes.
+   - Browse and organize your LoRA models
+   - Download models directly from CivitAI
+   - Automatically fetch or manually set preview images
+   - View and copy trigger words associated with each LoRA
+   - Add personal notes and usage tips
 
 ---
 
@@ -74,3 +87,21 @@ pip install requirements.txt
 
 If you have suggestions, bug reports, or improvements, feel free to open an issue or contribute directly to the codebase. Pull requests are always welcome!
 
+---
+
+## ☕ Support
+
+If you find this project helpful, consider supporting its development:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/pixelpawsai)
+
+---
+
+## 🗺️ Roadmap
+
+- 🔄 One-click integration of LoRAs into ComfyUI workflows with preset strength values
+- 🤝 Improved usage tips retrieval from CivitAI model pages
+- 🔌 Integration with Power LoRA Loader and other management tools
+- 🛡️ Configurable NSFW level settings for content filtering
+
+---
