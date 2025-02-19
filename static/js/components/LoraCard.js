@@ -171,15 +171,7 @@ export function showLoraModal(lora) {
 
                 </div>
 
-                <div class="showcase-section">
-                    <div class="scroll-indicator">
-                        <i class="fas fa-chevron-down"></i>
-                        Scroll for more examples
-                    </div>
-                    <div class="carousel">
-                        ${renderShowcaseImages(lora.civitai.images)}
-                    </div>
-                </div>
+                ${renderShowcaseImages(lora.civitai.images)}
             </div>
         </div>
     `;
@@ -275,21 +267,101 @@ function renderTriggerWords(words) {
 function renderShowcaseImages(images) {
     if (!images?.length) return '';
     
-    return images.map(img => {
-        if (img.type === 'video') {
-            return `
-                <video controls autoplay muted loop crossorigin="anonymous" referrerpolicy="no-referrer">
-                    <source src="${img.url}" type="video/mp4">
-                    Your browser does not support video playback
-                </video>
-            `;
+    return `
+        <div class="showcase-section">
+            <div class="scroll-indicator" onclick="toggleShowcase(this)">
+                <i class="fas fa-chevron-down"></i>
+                <span>Show ${images.length} examples</span>
+            </div>
+            <div class="carousel collapsed">
+                <div class="carousel-container">
+                    ${images.map(img => {
+                        // 计算适当的展示高度：
+                        // 1. 保持原始宽高比
+                        // 2. 限制最大高度为视窗高度的60%
+                        // 3. 确保最小高度为容器宽度的40%
+                        const aspectRatio = (img.height / img.width) * 100;
+                        const containerWidth = 800; // modal content的最大宽度
+                        const minHeightPercent = 40; // 最小高度为容器宽度的40%
+                        const maxHeightPercent = (window.innerHeight * 0.6 / containerWidth) * 100;
+                        const heightPercent = Math.max(
+                            minHeightPercent,
+                            Math.min(maxHeightPercent, aspectRatio)
+                        );
+                        
+                        if (img.type === 'video') {
+                            return `
+                                <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
+                                    <video controls autoplay muted loop crossorigin="anonymous" 
+                                           referrerpolicy="no-referrer" data-src="${img.url}"
+                                           class="lazy">
+                                        <source data-src="${img.url}" type="video/mp4">
+                                        Your browser does not support video playback
+                                    </video>
+                                </div>
+                            `;
+                        }
+                        return `
+                            <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
+                                <img data-src="${img.url}" 
+                                     alt="Preview" 
+                                     crossorigin="anonymous" 
+                                     referrerpolicy="no-referrer"
+                                     width="${img.width}"
+                                     height="${img.height}"
+                                     class="lazy"> 
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Add this to the window object for global access
+export function toggleShowcase(element) {
+    const carousel = element.nextElementSibling;
+    const isCollapsed = carousel.classList.contains('collapsed');
+    const indicator = element.querySelector('span');
+    const icon = element.querySelector('i');
+    
+    carousel.classList.toggle('collapsed');
+    
+    if (isCollapsed) {
+        indicator.textContent = 'Hide examples';
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        initLazyLoading(carousel);
+    } else {
+        const count = carousel.querySelectorAll('.media-wrapper').length;
+        indicator.textContent = `Show ${count} examples`;
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    }
+};
+
+// Add lazy loading initialization
+export function initLazyLoading(container) {
+    const lazyElements = container.querySelectorAll('.lazy');
+    
+    const lazyLoad = (element) => {
+        if (element.tagName.toLowerCase() === 'video') {
+            element.src = element.dataset.src;
+            element.querySelector('source').src = element.dataset.src;
+            element.load();
+        } else {
+            element.src = element.dataset.src;
         }
-        return `
-            <img src="${img.url}" 
-                 alt="Preview" 
-                 crossorigin="anonymous" 
-                 referrerpolicy="no-referrer" 
-                 loading="lazy">
-        `;
-    }).join('');
+        element.classList.remove('lazy');
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                lazyLoad(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    });
+
+    lazyElements.forEach(element => observer.observe(element));
 }
