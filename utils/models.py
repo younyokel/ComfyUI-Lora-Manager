@@ -15,7 +15,7 @@ class LoraMetadata:
     sha256: str                 # SHA256 hash of the file
     base_model: str             # Base model (SD1.5/SD2.1/SDXL/etc.)
     preview_url: str            # Preview image URL
-    usage_tips: str = ""        # Usage tips for the model
+    usage_tips: str = "{}"      # Usage tips for the model, json string
     notes: str = ""             # Additional notes
     from_civitai: bool = True  # Whether the lora is from Civitai
     civitai: Optional[Dict] = None  # Civitai API data if available

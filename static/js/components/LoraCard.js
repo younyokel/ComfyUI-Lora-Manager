@@ -1,6 +1,5 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
-import { resetAndReload } from '../api/loraApi.js';
 import { state } from '../state/index.js';
 
 export function createLoraCard(lora) {
@@ -129,7 +128,7 @@ export function showLoraModal(lora) {
                         </div>
                         <div class="info-item">
                             <label>File Name</label>
-                            <span>${lora.file_name || 'N/A'}</span>
+                            <span id="file-name">${lora.file_name || 'N/A'}</span>
                         </div>
                         <div class="info-item">
                             <label>Location</label>
@@ -142,10 +141,20 @@ export function showLoraModal(lora) {
                         <div class="info-item usage-tips">
                             <label>Usage Tips</label>
                             <div class="editable-field">
-                                <div class="usage-tips-content" contenteditable="true" spellcheck="false">${lora.usage_tips || 'Save usage tips here..'}</div>
-                                <button class="save-btn" onclick="saveUsageTips('${lora.file_path}')">
-                                    <i class="fas fa-save"></i>
-                                </button>
+                                <div class="preset-controls">
+                                    <select id="preset-selector">
+                                        <option value="">Add preset parameter...</option>
+                                        <option value="strength_min">Strength Min</option>
+                                        <option value="strength_max">Strength Max</option>
+                                        <option value="strength">Strength</option>
+                                        <option value="clip_skip">Clip Skip</option>
+                                    </select>
+                                    <input type="number" id="preset-value" step="0.01" placeholder="Value" style="display:none;">
+                                    <button class="add-preset-btn">Add</button>
+                                </div>
+                                <div class="preset-tags">
+                                    ${renderPresetTags(parsePresets(lora.usage_tips))}
+                                </div>
                             </div>
                         </div>
                         ${renderTriggerWords(escapedWords)}
@@ -195,25 +204,57 @@ function setupEditableFields() {
             }
         });
     });
-}
 
-// Add these functions to handle saving the editable fields
-window.saveUsageTips = async function(filePath) {
-    const content = document.querySelector('.usage-tips-content').textContent;
-    try {
-        await saveModelMetadata(filePath, { usage_tips: content });
+    const presetSelector = document.getElementById('preset-selector');
+    const presetValue = document.getElementById('preset-value');
+    const addPresetBtn = document.querySelector('.add-preset-btn');
+    const presetTags = document.querySelector('.preset-tags');
 
-        // Update the corresponding lora card's dataset
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard) {
-            loraCard.dataset.usage_tips = content;
+    presetSelector.addEventListener('change', function() {
+        const selected = this.value;
+        if (selected) {
+            presetValue.style.display = 'inline-block';
+            presetValue.min = selected.includes('strength') ? 0 : 1;
+            presetValue.max = selected.includes('strength') ? 1 : 12;
+            presetValue.step = selected.includes('strength') ? 0.01 : 1;
+            if (selected === 'clip_skip') {
+                presetValue.type = 'number';
+                presetValue.step = 1;
+            }
+        } else {
+            presetValue.style.display = 'none';
         }
+    });
 
-        showToast('Usage tips saved successfully', 'success');
-    } catch (error) {
-        showToast('Failed to save usage tips', 'error');
-    }
-};
+    addPresetBtn.addEventListener('click', async function() {
+        const key = presetSelector.value;
+        const value = presetValue.value;
+        
+        if (!key || !value) return;
+
+        const filePath = document.querySelector('.modal-content')
+            .querySelector('.file-path').textContent + 
+            document.querySelector('.modal-content')
+            .querySelector('#file-name').textContent + '.safetensors';
+
+        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        const currentPresets = parsePresets(loraCard.dataset.usage_tips);
+        
+        currentPresets[key] = parseFloat(value);
+        const newPresetsJson = JSON.stringify(currentPresets);
+
+        await saveModelMetadata(filePath, { 
+            usage_tips: newPresetsJson
+        });
+
+        loraCard.dataset.usage_tips = newPresetsJson;
+        presetTags.innerHTML = renderPresetTags(currentPresets);
+        
+        presetSelector.value = '';
+        presetValue.value = '';
+        presetValue.style.display = 'none';
+    });
+}
 
 window.saveNotes = async function(filePath) {
     const content = document.querySelector('.notes-content').textContent;
@@ -225,7 +266,7 @@ window.saveNotes = async function(filePath) {
         if (loraCard) {
             loraCard.dataset.notes = content;
         }
-        
+
         showToast('Notes saved successfully', 'success');
     } catch (error) {
         showToast('Failed to save notes', 'error');
@@ -427,3 +468,46 @@ export function scrollToTop(button) {
         });
     }
 }
+
+function parsePresets(usageTips) {
+    if (!usageTips || usageTips === 'Save usage tips here..') return {};
+    try {
+        return JSON.parse(usageTips);
+    } catch {
+        return {};
+    }
+}
+
+function renderPresetTags(presets) {
+    return Object.entries(presets).map(([key, value]) => `
+        <div class="preset-tag" data-key="${key}">
+            <span>${formatPresetKey(key)}: ${value}</span>
+            <i class="fas fa-times" onclick="removePreset('${key}')"></i>
+        </div>
+    `).join('');
+}
+
+function formatPresetKey(key) {
+    return key.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+}
+
+window.removePreset = async function(key) {
+    const filePath = document.querySelector('.modal-content')
+            .querySelector('.file-path').textContent + 
+            document.querySelector('.modal-content')
+            .querySelector('#file-name').textContent + '.safetensors';
+    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const currentPresets = parsePresets(loraCard.dataset.usage_tips);
+    
+    delete currentPresets[key];
+    const newPresetsJson = JSON.stringify(currentPresets);
+
+    await saveModelMetadata(filePath, { 
+        usage_tips: newPresetsJson 
+    });
+    
+    loraCard.dataset.usage_tips = newPresetsJson;
+    document.querySelector('.preset-tags').innerHTML = renderPresetTags(currentPresets);
+};
