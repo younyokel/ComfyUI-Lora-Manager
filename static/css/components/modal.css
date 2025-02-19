@@ -543,7 +543,7 @@ body.modal-open {
     opacity: 0.9;
 }
 
-/* Modal Header */
+/* Lora Modal Header */
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -583,6 +583,20 @@ body.modal-open {
 .info-item span {
     color: var(--text-color);
     word-break: break-word;
+}
+
+.info-item.notes {
+    grid-column: 1 / -1 !important; /* Make notes section full width */
+}
+
+/* Add specific styles for notes content */
+.info-item.notes .editable-field [contenteditable] {
+    min-height: 60px; /* Increase height for multiple lines */
+    max-height: 150px; /* Limit maximum height */
+    overflow-y: auto; /* Add scrolling for long content */
+    white-space: pre-wrap; /* Preserve line breaks */
+    line-height: 1.5; /* Improve readability */
+    padding: 8px 12px; /* Slightly increase padding */
 }
 
 .file-path {
@@ -659,6 +673,7 @@ body.modal-open {
     margin-top: var(--space-1);
 }
 
+/* Update Trigger Words styles */
 .trigger-word-tag {
     display: inline-flex;
     align-items: center;
@@ -671,17 +686,18 @@ body.modal-open {
     gap: 6px;
 }
 
-/* Keep the existing trigger word tag hover and content styles */
-.trigger-word-tag:hover {
-    background: oklch(var(--lora-accent) / 0.1);
-    border-color: var(--lora-accent);
-}
-
+/* Update trigger word content color to use theme accent */
 .trigger-word-content {
-    color: oklch(65% 0.2 256);
+    color: var(--lora-accent) !important; /* Override general span color */
     font-size: 0.85em;
     line-height: 1.4;
     word-break: break-word;
+}
+
+/* Keep the hover effect using accent color */
+.trigger-word-tag:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
 }
 
 .trigger-word-copy {
@@ -746,12 +762,6 @@ body.modal-open {
 
 .save-btn i {
     font-size: 0.9em;
-}
-
-/* Adjust info items for the new fields */
-.info-item.usage-tips,
-.info-item.notes {
-    grid-column: span 1;
 }
 
 @media (max-width: 640px) {

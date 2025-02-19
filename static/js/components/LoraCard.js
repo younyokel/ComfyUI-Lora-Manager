@@ -12,6 +12,7 @@ export function createLoraCard(lora) {
     card.dataset.folder = lora.folder;
     card.dataset.modified = lora.modified;
     card.dataset.from_civitai = lora.from_civitai;
+    card.dataset.base_model = lora.base_model;
     card.dataset.meta = JSON.stringify(lora.civitai || {});
 
     const version = state.previewVersions.get(lora.file_path);
@@ -58,17 +59,18 @@ export function createLoraCard(lora) {
 
     // Main card click event
     card.addEventListener('click', () => {
-        const meta = JSON.parse(card.dataset.meta || '{}');
-        if (Object.keys(meta).length) {
-            showLoraModal(meta);
-        } else {
-            showToast(
-                card.dataset.from_civitai === 'true' ?
-                'Click "Fetch" to retrieve metadata' :
-                'No CivitAI information available',
-                'info'
-            );
-        }
+        const loraMeta = {
+            sha256: card.dataset.sha256,
+            file_path: card.dataset.filepath.replace(/[^/]+$/, ''), // Extract directory path
+            model_name: card.dataset.name,
+            file_name: card.dataset.file_name,
+            folder: card.dataset.folder,
+            modified: card.dataset.modified,
+            from_civitai: card.dataset.from_civitai === 'true',
+            base_model: card.dataset.base_model,
+            civitai: JSON.parse(card.dataset.meta || '{}')
+        };
+        showLoraModal(loraMeta);
     });
 
     // Copy button click event
@@ -108,9 +110,9 @@ export function showLoraModal(lora) {
 
     const content = `
         <div class="modal-content">
+            <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
             <header class="modal-header">
-                <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
-                <h2>${lora.model.name}</h2>
+                <h2>${lora.model_name}</h2>
                 <div class="modal-actions">
                     ${lora.from_civitai ? 
                         `<button class="fetch-btn" title="Refresh metadata from Civitai">
@@ -128,7 +130,7 @@ export function showLoraModal(lora) {
                     <div class="info-grid">
                         <div class="info-item">
                             <label>Version</label>
-                            <span>${lora.name || 'N/A'}</span>
+                            <span>${lora.civitai.name || 'N/A'}</span>
                         </div>
                         <div class="info-item">
                             <label>File Name</label>
@@ -145,12 +147,13 @@ export function showLoraModal(lora) {
                         <div class="info-item usage-tips">
                             <label>Usage Tips</label>
                             <div class="editable-field">
-                                <div class="usage-tips-content" contenteditable="true" spellcheck="false">${lora.usage_tips || 'Strength: 0.8'}</div>
+                                <div class="usage-tips-content" contenteditable="true" spellcheck="false">${lora.usage_tips || 'Save usage tips here..'}</div>
                                 <button class="save-btn" onclick="saveUsageTips('${lora.file_path}')">
                                     <i class="fas fa-save"></i>
                                 </button>
                             </div>
                         </div>
+                        ${renderTriggerWords(escapedWords)}
                         <div class="info-item notes">
                             <label>Additional Notes</label>
                             <div class="editable-field">
@@ -160,7 +163,6 @@ export function showLoraModal(lora) {
                                 </button>
                             </div>
                         </div>
-                        ${renderTriggerWords(escapedWords)}
                         <div class="info-item full-width">
                             <label>About this version</label>
                             <div class="description-text">${lora.description || 'N/A'}</div>
@@ -175,7 +177,7 @@ export function showLoraModal(lora) {
                         Scroll for more examples
                     </div>
                     <div class="carousel">
-                        ${renderShowcaseImages(lora.images)}
+                        ${renderShowcaseImages(lora.civitai.images)}
                     </div>
                 </div>
             </div>
@@ -192,7 +194,7 @@ function setupEditableFields() {
     editableFields.forEach(field => {
         field.addEventListener('focus', function() {
             if (this.textContent === 'Add your notes here...' || 
-                this.textContent === 'Strength: 0.8') {
+                this.textContent === 'Save usage tips here..') {
                 this.textContent = '';
             }
         });
@@ -200,7 +202,7 @@ function setupEditableFields() {
         field.addEventListener('blur', function() {
             if (this.textContent.trim() === '') {
                 this.textContent = this.classList.contains('usage-tips-content') 
-                    ? 'Strength: 0.8' 
+                    ? 'Save usage tips here..' 
                     : 'Add your notes here...';
             }
         });
@@ -246,7 +248,12 @@ async function saveModelMetadata(filePath, data) {
 }
 
 function renderTriggerWords(words) {
-    if (!words.length) return '';
+    if (!words.length) return `
+        <div class="info-item full-width trigger-words">
+            <label>Trigger Words</label>
+            <span>No trigger word needed</span>
+        </div>
+    `;
     
     return `
         <div class="info-item full-width trigger-words">
