@@ -178,6 +178,7 @@ export function showLoraModal(lora) {
     
     modalManager.showModal('loraModal', content);
     setupEditableFields();
+    setupShowcaseScroll(); // Add this line
 }
 
 function setupEditableFields() {
@@ -271,7 +272,7 @@ function renderShowcaseImages(images) {
         <div class="showcase-section">
             <div class="scroll-indicator" onclick="toggleShowcase(this)">
                 <i class="fas fa-chevron-down"></i>
-                <span>Show ${images.length} examples</span>
+                <span>Scroll or click to show ${images.length} examples</span>
             </div>
             <div class="carousel collapsed">
                 <div class="carousel-container">
@@ -315,6 +316,9 @@ function renderShowcaseImages(images) {
                     }).join('')}
                 </div>
             </div>
+            <button class="back-to-top" onclick="scrollToTop(this)">
+                <i class="fas fa-arrow-up"></i>
+            </button>
         </div>
     `;
 }
@@ -329,18 +333,19 @@ export function toggleShowcase(element) {
     carousel.classList.toggle('collapsed');
     
     if (isCollapsed) {
-        indicator.textContent = 'Hide examples';
+        const count = carousel.querySelectorAll('.media-wrapper').length;
+        indicator.textContent = `Scroll or click to hide examples`;
         icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
         initLazyLoading(carousel);
     } else {
         const count = carousel.querySelectorAll('.media-wrapper').length;
-        indicator.textContent = `Show ${count} examples`;
+        indicator.textContent = `Scroll or click to show ${count} examples`;
         icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
     }
 };
 
 // Add lazy loading initialization
-export function initLazyLoading(container) {
+function initLazyLoading(container) {
     const lazyElements = container.querySelectorAll('.lazy');
     
     const lazyLoad = (element) => {
@@ -364,4 +369,52 @@ export function initLazyLoading(container) {
     });
 
     lazyElements.forEach(element => observer.observe(element));
+}
+
+export function setupShowcaseScroll() {
+    // Change from modal-content to window/document level
+    document.addEventListener('wheel', (event) => {
+        const modalContent = document.querySelector('.modal-content');
+        if (!modalContent) return;
+
+        const showcase = modalContent.querySelector('.showcase-section');
+        if (!showcase) return;
+        
+        const carousel = showcase.querySelector('.carousel');
+        const scrollIndicator = showcase.querySelector('.scroll-indicator');
+        
+        if (carousel?.classList.contains('collapsed') && event.deltaY > 0) {
+            const isNearBottom = modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight < 100;
+            
+            if (isNearBottom) {
+                toggleShowcase(scrollIndicator);
+                event.preventDefault();
+            }
+        }
+    });
+
+    // Keep the existing scroll tracking code
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.addEventListener('scroll', () => {
+            const backToTopBtn = modalContent.querySelector('.back-to-top');
+            if (backToTopBtn) {
+                if (modalContent.scrollTop > 300) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            }
+        });
+    }
+}
+
+export function scrollToTop(button) {
+    const modalContent = button.closest('.modal-content');
+    if (modalContent) {
+        modalContent.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
 }

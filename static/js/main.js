@@ -2,7 +2,7 @@ import { debounce } from './utils/debounce.js';
 import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { state } from './state/index.js';
-import { showLoraModal, toggleShowcase, initLazyLoading } from './components/LoraCard.js';
+import { showLoraModal, toggleShowcase, scrollToTop } from './components/LoraCard.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
 import { 
     showToast, 
@@ -46,6 +46,7 @@ window.settingsManager = new SettingsManager();
 window.toggleApiKeyVisibility = toggleApiKeyVisibility;
 window.moveManager = moveManager;
 window.toggleShowcase = toggleShowcase;
+window.scrollToTop = scrollToTop;
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initFolderTagsVisibility();
     initBackToTop();
-    initLazyLoading();
     window.searchManager = new SearchManager();
     new LoraContextMenu();
 });
