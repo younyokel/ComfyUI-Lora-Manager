@@ -39,7 +39,7 @@ export function createLoraCard(lora) {
                        ${!lora.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
                     </i>
                     <i class="fas fa-copy" 
-                       title="Copy Model Name">
+                       title="Copy LoRA Syntax">
                     </i>
                     <i class="fas fa-trash" 
                        title="Delete Model">
@@ -80,8 +80,12 @@ export function createLoraCard(lora) {
     // Copy button click event
     card.querySelector('.fa-copy')?.addEventListener('click', e => {
         e.stopPropagation();
-        navigator.clipboard.writeText(card.dataset.file_name)
-            .then(() => showToast('Model name copied', 'success'))
+        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+        const strength = usageTips.strength || 1;
+        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+        
+        navigator.clipboard.writeText(loraSyntax)
+            .then(() => showToast('LoRA syntax copied', 'success'))
             .catch(() => showToast('Copy failed', 'error'));
     });
 
