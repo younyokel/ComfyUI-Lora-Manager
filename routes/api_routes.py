@@ -498,6 +498,10 @@ class ApiRoutes:
                     relative_path=data.get('relative_path'),
                     progress_callback=progress_callback  # Add progress callback
                 )
+                
+                if not result.get('success', False):
+                    return web.Response(status=500, text=result.get('error', 'Unknown error'))
+                
                 return web.json_response(result)
             except Exception as e:
                 logger.error(f"Error downloading LoRA: {e}")

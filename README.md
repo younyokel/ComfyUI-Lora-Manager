@@ -25,6 +25,14 @@ A web-based management interface designed to help you organize and manage your l
 
 ---
 
+## **⚠ Important Note**: To use the CivitAI download feature, you'll need to:
+
+1. Get your CivitAI API key from your profile settings
+2. Add it to the LoRA Manager settings page
+3. Save the settings
+
+---
+
 ## Key Features
 
 - 🚀 **High Performance**
