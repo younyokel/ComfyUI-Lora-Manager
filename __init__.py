@@ -1,12 +1,12 @@
 from .lora_manager import LoraManager
-from .nodes.lora_gateway import LoRAGateway
+from .nodes.lora_loader import LoraManagerLoader
 
 NODE_CLASS_MAPPINGS = {
-    "LoRAGateway": LoRAGateway
+    "LoRALoader": LoraManagerLoader
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "LoRAGateway": "LoRAGateway"
+    "LoRALoader": "Lora Loader (LoraManager)"
 }
 
 WEB_DIRECTORY = "./web/comfyui"

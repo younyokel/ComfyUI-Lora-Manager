@@ -58,6 +58,9 @@ export class LoraContextMenu {
                 case 'refresh-metadata':
                     refreshSingleLoraMetadata(this.currentCard.dataset.filepath);
                     break;
+                case 'copy-to-stack':
+                    this.copyToLoraStack();
+                    break;
             }
             
             this.hideMenu();
@@ -97,5 +100,41 @@ export class LoraContextMenu {
     hideMenu() {
         this.menu.style.display = 'none';
         this.currentCard = null;
+    }
+
+    copyToLoraStack() {
+        if (!this.currentCard) return;
+
+        const loraStackNode = {
+            "id": crypto.randomUUID(),
+            "type": "LoRAStack",
+            "inputs": {
+                "enabled": true,
+                "lora_name": this.currentCard.dataset.filepath,
+                "model_strength": 1.0,  
+            },
+            "class_type": "LoRAStack",
+            "_meta": {
+                "title": `LoRA Stack (${this.currentCard.dataset.file_name})`,
+            }
+        };
+
+        // Convert to ComfyUI workflow format
+        const workflow = {
+            "last_node_id": 1,
+            "last_link_id": 0,
+            "nodes": [loraStackNode],
+            "links": [],
+        };
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(JSON.stringify(workflow))
+            .then(() => {
+                showToast('LoRA Stack copied to clipboard', 'success');
+            })
+            .catch(err => {
+                console.error('Failed to copy:', err);
+                showToast('Failed to copy LoRA Stack', 'error');
+            });
     }
 }
