@@ -1,6 +1,6 @@
 {
-  "last_node_id": 47,
-  "last_link_id": 77,
+  "last_node_id": 52,
+  "last_link_id": 80,
   "nodes": [
     {
       "id": 34,
@@ -72,158 +72,6 @@
       "bgcolor": "#533"
     },
     {
-      "id": 46,
-      "type": "JoinStrings",
-      "pos": [
-        696.0320434570312,
-        -173.09176635742188
-      ],
-      "size": [
-        315,
-        106
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 9,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "string1",
-          "type": "STRING",
-          "link": 73,
-          "widget": {
-            "name": "string1"
-          }
-        },
-        {
-          "name": "string2",
-          "type": "STRING",
-          "link": 74,
-          "widget": {
-            "name": "string2"
-          }
-        }
-      ],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            76
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "JoinStrings"
-      },
-      "widgets_values": [
-        "",
-        "",
-        ","
-      ]
-    },
-    {
-      "id": 41,
-      "type": "easy showAnything",
-      "pos": [
-        853.4336547851562,
-        -430.6646728515625
-      ],
-      "size": [
-        343,
-        186
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "anything",
-          "type": "*",
-          "link": 65,
-          "shape": 7
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": null
-        }
-      ],
-      "title": "loaded loras",
-      "properties": {
-        "Node name for S&R": "easy showAnything"
-      },
-      "widgets_values": [
-        "pp-storybook_rank2_bf16: 1.0\npsycho_art: 1.3"
-      ],
-      "color": "#233",
-      "bgcolor": "#355"
-    },
-    {
-      "id": 31,
-      "type": "KSampler",
-      "pos": [
-        816,
-        192
-      ],
-      "size": [
-        315,
-        262
-      ],
-      "flags": {},
-      "order": 13,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 61
-        },
-        {
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 57
-        },
-        {
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 55
-        },
-        {
-          "name": "latent_image",
-          "type": "LATENT",
-          "link": 51
-        }
-      ],
-      "outputs": [
-        {
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [
-            52
-          ],
-          "slot_index": 0,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "KSampler"
-      },
-      "widgets_values": [
-        42,
-        "fixed",
-        20,
-        1,
-        "euler",
-        "simple",
-        1
-      ]
-    },
-    {
       "id": 27,
       "type": "EmptySD3LatentImage",
       "pos": [
@@ -291,7 +139,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            77
+            78
           ],
           "slot_index": 0
         }
@@ -344,46 +192,6 @@
       ]
     },
     {
-      "id": 37,
-      "type": "UNETLoader",
-      "pos": [
-        -230,
-        -30
-      ],
-      "size": [
-        315,
-        82
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            59
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "UNETLoader",
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65
-      },
-      "widgets_values": [
-        "flux\\flux1-dev-fp8-e4m3fn.safetensors",
-        "fp8_e4m3fn"
-      ]
-    },
-    {
       "id": 38,
       "type": "DualCLIPLoader",
       "pos": [
@@ -395,7 +203,7 @@
         106
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -425,33 +233,6 @@
         "flux",
         "default"
       ]
-    },
-    {
-      "id": 47,
-      "type": "PreviewImage",
-      "pos": [
-        1377.63232421875,
-        189.60824584960938
-      ],
-      "size": [
-        441,
-        365.8999938964844
-      ],
-      "flags": {},
-      "order": 15,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 77
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
     },
     {
       "id": 6,
@@ -544,43 +325,164 @@
       ]
     },
     {
-      "id": 42,
-      "type": "easy showAnything",
+      "id": 37,
+      "type": "UNETLoader",
       "pos": [
-        858.0067749023438,
-        -195.9464569091797
+        -230,
+        -30
       ],
       "size": [
-        344.583740234375,
-        150.5681915283203
+        315,
+        82
       ],
       "flags": {},
-      "order": 10,
+      "order": 4,
       "mode": 0,
-      "inputs": [
-        {
-          "name": "anything",
-          "type": "*",
-          "link": 76,
-          "shape": 7
-        }
-      ],
+      "inputs": [],
       "outputs": [
         {
-          "name": "output",
-          "type": "*",
+          "name": "MODEL",
+          "type": "MODEL",
           "links": [
-            72
+            59
           ],
           "slot_index": 0
         }
       ],
-      "title": "trigger words & prompt",
       "properties": {
-        "Node name for S&R": "easy showAnything"
+        "Node name for S&R": "UNETLoader",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
       },
       "widgets_values": [
-        "ppstorybook, pscho_4rt, surreal, abstract, glitch,cute anime girl with massive fluffy fennec ears and a big fluffy tail blonde messy long hair blue eyes wearing a maid outfit with a long black gold leaf pattern dress and a white apron mouth open placing a fancy black forest cake with candles on top of a dinner table of an old dark Victorian mansion lit by candlelight with a bright window to the foggy forest and very expensive stuff everywhere there are paintings on the walls"
+        "flux\\flux1-dev-fp8-e4m3fn.safetensors",
+        "fp8_e4m3fn_fast"
+      ]
+    },
+    {
+      "id": 50,
+      "type": "PreviewImage",
+      "pos": [
+        1138.27978515625,
+        -502.31640625
+      ],
+      "size": [
+        563.1337280273438,
+        591.0390014648438
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 78
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 31,
+      "type": "KSampler",
+      "pos": [
+        818.4793090820312,
+        196.13223266601562
+      ],
+      "size": [
+        315,
+        262
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 61
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 57
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 55
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 51
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            52
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        42,
+        "fixed",
+        20,
+        1,
+        "euler",
+        "simple",
+        1
+      ]
+    },
+    {
+      "id": 51,
+      "type": "StringConstantMultiline",
+      "pos": [
+        208.3675994873047,
+        -122.63990020751953
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            79
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "positive",
+      "properties": {
+        "Node name for S&R": "StringConstantMultiline"
+      },
+      "widgets_values": [
+        "cute anime girl with massive fluffy fennec ears and a big fluffy tail blonde messy long hair blue eyes wearing a maid outfit with a long black gold leaf pattern dress and a white apron mouth open placing a fancy black forest cake with candles on top of a dinner table of an old dark Victorian mansion lit by candlelight with a bright window to the foggy forest and very expensive stuff everywhere there are paintings on the walls",
+        true
       ],
       "color": "#232",
       "bgcolor": "#353"
@@ -589,8 +491,8 @@
       "id": 40,
       "type": "LoRALoader",
       "pos": [
-        180.88629150390625,
-        -261.74188232421875
+        209.59677124023438,
+        -383.6261901855469
       ],
       "size": [
         400,
@@ -650,45 +552,142 @@
         "Node name for S&R": "LoRALoader"
       },
       "widgets_values": [
-        ""
+        "<lora:pp-enchanted-whimsy:0.9> <lora:ral-frctlgmtry_flux:1> <lora:pp-storybook_rank2_bf16:0.8>"
       ],
-      "color": "#432",
-      "bgcolor": "#653"
+      "color": "#323",
+      "bgcolor": "#535"
     },
     {
-      "id": 45,
-      "type": "easy string",
+      "id": 41,
+      "type": "easy showAnything",
       "pos": [
-        192.89907836914062,
-        -7.67711877822876
+        759.5703125,
+        -378.4567565917969
       ],
       "size": [
-        391.3636474609375,
-        83.45454406738281
+        343,
+        186
       ],
       "flags": {},
-      "order": 5,
+      "order": 8,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "anything",
+          "type": "*",
+          "link": 65,
+          "shape": 7
+        }
+      ],
       "outputs": [
         {
-          "name": "string",
-          "type": "STRING",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "loaded loras",
+      "properties": {
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "pp-enchanted-whimsy: 0.9\nral-frctlgmtry_flux: 1.0\npp-storybook_rank2_bf16: 0.8"
+      ]
+    },
+    {
+      "id": 42,
+      "type": "easy showAnything",
+      "pos": [
+        759.541748046875,
+        -70.61344146728516
+      ],
+      "size": [
+        344.583740234375,
+        150.5681915283203
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "anything",
+          "type": "*",
+          "link": 76,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
           "links": [
-            74
+            72
           ],
           "slot_index": 0
         }
       ],
-      "title": "prompt",
+      "title": "trigger words & prompt",
       "properties": {
-        "Node name for S&R": "easy string"
+        "Node name for S&R": "easy showAnything"
       },
       "widgets_values": [
-        "cute anime girl with massive fluffy fennec ears and a big fluffy tail blonde messy long hair blue eyes wearing a maid outfit with a long black gold leaf pattern dress and a white apron mouth open placing a fancy black forest cake with candles on top of a dinner table of an old dark Victorian mansion lit by candlelight with a bright window to the foggy forest and very expensive stuff everywhere there are paintings on the walls"
+        "in the style of ppWhimsy, ral-frctlgmtry, ppstorybook,cute anime girl with massive fluffy fennec ears and a big fluffy tail blonde messy long hair blue eyes wearing a maid outfit with a long black gold leaf pattern dress and a white apron mouth open placing a fancy black forest cake with candles on top of a dinner table of an old dark Victorian mansion lit by candlelight with a bright window to the foggy forest and very expensive stuff everywhere there are paintings on the walls"
       ],
       "color": "#232",
       "bgcolor": "#353"
+    },
+    {
+      "id": 46,
+      "type": "JoinStrings",
+      "pos": [
+        715.80712890625,
+        -130.51344299316406
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string1",
+          "type": "STRING",
+          "link": 73,
+          "widget": {
+            "name": "string1"
+          }
+        },
+        {
+          "name": "string2",
+          "type": "STRING",
+          "link": 79,
+          "widget": {
+            "name": "string2"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            76
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "JoinStrings"
+      },
+      "widgets_values": [
+        "",
+        "",
+        ","
+      ]
     }
   ],
   "links": [
@@ -805,14 +804,6 @@
       "STRING"
     ],
     [
-      74,
-      45,
-      0,
-      46,
-      1,
-      "STRING"
-    ],
-    [
       76,
       46,
       0,
@@ -821,12 +812,20 @@
       "*"
     ],
     [
-      77,
+      78,
       8,
       0,
-      47,
+      50,
       0,
       "IMAGE"
+    ],
+    [
+      79,
+      51,
+      0,
+      46,
+      1,
+      "STRING"
     ]
   ],
   "groups": [],
@@ -835,8 +834,8 @@
     "node_versions": {
       "comfy-core": "0.3.14",
       "ComfyUI-KJNodes": "9a3434ffa335a16949aa4c3196a2cd37ba7b4876",
-      "ComfyUI-Easy-Use": "0b64d4c29733f79bcc491e286df333a943e17152",
-      "ComfyUI-Lora-Manager": "3fa8bae2056976f3df828064de3542dd5a360d60"
+      "ComfyUI-Lora-Manager": "4605399b50babce4de4b8eae377f422d5ceee7f2",
+      "ComfyUI-Easy-Use": "0b64d4c29733f79bcc491e286df333a943e17152"
     },
     "ue_links": [],
     "VHS_latentpreview": false,

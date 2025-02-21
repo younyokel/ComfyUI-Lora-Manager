@@ -4,6 +4,11 @@ A web-based management interface designed to help you organize and manage your l
 
 ![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/Screenshot%202025-01-27%20172349.png)
 
+## 📺 Tutorial: One-Click LoRA Integration
+Watch this quick tutorial to learn how to use the new one-click LoRA integration feature:
+
+[![One-Click LoRA Integration Tutorial](https://img.youtube.com/vi/qS95OjX3e70/0.jpg)](https://youtu.be/qS95OjX3e70)
+
 ---
 
 ## [Update 0.7.2] New Features
