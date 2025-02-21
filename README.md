@@ -6,6 +6,14 @@ A web-based management interface designed to help you organize and manage your l
 
 ---
 
+## [Update 0.7.2] New Features
+- ✨ **One-Click LoRA Integration**:
+  - Use "Lora Loader (LoraManager)" custom node in workflows
+  - Copy LoRA syntax directly from manager interface
+  - Auto-applies preset strength values
+  - Auto-loads trigger words when available
+  - Example workflow included
+
 ## [Update 0.7.0] Major Features Enhancement
 
 - 🚀 **Direct CivitAI Integration**:
@@ -51,6 +59,7 @@ A web-based management interface designed to help you organize and manage your l
   - Preview images and videos
   - Model descriptions and version selection
   - Trigger words at a glance
+  - One-click workflow integration with preset values
   
 - 💻 **User Friendly**
   - One-click access from ComfyUI menu
@@ -88,6 +97,12 @@ pip install requirements.txt
    - Automatically fetch or manually set preview images
    - View and copy trigger words associated with each LoRA
    - Add personal notes and usage tips
+3. To use LoRAs in your workflow:
+   - Add the "Lora Loader (LoraManager)" node to your workflow
+   - Select a LoRA in the manager interface
+   - Click copy button or use right-click menu "Copy LoRA syntax"
+   - Paste into the Lora Loader node's text input
+   - The node will automatically apply preset strength and trigger words
 
 ---
 
@@ -107,7 +122,7 @@ If you find this project helpful, consider supporting its development:
 
 ## 🗺️ Roadmap
 
-- 🔄 One-click integration of LoRAs into ComfyUI workflows with preset strength values
+- ✅ One-click integration of LoRAs into ComfyUI workflows with preset strength values
 - 🤝 Improved usage tips retrieval from CivitAI model pages
 - 🔌 Integration with Power LoRA Loader and other management tools
 - 🛡️ Configurable NSFW level settings for content filtering
