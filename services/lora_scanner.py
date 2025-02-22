@@ -231,23 +231,35 @@ class LoraScanner:
     async def _scan_directory(self, root_path: str) -> List[Dict]:
         """Scan a single directory for LoRA files"""
         loras = []
+        original_root = root_path  # 保存原始根路径
         
-        # 使用异步安全的目录遍历方式
-        async def scan_recursive(path: str):
+        async def scan_recursive(path: str, visited_paths: set):
+            """递归扫描目录，避免循环链接"""
             try:
+                real_path = os.path.realpath(path)
+                if real_path in visited_paths:
+                    logger.debug(f"Skipping already visited path: {path}")
+                    return
+                visited_paths.add(real_path)
+                
                 with os.scandir(path) as it:
-                    entries = list(it)  # 同步获取目录条目
+                    entries = list(it)
                     for entry in entries:
-                        if entry.is_file() and entry.name.endswith('.safetensors'):
-                            file_path = entry.path.replace(os.sep, "/")
-                            await self._process_single_file(file_path, root_path, loras)
-                            await asyncio.sleep(0)  # 释放事件循环
-                        elif entry.is_dir():
-                            await scan_recursive(entry.path)
+                        try:
+                            if entry.is_file(follow_symlinks=True) and entry.name.endswith('.safetensors'):
+                                # 使用原始路径而不是真实路径
+                                file_path = entry.path.replace(os.sep, "/")
+                                await self._process_single_file(file_path, original_root, loras)
+                                await asyncio.sleep(0)
+                            elif entry.is_dir(follow_symlinks=True):
+                                # 对于目录，使用原始路径继续扫描
+                                await scan_recursive(entry.path, visited_paths)
+                        except Exception as e:
+                            logger.error(f"Error processing entry {entry.path}: {e}")
             except Exception as e:
                 logger.error(f"Error scanning {path}: {e}")
 
-        await scan_recursive(root_path)
+        await scan_recursive(root_path, set())
         return loras
 
     async def _process_single_file(self, file_path: str, root_path: str, loras: list):
@@ -316,6 +328,7 @@ class LoraScanner:
     
     def _calculate_folder(self, file_path: str) -> str:
         """Calculate the folder path for a LoRA file"""
+        # 使用原始路径计算相对路径
         for root in config.loras_roots:
             if file_path.startswith(root):
                 rel_path = os.path.relpath(file_path, root)
@@ -323,46 +336,38 @@ class LoraScanner:
         return ''
 
     async def move_model(self, source_path: str, target_path: str) -> bool:
-        """Move a model and its associated files to a new location
-        
-        Args:
-            source_path: Full path to the source lora file
-            target_path: Full path to the target directory
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
+        """Move a model and its associated files to a new location"""
         try:
-            # Ensure paths are normalized
+            # 保持原始路径格式
             source_path = source_path.replace(os.sep, '/')
             target_path = target_path.replace(os.sep, '/')
             
-            # Get base name without extension
+            # 其余代码保持不变
             base_name = os.path.splitext(os.path.basename(source_path))[0]
             source_dir = os.path.dirname(source_path)
             
-            # Create target directory if it doesn't exist
             os.makedirs(target_path, exist_ok=True)
             
-            # Calculate target lora path
             target_lora = os.path.join(target_path, f"{base_name}.safetensors").replace(os.sep, '/')
 
-            # Get source file size for timeout calculation
-            file_size = os.path.getsize(source_path)
+            # 使用真实路径进行文件操作
+            real_source = os.path.realpath(source_path)
+            real_target = os.path.realpath(target_lora)
             
-            # Tell file monitor to ignore these paths
+            file_size = os.path.getsize(real_source)
+            
             if self.file_monitor:
                 self.file_monitor.handler.add_ignore_path(
-                    source_path,
+                    real_source,
                     file_size
                 )
                 self.file_monitor.handler.add_ignore_path(
-                    target_lora,
+                    real_target,
                     file_size
                 )
             
-            # Move main lora file
-            shutil.move(source_path, target_lora)
+            # 使用真实路径进行文件操作
+            shutil.move(real_source, real_target)
             
             # Move associated files
             source_metadata = os.path.join(source_dir, f"{base_name}.metadata.json")
