@@ -1,4 +1,5 @@
 import asyncio
+import os
 from server import PromptServer # type: ignore
 from .config import config
 from .routes.lora_routes import LoraRoutes
@@ -6,6 +7,9 @@ from .routes.api_routes import ApiRoutes
 from .services.lora_scanner import LoraScanner
 from .services.file_monitor import LoraFileMonitor
 from .services.lora_cache import LoraCache
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LoraManager:
     """Main entry point for LoRA Manager plugin"""
@@ -14,11 +18,33 @@ class LoraManager:
     def add_routes(cls):
         """Initialize and register all routes"""
         app = PromptServer.instance.app
+
+        added_targets = set()  # 用于跟踪已添加的目标路径
         
         # Add static routes for each lora root
         for idx, root in enumerate(config.loras_roots, start=1):
             preview_path = f'/loras_static/root{idx}/preview'
+            
+            # 为原始路径添加静态路由
             app.router.add_static(preview_path, root)
+            logger.info(f"Added static route {preview_path} -> {root}")
+            
+            # 记录路由映射
+            config.add_route_mapping(root, preview_path)
+            added_targets.add(root)
+        
+        # 为符号链接的目标路径添加额外的静态路由
+        link_idx = 1
+        
+        for target_path, link_path in config._path_mappings.items():
+            if target_path not in added_targets:
+                route_path = f'/loras_static/link_{link_idx}/preview'
+                app.router.add_static(route_path, target_path)
+                logger.info(f"Added static route for link target {route_path} -> {target_path}")
+                config.add_route_mapping(target_path, route_path)
+                config.add_route_mapping(link_path, route_path)  # 也为符号链接路径添加路由映射
+                added_targets.add(target_path)
+                link_idx += 1
         
         # Add static route for plugin assets
         app.router.add_static('/loras_static', config.static_path)
