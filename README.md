@@ -11,7 +11,7 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ---
 
-## [Update 0.7.2] New Features
+## [Update 0.7.3] New Features
 - ✨ **One-Click LoRA Integration**:
   - Use "Lora Loader (LoraManager)" custom node in workflows
   - Copy LoRA syntax directly from manager interface
