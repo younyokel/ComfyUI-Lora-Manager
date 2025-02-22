@@ -294,7 +294,7 @@ class LoraScanner:
     async def scan_single_lora(self, file_path: str) -> Optional[Dict]:
         """Scan a single LoRA file and return its metadata"""
         try:
-            if not os.path.exists(file_path):
+            if not os.path.exists(os.path.realpath(file_path)):
                 return None
                 
             # 获取基本文件信息

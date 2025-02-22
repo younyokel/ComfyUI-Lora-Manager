@@ -1,3 +1,4 @@
+import logging
 import os
 import hashlib
 import json
@@ -5,6 +6,8 @@ from typing import Dict, Optional
 
 from .lora_metadata import extract_lora_metadata
 from .models import LoraMetadata
+
+logger = logging.getLogger(__name__)
 
 async def calculate_sha256(file_path: str) -> str:
     """Calculate SHA256 hash of a file"""
@@ -37,33 +40,46 @@ def normalize_path(path: str) -> str:
     """Normalize file path to use forward slashes"""
     return path.replace(os.sep, "/") if path else path
 
-async def get_file_info(file_path: str) -> LoraMetadata:
+async def get_file_info(file_path: str) -> Optional[LoraMetadata]:
     """Get basic file information as LoraMetadata object"""
+    # First check if file actually exists and resolve symlinks
+    try:
+        real_path = os.path.realpath(file_path)
+        if not os.path.exists(real_path):
+            return None
+    except Exception as e:
+        logger.error(f"Error checking file existence for {file_path}: {e}")
+        return None
+        
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     dir_path = os.path.dirname(file_path)
     
     preview_url = _find_preview_file(base_name, dir_path)
 
-    metadata = LoraMetadata(
-        file_name=base_name,
-        model_name=base_name,
-        file_path=normalize_path(file_path),
-        size=os.path.getsize(file_path),
-        modified=os.path.getmtime(file_path),
-        sha256=await calculate_sha256(file_path),
-        base_model="Unknown",  # Will be updated later
-        usage_tips="",
-        notes="",
-        from_civitai=True,
-        preview_url=normalize_path(preview_url),
-    )
+    try:
+        metadata = LoraMetadata(
+            file_name=base_name,
+            model_name=base_name,
+            file_path=normalize_path(file_path),
+            size=os.path.getsize(real_path),
+            modified=os.path.getmtime(real_path),
+            sha256=await calculate_sha256(real_path),
+            base_model="Unknown",  # Will be updated later
+            usage_tips="",
+            notes="",
+            from_civitai=True,
+            preview_url=normalize_path(preview_url),
+        )
 
-    # create metadata file
-    base_model_info = await extract_lora_metadata(file_path)
-    metadata.base_model = base_model_info['base_model']
-    await save_metadata(file_path, metadata)
-    
-    return metadata
+        # create metadata file
+        base_model_info = await extract_lora_metadata(real_path)
+        metadata.base_model = base_model_info['base_model']
+        await save_metadata(file_path, metadata)
+        
+        return metadata
+    except Exception as e:
+        logger.error(f"Error getting file info for {file_path}: {e}")
+        return None
 
 async def save_metadata(file_path: str, metadata: LoraMetadata) -> None:
     """Save metadata to .metadata.json file"""
