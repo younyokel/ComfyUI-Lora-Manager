@@ -78,15 +78,32 @@ export function createLoraCard(lora) {
     });
 
     // Copy button click event
-    card.querySelector('.fa-copy')?.addEventListener('click', e => {
+    card.querySelector('.fa-copy')?.addEventListener('click', async e => {
         e.stopPropagation();
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
         
-        navigator.clipboard.writeText(loraSyntax)
-            .then(() => showToast('LoRA syntax copied', 'success'))
-            .catch(() => showToast('Copy failed', 'error'));
+        try {
+            // Modern clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(loraSyntax);
+            } else {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = loraSyntax;
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-99999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            showToast('LoRA syntax copied', 'success');
+        } catch (err) {
+            console.error('Copy failed:', err);
+            showToast('Copy failed', 'error');
+        }
     });
 
     // Civitai button click event
