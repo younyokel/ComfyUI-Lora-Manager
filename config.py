@@ -109,32 +109,13 @@ class Config:
         if not preview_path:
             return ""
         
-        # 获取真实路径和规范化路径
-        real_preview_path = os.path.realpath(preview_path)
-        normalized_real_path = real_preview_path.replace(os.sep, '/')
-        normalized_preview_path = preview_path.replace(os.sep, '/')
-        
-        # 首先尝试使用原始路径查找路由
-        for root_path, route in self._route_mappings.items():
-            if normalized_preview_path.startswith(root_path):
-                relative_path = os.path.relpath(normalized_preview_path, root_path)
+        real_path = os.path.realpath(preview_path).replace(os.sep, '/')
+
+        for path, route in self._route_mappings.items():
+            if real_path.startswith(path):
+                relative_path = os.path.relpath(real_path, path)
                 return f'{route}/{relative_path.replace(os.sep, "/")}'
-        
-        # 如果没找到，尝试使用真实路径查找路由
-        for root_path, route in self._route_mappings.items():
-            if normalized_real_path.startswith(root_path):
-                relative_path = os.path.relpath(normalized_real_path, root_path)
-                return f'{route}/{relative_path.replace(os.sep, "/")}'
-        
-        # 如果还没找到，尝试使用路径映射
-        mapped_path = self.map_path_to_link(real_preview_path)
-        normalized_mapped_path = mapped_path.replace(os.sep, '/')
-        
-        for root_path, route in self._route_mappings.items():
-            if normalized_mapped_path.startswith(root_path):
-                relative_path = os.path.relpath(normalized_mapped_path, root_path)
-                return f'{route}/{relative_path.replace(os.sep, "/")}'
-        
+
         return ""
 
 # Global config instance
