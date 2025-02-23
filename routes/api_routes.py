@@ -215,14 +215,22 @@ class ApiRoutes:
         
         deleted = []
         main_file = patterns[0]
-        main_path = os.path.join(target_dir, main_file)
+        main_path = os.path.join(target_dir, main_file).replace(os.sep, '/')
         
         if os.path.exists(main_path):
-            # Delete main file first
+            # Notify file monitor to ignore delete event
+            self.download_manager.file_monitor.handler.add_ignore_path(main_path, 0)
+            
+            # Delete file
             os.remove(main_path)
-            deleted.append(main_file)
+            deleted.append(main_path)
         else:
             logger.warning(f"Model file not found: {main_file}")
+
+        # Remove from cache
+        cache = await self.scanner.get_cached_data()
+        cache.raw_data = [item for item in cache.raw_data if item['file_path'] != main_path]
+        await cache.resort()
         
         # Delete optional files
         for pattern in patterns[1:]:

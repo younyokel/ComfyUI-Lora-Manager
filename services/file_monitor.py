@@ -27,8 +27,6 @@ class LoraFileHandler(FileSystemEventHandler):
 
     def _should_ignore(self, path: str) -> bool:
         """Check if path should be ignored"""
-        logger.info(f"Checking ignore for {path}")
-        logger.info(f"Current ignore paths: {self._ignore_paths}")
         real_path = os.path.realpath(path)  # Resolve any symbolic links
         return real_path.replace(os.sep, '/') in self._ignore_paths
 
@@ -37,14 +35,8 @@ class LoraFileHandler(FileSystemEventHandler):
         real_path = os.path.realpath(path)  # Resolve any symbolic links
         self._ignore_paths.add(real_path.replace(os.sep, '/'))
         
-        # Calculate timeout based on file size, with a minimum value
-        # Assuming average download speed of 1MB/s
-        timeout = max(
-            self._min_ignore_timeout,
-            (file_size / self._download_speed) * 1.5  # Add 50% buffer
-        )
-        
-        logger.debug(f"Adding {real_path} to ignore list for {timeout:.1f} seconds")
+        # Short timeout (e.g. 5 seconds) is sufficient to ignore the CREATE event
+        timeout = 5
         
         asyncio.get_event_loop().call_later(
             timeout,
