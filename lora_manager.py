@@ -25,13 +25,19 @@ class LoraManager:
         for idx, root in enumerate(config.loras_roots, start=1):
             preview_path = f'/loras_static/root{idx}/preview'
             
+            real_root = root
+            if root in config._path_mappings.values():
+                for target, link in config._path_mappings.items():
+                    if link == root:
+                        real_root = target
+                        break
             # 为原始路径添加静态路由
-            app.router.add_static(preview_path, root)
-            logger.info(f"Added static route {preview_path} -> {root}")
+            app.router.add_static(preview_path, real_root)
+            logger.info(f"Added static route {preview_path} -> {real_root}")
             
             # 记录路由映射
-            config.add_route_mapping(root, preview_path)
-            added_targets.add(root)
+            config.add_route_mapping(real_root, preview_path)
+            added_targets.add(real_root)
         
         # 为符号链接的目标路径添加额外的静态路由
         link_idx = 1
@@ -42,7 +48,6 @@ class LoraManager:
                 app.router.add_static(route_path, target_path)
                 logger.info(f"Added static route for link target {route_path} -> {target_path}")
                 config.add_route_mapping(target_path, route_path)
-                config.add_route_mapping(link_path, route_path)  # 也为符号链接路径添加路由映射
                 added_targets.add(target_path)
                 link_idx += 1
         

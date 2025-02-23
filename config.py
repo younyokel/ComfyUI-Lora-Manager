@@ -82,7 +82,6 @@ class Config:
             if normalized_path.startswith(target_path):
                 # 如果路径以目标路径开头，则替换为链接路径
                 mapped_path = normalized_path.replace(target_path, link_path, 1)
-                logger.info(f"Mapped path {normalized_path} to {mapped_path}")
                 return mapped_path
         return path
 
@@ -100,7 +99,7 @@ class Config:
         for path in paths:
             real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
             if real_path != path:
-                self.add_path_mapping(real_path, path)
+                self.add_path_mapping(path, real_path)
         
         return paths
 

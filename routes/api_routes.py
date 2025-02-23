@@ -217,12 +217,12 @@ class ApiRoutes:
         main_file = patterns[0]
         main_path = os.path.join(target_dir, main_file)
         
-        if not os.path.exists(main_path):
-            raise web.HTTPNotFound(text=f"Model file not found: {main_file}")
-            
-        # Delete main file first
-        os.remove(main_path)
-        deleted.append(main_file)
+        if os.path.exists(main_path):
+            # Delete main file first
+            os.remove(main_path)
+            deleted.append(main_file)
+        else:
+            logger.warning(f"Model file not found: {main_file}")
         
         # Delete optional files
         for pattern in patterns[1:]:

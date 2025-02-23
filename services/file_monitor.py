@@ -27,6 +27,8 @@ class LoraFileHandler(FileSystemEventHandler):
 
     def _should_ignore(self, path: str) -> bool:
         """Check if path should be ignored"""
+        logger.info(f"Checking ignore for {path}")
+        logger.info(f"Current ignore paths: {self._ignore_paths}")
         real_path = os.path.realpath(path)  # Resolve any symbolic links
         return real_path.replace(os.sep, '/') in self._ignore_paths
 
@@ -66,7 +68,7 @@ class LoraFileHandler(FileSystemEventHandler):
         logger.info(f"LoRA file deleted: {event.src_path}")
         self._schedule_update('remove', event.src_path)
         
-    def _schedule_update(self, action: str, file_path: str):
+    def _schedule_update(self, action: str, file_path: str): #file_path is a real path
         """Schedule a cache update"""
         with self.lock:
             # 使用 config 中的方法映射路径
@@ -112,6 +114,7 @@ class LoraFileHandler(FileSystemEventHandler):
                             
                     elif action == 'remove':
                         # 从缓存中移除
+                        logger.info(f"Removing {file_path} from cache")
                         cache.raw_data = [
                             item for item in cache.raw_data 
                             if item['file_path'] != file_path
@@ -145,7 +148,7 @@ class LoraFileMonitor:
         # 使用已存在的路径映射
         self.monitor_paths = set()
         for root in roots:
-            self.monitor_paths.add(os.path.realpath(root))
+            self.monitor_paths.add(os.path.realpath(root).replace(os.sep, '/'))
 
         # 添加所有已映射的目标路径
         for target_path in config._path_mappings.keys():
