@@ -7,7 +7,7 @@ import asyncio
 import os
 
 class LoraManagerLoader:
-    NAME = "Lora Loader"
+    NAME = "Lora Loader (LoraManager)"
     CATEGORY = "loaders"
 
     @classmethod
