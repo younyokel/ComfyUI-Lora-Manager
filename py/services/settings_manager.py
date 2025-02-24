@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class SettingsManager:
     def __init__(self):
-        self.settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings.json')
+        self.settings_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'settings.json')
         self.settings = self._load_settings()
 
     def _load_settings(self) -> Dict[str, Any]:
