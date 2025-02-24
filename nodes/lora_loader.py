@@ -1,6 +1,6 @@
 import re
 from nodes import LoraLoader
-from comfy.comfy_types import IO
+from comfy.comfy_types import IO # type: ignore
 from ..services.lora_scanner import LoraScanner
 from ..config import config
 import asyncio
