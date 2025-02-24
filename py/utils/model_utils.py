@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 
 # Base model mapping based on version string
 BASE_MODEL_MAPPING = {

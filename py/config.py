@@ -10,8 +10,8 @@ class Config:
     """Global configuration for LoRA Manager"""
     
     def __init__(self):
-        self.templates_path = os.path.join(os.path.dirname(__file__), 'templates')
-        self.static_path = os.path.join(os.path.dirname(__file__), 'static')
+        self.templates_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
+        self.static_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
         # 路径映射字典, target to link mapping
         self._path_mappings = {}
         # 静态路由映射字典, target to route mapping

@@ -7,7 +7,6 @@ from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileDelete
 from typing import List
 from threading import Lock
 from .lora_scanner import LoraScanner
-import platform
 from ..config import config
 
 logger = logging.getLogger(__name__)

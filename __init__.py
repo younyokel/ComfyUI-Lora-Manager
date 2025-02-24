@@ -1,5 +1,5 @@
-from .lora_manager import LoraManager
-from .nodes.lora_loader import LoraManagerLoader
+from .py.lora_manager import LoraManager
+from .py.nodes.lora_loader import LoraManagerLoader
 
 NODE_CLASS_MAPPINGS = {
     LoraManagerLoader.NAME: LoraManagerLoader
