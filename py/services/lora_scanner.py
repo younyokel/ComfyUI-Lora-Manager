@@ -84,19 +84,31 @@ class LoraScanner:
 
     async def _initialize_cache(self) -> None:
         """Initialize or refresh the cache"""
-        # Scan for new data
-        raw_data = await self.scan_all_loras()
-        
-        # Update cache
-        self._cache = LoraCache(
-            raw_data=raw_data,
-            sorted_by_name=[],
-            sorted_by_date=[],
-            folders=[]
-        )
-        
-        # Call resort_cache to create sorted views
-        await self._cache.resort()
+        try:
+            # Scan for new data
+            raw_data = await self.scan_all_loras()
+            
+            # Update cache
+            self._cache = LoraCache(
+                raw_data=raw_data,
+                sorted_by_name=[],
+                sorted_by_date=[],
+                folders=[]
+            )
+            
+            # Call resort_cache to create sorted views
+            await self._cache.resort()
+
+            self._initialization_task = None
+            logger.info("LoRA Manager: Cache initialization completed")
+        except Exception as e:
+            logger.error(f"LoRA Manager: Error initializing cache: {e}")
+            self._cache = LoraCache(
+                raw_data=[],
+                sorted_by_name=[],
+                sorted_by_date=[],
+                folders=[]
+            )
 
     def fuzzy_match(self, text: str, pattern: str, threshold: float = 0.7) -> bool:
         """

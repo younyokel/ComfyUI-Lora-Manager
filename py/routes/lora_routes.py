@@ -52,8 +52,9 @@ class LoraRoutes:
         try:
             # 不等待缓存数据，直接检查缓存状态
             is_initializing = (
-                self.scanner._cache is None or 
-                (hasattr(self.scanner, '_cache') and len(self.scanner._cache.raw_data) == 0)
+                self.scanner._cache is None and 
+                (self.scanner._initialization_task is not None and 
+                not self.scanner._initialization_task.done())
             )
 
             if is_initializing:
