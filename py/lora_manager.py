@@ -97,7 +97,6 @@ class LoraManager:
             
             # 分阶段加载缓存
             await scanner.get_cached_data(force_refresh=True)
-            print("LoRA Manager: Cache initialization completed")
         except Exception as e:
             print(f"LoRA Manager: Error initializing cache: {e}")
     

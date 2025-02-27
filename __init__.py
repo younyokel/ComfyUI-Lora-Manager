@@ -1,8 +1,10 @@
 from .py.lora_manager import LoraManager
 from .py.nodes.lora_loader import LoraManagerLoader
+from .py.nodes.trigger_word_toggle import TriggerWordToggle
 
 NODE_CLASS_MAPPINGS = {
-    LoraManagerLoader.NAME: LoraManagerLoader
+    LoraManagerLoader.NAME: LoraManagerLoader,
+    TriggerWordToggle.NAME: TriggerWordToggle
 }
 
 WEB_DIRECTORY = "./web/comfyui"
