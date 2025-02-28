@@ -124,13 +124,16 @@
 .folder-tags-container {
     position: relative;
     width: 100%;
+    margin-bottom: 8px; /* Add margin to ensure space for the button */
 }
 
 .folder-tags {
     transition: max-height 0.3s ease, opacity 0.2s ease;
-    max-height: 200px;
+    max-height: 150px; /* Limit height to prevent overflow */
     opacity: 1;
-    overflow: hidden;
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding-right: 40px; /* Make space for the toggle button */
+    margin-bottom: 5px; /* Add margin below the tags */
 }
 
 .folder-tags.collapsed {
@@ -184,9 +187,27 @@
 .folder-tags {
     display: flex;
     gap: 4px;
-    overflow-x: auto;
     padding: 2px 0;
     flex-wrap: wrap;
+}
+
+/* Add custom scrollbar for better visibility */
+.folder-tags::-webkit-scrollbar {
+    width: 6px;
+}
+
+.folder-tags::-webkit-scrollbar-track {
+    background: var(--card-bg);
+    border-radius: 3px;
+}
+
+.folder-tags::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.folder-tags::-webkit-scrollbar-thumb:hover {
+    background: var(--lora-accent);
 }
 
 .tag {
