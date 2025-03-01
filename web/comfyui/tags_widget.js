@@ -187,6 +187,10 @@ export function addTagsWidget(node, name, opts, callback) {
   widget.options.setValue(defaultValue);
 
   widget.callback = callback;
+  widget.serializeValue = function(workflowNode, widgetIndex) {
+    console.log("Serializing tags widget", widget.value);
+    return widget.value;
+  };
 
   // Render initial state
   renderTags(widgetValue, widget);
@@ -195,5 +199,5 @@ export function addTagsWidget(node, name, opts, callback) {
     container.remove(); 
   };
 
-  return { minWidth: 300, minHeight: 30, widget };
+  return { minWidth: 300, minHeight: 150, widget };
 }

@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { addTagsWidget } from "./lm_widgets.js";
+import { addTagsWidget } from "./tags_widget.js";
 import { hideWidgetForGood } from "./utils.js";
 
 // TriggerWordToggle extension for ComfyUI
@@ -19,6 +19,7 @@ app.registerExtension({
         if (node.comfyClass === "TriggerWord Toggle (LoraManager)") {
             // Enable widget serialization
             node.serialize_widgets = true;
+            node.size = [400, 200];
 
             // Wait for node to be properly initialized
             requestAnimationFrame(() => {
@@ -46,6 +47,8 @@ app.registerExtension({
                         result.widget.value = savedValue;
                     }
                 }
+
+                console.log("trigger word toggle node: ", node);
             });
         }
     },

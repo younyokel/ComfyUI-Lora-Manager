@@ -19,7 +19,8 @@ class LoraManagerLoader:
                 "text": (IO.STRING, {
                     "multiline": True, 
                     "dynamicPrompts": True, 
-                    "tooltip": "Format: <lora:lora_name:strength> separated by spaces or punctuation"
+                    "tooltip": "Format: <lora:lora_name:strength> separated by spaces or punctuation",
+                    "placeholder": "LoRA syntax input: <lora:name:strength>"
                 }),
             },
         }
@@ -47,8 +48,11 @@ class LoraManagerLoader:
                             return relative_path, trigger_words
         return lora_name, []  # Fallback if not found
 
-    def load_loras(self, model, clip, text):
+    def load_loras(self, model, clip, text, **kwargs):
         """Loads multiple LoRAs based on the text input format."""
+        for key, value in kwargs.items():
+            print(f"{key}: {value}")
+
         lora_pattern = r'<lora:([^:]+):([\d\.]+)>'
         lora_matches = re.finditer(lora_pattern, text)
         
