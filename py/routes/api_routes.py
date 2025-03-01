@@ -41,6 +41,7 @@ class ApiRoutes:
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
+        app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
@@ -592,4 +593,39 @@ class ApiRoutes:
 
         except Exception as e:
             logger.error(f"Error saving metadata: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
+
+    async def get_lora_preview_url(self, request: web.Request) -> web.Response:
+        """Get the static preview URL for a LoRA file"""
+        try:
+            # Get lora file name from query parameters
+            lora_name = request.query.get('name')
+            if not lora_name:
+                return web.Response(text='Lora file name is required', status=400)
+
+            # Get cache data
+            cache = await self.scanner.get_cached_data()
+            
+            # Search for the lora in cache data
+            for lora in cache.raw_data:
+                file_name = lora['file_name']
+                if file_name == lora_name:
+                    if preview_url := lora.get('preview_url'):
+                        # Convert preview path to static URL
+                        static_url = config.get_preview_static_url(preview_url)
+                        if static_url:
+                            return web.json_response({
+                                'success': True,
+                                'preview_url': static_url
+                            })
+                    break
+
+            # If no preview URL found
+            return web.json_response({
+                'success': False,
+                'error': 'No preview URL found for the specified lora'
+            }, status=404)
+
+        except Exception as e:
+            logger.error(f"Error getting lora preview URL: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)

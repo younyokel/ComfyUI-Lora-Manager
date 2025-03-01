@@ -1,6 +1,5 @@
 import { app } from "../../scripts/app.js";
 import { addLorasWidget } from "./loras_widget.js";
-import { hideWidgetForGood } from "./utils.js";
 
 function mergeLoras(lorasText, lorasJson) {
     const result = [];
@@ -29,10 +28,6 @@ function mergeLoras(lorasText, lorasJson) {
 app.registerExtension({
     name: "LoraManager.LoraLoader",
     
-    setup(...args) {
-        console.log("LoraLoader setup args:", args);
-    },
-    
     async nodeCreated(node) {
         if (node.comfyClass === "Lora Loader (LoraManager)") {
             // Enable widget serialization
@@ -43,9 +38,14 @@ app.registerExtension({
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
-                    // 0 is input, 1 is loras widget
+                    const savedValue = node.widgets_values[1];
                     try {
-                        existingLoras = JSON.parse(node.widgets_values[1]);
+                        // Check if the value is already an array/object
+                        if (typeof savedValue === 'object' && savedValue !== null) {
+                            existingLoras = savedValue;
+                        } else if (typeof savedValue === 'string') {
+                            existingLoras = JSON.parse(savedValue);
+                        }
                     } catch (e) {
                         console.warn("Failed to parse loras data:", e);
                         existingLoras = [];
@@ -72,8 +72,6 @@ app.registerExtension({
                     
                     node.lorasWidget.value = mergedLoras;
                 };
-
-                console.log("node: ", node);
             });
         }
     },

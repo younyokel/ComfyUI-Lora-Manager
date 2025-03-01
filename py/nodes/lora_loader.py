@@ -1,10 +1,10 @@
-import re
 from nodes import LoraLoader
 from comfy.comfy_types import IO # type: ignore
 from ..services.lora_scanner import LoraScanner
 from ..config import config
 import asyncio
 import os
+from .utils import FlexibleOptionalInputType, any_type
 
 class LoraManagerLoader:
     NAME = "Lora Loader (LoraManager)"
@@ -23,10 +23,11 @@ class LoraManagerLoader:
                     "placeholder": "LoRA syntax input: <lora:name:strength>"
                 }),
             },
+            "optional": FlexibleOptionalInputType(any_type),
         }
 
-    RETURN_TYPES = ("MODEL", "CLIP", IO.STRING, IO.STRING)
-    RETURN_NAMES = ("MODEL", "CLIP", "loaded_loras", "trigger_words")
+    RETURN_TYPES = ("MODEL", "CLIP", IO.STRING)
+    RETURN_NAMES = ("MODEL", "CLIP", "trigger_words")
     FUNCTION = "load_loras"
 
     async def get_lora_info(self, lora_name):
@@ -49,31 +50,28 @@ class LoraManagerLoader:
         return lora_name, []  # Fallback if not found
 
     def load_loras(self, model, clip, text, **kwargs):
-        """Loads multiple LoRAs based on the text input format."""
-        for key, value in kwargs.items():
-            print(f"{key}: {value}")
-
-        lora_pattern = r'<lora:([^:]+):([\d\.]+)>'
-        lora_matches = re.finditer(lora_pattern, text)
-        
+        """Loads multiple LoRAs based on the kwargs input."""
         loaded_loras = []
         all_trigger_words = []
         
-        for match in lora_matches:
-            lora_name = match.group(1)
-            strength = float(match.group(2))
-            
-            # Get lora path and trigger words
-            lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
-            
-            # Apply the LoRA using the resolved path
-            model, clip = LoraLoader().load_lora(model, clip, lora_path, strength, strength)
-            loaded_loras.append(f"{lora_name}: {strength}")
-            
-            # Add trigger words to collection
-            all_trigger_words.extend(trigger_words)
+        if 'loras' in kwargs:
+            for lora in kwargs['loras']:
+                if not lora.get('active', False):
+                    continue
+                    
+                lora_name = lora['name']
+                strength = float(lora['strength'])
+                
+                # Get lora path and trigger words
+                lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
+                
+                # Apply the LoRA using the resolved path
+                model, clip = LoraLoader().load_lora(model, clip, lora_path, strength, strength)
+                loaded_loras.append(f"{lora_name}: {strength}")
+                
+                # Add trigger words to collection
+                all_trigger_words.extend(trigger_words)
         
-        loaded_loras_text = "\n".join(loaded_loras) if loaded_loras else "No LoRAs loaded"
         trigger_words_text = ", ".join(all_trigger_words) if all_trigger_words else ""
 
-        return (model, clip, loaded_loras_text, trigger_words_text)
+        return (model, clip, trigger_words_text)

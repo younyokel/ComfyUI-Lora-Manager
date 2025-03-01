@@ -1,3 +1,5 @@
+import { api } from "../../scripts/api.js";
+
 export function addLorasWidget(node, name, opts, callback) {
   // Create container for loras
   const container = document.createElement("div");
@@ -103,6 +105,129 @@ export function addLorasWidget(node, name, opts, callback) {
     
     return button;
   };
+
+  // 添加预览弹窗组件
+  class PreviewTooltip {
+    constructor() {
+      this.element = document.createElement('div');
+      Object.assign(this.element.style, {
+        position: 'fixed',
+        zIndex: 9999,
+        padding: '4px', // 减小内边距
+        background: 'rgba(0, 0, 0, 0.75)', // 稍微调整透明度
+        borderRadius: '4px', // 减小圆角
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)', // 减小阴影
+        display: 'none',
+        maxWidth: '300px',
+        maxHeight: '300px',
+      });
+      document.body.appendChild(this.element);
+      this.hideTimeout = null;  // 添加超时处理变量
+    }
+
+    async show(loraName, x, y) {
+      try {
+        // 清除之前的隐藏定时器
+        if (this.hideTimeout) {
+          clearTimeout(this.hideTimeout);
+          this.hideTimeout = null;
+        }
+        // 获取预览URL
+        const response = await api.fetchApi(`/lora-preview-url?name=${encodeURIComponent(loraName)}`, {
+          method: 'GET'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch preview URL');
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.preview_url) {
+          throw new Error('No preview available');
+        }
+
+        // 清除现有内容
+        while (this.element.firstChild) {
+          this.element.removeChild(this.element.firstChild);
+        }
+
+        // 判断是否为视频
+        const isVideo = data.preview_url.endsWith('.mp4');
+        const mediaElement = isVideo ? 
+          document.createElement('video') : 
+          document.createElement('img');
+
+        Object.assign(mediaElement.style, {
+          maxWidth: '300px',
+          maxHeight: '300px',
+          objectFit: 'contain'
+        });
+
+        if (isVideo) {
+          mediaElement.autoplay = true;
+          mediaElement.loop = true;
+          mediaElement.muted = true;
+          mediaElement.controls = false;
+        }
+
+        mediaElement.src = data.preview_url;
+
+        this.element.appendChild(mediaElement);
+        this.position(x, y);
+        this.element.style.display = 'block';
+      } catch (error) {
+        console.warn('Failed to load preview:', error);
+      }
+    }
+
+    position(x, y) {
+      // 确保预览框不超出视窗边界
+      const rect = this.element.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let left = x + 10; // 默认在鼠标右侧偏移10px
+      let top = y + 10;  // 默认在鼠标下方偏移10px
+
+      // 检查右边界
+      if (left + rect.width > viewportWidth) {
+        left = x - rect.width - 10;
+      }
+
+      // 检查下边界
+      if (top + rect.height > viewportHeight) {
+        top = y - rect.height - 10;
+      }
+
+      Object.assign(this.element.style, {
+        left: `${left}px`,
+        top: `${top}px`
+      });
+    }
+
+    hide() {
+      // 使用延迟来确保隐藏事件在显示事件之后执行
+      this.hideTimeout = setTimeout(() => {
+        this.element.style.display = 'none';
+        // 停止视频播放
+        const video = this.element.querySelector('video');
+        if (video) {
+          video.pause();
+        }
+        this.hideTimeout = null;
+      }, 50);
+    }
+
+    cleanup() {
+      if (this.hideTimeout) {
+        clearTimeout(this.hideTimeout);
+      }
+      this.element.remove();
+    }
+  }
+
+  // 创建预览tooltip实例
+  const previewTooltip = new PreviewTooltip();
 
   // Function to render loras from data
   const renderLoras = (value, widget) => {
@@ -234,7 +359,35 @@ export function addLorasWidget(node, name, opts, callback) {
         whiteSpace: "nowrap",
         color: active ? "rgba(226, 232, 240, 0.9)" : "rgba(226, 232, 240, 0.6)",
         fontSize: "13px",
+        cursor: "pointer", // Add pointer cursor to indicate hoverable area
       });
+
+      // Move preview tooltip events to nameEl instead of loraEl
+      nameEl.addEventListener('mouseenter', async (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        await previewTooltip.show(name, e.clientX, e.clientY);
+      });
+
+      nameEl.addEventListener('mousemove', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        if (previewTooltip.element.style.display === 'block') {
+          previewTooltip.position(e.clientX, e.clientY);
+        }
+      });
+
+      nameEl.addEventListener('mouseleave', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        previewTooltip.hide();
+      });
+
+      // Remove the preview tooltip events from loraEl
+      loraEl.onmouseenter = () => {
+        loraEl.style.backgroundColor = active ? "rgba(50, 60, 80, 0.8)" : "rgba(40, 45, 55, 0.6)";
+      };
+      
+      loraEl.onmouseleave = () => {
+        loraEl.style.backgroundColor = active ? "rgba(45, 55, 72, 0.7)" : "rgba(35, 40, 50, 0.5)";
+      };
 
       // Create strength control
       const strengthControl = document.createElement("div");
@@ -264,14 +417,77 @@ export function addLorasWidget(node, name, opts, callback) {
       });
 
       // Strength display
-      const strengthEl = document.createElement("div");
-      const displayStrength = typeof strength === 'number' ? strength.toFixed(2) : Number(strength).toFixed(2);
-      strengthEl.textContent = displayStrength;
+      const strengthEl = document.createElement("input");
+      strengthEl.type = "text";
+      strengthEl.value = typeof strength === 'number' ? strength.toFixed(2) : Number(strength).toFixed(2);
       Object.assign(strengthEl.style, {
-        minWidth: "36px",
+        minWidth: "50px",
+        width: "50px",
         textAlign: "center",
         color: active ? "rgba(226, 232, 240, 0.9)" : "rgba(226, 232, 240, 0.6)",
         fontSize: "13px",
+        background: "none",
+        border: "1px solid transparent",
+        padding: "2px 4px",
+        borderRadius: "3px",
+        outline: "none",
+      });
+
+      // 添加hover效果
+      strengthEl.addEventListener('mouseenter', () => {
+        strengthEl.style.border = "1px solid rgba(226, 232, 240, 0.2)";
+      });
+
+      strengthEl.addEventListener('mouseleave', () => {
+        if (document.activeElement !== strengthEl) {
+          strengthEl.style.border = "1px solid transparent";
+        }
+      });
+
+      // 处理焦点
+      strengthEl.addEventListener('focus', () => {
+        strengthEl.style.border = "1px solid rgba(66, 153, 225, 0.6)";
+        strengthEl.style.background = "rgba(0, 0, 0, 0.2)";
+        // 自动选中所有内容
+        strengthEl.select();
+      });
+
+      strengthEl.addEventListener('blur', () => {
+        strengthEl.style.border = "1px solid transparent";
+        strengthEl.style.background = "none";
+      });
+
+      // 处理输入变化
+      strengthEl.addEventListener('change', () => {
+        let newValue = parseFloat(strengthEl.value);
+        
+        // 验证输入
+        if (isNaN(newValue)) {
+          newValue = 1.0;
+        }
+        
+        // 更新数值
+        const lorasData = parseLoraValue(widget.value);
+        const loraIndex = lorasData.findIndex(l => l.name === name);
+        
+        if (loraIndex >= 0) {
+          lorasData[loraIndex].strength = newValue.toFixed(2);
+          
+          // 更新值并触发回调
+          const newLorasValue = formatLoraValue(lorasData);
+          widget.value = newLorasValue;
+          widget.callback?.(newLorasValue);
+          
+          // 重新渲染
+          renderLoras(newLorasValue, widget);
+        }
+      });
+
+      // 处理按键事件
+      strengthEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          strengthEl.blur();
+        }
       });
 
       // Right arrow
@@ -312,15 +528,6 @@ export function addLorasWidget(node, name, opts, callback) {
       loraEl.appendChild(leftSection);
       loraEl.appendChild(strengthControl);
 
-      // Add hover effect to the lora entry
-      loraEl.onmouseenter = () => {
-        loraEl.style.backgroundColor = active ? "rgba(50, 60, 80, 0.8)" : "rgba(40, 45, 55, 0.6)";
-      };
-      
-      loraEl.onmouseleave = () => {
-        loraEl.style.backgroundColor = active ? "rgba(45, 55, 72, 0.7)" : "rgba(35, 40, 50, 0.5)";
-      };
-      
       container.appendChild(loraEl);
     });
   };
@@ -345,9 +552,6 @@ export function addLorasWidget(node, name, opts, callback) {
         lorasCount > 0 ? 60 + lorasCount * 44 : 60 // Header + entries or minimum height
       );
     },
-    onDraw: function() {
-      // Empty function
-    }
   });
 
   // Initialize widget value using options methods
@@ -355,11 +559,17 @@ export function addLorasWidget(node, name, opts, callback) {
 
   widget.callback = callback;
 
+  widget.computeSize = (width, height) => {
+    // console.log("loras_widget computeSize called: ", width, height);
+    return [400, 200];
+  };
+
   // Render initial state
   renderLoras(widgetValue, widget);
 
   widget.onRemove = () => {
     container.remove(); 
+    previewTooltip.cleanup();
   };
 
   return { minWidth: 400, minHeight: 200, widget };
