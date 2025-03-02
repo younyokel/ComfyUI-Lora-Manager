@@ -14,23 +14,7 @@ export function addTagsWidget(node, name, opts, callback) {
   });
 
   // Initialize default value as array
-  const defaultValue = opts?.defaultVal || [];
-  let initialTagsData = Array.isArray(defaultValue) ? defaultValue : [];
-
-  // Normalize tag data to ensure consistent format
-  const normalizeTagData = (data) => {
-    if (!Array.isArray(data)) return [];
-    
-    return data.map(item => {
-      if (item && typeof item === 'object' && 'text' in item) {
-        return {
-          text: item.text,
-          active: item.active !== undefined ? item.active : true
-        };
-      }
-      return { text: String(item), active: true };
-    });
-  };
+  const initialTagsData = opts?.defaultVal || [];
 
   // Function to render tags from array data
   const renderTags = (tagsData, widget) => {
@@ -39,8 +23,7 @@ export function addTagsWidget(node, name, opts, callback) {
       container.removeChild(container.firstChild);
     }
 
-    // Ensure we're working with normalized data
-    const normalizedTags = normalizeTagData(tagsData);
+    const normalizedTags = tagsData;
 
     normalizedTags.forEach((tagData, index) => {
       const { text, active } = tagData;
@@ -119,16 +102,15 @@ export function addTagsWidget(node, name, opts, callback) {
   }
 
   // Store the value as array
-  let widgetValue = normalizeTagData(initialTagsData);
+  let widgetValue = initialTagsData;
 
   // Create widget with initial properties
   const widget = node.addDOMWidget(name, "tags", container, {
     getValue: function() {
-      console.log("Tags widget value:", widgetValue);
       return widgetValue;
     },
     setValue: function(v) {
-      widgetValue = normalizeTagData(Array.isArray(v) ? v : []);
+      widgetValue = v;
       renderTags(widgetValue, widget);
     },
     getHeight: function() {
@@ -138,21 +120,11 @@ export function addTagsWidget(node, name, opts, callback) {
         Math.ceil(container.scrollHeight / 5) * 5 // Round up to nearest 5px
       );
     },
-    onDraw: function() {
-      // Empty function
-    }
   });
 
-  widget.value = defaultValue;
+  widget.value = initialTagsData;
 
   widget.callback = callback;
-
-  // Render initial state
-  renderTags(widgetValue, widget);
-
-  widget.onRemove = () => {
-    container.remove(); 
-  };
 
   return { minWidth: 300, minHeight: 150, widget };
 }
