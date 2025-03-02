@@ -39,6 +39,7 @@ app.registerExtension({
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
                     const savedValue = node.widgets_values[1];
+                    // TODO: clean up this code
                     try {
                         // Check if the value is already an array/object
                         if (typeof savedValue === 'object' && savedValue !== null) {
@@ -53,37 +54,55 @@ app.registerExtension({
                 }
                 // Merge the loras data
                 const mergedLoras = mergeLoras(node.widgets[0].value, existingLoras);
+                
+                // Add flag to prevent callback loops
+                let isUpdating = false;
                  
                 // Get the widget object directly from the returned object
                 const result = addLorasWidget(node, "loras", {
                     defaultVal: mergedLoras  // Pass object directly
                 }, (value) => {
-                    // Remove loras that are not in the value array
-                    const inputWidget = node.widgets[0];
-                    const pattern = /<lora:([^:]+):([\d\.]+)>/g;
-                    const currentLoras = value.map(l => l.name);
+                    // Prevent recursive calls
+                    if (isUpdating) return;
+                    isUpdating = true;
                     
-                    let newText = inputWidget.value.replace(pattern, (match, name, strength) => {
-                        return currentLoras.includes(name) ? match : '';
-                    });
-                    
-                    // Clean up multiple spaces and trim
-                    newText = newText.replace(/\s+/g, ' ').trim();
-                    
-                    inputWidget.value = newText;
+                    try {
+                        // Remove loras that are not in the value array
+                        const inputWidget = node.widgets[0];
+                        const pattern = /<lora:([^:]+):([\d\.]+)>/g;
+                        const currentLoras = value.map(l => l.name);
+                        
+                        let newText = inputWidget.value.replace(pattern, (match, name, strength) => {
+                            return currentLoras.includes(name) ? match : '';
+                        });
+                        
+                        // Clean up multiple spaces and trim
+                        newText = newText.replace(/\s+/g, ' ').trim();
+                        
+                        inputWidget.value = newText;
+                    } finally {
+                        isUpdating = false;
+                    }
                 });
                 
                 node.lorasWidget = result.widget;
 
                 // get the input widget and set a callback
                 const inputWidget = node.widgets[0];
-                inputWidget.callback = (value) => {               
-                    // Merge the loras data with widget value
-                    const currentLoras = node.lorasWidget.value || [];
-                    const mergedLoras = mergeLoras(value, currentLoras);
+                inputWidget.callback = (value) => {
+                    // Prevent recursive calls
+                    if (isUpdating) return;
+                    isUpdating = true;
                     
-                    node.lorasWidget.value = mergedLoras;
-                    // node.graph.setDirtyCanvas(true, true);
+                    try {
+                        // Merge the loras data with widget value
+                        const currentLoras = node.lorasWidget.value || [];
+                        const mergedLoras = mergeLoras(value, currentLoras);
+                        
+                        node.lorasWidget.value = mergedLoras;
+                    } finally {
+                        isUpdating = false;
+                    }
                 };
             });
         }
