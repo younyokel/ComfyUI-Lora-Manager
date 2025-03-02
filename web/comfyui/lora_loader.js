@@ -1,13 +1,15 @@
 import { app } from "../../scripts/app.js";
 import { addLorasWidget } from "./loras_widget.js";
 
+// Extract pattern into a constant for consistent use
+const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)>/g;
+
 function mergeLoras(lorasText, lorasJson) {
     const result = [];
-    const pattern = /<lora:([^:]+):([\d\.]+)>/g;
     let match;
 
     // Parse text input and create initial entries
-    while ((match = pattern.exec(lorasText)) !== null) {
+    while ((match = LORA_PATTERN.exec(lorasText)) !== null) {
         const name = match[1];
         const inputStrength = Number(match[2]);
         
@@ -69,10 +71,10 @@ app.registerExtension({
                     try {
                         // Remove loras that are not in the value array
                         const inputWidget = node.widgets[0];
-                        const pattern = /<lora:([^:]+):([\d\.]+)>/g;
                         const currentLoras = value.map(l => l.name);
                         
-                        let newText = inputWidget.value.replace(pattern, (match, name, strength) => {
+                        // Use the constant pattern here as well
+                        let newText = inputWidget.value.replace(LORA_PATTERN, (match, name, strength) => {
                             return currentLoras.includes(name) ? match : '';
                         });
                         
