@@ -24,27 +24,19 @@ app.registerExtension({
                 // Get the widget object directly from the returned object
                 const result = addTagsWidget(node, "toggle_trigger_words", {
                     defaultVal: []
-                }, (value) => {
-
                 });
                 
                 node.tagWidget = result.widget;
 
                 // Restore saved value if exists
                 if (node.widgets_values && node.widgets_values.length > 0) {
-                    // 0 is input, 1 is hidden widget, 2 is tag widget
+                    // 0 is input, 1 is tag widget
                     const savedValue = node.widgets_values[1];
                     if (savedValue) {
                         result.widget.value = savedValue;
                     }
                 }
             });
-        }
-    },
-
-    async nodeRemoved(node) {
-        if (node.comfyClass === "TriggerWord Toggle (LoraManager)") {
-            // TODO: Remove widget from node
         }
     },
 
@@ -63,9 +55,7 @@ app.registerExtension({
                 const existingTags = node.tagWidget.value || [];
 
                 const tempWidget = node.tagWidget;
-                console.log("height of node: ", node.size[1]);
-                // console.log("tempWidget: ", tempWidget);
-                console.log("tagWidget height: ", tempWidget.options.getHeight());
+                const originalHeight = tempWidget.options.getHeight();
                 
                 // Create a map of existing tags and their active states
                 const existingTagMap = {};
@@ -85,10 +75,7 @@ app.registerExtension({
                     }));
                 
                 node.tagWidget.value = tagArray;
-                console.log("tagWidget new height: ", tempWidget.options.getHeight());
-                const computed = node.computeSize();
-                node.size[1] = computed[1];
-                console.log("computed height: ", computed[1]);
+                node.size[1] = node.size[1] + (tempWidget.options.getHeight() - originalHeight);
                 node.setDirtyCanvas(true, true);
             }
         }

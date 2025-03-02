@@ -22,3 +22,18 @@ export function hideWidgetForGood(node, widget, suffix = "") {
     }
   }
 }
+
+// Wrapper class to handle 'two element array bug' in LiteGraph or comfyui
+export class DataWrapper {
+  constructor(data) {
+    this.data = data;
+  }
+
+  getData() {
+    return this.data;
+  }
+
+  setData(data) {
+    this.data = data;
+  }
+}

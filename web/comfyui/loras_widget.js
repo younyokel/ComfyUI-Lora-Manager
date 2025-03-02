@@ -272,13 +272,8 @@ export function addLorasWidget(node, name, opts, callback) {
       const lorasData = parseLoraValue(widget.value);
       lorasData.forEach(lora => lora.active = active);
       
-      // Update value and trigger widget callback
       const newValue = formatLoraValue(lorasData);
       widget.value = newValue;
-      widget.callback?.(newValue);
-      
-      // Remove re-render call - this is causing double callback
-      // renderLoras(newValue, widget);
     });
 
     // Add label to toggle all
@@ -337,13 +332,8 @@ export function addLorasWidget(node, name, opts, callback) {
         if (loraIndex >= 0) {
           lorasData[loraIndex].active = newActive;
           
-          // Update value and trigger widget callback
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
-          widget.callback?.(newValue);
-          
-          // Remove re-render call - this is causing double callback
-          // renderLoras(newValue, widget);
         }
       });
 
@@ -406,13 +396,8 @@ export function addLorasWidget(node, name, opts, callback) {
         if (loraIndex >= 0) {
           lorasData[loraIndex].strength = (lorasData[loraIndex].strength - 0.05).toFixed(2);
           
-          // Update value and trigger widget callback
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
-          widget.callback?.(newValue);
-          
-          // Remove re-render call - this is causing double callback
-          // renderLoras(newValue, widget);
         }
       });
 
@@ -476,10 +461,6 @@ export function addLorasWidget(node, name, opts, callback) {
           // 更新值并触发回调
           const newLorasValue = formatLoraValue(lorasData);
           widget.value = newLorasValue;
-          widget.callback?.(newLorasValue);
-          
-          // Remove re-render call - this is causing double callback
-          // renderLoras(newLorasValue, widget);
         }
       });
 
@@ -499,13 +480,8 @@ export function addLorasWidget(node, name, opts, callback) {
         if (loraIndex >= 0) {
           lorasData[loraIndex].strength = (parseFloat(lorasData[loraIndex].strength) + 0.05).toFixed(2);
           
-          // Update value and trigger widget callback
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
-          widget.callback?.(newValue);
-          
-          // Remove re-render call - this is causing double callback
-          // renderLoras(newValue, widget);
         }
       });
 

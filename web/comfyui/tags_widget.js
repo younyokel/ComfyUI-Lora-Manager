@@ -15,33 +15,19 @@ export function addTagsWidget(node, name, opts, callback) {
 
   // Initialize default value as array
   const defaultValue = opts?.defaultVal || [];
-  let initialTagsData = [];
-  
-  try {
-    // Convert string input to array if needed
-    initialTagsData = typeof defaultValue === 'string' ? 
-      JSON.parse(defaultValue) : (Array.isArray(defaultValue) ? defaultValue : []);
-  } catch (e) {
-    console.warn("Invalid default tags data format", e);
-  }
+  let initialTagsData = Array.isArray(defaultValue) ? defaultValue : [];
 
   // Normalize tag data to ensure consistent format
   const normalizeTagData = (data) => {
     if (!Array.isArray(data)) return [];
     
     return data.map(item => {
-      // If it's already in the correct format, return as is
       if (item && typeof item === 'object' && 'text' in item) {
         return {
           text: item.text,
           active: item.active !== undefined ? item.active : true
         };
-      } 
-      // If it's just a string, convert to object
-      else if (typeof item === 'string') {
-        return { text: item, active: true };
       }
-      // Default fallback
       return { text: String(item), active: true };
     });
   };
@@ -56,7 +42,7 @@ export function addTagsWidget(node, name, opts, callback) {
     // Ensure we're working with normalized data
     const normalizedTags = normalizeTagData(tagsData);
 
-    normalizedTags.forEach((tagData) => {
+    normalizedTags.forEach((tagData, index) => {
       const { text, active } = tagData;
       const tagEl = document.createElement("div");
       tagEl.className = "comfy-tag";
@@ -70,18 +56,12 @@ export function addTagsWidget(node, name, opts, callback) {
       tagEl.addEventListener("click", (e) => {
         e.stopPropagation();
 
-        // Toggle active state for this tag
+        // Toggle active state for this specific tag using its index
         const updatedTags = [...widget.value];
-        const tagIndex = updatedTags.findIndex((t) => t.text === text);
+        updatedTags[index].active = !updatedTags[index].active;
+        updateTagStyle(tagEl, updatedTags[index].active);
 
-        if (tagIndex >= 0) {
-          updatedTags[tagIndex].active = !updatedTags[tagIndex].active;
-          updateTagStyle(tagEl, updatedTags[tagIndex].active);
-
-          // Update widget value and trigger callback
-          widget.value = updatedTags;
-          widget.callback?.(updatedTags);
-        }
+        widget.value = updatedTags;
       });
 
       container.appendChild(tagEl);
@@ -104,6 +84,10 @@ export function addTagsWidget(node, name, opts, callback) {
       display: "inline-block",
       boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
       margin: "4px",          // 从6px减小到4px
+      userSelect: "none",     // Add this line to prevent text selection
+      WebkitUserSelect: "none",  // For Safari support
+      MozUserSelect: "none",     // For Firefox support
+      msUserSelect: "none",      // For IE/Edge support
     };
 
     if (active) {
@@ -140,46 +124,11 @@ export function addTagsWidget(node, name, opts, callback) {
   // Create widget with initial properties
   const widget = node.addDOMWidget(name, "tags", container, {
     getValue: function() {
+      console.log("Tags widget value:", widgetValue);
       return widgetValue;
     },
     setValue: function(v) {
-      // Handle input formats but always normalize to array
-      try {
-        if (typeof v === "string") {
-          // If JSON string, parse it
-          if (v.startsWith("[") || v.startsWith("{")) {
-            const parsed = JSON.parse(v);
-            widgetValue = normalizeTagData(parsed);
-          } else {
-            // If it's a comma-separated string of tags
-            const tagStrings = v
-              .split(",")
-              .map((word) => word.trim())
-              .filter((word) => word);
-
-            // Preserve active states from existing tags where possible
-            const existingTagsMap = {};
-            widgetValue.forEach((tag) => {
-              existingTagsMap[tag.text] = tag.active;
-            });
-
-            widgetValue = tagStrings.map((text) => ({
-              text,
-              active: text in existingTagsMap ? existingTagsMap[text] : true,
-            }));
-          }
-        } else if (Array.isArray(v)) {
-          // Directly use array input but ensure proper format
-          widgetValue = normalizeTagData(v);
-        } else {
-          // Default to empty array for invalid inputs
-          widgetValue = [];
-        }
-      } catch (e) {
-        console.warn("Error formatting tags value:", e);
-        // Keep existing value if there's an error
-      }
-
+      widgetValue = normalizeTagData(Array.isArray(v) ? v : []);
       renderTags(widgetValue, widget);
     },
     getHeight: function() {
@@ -194,8 +143,7 @@ export function addTagsWidget(node, name, opts, callback) {
     }
   });
 
-  // Initialize widget value using options methods
-  widget.options.setValue(defaultValue);
+  widget.value = defaultValue;
 
   widget.callback = callback;
 
