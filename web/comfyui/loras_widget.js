@@ -664,7 +664,15 @@ export function addLorasWidget(node, name, opts, callback) {
       return widgetValue;
     },
     setValue: function(v) {
-      widgetValue = v || "";
+      // Remove duplicates by keeping the last occurrence of each lora name
+      const uniqueValue = (v || []).reduce((acc, lora) => {
+        // Remove any existing lora with the same name
+        const filtered = acc.filter(l => l.name !== lora.name);
+        // Add the current lora
+        return [...filtered, lora];
+      }, []);
+
+      widgetValue = uniqueValue;
       renderLoras(widgetValue, widget);
       
       // Update container height after rendering

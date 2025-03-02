@@ -4,7 +4,7 @@ import { addLorasWidget } from "./loras_widget.js";
 // Extract pattern into a constant for consistent use
 const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)>/g;
 
-function mergeLoras(lorasText, lorasJson) {
+function mergeLoras(lorasText, lorasArr) {
     const result = [];
     let match;
 
@@ -13,8 +13,8 @@ function mergeLoras(lorasText, lorasJson) {
         const name = match[1];
         const inputStrength = Number(match[2]);
         
-        // Find if this lora exists in the JSON data
-        const existingLora = lorasJson.find(l => l.name === name);
+        // Find if this lora exists in the array data
+        const existingLora = lorasArr.find(l => l.name === name);
         
         result.push({
             name: name,
