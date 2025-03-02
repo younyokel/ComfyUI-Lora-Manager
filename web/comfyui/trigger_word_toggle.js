@@ -1,7 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { addTagsWidget } from "./tags_widget.js";
-import { hideWidgetForGood } from "./utils.js";
 
 // TriggerWordToggle extension for ComfyUI
 app.registerExtension({
@@ -19,22 +18,14 @@ app.registerExtension({
         if (node.comfyClass === "TriggerWord Toggle (LoraManager)") {
             // Enable widget serialization
             node.serialize_widgets = true;
-            node.size = [400, 200];
 
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {
-                // add a hidden widget for excluded trigger words to send to Python
-                node.hiddenWidget = node.addWidget("text", "hidden_trigger_words", "", (value) => {
-                    // empty callback
-                });
-                hideWidgetForGood(node, node.hiddenWidget);
-                 
+            requestAnimationFrame(() => {                 
                 // Get the widget object directly from the returned object
-                const result = addTagsWidget(node, "trigger_words", {
-                    defaultVal: "[]"
+                const result = addTagsWidget(node, "toggle_trigger_words", {
+                    defaultVal: []
                 }, (value) => {
-                    // update value of hidden widget
-                    node.hiddenWidget.value = value;
+
                 });
                 
                 node.tagWidget = result.widget;
@@ -42,13 +33,11 @@ app.registerExtension({
                 // Restore saved value if exists
                 if (node.widgets_values && node.widgets_values.length > 0) {
                     // 0 is input, 1 is hidden widget, 2 is tag widget
-                    const savedValue = node.widgets_values[2];
+                    const savedValue = node.widgets_values[1];
                     if (savedValue) {
                         result.widget.value = savedValue;
                     }
                 }
-
-                console.log("trigger word toggle node: ", node);
             });
         }
     },
@@ -68,8 +57,40 @@ app.registerExtension({
         }
         
         if (node.tagWidget) {
-            // Use widget.value setter instead of setValue
-            node.tagWidget.value = message;
+            // Convert comma-separated message to tag object format
+            if (typeof message === 'string') {
+                // Get existing tags to preserve active states
+                const existingTags = node.tagWidget.value || [];
+
+                const tempWidget = node.tagWidget;
+                console.log("height of node: ", node.size[1]);
+                // console.log("tempWidget: ", tempWidget);
+                console.log("tagWidget height: ", tempWidget.options.getHeight());
+                
+                // Create a map of existing tags and their active states
+                const existingTagMap = {};
+                existingTags.forEach(tag => {
+                    existingTagMap[tag.text] = tag.active;
+                });
+                
+                // Process the incoming message
+                const tagArray = message
+                    .split(',')
+                    .map(word => word.trim())
+                    .filter(word => word)
+                    .map(word => ({
+                        text: word,
+                        // Keep previous active state if exists, otherwise default to true
+                        active: existingTagMap[word] !== undefined ? existingTagMap[word] : true
+                    }));
+                
+                node.tagWidget.value = tagArray;
+                console.log("tagWidget new height: ", tempWidget.options.getHeight());
+                const computed = node.computeSize();
+                node.size[1] = computed[1];
+                console.log("computed height: ", computed[1]);
+                node.setDirtyCanvas(true, true);
+            }
         }
     },
 });

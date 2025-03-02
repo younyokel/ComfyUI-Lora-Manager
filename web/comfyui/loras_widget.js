@@ -277,8 +277,8 @@ export function addLorasWidget(node, name, opts, callback) {
       widget.value = newValue;
       widget.callback?.(newValue);
       
-      // Re-render
-      renderLoras(newValue, widget);
+      // Remove re-render call - this is causing double callback
+      // renderLoras(newValue, widget);
     });
 
     // Add label to toggle all
@@ -342,8 +342,8 @@ export function addLorasWidget(node, name, opts, callback) {
           widget.value = newValue;
           widget.callback?.(newValue);
           
-          // Re-render
-          renderLoras(newValue, widget);
+          // Remove re-render call - this is causing double callback
+          // renderLoras(newValue, widget);
         }
       });
 
@@ -404,15 +404,15 @@ export function addLorasWidget(node, name, opts, callback) {
         const loraIndex = lorasData.findIndex(l => l.name === name);
         
         if (loraIndex >= 0) {
-          lorasData[loraIndex].strength = Math.max(0, lorasData[loraIndex].strength - 0.05).toFixed(2);
+          lorasData[loraIndex].strength = (lorasData[loraIndex].strength - 0.05).toFixed(2);
           
           // Update value and trigger widget callback
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
           widget.callback?.(newValue);
           
-          // Re-render
-          renderLoras(newValue, widget);
+          // Remove re-render call - this is causing double callback
+          // renderLoras(newValue, widget);
         }
       });
 
@@ -478,8 +478,8 @@ export function addLorasWidget(node, name, opts, callback) {
           widget.value = newLorasValue;
           widget.callback?.(newLorasValue);
           
-          // 重新渲染
-          renderLoras(newLorasValue, widget);
+          // Remove re-render call - this is causing double callback
+          // renderLoras(newLorasValue, widget);
         }
       });
 
@@ -504,8 +504,8 @@ export function addLorasWidget(node, name, opts, callback) {
           widget.value = newValue;
           widget.callback?.(newValue);
           
-          // Re-render
-          renderLoras(newValue, widget);
+          // Remove re-render call - this is causing double callback
+          // renderLoras(newValue, widget);
         }
       });
 
@@ -559,10 +559,10 @@ export function addLorasWidget(node, name, opts, callback) {
 
   widget.callback = callback;
 
-  widget.computeSize = (width, height) => {
-    // console.log("loras_widget computeSize called: ", width, height);
-    return [400, 200];
-  };
+  // widget.computeSize = (width) => {
+  //   // console.log("loras_widget computeSize called: ", width, height);
+  //   return [400, 200];
+  // };
 
   // Render initial state
   renderLoras(widgetValue, widget);

@@ -13,38 +13,50 @@ export function addTagsWidget(node, name, opts, callback) {
     width: "100%",
   });
 
-  // Initialize default value
-  const defaultValue = opts?.defaultVal || "[]";
+  // Initialize default value as array
+  const defaultValue = opts?.defaultVal || [];
+  let initialTagsData = [];
+  
+  try {
+    // Convert string input to array if needed
+    initialTagsData = typeof defaultValue === 'string' ? 
+      JSON.parse(defaultValue) : (Array.isArray(defaultValue) ? defaultValue : []);
+  } catch (e) {
+    console.warn("Invalid default tags data format", e);
+  }
 
-  // Parse trigger words and states from string
-  const parseTagsValue = (value) => {
-    if (!value) return [];
-
-    try {
-      return JSON.parse(value);
-    } catch (e) {
-      // If it's not valid JSON, try legacy format or return empty array
-      console.warn("Invalid tags data format", e);
-      return [];
-    }
+  // Normalize tag data to ensure consistent format
+  const normalizeTagData = (data) => {
+    if (!Array.isArray(data)) return [];
+    
+    return data.map(item => {
+      // If it's already in the correct format, return as is
+      if (item && typeof item === 'object' && 'text' in item) {
+        return {
+          text: item.text,
+          active: item.active !== undefined ? item.active : true
+        };
+      } 
+      // If it's just a string, convert to object
+      else if (typeof item === 'string') {
+        return { text: item, active: true };
+      }
+      // Default fallback
+      return { text: String(item), active: true };
+    });
   };
 
-  // Format tags data back to string
-  const formatTagsValue = (tagsData) => {
-    return JSON.stringify(tagsData);
-  };
-
-  // Function to render tags from data
-  const renderTags = (value, widget) => {
+  // Function to render tags from array data
+  const renderTags = (tagsData, widget) => {
     // Clear existing tags
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
 
-    // Parse the tags data
-    const tagsData = parseTagsValue(value);
+    // Ensure we're working with normalized data
+    const normalizedTags = normalizeTagData(tagsData);
 
-    tagsData.forEach((tagData) => {
+    normalizedTags.forEach((tagData) => {
       const { text, active } = tagData;
       const tagEl = document.createElement("div");
       tagEl.className = "comfy-tag";
@@ -59,17 +71,16 @@ export function addTagsWidget(node, name, opts, callback) {
         e.stopPropagation();
 
         // Toggle active state for this tag
-        const tagsData = parseTagsValue(widget.value);
-        const tagIndex = tagsData.findIndex((t) => t.text === text);
+        const updatedTags = [...widget.value];
+        const tagIndex = updatedTags.findIndex((t) => t.text === text);
 
         if (tagIndex >= 0) {
-          tagsData[tagIndex].active = !tagsData[tagIndex].active;
-          updateTagStyle(tagEl, tagsData[tagIndex].active);
+          updatedTags[tagIndex].active = !updatedTags[tagIndex].active;
+          updateTagStyle(tagEl, updatedTags[tagIndex].active);
 
-          // Update value and trigger widget callback
-          const newValue = formatTagsValue(tagsData);
-          widget.value = newValue;
-          widget.callback?.(newValue);
+          // Update widget value and trigger callback
+          widget.value = updatedTags;
+          widget.callback?.(updatedTags);
         }
       });
 
@@ -123,8 +134,8 @@ export function addTagsWidget(node, name, opts, callback) {
     };
   }
 
-  // Store the value in a variable to avoid recursion
-  let widgetValue = defaultValue;
+  // Store the value as array
+  let widgetValue = normalizeTagData(initialTagsData);
 
   // Create widget with initial properties
   const widget = node.addDOMWidget(name, "tags", container, {
@@ -132,43 +143,43 @@ export function addTagsWidget(node, name, opts, callback) {
       return widgetValue;
     },
     setValue: function(v) {
-      // Format the incoming value if it's not in the expected JSON format
-      let parsedValue = v;
-
+      // Handle input formats but always normalize to array
       try {
-        // Try to parse as JSON first
-        if (typeof v === "string" && (v.startsWith("[") || v.startsWith("{"))) {
-          JSON.parse(v);
-          // If no error, it's already valid JSON
-          parsedValue = v;
-        } else if (typeof v === "string") {
-          // If it's a comma-separated string of trigger words, convert to tag format
-          const triggerWords = v
-            .split(",")
-            .map((word) => word.trim())
-            .filter((word) => word);
+        if (typeof v === "string") {
+          // If JSON string, parse it
+          if (v.startsWith("[") || v.startsWith("{")) {
+            const parsed = JSON.parse(v);
+            widgetValue = normalizeTagData(parsed);
+          } else {
+            // If it's a comma-separated string of tags
+            const tagStrings = v
+              .split(",")
+              .map((word) => word.trim())
+              .filter((word) => word);
 
-          // Get existing tags to merge with new ones
-          const existingTags = parseTagsValue(widgetValue || "[]");
-          const existingTagsMap = {};
-          existingTags.forEach((tag) => {
-            existingTagsMap[tag.text] = tag.active;
-          });
+            // Preserve active states from existing tags where possible
+            const existingTagsMap = {};
+            widgetValue.forEach((tag) => {
+              existingTagsMap[tag.text] = tag.active;
+            });
 
-          // Create new tags with merging logic
-          const newTags = triggerWords.map((word) => ({
-            text: word,
-            active: word in existingTagsMap ? existingTagsMap[word] : true,
-          }));
-
-          parsedValue = JSON.stringify(newTags);
+            widgetValue = tagStrings.map((text) => ({
+              text,
+              active: text in existingTagsMap ? existingTagsMap[text] : true,
+            }));
+          }
+        } else if (Array.isArray(v)) {
+          // Directly use array input but ensure proper format
+          widgetValue = normalizeTagData(v);
+        } else {
+          // Default to empty array for invalid inputs
+          widgetValue = [];
         }
       } catch (e) {
         console.warn("Error formatting tags value:", e);
-        // Keep the original value if there's an error
+        // Keep existing value if there's an error
       }
 
-      widgetValue = parsedValue || ""; // Store in our local variable instead
       renderTags(widgetValue, widget);
     },
     getHeight: function() {
@@ -187,10 +198,6 @@ export function addTagsWidget(node, name, opts, callback) {
   widget.options.setValue(defaultValue);
 
   widget.callback = callback;
-  widget.serializeValue = function(workflowNode, widgetIndex) {
-    console.log("Serializing tags widget", widget.value);
-    return widget.value;
-  };
 
   // Render initial state
   renderTags(widgetValue, widget);

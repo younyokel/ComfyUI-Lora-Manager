@@ -58,7 +58,7 @@ app.registerExtension({
                 const result = addLorasWidget(node, "loras", {
                     defaultVal: mergedLoras  // Pass object directly
                 }, (value) => {
-                    // TODO
+                    console.log("Loras data updated:", value);
                 });
                 
                 node.lorasWidget = result.widget;
@@ -71,7 +71,10 @@ app.registerExtension({
                     const mergedLoras = mergeLoras(value, currentLoras);
                     
                     node.lorasWidget.value = mergedLoras;
+                    // node.graph.setDirtyCanvas(true, true);
                 };
+
+                console.log("node: ", node);
             });
         }
     },
