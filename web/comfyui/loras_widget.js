@@ -666,13 +666,23 @@ export function addLorasWidget(node, name, opts, callback) {
     setValue: function(v) {
       widgetValue = v || "";
       renderLoras(widgetValue, widget);
+      
+      // Update container height after rendering
+      requestAnimationFrame(() => {
+        const minHeight = this.getMinHeight();
+        container.style.height = `${minHeight}px`;
+        
+        // Force node to update size
+        node.setSize([node.size[0], node.computeSize()[1]]);
+        node.setDirtyCanvas(true, true);
+      });
     },
-    getHeight: function() {
+    getMinHeight: function() {
       // Calculate height based on content
       const lorasCount = parseLoraValue(widgetValue).length;
       return Math.max(
         100,
-        lorasCount > 0 ? 60 + lorasCount * 44 : 60 // Header + entries or minimum height
+        lorasCount > 0 ? 60 + lorasCount * 44 : 60
       );
     },
   });

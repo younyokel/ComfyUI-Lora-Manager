@@ -89,15 +89,13 @@ app.registerExtension({
                 
                 node.lorasWidget = result.widget;
 
-                // get the input widget and set a callback
+                // Update input widget callback
                 const inputWidget = node.widgets[0];
                 inputWidget.callback = (value) => {
-                    // Prevent recursive calls
                     if (isUpdating) return;
                     isUpdating = true;
                     
                     try {
-                        // Merge the loras data with widget value
                         const currentLoras = node.lorasWidget.value || [];
                         const mergedLoras = mergeLoras(value, currentLoras);
                         

@@ -53,9 +53,6 @@ app.registerExtension({
             if (typeof message === 'string') {
                 // Get existing tags to preserve active states
                 const existingTags = node.tagWidget.value || [];
-
-                const tempWidget = node.tagWidget;
-                const originalHeight = tempWidget.options.getHeight();
                 
                 // Create a map of existing tags and their active states
                 const existingTagMap = {};
@@ -75,8 +72,6 @@ app.registerExtension({
                     }));
                 
                 node.tagWidget.value = tagArray;
-                node.size[1] = node.size[1] + (tempWidget.options.getHeight() - originalHeight);
-                node.setDirtyCanvas(true, true);
             }
         }
     },

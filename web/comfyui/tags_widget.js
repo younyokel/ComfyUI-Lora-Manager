@@ -5,7 +5,7 @@ export function addTagsWidget(node, name, opts, callback) {
   Object.assign(container.style, {
     display: "flex",
     flexWrap: "wrap",
-    gap: "8px",
+    gap: "4px",    // 从8px减小到4px
     padding: "6px",
     minHeight: "30px",
     backgroundColor: "rgba(40, 44, 52, 0.6)",  // Darker, more modern background
@@ -54,7 +54,7 @@ export function addTagsWidget(node, name, opts, callback) {
   // Helper function to update tag style based on active state
   function updateTagStyle(tagEl, active) {
     const baseStyles = {
-      padding: "6px 12px",    // 水平内边距从16px减小到12px
+      padding: "4px 12px",    // 垂直内边距从6px减小到4px
       borderRadius: "6px",    // Matching container radius
       maxWidth: "200px",      // Increased max width
       overflow: "hidden",
@@ -66,7 +66,7 @@ export function addTagsWidget(node, name, opts, callback) {
       border: "1px solid transparent",
       display: "inline-block",
       boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-      margin: "4px",          // 从6px减小到4px
+      margin: "2px",          // 从4px减小到2px
       userSelect: "none",     // Add this line to prevent text selection
       WebkitUserSelect: "none",  // For Safari support
       MozUserSelect: "none",     // For Firefox support
@@ -112,12 +112,22 @@ export function addTagsWidget(node, name, opts, callback) {
     setValue: function(v) {
       widgetValue = v;
       renderTags(widgetValue, widget);
+
+      // Update container height after rendering
+      requestAnimationFrame(() => {
+        const minHeight = this.getMinHeight();
+        container.style.height = `${minHeight}px`;
+        
+        // Force node to update size
+        node.setSize([node.size[0], node.computeSize()[1]]);
+        node.setDirtyCanvas(true, true);
+      });
     },
-    getHeight: function() {
+    getMinHeight: function() {
       // Calculate height based on content
       return Math.max(
         150,
-        Math.ceil(container.scrollHeight / 5) * 5 // Round up to nearest 5px
+        Math.ceil(container.scrollHeight / 5) * 5 + 15// Round up to nearest 5px
       );
     },
   });
