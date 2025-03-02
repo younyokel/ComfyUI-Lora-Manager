@@ -229,6 +229,130 @@ export function addLorasWidget(node, name, opts, callback) {
   // 创建预览tooltip实例
   const previewTooltip = new PreviewTooltip();
 
+  // Function to create menu item
+  const createMenuItem = (text, icon, onClick) => {
+    const menuItem = document.createElement('div');
+    Object.assign(menuItem.style, {
+      padding: '6px 20px',
+      cursor: 'pointer',
+      color: 'rgba(226, 232, 240, 0.9)',
+      fontSize: '13px',
+      userSelect: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    });
+
+    // Create icon element
+    const iconEl = document.createElement('div');
+    iconEl.innerHTML = icon;
+    Object.assign(iconEl.style, {
+      width: '14px',
+      height: '14px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    });
+
+    // Create text element
+    const textEl = document.createElement('span');
+    textEl.textContent = text;
+
+    menuItem.appendChild(iconEl);
+    menuItem.appendChild(textEl);
+
+    menuItem.addEventListener('mouseenter', () => {
+      menuItem.style.backgroundColor = 'rgba(66, 153, 225, 0.2)';
+    });
+
+    menuItem.addEventListener('mouseleave', () => {
+      menuItem.style.backgroundColor = 'transparent';
+    });
+
+    if (onClick) {
+      menuItem.addEventListener('click', onClick);
+    }
+
+    return menuItem;
+  };
+
+  // Function to create context menu
+  const createContextMenu = (x, y, loraName, widget) => {
+    // Hide preview tooltip first
+    previewTooltip.hide();
+
+    // Remove existing context menu if any
+    const existingMenu = document.querySelector('.comfy-lora-context-menu');
+    if (existingMenu) {
+      existingMenu.remove();
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'comfy-lora-context-menu';
+    Object.assign(menu.style, {
+      position: 'fixed',
+      left: `${x}px`,
+      top: `${y}px`,
+      backgroundColor: 'rgba(30, 30, 30, 0.95)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      borderRadius: '4px',
+      padding: '4px 0',
+      zIndex: 1000,
+      boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+       minWidth: '180px',
+    });
+
+    // Delete option with trash icon
+    const deleteOption = createMenuItem(
+      'Delete', 
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>',
+      () => {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+        
+        const lorasData = parseLoraValue(widget.value).filter(l => l.name !== loraName);
+        widget.value = formatLoraValue(lorasData);
+
+        if (widget.callback) {
+          widget.callback(widget.value);
+        }
+      }
+    );
+
+    // Save recipe option with bookmark icon (WIP)
+    const saveOption = createMenuItem(
+      'Save Recipe (WIP)',
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>',
+      null
+    );
+    Object.assign(saveOption.style, {
+      opacity: '0.6',
+      cursor: 'default',
+    });
+
+    // Add separator
+    const separator = document.createElement('div');
+    Object.assign(separator.style, {
+      margin: '4px 0',
+      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+    });
+
+    menu.appendChild(deleteOption);
+    menu.appendChild(separator);
+    menu.appendChild(saveOption);
+    
+    document.body.appendChild(menu);
+
+    // Close menu when clicking outside
+    const closeMenu = (e) => {
+      if (!menu.contains(e.target)) {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeMenu), 0);
+  };
+
   // Function to render loras from data
   const renderLoras = (value, widget) => {
     // Clear existing content
@@ -394,6 +518,13 @@ export function addLorasWidget(node, name, opts, callback) {
       loraEl.onmouseleave = () => {
         loraEl.style.backgroundColor = active ? "rgba(45, 55, 72, 0.7)" : "rgba(35, 40, 50, 0.5)";
       };
+
+      // Add context menu event
+      loraEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        createContextMenu(e.clientX, e.clientY, name, widget);
+      });
 
       // Create strength control
       const strengthControl = document.createElement("div");

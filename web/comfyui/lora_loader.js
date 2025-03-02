@@ -58,7 +58,19 @@ app.registerExtension({
                 const result = addLorasWidget(node, "loras", {
                     defaultVal: mergedLoras  // Pass object directly
                 }, (value) => {
-                    console.log("Loras data updated:", value);
+                    // Remove loras that are not in the value array
+                    const inputWidget = node.widgets[0];
+                    const pattern = /<lora:([^:]+):([\d\.]+)>/g;
+                    const currentLoras = value.map(l => l.name);
+                    
+                    let newText = inputWidget.value.replace(pattern, (match, name, strength) => {
+                        return currentLoras.includes(name) ? match : '';
+                    });
+                    
+                    // Clean up multiple spaces and trim
+                    newText = newText.replace(/\s+/g, ' ').trim();
+                    
+                    inputWidget.value = newText;
                 });
                 
                 node.lorasWidget = result.widget;
