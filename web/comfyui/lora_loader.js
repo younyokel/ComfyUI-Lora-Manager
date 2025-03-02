@@ -73,15 +73,7 @@ app.registerExtension({
                     node.lorasWidget.value = mergedLoras;
                     // node.graph.setDirtyCanvas(true, true);
                 };
-
-                console.log("node: ", node);
             });
-        }
-    },
-
-    async nodeRemoved(node) {
-        if (node.comfyClass === "Lora Loader (LoraManager)") {
-            // TODO: Remove widget from node
         }
     },
 });

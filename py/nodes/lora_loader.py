@@ -53,8 +53,6 @@ class LoraManagerLoader:
         """Loads multiple LoRAs based on the kwargs input."""
         loaded_loras = []
         all_trigger_words = []
-
-        print(f"kwargs: {kwargs}")
         
         if 'loras' in kwargs:
             for lora in kwargs['loras']:

@@ -15,7 +15,7 @@ export function addLorasWidget(node, name, opts, callback) {
   });
 
   // Initialize default value
-  const defaultValue = opts?.defaultVal || "";
+  const defaultValue = opts?.defaultVal || [];
 
   // Parse LoRA entries from value
   const parseLoraValue = (value) => {
@@ -247,7 +247,11 @@ export function addLorasWidget(node, name, opts, callback) {
         textAlign: "center",
         padding: "20px 0",
         color: "rgba(226, 232, 240, 0.8)",
-        fontStyle: "italic"
+        fontStyle: "italic",
+        userSelect: "none",     // Add this line to prevent text selection
+        WebkitUserSelect: "none",  // For Safari support
+        MozUserSelect: "none",     // For Firefox support
+        msUserSelect: "none",      // For IE/Edge support
       });
       container.appendChild(emptyMessage);
       return;
@@ -283,6 +287,10 @@ export function addLorasWidget(node, name, opts, callback) {
       color: "rgba(226, 232, 240, 0.8)",
       fontSize: "13px",
       marginLeft: "8px",
+      userSelect: "none",     // Add this line to prevent text selection
+      WebkitUserSelect: "none",  // For Safari support
+      MozUserSelect: "none",     // For Firefox support
+      msUserSelect: "none",      // For IE/Edge support
     });
 
     const toggleContainer = document.createElement("div");
@@ -299,7 +307,11 @@ export function addLorasWidget(node, name, opts, callback) {
     Object.assign(strengthLabel.style, {
       color: "rgba(226, 232, 240, 0.8)",
       fontSize: "13px",
-      marginRight: "8px"
+      marginRight: "8px",
+      userSelect: "none",     // Add this line to prevent text selection
+      WebkitUserSelect: "none",  // For Safari support
+      MozUserSelect: "none",     // For Firefox support
+      msUserSelect: "none",      // For IE/Edge support
     });
 
     header.appendChild(toggleContainer);
@@ -350,6 +362,10 @@ export function addLorasWidget(node, name, opts, callback) {
         color: active ? "rgba(226, 232, 240, 0.9)" : "rgba(226, 232, 240, 0.6)",
         fontSize: "13px",
         cursor: "pointer", // Add pointer cursor to indicate hoverable area
+        userSelect: "none",     // Add this line to prevent text selection
+        WebkitUserSelect: "none",  // For Safari support
+        MozUserSelect: "none",     // For Firefox support
+        msUserSelect: "none",      // For IE/Edge support
       });
 
       // Move preview tooltip events to nameEl instead of loraEl
@@ -530,18 +546,17 @@ export function addLorasWidget(node, name, opts, callback) {
     },
   });
 
-  // Initialize widget value using options methods
-  widget.options.setValue(defaultValue);
+  widget.value = defaultValue;
 
   widget.callback = callback;
 
-  // widget.computeSize = (width) => {
-  //   // console.log("loras_widget computeSize called: ", width, height);
-  //   return [400, 200];
-  // };
-
-  // Render initial state
-  renderLoras(widgetValue, widget);
+  widget.serializeValue = () => {
+    // Add dummy items to avoid the 2-element serialization issue, a bug in comfyui
+    return [...widgetValue, 
+        { name: "__dummy_item1__", strength: 0, active: false, _isDummy: true },
+        { name: "__dummy_item2__", strength: 0, active: false, _isDummy: true }
+      ];
+  }
 
   widget.onRemove = () => {
     container.remove(); 

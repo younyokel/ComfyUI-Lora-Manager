@@ -29,8 +29,6 @@ class TriggerWordToggle:
             "id": id,
             "message": trigger_words
         })
-
-        print(f"kwargs: {kwargs}")
         
         filtered_triggers = trigger_words
         
