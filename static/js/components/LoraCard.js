@@ -149,7 +149,10 @@ export function showLoraModal(lora) {
                         </div>
                         <div class="info-item">
                             <label>File Name</label>
-                            <span id="file-name">${lora.file_name || 'N/A'}</span>
+                            <div class="file-name-wrapper" onclick="copyFileName('${lora.file_name}')">
+                                <span id="file-name">${lora.file_name || 'N/A'}</span>
+                                <i class="fas fa-copy" title="Copy file name"></i>
+                            </div>
                         </div>
                         <div class="info-item">
                             <label>Location</label>
@@ -205,6 +208,17 @@ export function showLoraModal(lora) {
     setupEditableFields();
     setupShowcaseScroll(); // Add this line
 }
+
+// 添加复制文件名的函数
+window.copyFileName = async function(fileName) {
+    try {
+        await navigator.clipboard.writeText(fileName);
+        showToast('File name copied', 'success');
+    } catch (err) {
+        console.error('Copy failed:', err);
+        showToast('Copy failed', 'error');
+    }
+};
 
 function setupEditableFields() {
     const editableFields = document.querySelectorAll('.editable-field [contenteditable]');

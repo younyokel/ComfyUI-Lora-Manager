@@ -914,3 +914,29 @@ body.modal-open {
 .add-preset-btn:hover {
     opacity: 0.9;
 }
+
+/* File name copy styles */
+.file-name-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius-xs);
+    transition: background-color 0.2s;
+}
+
+.file-name-wrapper:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+}
+
+.file-name-wrapper i {
+    color: var(--text-color);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.file-name-wrapper:hover i {
+    opacity: 1;
+    color: var(--lora-accent);
+}
