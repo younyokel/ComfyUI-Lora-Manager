@@ -25,6 +25,24 @@ export function addTagsWidget(node, name, opts, callback) {
 
     const normalizedTags = tagsData;
 
+    if (normalizedTags.length === 0) {
+      // Show message when no tags are present
+      const emptyMessage = document.createElement("div");
+      emptyMessage.textContent = "No trigger words detected";
+      Object.assign(emptyMessage.style, {
+        textAlign: "center",
+        padding: "20px 0",
+        color: "rgba(226, 232, 240, 0.8)",
+        fontStyle: "italic",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        MozUserSelect: "none",
+        msUserSelect: "none",
+      });
+      container.appendChild(emptyMessage);
+      return;
+    }
+
     normalizedTags.forEach((tagData, index) => {
       const { text, active } = tagData;
       const tagEl = document.createElement("div");
@@ -124,10 +142,12 @@ export function addTagsWidget(node, name, opts, callback) {
       });
     },
     getMinHeight: function() {
-      // Calculate height based on content
+      // Calculate height based on content with minimal extra space
+      // Use a small buffer instead of explicit padding calculation
+      const buffer = 10; // Small buffer to ensure no overflow
       return Math.max(
         150,
-        Math.ceil(container.scrollHeight / 5) * 5 + 15// Round up to nearest 5px
+        Math.ceil((container.scrollHeight + buffer) / 5) * 5 // Round up to nearest 5px
       );
     },
   });
