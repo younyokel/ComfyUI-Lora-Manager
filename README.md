@@ -11,7 +11,22 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ---
 
-## [Update 0.7.3] New Features
+## [Update 0.7.33] Latest Enhancements
+- 🎛️ **Enhanced LoRA Loader Node**:
+  - New visual widgets for easier LoRA strength adjustment
+  - Toggle switches for quick LoRA enable/disable
+  - Image tooltips for quick LoRA preview identification
+  - Improved UI for managing multiple LoRAs
+
+- 🏷️ **New TriggerWord Toggle Node**:
+  - Visual display of applicable trigger words
+  - Click-to-toggle individual trigger words
+  - Easy exclusion of unwanted trigger words
+  - Connects directly after LoRA Loader node
+
+- 🐛 **Bug Fixes and Stability Improvements**
+
+## [Update 0.7.3] Previous Features
 - ✨ **One-Click LoRA Integration**:
   - Use "Lora Loader (LoraManager)" custom node in workflows
   - Copy LoRA syntax directly from manager interface
