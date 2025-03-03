@@ -23,13 +23,18 @@ class MoveManager {
             const folderItem = e.target.closest('.folder-item');
             if (!folderItem) return;
 
-            // 取消其他选中状态
-            this.folderBrowser.querySelectorAll('.folder-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-
-            // 设置当前选中状态
-            folderItem.classList.add('selected');
+            // 如果点击已选中的文件夹，则取消选择
+            if (folderItem.classList.contains('selected')) {
+                folderItem.classList.remove('selected');
+            } else {
+                // 取消其他选中状态
+                this.folderBrowser.querySelectorAll('.folder-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                // 设置当前选中状态
+                folderItem.classList.add('selected');
+            }
+            
             this.updatePathPreview();
         });
 

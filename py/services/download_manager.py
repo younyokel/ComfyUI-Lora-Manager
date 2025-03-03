@@ -80,7 +80,7 @@ class DownloadManager:
             if images:
                 # Report preview download progress
                 if progress_callback:
-                    await progress_callback(5)  # 5% progress for starting preview download
+                    await progress_callback(1)  # 1% progress for starting preview download
 
                 preview_ext = '.mp4' if images[0].get('type') == 'video' else '.png'
                 preview_path = os.path.splitext(save_path)[0] + '.preview' + preview_ext
@@ -91,7 +91,7 @@ class DownloadManager:
 
                 # Report preview download completion
                 if progress_callback:
-                    await progress_callback(10)  # 10% progress after preview download
+                    await progress_callback(3)  # 3% progress after preview download
 
             # Download model file with progress tracking
             success, result = await self.civitai_client._download_file(
@@ -149,6 +149,6 @@ class DownloadManager:
             progress_callback: Callback function for progress updates
         """
         if progress_callback:
-            # Scale file progress to 10-100 range (after preview download)
-            overall_progress = 10 + (file_progress * 0.9)  # 90% of progress for file download
+            # Scale file progress to 3-100 range (after preview download)
+            overall_progress = 3 + (file_progress * 0.97)  # 97% of progress for file download
             await progress_callback(round(overall_progress))
