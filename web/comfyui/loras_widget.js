@@ -113,13 +113,12 @@ export function addLorasWidget(node, name, opts, callback) {
       Object.assign(this.element.style, {
         position: 'fixed',
         zIndex: 9999,
-        padding: '4px', // 减小内边距
-        background: 'rgba(0, 0, 0, 0.75)', // 稍微调整透明度
-        borderRadius: '4px', // 减小圆角
-        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)', // 减小阴影
+        background: 'rgba(0, 0, 0, 0.85)',
+        borderRadius: '6px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
         display: 'none',
+        overflow: 'hidden',
         maxWidth: '300px',
-        maxHeight: '300px',
       });
       document.body.appendChild(this.element);
       this.hideTimeout = null;  // 添加超时处理变量
@@ -151,16 +150,22 @@ export function addLorasWidget(node, name, opts, callback) {
           this.element.removeChild(this.element.firstChild);
         }
 
-        // 判断是否为视频
+        // Create media container with relative positioning
+        const mediaContainer = document.createElement('div');
+        Object.assign(mediaContainer.style, {
+          position: 'relative',
+          maxWidth: '300px',
+          maxHeight: '300px',
+        });
+
         const isVideo = data.preview_url.endsWith('.mp4');
-        const mediaElement = isVideo ? 
-          document.createElement('video') : 
-          document.createElement('img');
+        const mediaElement = isVideo ? document.createElement('video') : document.createElement('img');
 
         Object.assign(mediaElement.style, {
           maxWidth: '300px',
           maxHeight: '300px',
-          objectFit: 'contain'
+          objectFit: 'contain',
+          display: 'block',
         });
 
         if (isVideo) {
@@ -172,7 +177,31 @@ export function addLorasWidget(node, name, opts, callback) {
 
         mediaElement.src = data.preview_url;
 
-        this.element.appendChild(mediaElement);
+        // Create name label with absolute positioning
+        const nameLabel = document.createElement('div');
+        nameLabel.textContent = loraName;
+        Object.assign(nameLabel.style, {
+          position: 'absolute',
+          bottom: '0',
+          left: '0',
+          right: '0',
+          padding: '8px',
+          color: 'rgba(255, 255, 255, 0.95)',
+          fontSize: '13px',
+          fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
+          background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.8))',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          textAlign: 'center',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+        });
+
+        mediaContainer.appendChild(mediaElement);
+        mediaContainer.appendChild(nameLabel);
+        this.element.appendChild(mediaContainer);
+        
         this.position(x, y);
         this.element.style.display = 'block';
       } catch (error) {
@@ -476,7 +505,6 @@ export function addLorasWidget(node, name, opts, callback) {
       // Create name display
       const nameEl = document.createElement("div");
       nameEl.textContent = name;
-      nameEl.title = name; // Set tooltip for full name
       Object.assign(nameEl.style, {
         marginLeft: "10px",
         flex: "1",
