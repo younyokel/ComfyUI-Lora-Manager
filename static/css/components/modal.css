@@ -940,3 +940,36 @@ body.modal-open {
     opacity: 1;
     color: var(--lora-accent);
 }
+
+/* Location and Size combined styles */
+.info-item.location-size {
+    display: block;
+}
+
+/* Base Model and Size combined styles */
+.info-item.base-size {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.base-wrapper {
+    flex: 2;  /* 分配更多空间给base model */
+}
+
+.size-wrapper {
+    flex: 1;
+    border-left: 1px solid var(--lora-border);
+    padding-left: var(--space-3);
+}
+
+.base-wrapper label,
+.size-wrapper label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.size-wrapper span {
+    font-family: monospace;
+    font-size: 0.9em;
+    opacity: 0.9;
+}

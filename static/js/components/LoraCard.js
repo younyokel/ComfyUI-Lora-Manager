@@ -11,6 +11,7 @@ export function createLoraCard(lora) {
     card.dataset.file_name = lora.file_name;
     card.dataset.folder = lora.folder;
     card.dataset.modified = lora.modified;
+    card.dataset.file_size = lora.file_size;
     card.dataset.from_civitai = lora.from_civitai;
     card.dataset.base_model = lora.base_model;
     card.dataset.usage_tips = lora.usage_tips;
@@ -68,6 +69,7 @@ export function createLoraCard(lora) {
             file_name: card.dataset.file_name,
             folder: card.dataset.folder,
             modified: card.dataset.modified,
+            file_size: card.dataset.file_size,
             from_civitai: card.dataset.from_civitai === 'true',
             base_model: card.dataset.base_model,
             usage_tips: card.dataset.usage_tips,
@@ -154,13 +156,21 @@ export function showLoraModal(lora) {
                                 <i class="fas fa-copy" title="Copy file name"></i>
                             </div>
                         </div>
-                        <div class="info-item">
-                            <label>Location</label>
-                            <span class="file-path">${lora.file_path.replace(/[^/]+$/, '') || 'N/A'}</span>
+                        <div class="info-item location-size">
+                            <div class="location-wrapper">
+                                <label>Location</label>
+                                <span class="file-path">${lora.file_path.replace(/[^/]+$/, '') || 'N/A'}</span>
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <label>Base Model</label>
-                            <span>${lora.base_model || 'N/A'}</span>
+                        <div class="info-item base-size">
+                            <div class="base-wrapper">
+                                <label>Base Model</label>
+                                <span>${lora.base_model || 'N/A'}</span>
+                            </div>
+                            <div class="size-wrapper">
+                                <label>Size</label>
+                                <span>${formatFileSize(lora.file_size)}</span>
+                            </div>
                         </div>
                         <div class="info-item usage-tips">
                             <label>Usage Tips</label>
@@ -546,3 +556,19 @@ window.removePreset = async function(key) {
     loraCard.dataset.usage_tips = newPresetsJson;
     document.querySelector('.preset-tags').innerHTML = renderPresetTags(currentPresets);
 };
+
+// 添加文件大小格式化函数
+function formatFileSize(bytes) {
+    console.log('formatFileSize: ', bytes);
+    if (!bytes) return 'N/A';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = 0;
+    
+    while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+    }
+    
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+}

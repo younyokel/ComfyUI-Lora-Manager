@@ -177,6 +177,7 @@ class ApiRoutes:
             "folder": lora["folder"],
             "sha256": lora["sha256"],
             "file_path": lora["file_path"].replace(os.sep, "/"),
+            "file_size": lora["size"],
             "modified": lora["modified"],
             "from_civitai": lora.get("from_civitai", True),
             "usage_tips": lora.get("usage_tips", ""),
