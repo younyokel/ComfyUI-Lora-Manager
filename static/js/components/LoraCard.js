@@ -266,6 +266,8 @@ function setupEditableFields() {
                 presetValue.type = 'number';
                 presetValue.step = 1;
             }
+            // Add auto-focus
+            setTimeout(() => presetValue.focus(), 0);
         } else {
             presetValue.style.display = 'none';
         }
@@ -298,6 +300,33 @@ function setupEditableFields() {
         presetSelector.value = '';
         presetValue.value = '';
         presetValue.style.display = 'none';
+    });
+
+    // Add keydown event listeners for notes
+    const notesContent = document.querySelector('.notes-content');
+    if (notesContent) {
+        notesContent.addEventListener('keydown', async function(e) {
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    // Allow shift+enter for new line
+                    return;
+                }
+                e.preventDefault();
+                const filePath = document.querySelector('.modal-content')
+                    .querySelector('.file-path').textContent + 
+                    document.querySelector('.modal-content')
+                    .querySelector('#file-name').textContent + '.safetensors';
+                await saveNotes(filePath);
+            }
+        });
+    }
+
+    // Add keydown event for preset value
+    presetValue.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addPresetBtn.click();
+        }
     });
 }
 
