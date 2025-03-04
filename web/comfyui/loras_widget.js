@@ -122,6 +122,12 @@ export function addLorasWidget(node, name, opts, callback) {
       });
       document.body.appendChild(this.element);
       this.hideTimeout = null;  // 添加超时处理变量
+      
+      // 添加全局点击事件来隐藏tooltip
+      document.addEventListener('click', () => this.hide());
+      
+      // 添加滚动事件监听
+      document.addEventListener('scroll', () => this.hide(), true);
     }
 
     async show(loraName, x, y) {
@@ -131,6 +137,14 @@ export function addLorasWidget(node, name, opts, callback) {
           clearTimeout(this.hideTimeout);
           this.hideTimeout = null;
         }
+
+        // 如果已经显示同一个lora的预览，则不重复显示
+        if (this.element.style.display === 'block' && this.currentLora === loraName) {
+          return;
+        }
+
+        this.currentLora = loraName;
+        
         // 获取预览URL
         const response = await api.fetchApi(`/lora-preview-url?name=${encodeURIComponent(loraName)}`, {
           method: 'GET'
@@ -202,8 +216,15 @@ export function addLorasWidget(node, name, opts, callback) {
         mediaContainer.appendChild(nameLabel);
         this.element.appendChild(mediaContainer);
         
-        this.position(x, y);
+        // 添加淡入效果
+        this.element.style.opacity = '0';
         this.element.style.display = 'block';
+        this.position(x, y);
+        
+        requestAnimationFrame(() => {
+          this.element.style.transition = 'opacity 0.15s ease';
+          this.element.style.opacity = '1';
+        });
       } catch (error) {
         console.warn('Failed to load preview:', error);
       }
@@ -235,22 +256,29 @@ export function addLorasWidget(node, name, opts, callback) {
     }
 
     hide() {
-      // 使用延迟来确保隐藏事件在显示事件之后执行
-      this.hideTimeout = setTimeout(() => {
-        this.element.style.display = 'none';
-        // 停止视频播放
-        const video = this.element.querySelector('video');
-        if (video) {
-          video.pause();
-        }
-        this.hideTimeout = null;
-      }, 50);
+      // 使用淡出效果
+      if (this.element.style.display === 'block') {
+        this.element.style.opacity = '0';
+        this.hideTimeout = setTimeout(() => {
+          this.element.style.display = 'none';
+          this.currentLora = null;
+          // 停止视频播放
+          const video = this.element.querySelector('video');
+          if (video) {
+            video.pause();
+          }
+          this.hideTimeout = null;
+        }, 150);
+      }
     }
 
     cleanup() {
       if (this.hideTimeout) {
         clearTimeout(this.hideTimeout);
       }
+      // 移除所有事件监听器
+      document.removeEventListener('click', () => this.hide());
+      document.removeEventListener('scroll', () => this.hide(), true);
       this.element.remove();
     }
   }
@@ -522,19 +550,13 @@ export function addLorasWidget(node, name, opts, callback) {
 
       // Move preview tooltip events to nameEl instead of loraEl
       nameEl.addEventListener('mouseenter', async (e) => {
-        e.stopPropagation(); // 阻止事件冒泡
-        await previewTooltip.show(name, e.clientX, e.clientY);
-      });
-
-      nameEl.addEventListener('mousemove', (e) => {
-        e.stopPropagation(); // 阻止事件冒泡
-        if (previewTooltip.element.style.display === 'block') {
-          previewTooltip.position(e.clientX, e.clientY);
-        }
+        e.stopPropagation();
+        const rect = nameEl.getBoundingClientRect();
+        await previewTooltip.show(name, rect.right, rect.top);
       });
 
       nameEl.addEventListener('mouseleave', (e) => {
-        e.stopPropagation(); // 阻止事件冒泡
+        e.stopPropagation();
         previewTooltip.hide();
       });
 
