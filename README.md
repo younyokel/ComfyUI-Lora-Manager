@@ -11,7 +11,7 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ---
 
-## [Update 0.7.33] Latest Enhancements
+## [Update 0.7.33] Enhanced UI Controls & Trigger Word Management
 - 🎛️ **Enhanced LoRA Loader Node**:
   - New visual widgets for easier LoRA strength adjustment
   - Toggle switches for quick LoRA enable/disable
@@ -26,7 +26,7 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 - 🐛 **Bug Fixes and Stability Improvements**
 
-## [Update 0.7.3] Previous Features
+## [Update 0.7.3] One-Click Integration & Workflow Automation
 - ✨ **One-Click LoRA Integration**:
   - Use "Lora Loader (LoraManager)" custom node in workflows
   - Copy LoRA syntax directly from manager interface
@@ -137,6 +137,11 @@ If you have suggestions, bug reports, or improvements, feel free to open an issu
 If you find this project helpful, consider supporting its development:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/pixelpawsai)
+
+## 💬 Community
+
+Join our Discord community for support, discussions, and updates:
+[Discord Server](https://discord.gg/vcqNrWVFvM)
 
 ---
 
