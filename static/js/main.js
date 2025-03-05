@@ -24,6 +24,7 @@ import { DownloadManager } from './managers/DownloadManager.js';
 import { SettingsManager, toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { LoraContextMenu } from './components/ContextMenu.js';
 import { moveManager } from './managers/MoveManager.js';
+import { FilterManager } from './managers/FilterManager.js';
 
 // Export all functions that need global access
 window.loadMoreLoras = loadMoreLoras;
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.loadingManager = new LoadingManager();
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
     window.downloadManager = new DownloadManager();  // Move this after modalManager initialization
+    window.filterManager = new FilterManager(); // Initialize filter manager
     initializeInfiniteScroll();
     initializeEventListeners();
     lazyLoadImages();

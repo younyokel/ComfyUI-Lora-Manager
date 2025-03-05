@@ -35,6 +35,34 @@
             <button class="search-mode-toggle" id="searchModeToggle" title="Toggle recursive search in folders">
                 <i class="fas fa-folder"></i>
             </button>
+             <button class="search-filter-toggle" id="filterButton" onclick="filterManager.toggleFilterPanel()" title="Filter models">
+                <i class="fas fa-filter"></i>
+                <span class="filter-badge" id="activeFiltersCount" style="display: none">0</span>
+            </button>
         </div>
+    </div>
+</div>
+
+<!-- Add filter panel -->
+<div id="filterPanel" class="filter-panel hidden">
+    <div class="filter-header">
+        <h3>Filter Models</h3>
+        <button class="close-filter-btn" onclick="filterManager.closeFilterPanel()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="filter-section">
+        <h4>Base Model</h4>
+        <div class="filter-tags" id="baseModelTags">
+            <!-- Tags will be dynamically inserted here -->
+        </div>
+    </div>
+    <div class="filter-actions">
+        <button class="clear-filters-btn" onclick="filterManager.clearFilters()">
+            Clear All Filters
+        </button>
+        <button class="apply-filters-btn" onclick="filterManager.applyFilters()">
+            Apply Filters
+        </button>
     </div>
 </div>

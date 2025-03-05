@@ -7,5 +7,8 @@ export const state = {
     loadingManager: null,
     observer: null,
     previewVersions: new Map(),
-    searchManager: null  // 添加 searchManager
+    searchManager: null,
+    filters: {
+        baseModel: []
+    }
 };
