@@ -9,7 +9,8 @@ BASE_MODEL_MAPPING = {
     "flux1": "Flux.1 D",
     "flux.1 d": "Flux.1 D",
     "illustrious": "IL",
-    "pony": "Pony"
+    "pony": "Pony",
+    "Hunyuan Video": "Hunyuan Video"
 }
 
 def determine_base_model(version_string: Optional[str]) -> str:
