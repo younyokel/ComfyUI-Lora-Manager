@@ -331,6 +331,33 @@
     transform: translateY(-2px);
 }
 
+.support-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--lora-error);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.support-toggle:hover {
+    background: var(--lora-error);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.support-toggle i {
+    font-size: 1.1em;
+    position: relative;
+    top: 1px;
+    left: -0.5px;
+}
+
 .theme-toggle img {
     width: 20px;
     height: 20px;

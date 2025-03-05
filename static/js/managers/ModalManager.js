@@ -52,6 +52,15 @@ export class ModalManager {
                 document.body.classList.remove('modal-open');
             }
         });
+        
+        // Add supportModal registration
+        this.registerModal('supportModal', {
+            element: document.getElementById('supportModal'),
+            onClose: () => {
+                this.getModal('supportModal').element.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
 
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
