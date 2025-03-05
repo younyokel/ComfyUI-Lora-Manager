@@ -47,15 +47,25 @@
 </head>
 <body>
     <div class="corner-controls">
-        <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-            <img src="/loras_static/images/theme-toggle-light.svg" alt="Theme" class="theme-icon light-icon">
-            <img src="/loras_static/images/theme-toggle-dark.svg" alt="Theme" class="theme-icon dark-icon">
+        <div class="corner-controls-toggle">
+            <i class="fas fa-ellipsis-v"></i>
+            <span class="update-badge corner-badge hidden"></span>
         </div>
-        <div class="support-toggle" onclick="modalManager.showModal('supportModal')" title="Support">
-            <i class="fas fa-heart"></i>
-        </div>
-        <div class="settings-toggle" onclick="settingsManager.toggleSettings()" title="Settings">
-            <i class="fas fa-cog"></i>
+        <div class="corner-controls-items">
+            <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                <img src="/loras_static/images/theme-toggle-light.svg" alt="Theme" class="theme-icon light-icon">
+                <img src="/loras_static/images/theme-toggle-dark.svg" alt="Theme" class="theme-icon dark-icon">
+            </div>
+            <div class="update-toggle" onclick="modalManager.showModal('updateModal')" title="Check Updates">
+                <i class="fas fa-bell"></i>
+                <span class="update-badge hidden"></span>
+            </div>
+            <div class="support-toggle" onclick="modalManager.showModal('supportModal')" title="Support">
+                <i class="fas fa-heart"></i>
+            </div>
+            <div class="settings-toggle" onclick="settingsManager.toggleSettings()" title="Settings">
+                <i class="fas fa-cog"></i>
+            </div>
         </div>
     </div>
     

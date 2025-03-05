@@ -216,3 +216,63 @@
         </div>
     </div>
 </div>
+
+<!-- Update Modal -->
+<div id="updateModal" class="modal">
+    <div class="modal-content update-modal">
+        <button class="close" onclick="modalManager.closeModal('updateModal')">&times;</button>
+        <div class="update-header">
+            <i class="fas fa-bell update-icon"></i>
+            <h2>Update Available</h2>
+        </div>
+        <div class="update-content">
+            <div class="update-info">
+                <div class="version-info">
+                    <div class="current-version">
+                        <span class="label">Current Version:</span>
+                        <span class="version-number">v1.0.0</span>
+                    </div>
+                    <div class="new-version">
+                        <span class="label">New Version:</span>
+                        <span class="version-number">v1.1.0</span>
+                    </div>
+                </div>
+                <a href="https://github.com/willmiao/ComfyUI-Lora-Manager" target="_blank" class="update-link">
+                    <i class="fas fa-external-link-alt"></i> View on GitHub
+                </a>
+            </div>
+            
+            <div class="changelog-section">
+                <h3>Changelog</h3>
+                <div class="changelog-content">
+                    <div class="changelog-item">
+                        <h4>Version 1.1.0</h4>
+                        <ul>
+                            <li>Added support for custom folder structures</li>
+                            <li>Improved search functionality</li>
+                            <li>Fixed bug with loading large libraries</li>
+                            <li>Added new sorting options</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="update-instructions">
+                <h3>How to Update</h3>
+                <p>To update LoRA Manager, run the following command in your ComfyUI directory:</p>
+                <div class="code-block">
+                    <code>git pull origin main</code>
+                </div>
+                <p>Or update through the ComfyUI Manager if you installed it that way.</p>
+            </div>
+            
+            <div class="update-preferences">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="updateNotifications" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Show update notifications</span>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>

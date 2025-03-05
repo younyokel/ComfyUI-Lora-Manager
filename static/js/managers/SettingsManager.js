@@ -16,13 +16,6 @@ export class SettingsManager {
         this.isOpen = !this.isOpen;
     }
 
-    /*
-    showSettings() {
-        console.log('Opening settings modal...'); // Debug log
-        modalManager.showModal('settingsModal');
-    }
-    */
-
     async saveSettings() {
         const apiKey = document.getElementById('civitaiApiKey').value;
         
