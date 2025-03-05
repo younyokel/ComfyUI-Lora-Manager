@@ -23,4 +23,5 @@ def determine_base_model(version_string: Optional[str]) -> str:
         if key in version_lower:
             return value
     
-    return "Unknown" 
+    # TODO: Add more base model mappings
+    return version_string 
