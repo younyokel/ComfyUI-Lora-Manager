@@ -2,10 +2,10 @@ from typing import Optional
 
 # Base model mapping based on version string
 BASE_MODEL_MAPPING = {
-    "sd-v1-5": "SD1.5",
-    "sd-v2-1": "SD2.1",
-    "sdxl": "SDXL",
-    "sd-v2": "SD2.0",
+    "sd-v1-5": "SD 1.5",
+    "sd-v2-1": "SD 2.1",
+    "sdxl": "SDXL 1.0",
+    "sd-v2": "SD 2.0",
     "flux1": "Flux.1 D",
     "flux.1 d": "Flux.1 D",
     "illustrious": "IL",

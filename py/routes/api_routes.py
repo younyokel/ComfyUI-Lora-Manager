@@ -121,6 +121,10 @@ class ApiRoutes:
             fuzzy = request.query.get('fuzzy', 'false').lower() == 'true'
             recursive = request.query.get('recursive', 'false').lower() == 'true'
             
+            # Parse base models filter parameter
+            base_models = request.query.get('base_models', '').split(',')
+            base_models = [model.strip() for model in base_models if model.strip()]
+            
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
                 return web.json_response({
@@ -132,7 +136,7 @@ class ApiRoutes:
                     'error': 'Invalid sort parameter'
                 }, status=400)
             
-            # Get paginated data with search
+            # Get paginated data with search and filters
             result = await self.scanner.get_paginated_data(
                 page=page,
                 page_size=page_size,
@@ -140,7 +144,8 @@ class ApiRoutes:
                 folder=folder,
                 search=search,
                 fuzzy=fuzzy,
-                recursive=recursive  # 添加递归参数
+                recursive=recursive,
+                base_models=base_models  # Pass base models filter
             )
             
             # Format the response data

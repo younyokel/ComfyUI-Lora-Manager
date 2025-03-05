@@ -1,6 +1,7 @@
 import { BASE_MODELS, BASE_MODEL_CLASSES } from '../utils/constants.js';
 import { state } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
+import { resetAndReload } from '../api/loraApi.js';
 
 export class FilterManager {
     constructor() {
@@ -45,8 +46,8 @@ export class FilterManager {
             tag.dataset.baseModel = value;
             tag.innerHTML = value;
             
-            // Add click handler to toggle selection
-            tag.addEventListener('click', () => {
+            // Add click handler to toggle selection and automatically apply
+            tag.addEventListener('click', async () => {
                 tag.classList.toggle('active');
                 
                 if (tag.classList.contains('active')) {
@@ -58,6 +59,9 @@ export class FilterManager {
                 }
                 
                 this.updateActiveFiltersCount();
+                
+                // Auto-apply filter when tag is clicked
+                await this.applyFilters(false);
             });
             
             baseModelTagsContainer.appendChild(tag);
@@ -101,29 +105,38 @@ export class FilterManager {
         }
     }
     
-    applyFilters() {
+    async applyFilters(showToastNotification = true) {
         // Save filters to localStorage
         localStorage.setItem('loraFilters', JSON.stringify(this.filters));
         
-        // Apply filters to cards (will be implemented later)
-        showToast('Filters applied', 'success');
+        // Update state with current filters
+        state.filters = { ...this.filters };
         
-        // Close the filter panel
-        this.closeFilterPanel();
+        // Reload loras with filters applied
+        await resetAndReload();
         
         // Update filter button to show active state
         if (this.hasActiveFilters()) {
             this.filterButton.classList.add('active');
+            if (showToastNotification) {
+                showToast(`Filtering by ${this.filters.baseModel.length} base models`, 'success');
+            }
         } else {
             this.filterButton.classList.remove('active');
+            if (showToastNotification) {
+                showToast('Filters cleared', 'info');
+            }
         }
     }
     
-    clearFilters() {
+    async clearFilters() {
         // Clear all filters
         this.filters = {
             baseModel: []
         };
+        
+        // Update state
+        state.filters = { ...this.filters };
         
         // Update UI
         this.updateTagSelections();
@@ -132,8 +145,9 @@ export class FilterManager {
         // Remove from localStorage
         localStorage.removeItem('loraFilters');
         
+        // Update UI and reload data
         this.filterButton.classList.remove('active');
-        showToast('All filters cleared', 'info');
+        await resetAndReload();
     }
     
     loadFiltersFromStorage() {

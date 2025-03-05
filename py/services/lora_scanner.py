@@ -148,7 +148,7 @@ class LoraScanner:
 
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
                                folder: str = None, search: str = None, fuzzy: bool = False,
-                               recursive: bool = False):
+                               recursive: bool = False, base_models: list = None):
         """Get paginated and filtered lora data
         
         Args:
@@ -159,6 +159,7 @@ class LoraScanner:
             search: Search term
             fuzzy: Use fuzzy matching for search
             recursive: Include subfolders when folder filter is applied
+            base_models: List of base models to filter by
         """
         cache = await self.get_cached_data()
 
@@ -179,6 +180,13 @@ class LoraScanner:
                     item for item in filtered_data 
                     if item['folder'] == folder
                 ]
+        
+        # Apply base model filtering
+        if base_models and len(base_models) > 0:
+            filtered_data = [
+                item for item in filtered_data
+                if item.get('base_model') in base_models
+            ]
         
         # 应用搜索过滤
         if search:

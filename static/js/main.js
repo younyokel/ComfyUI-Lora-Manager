@@ -55,6 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
     window.downloadManager = new DownloadManager();  // Move this after modalManager initialization
     window.filterManager = new FilterManager(); // Initialize filter manager
+    
+    // Initialize state filters from filterManager if available
+    if (window.filterManager && window.filterManager.filters) {
+        state.filters = { ...window.filterManager.filters };
+    }
+    
     initializeInfiniteScroll();
     initializeEventListeners();
     lazyLoadImages();
