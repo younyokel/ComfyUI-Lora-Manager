@@ -1,6 +1,7 @@
 import { debounce } from './utils/debounce.js';
 import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
+import { updateService } from './managers/UpdateService.js';
 import { state } from './state/index.js';
 import { showLoraModal, toggleShowcase, scrollToTop } from './components/LoraCard.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
@@ -50,9 +51,10 @@ window.toggleShowcase = toggleShowcase;
 window.scrollToTop = scrollToTop;
 
 // Initialize everything when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     state.loadingManager = new LoadingManager();
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
+    updateService.initialize(); // Initialize updateService after modalManager
     window.downloadManager = new DownloadManager();  // Move this after modalManager initialization
     window.filterManager = new FilterManager(); // Initialize filter manager
     

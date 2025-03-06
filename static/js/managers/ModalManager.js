@@ -2,7 +2,6 @@ export class ModalManager {
     constructor() {
         this.modals = new Map();
         this.scrollPosition = 0;
-        this.updateAvailable = false;
     }
 
     initialize() {
@@ -75,9 +74,8 @@ export class ModalManager {
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
         
-        // Initialize corner controls and update modal
+        // Initialize corner controls
         this.initCornerControls();
-        this.initUpdateModal();
     }
 
     registerModal(id, config) {
@@ -159,79 +157,16 @@ export class ModalManager {
         }
     }
 
-    // Add method to initialize corner controls behavior
+    // Keep only the corner controls initialization
     initCornerControls() {
         const cornerControls = document.querySelector('.corner-controls');
         const cornerControlsToggle = document.querySelector('.corner-controls-toggle');
         
         if(cornerControls && cornerControlsToggle) {
-            // Check for updates (mock implementation)
-            this.checkForUpdates();
-            
-            // Apply the initial badge state based on localStorage
-            const showUpdates = localStorage.getItem('show_update_notifications');
-            if (showUpdates === 'false') {
-                this.updateBadgeVisibility(false);
-            }
-        }
-    }
-    
-    // Modified update checker
-    checkForUpdates() {
-        // First check if user has disabled update notifications
-        const showUpdates = localStorage.getItem('show_update_notifications');
-        
-        // For demo purposes, we'll simulate an update being available
-        setTimeout(() => {
-            // We have an update available (mock)
-            this.updateAvailable = true;
-            
-            // Only show badges if notifications are enabled
-            const shouldShow = showUpdates !== 'false';
-            this.updateBadgeVisibility(shouldShow);
-        }, 2000);
-    }
-
-    // Add method to initialize update modal
-    initUpdateModal() {
-        const updateModal = document.getElementById('updateModal');
-        if (!updateModal) return;
-
-        const checkbox = updateModal.querySelector('#updateNotifications');
-        if (!checkbox) return;
-        
-        // Set initial state from localStorage or default to true
-        const showUpdates = localStorage.getItem('show_update_notifications');
-        checkbox.checked = showUpdates === null || showUpdates === 'true';
-        
-        // Apply the initial badge visibility based on checkbox state
-        this.updateBadgeVisibility(checkbox.checked);
-        
-        // Add event listener for changes
-        checkbox.addEventListener('change', (e) => {
-            localStorage.setItem('show_update_notifications', e.target.checked);
-            
-            // Immediately update badge visibility based on the new setting
-            this.updateBadgeVisibility(e.target.checked);
-        });
-    }
-    
-    // Enhanced helper method to update badge visibility
-    updateBadgeVisibility(show) {
-        const updateToggle = document.querySelector('.update-toggle');
-        const updateBadge = document.querySelector('.update-toggle .update-badge');
-        const cornerBadge = document.querySelector('.corner-badge');
-        
-        if (updateToggle) {
-            updateToggle.title = show && this.updateAvailable ? "Update Available" : "Check Updates";
-        }
-        
-        if (updateBadge) {
-            updateBadge.classList.toggle('hidden', !(show && this.updateAvailable));
-        }
-        
-        if (cornerBadge) {
-            cornerBadge.classList.toggle('hidden', !(show && this.updateAvailable));
+            // Toggle corner controls visibility
+            cornerControlsToggle.addEventListener('click', () => {
+                cornerControls.classList.toggle('expanded');
+            });
         }
     }
 }

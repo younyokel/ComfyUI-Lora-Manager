@@ -13,6 +13,7 @@ from operator import itemgetter
 from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 import asyncio
+from .update_routes import UpdateRoutes
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ class ApiRoutes:
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
+
+        # Add update check routes
+        UpdateRoutes.setup_routes(app)
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
