@@ -85,7 +85,7 @@
         {% else %}
             {% include 'components/controls.html' %}
             <!-- Lora卡片容器 -->
-            <div class="card-grid" id="loraGrid">
+            <div class="card-grid" id="loraGrid" style="height: calc(100vh - [header-height]px); overflow-y: auto;">
                 <!-- Cards will be dynamically inserted here -->
             </div>
         {% endif %}

@@ -22,8 +22,15 @@ export function initializeInfiniteScroll() {
     } else {
         const sentinel = document.createElement('div');
         sentinel.id = 'scroll-sentinel';
-        sentinel.style.height = '10px';
+        sentinel.style.height = '20px'; // Increase height a bit
+        sentinel.style.width = '100%';  // Ensure full width
+        sentinel.style.position = 'relative'; // Ensure it's in the normal flow
         document.getElementById('loraGrid').appendChild(sentinel);
         state.observer.observe(sentinel);
     }
-} 
+
+    // Force layout recalculation
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 100);
+}
