@@ -5,6 +5,29 @@ export class SettingsManager {
     constructor() {
         this.initialized = false;
         this.isOpen = false;
+        
+        // Add initialization to sync with modal state
+        this.initialize();
+    }
+
+    initialize() {
+        if (this.initialized) return;
+        
+        // Add event listener to sync state when modal is closed via other means (like Escape key)
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        this.isOpen = settingsModal.style.display === 'block';
+                    }
+                });
+            });
+            
+            observer.observe(settingsModal, { attributes: true });
+        }
+        
+        this.initialized = true;
     }
 
     toggleSettings() {
