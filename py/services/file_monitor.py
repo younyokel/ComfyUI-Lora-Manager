@@ -86,26 +86,32 @@ class LoraFileHandler(FileSystemEventHandler):
             if not changes:
                 return
             
-            
             logger.info(f"Processing {len(changes)} file changes")
 
-            cache = await self.scanner.get_cached_data()  # 先完成可能的初始化
+            cache = await self.scanner.get_cached_data()
             needs_resort = False
-            new_folders = set()  # 用于收集新的文件夹
+            new_folders = set()
             
             for action, file_path in changes:
                 try:
                     if action == 'add':
-                        # 扫描新文件
+                        # Scan new file
                         lora_data = await self.scanner.scan_single_lora(file_path)
                         if lora_data:
                             cache.raw_data.append(lora_data)
-                            new_folders.add(lora_data['folder'])  # 收集新文件夹
+                            new_folders.add(lora_data['folder'])
+                            # Update hash index
+                            if 'sha256' in lora_data:
+                                self.scanner._hash_index.add_entry(
+                                    lora_data['sha256'], 
+                                    lora_data['file_path']
+                                )
                             needs_resort = True
                             
                     elif action == 'remove':
-                        # 从缓存中移除
+                        # Remove from cache and hash index
                         logger.info(f"Removing {file_path} from cache")
+                        self.scanner._hash_index.remove_by_path(file_path)
                         cache.raw_data = [
                             item for item in cache.raw_data 
                             if item['file_path'] != file_path
@@ -118,7 +124,7 @@ class LoraFileHandler(FileSystemEventHandler):
             if needs_resort:
                 await cache.resort()
                 
-                # 更新文件夹列表，包括新添加的文件夹
+                # Update folder list
                 all_folders = set(cache.folders) | new_folders
                 cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
                 

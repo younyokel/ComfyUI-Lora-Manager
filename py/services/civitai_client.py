@@ -4,7 +4,7 @@ import os
 import json
 import logging
 from email.parser import Parser
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 from urllib.parse import unquote
 from ..utils.models import LoraMetadata
 
@@ -135,16 +135,15 @@ class CivitaiClient:
             print(f"Download Error: {str(e)}")
             return False
             
-    async def get_model_versions(self, model_id: str) -> Optional[Dict]:
-        """Fetch all versions of a model"""
+    async def get_model_versions(self, model_id: str) -> List[Dict]:
+        """Get all versions of a model with local availability info"""
         try:
-            session = await self.session
-            url = f"{self.base_url}/models/{model_id}"
-            async with session.get(url, headers=self.headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data.get('modelVersions', [])
-                return None
+            session = await self.session  # 等待获取 session
+            async with session.get(f"{self.base_url}/models/{model_id}") as response:
+                if response.status != 200:
+                    return None
+                data = await response.json()
+                return data.get('modelVersions', [])
         except Exception as e:
             logger.error(f"Error fetching model versions: {e}")
             return None

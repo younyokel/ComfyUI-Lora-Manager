@@ -7,9 +7,13 @@
 /* Import Components */
 @import 'components/card.css';
 @import 'components/modal.css';
+@import 'components/download-modal.css';
 @import 'components/toast.css';
 @import 'components/loading.css';
 @import 'components/menu.css';
+@import 'components/update-modal.css';
+@import 'components/lora-modal.css';
+@import 'components/support-modal.css';
 
 .initialization-notice {
     display: flex;

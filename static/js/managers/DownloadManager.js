@@ -71,7 +71,6 @@ export class DownloadManager {
         const errorElement = document.getElementById('urlError');
         
         try {
-            // Show loading while fetching versions
             this.loadingManager.showSimpleLoading('Fetching model versions...');
             
             const modelId = this.extractModelId(url);
@@ -98,7 +97,6 @@ export class DownloadManager {
         } catch (error) {
             errorElement.textContent = error.message;
         } finally {
-            // Hide loading when done
             this.loadingManager.hide();
         }
     }
@@ -120,19 +118,31 @@ export class DownloadManager {
         
         const versionList = document.getElementById('versionList');
         versionList.innerHTML = this.versions.map(version => {
-            // Find first image (skip videos)
             const firstImage = version.images?.find(img => !img.url.endsWith('.mp4'));
             const thumbnailUrl = firstImage ? firstImage.url : '/loras_static/images/no-preview.png';
-            const fileSize = (version.files[0]?.sizeKB / 1024).toFixed(2); // Convert to MB
+            const fileSize = (version.files[0]?.sizeKB / 1024).toFixed(2);
+            
+            const existsLocally = version.files[0]?.existsLocally;
+            const localPath = version.files[0]?.localPath;
+            
+            // 更新本地状态指示器为badge样式
+            const localStatus = existsLocally ? 
+                `<div class="local-badge">
+                    <i class="fas fa-check"></i> In Library
+                    <div class="local-path">${localPath}</div>
+                 </div>` : '';
 
             return `
-                <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''}"
+                <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''} ${existsLocally ? 'exists-locally' : ''}"
                      onclick="downloadManager.selectVersion('${version.id}')">
                     <div class="version-thumbnail">
                         <img src="${thumbnailUrl}" alt="Version preview">
                     </div>
                     <div class="version-content">
-                        <h3>${version.name}</h3>
+                        <div class="version-header">
+                            <h3>${version.name}</h3>
+                            ${localStatus}
+                        </div>
                         <div class="version-info">
                             ${version.baseModel ? `<div class="base-model">${version.baseModel}</div>` : ''}
                         </div>
@@ -149,6 +159,12 @@ export class DownloadManager {
     selectVersion(versionId) {
         this.currentVersion = this.versions.find(v => v.id.toString() === versionId.toString());
         if (!this.currentVersion) return;
+
+        // Check if version exists locally
+        const existsLocally = this.currentVersion.files[0]?.existsLocally;
+        if (existsLocally) {
+            showToast('This version already exists in your library', 'info');
+        }
 
         document.querySelectorAll('.version-item').forEach(item => {
             item.classList.toggle('selected', item.querySelector('h3').textContent === this.currentVersion.name);

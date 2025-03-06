@@ -488,12 +488,22 @@ class ApiRoutes:
         })
 
     async def get_civitai_versions(self, request: web.Request) -> web.Response:
-        """Get available versions for a Civitai model"""
+        """Get available versions for a Civitai model with local availability info"""
         try:
             model_id = request.match_info['model_id']
             versions = await self.civitai_client.get_model_versions(model_id)
             if not versions:
                 return web.Response(status=404, text="Model not found")
+            
+            # Check local availability for each version
+            for version in versions:
+                for file in version.get('files', []):
+                    sha256 = file.get('hashes', {}).get('SHA256')
+                    if sha256:
+                        file['existsLocally'] = self.scanner.has_lora_hash(sha256)
+                        if file['existsLocally']:
+                            file['localPath'] = self.scanner.get_lora_path_by_hash(sha256)
+                        
             return web.json_response(versions)
         except Exception as e:
             logger.error(f"Error fetching model versions: {e}")

@@ -10,6 +10,7 @@ from ..config import config
 from ..utils.file_utils import load_metadata, get_file_info
 from .lora_cache import LoraCache
 from difflib import SequenceMatcher
+from .lora_hash_index import LoraHashIndex
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class LoraScanner:
         # 确保初始化只执行一次
         if not hasattr(self, '_initialized'):
             self._cache: Optional[LoraCache] = None
+            self._hash_index = LoraHashIndex()
             self._initialization_lock = asyncio.Lock()
             self._initialization_task: Optional[asyncio.Task] = None
             self._initialized = True
@@ -85,8 +87,16 @@ class LoraScanner:
     async def _initialize_cache(self) -> None:
         """Initialize or refresh the cache"""
         try:
+            # Clear existing hash index
+            self._hash_index.clear()
+            
             # Scan for new data
             raw_data = await self.scan_all_loras()
+            
+            # Build hash index
+            for lora_data in raw_data:
+                if 'sha256' in lora_data and 'file_path' in lora_data:
+                    self._hash_index.add_entry(lora_data['sha256'], lora_data['file_path'])
             
             # Update cache
             self._cache = LoraCache(
@@ -416,20 +426,29 @@ class LoraScanner:
         
     async def update_single_lora_cache(self, original_path: str, new_path: str, metadata: Dict) -> bool:
         cache = await self.get_cached_data()
+        
+        # Remove old path from hash index if exists
+        self._hash_index.remove_by_path(original_path)
+        
         cache.raw_data = [
-                        item for item in cache.raw_data 
-                        if item['file_path'] != original_path
-                    ]
+            item for item in cache.raw_data 
+            if item['file_path'] != original_path
+        ]
+        
         if metadata:
             metadata['folder'] = self._calculate_folder(new_path)
             cache.raw_data.append(metadata)
+            
+            # Update hash index with new path
+            if 'sha256' in metadata:
+                self._hash_index.add_entry(metadata['sha256'], new_path)
+            
             all_folders = set(cache.folders)
             all_folders.add(metadata['folder'])
             cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
         
         # Resort cache
         await cache.resort()
-
 
     async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
         """Update file paths in metadata file"""
@@ -456,4 +475,17 @@ class LoraScanner:
                 
         except Exception as e:
             logger.error(f"Error updating metadata paths: {e}", exc_info=True)
+
+    # Add new methods for hash index functionality
+    def has_lora_hash(self, sha256: str) -> bool:
+        """Check if a LoRA with given hash exists"""
+        return self._hash_index.has_hash(sha256)
+        
+    def get_lora_path_by_hash(self, sha256: str) -> Optional[str]:
+        """Get file path for a LoRA by its hash"""
+        return self._hash_index.get_path(sha256)
+        
+    def get_lora_hash_by_path(self, file_path: str) -> Optional[str]:
+        """Get hash for a LoRA by its file path"""
+        return self._hash_index.get_hash(file_path)
 
