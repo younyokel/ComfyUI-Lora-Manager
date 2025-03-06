@@ -2,6 +2,7 @@ export class ModalManager {
     constructor() {
         this.modals = new Map();
         this.scrollPosition = 0;
+        this.currentOpenModal = null; // Track currently open modal
     }
 
     initialize() {
@@ -73,9 +74,6 @@ export class ModalManager {
 
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
-        
-        // Initialize corner controls
-        this.initCornerControls();
     }
 
     registerModal(id, config) {
@@ -99,9 +97,25 @@ export class ModalManager {
         return this.modals.get(id);
     }
 
+    // Check if any modal is currently open
+    isAnyModalOpen() {
+        for (const [id, modal] of this.modals) {
+            if (modal.isOpen) {
+                return id;
+            }
+        }
+        return null;
+    }
+
     showModal(id, content = null, onCloseCallback = null) {
         const modal = this.getModal(id);
         if (!modal) return;
+
+        // Close any open modal before showing the new one
+        const openModalId = this.isAnyModalOpen();
+        if (openModalId && openModalId !== id) {
+            this.closeModal(openModalId);
+        }
 
         if (content) {
             modal.element.innerHTML = content;
@@ -122,6 +136,7 @@ export class ModalManager {
         }
 
         modal.isOpen = true;
+        this.currentOpenModal = id; // Update currently open modal
         document.body.style.top = `-${this.scrollPosition}px`;
         document.body.classList.add('modal-open');
     }
@@ -132,6 +147,11 @@ export class ModalManager {
 
         modal.onClose();
         modal.isOpen = false;
+
+        // Clear current open modal if this is the one being closed
+        if (this.currentOpenModal === id) {
+            this.currentOpenModal = null;
+        }
 
         // Remove fixed positioning and restore scroll position
         document.body.classList.remove('modal-open');
@@ -147,26 +167,10 @@ export class ModalManager {
 
     handleEscape(e) {
         if (e.key === 'Escape') {
-            // Close the last opened modal
-            for (const [id, modal] of this.modals) {
-                if (modal.isOpen) {
-                    this.closeModal(id);
-                    break;
-                }
+            // Close the current open modal if it exists
+            if (this.currentOpenModal) {
+                this.closeModal(this.currentOpenModal);
             }
-        }
-    }
-
-    // Keep only the corner controls initialization
-    initCornerControls() {
-        const cornerControls = document.querySelector('.corner-controls');
-        const cornerControlsToggle = document.querySelector('.corner-controls-toggle');
-        
-        if(cornerControls && cornerControlsToggle) {
-            // Toggle corner controls visibility
-            cornerControlsToggle.addEventListener('click', () => {
-                cornerControls.classList.toggle('expanded');
-            });
         }
     }
 }

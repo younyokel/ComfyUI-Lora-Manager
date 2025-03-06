@@ -1342,4 +1342,21 @@ input:checked + .toggle-slider:before {
     color: var(--text-color);
 }
 
+/* Civitai link styles */
+.civitai-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.civitai-icon {
+    width: 20px;
+    height: 20px;
+    color: #1b98e4; /* Civitai brand blue color */
+}
+
+.social-link:hover .civitai-icon {
+    color: white; /* Icon color changes to white on hover */
+}
+
 /* ...existing code... */
