@@ -25,14 +25,14 @@ body.modal-open {
     height: auto;
     max-height: 90vh;
     margin: 2rem auto;
-    background: #ffffff; /* 使用纯白色背景 */
+    background: var(--lora-surface);
     border-radius: var(--border-radius-base);
     padding: var(--space-3);
-    border: 1px solid rgba(0, 0, 0, 0.1); /* 更细腻的边框 */
+    border: 1px solid var(--lora-border);
     box-shadow: 
         0 4px 6px -1px rgba(0, 0, 0, 0.1),
         0 2px 4px -1px rgba(0, 0, 0, 0.06),
-        0 10px 15px -3px rgba(0, 0, 0, 0.05); /* 多层阴影创造深度 */
+        0 10px 15px -3px rgba(0, 0, 0, 0.05);
     overflow-y: auto;
     overflow-x: hidden; /* 防止水平滚动条 */
 }
@@ -298,14 +298,22 @@ body.modal-open {
     margin-top: 4px;
 }
 
-/* 调整深色主题 */
+/* 统一各个 section 的样式 */
+.support-section,
+.changelog-section,
+.update-info,
+.info-item,
+.path-preview {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-sm);
+    padding: var(--space-2);
+}
+
+/* 深色主题统一样式 */
 [data-theme="dark"] .modal-content {
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
-    box-shadow: 
-        0 4px 6px -1px rgba(0, 0, 0, 0.2),
-        0 2px 4px -1px rgba(0, 0, 0, 0.15),
-        0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="dark"] .support-section,
@@ -315,14 +323,4 @@ body.modal-open {
 [data-theme="dark"] .path-preview {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--lora-border);
-}
-
-/* 调整内容区域的间距，增加呼吸感 */
-.support-section,
-.changelog-section,
-.update-info,
-.info-item {
-    padding: var(--space-3);
-    margin-bottom: var(--space-2);
-    border-radius: var(--border-radius-sm);
 }

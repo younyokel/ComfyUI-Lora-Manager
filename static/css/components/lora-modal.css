@@ -1,4 +1,3 @@
-
 /* Lora Modal Header */
 .modal-header {
     display: flex;
@@ -19,9 +18,15 @@
 
 .info-item {
     padding: var(--space-2);
-    background: var(--lora-surface);
-    border: 1px solid var(--lora-border);
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: var(--border-radius-sm);
+}
+
+/* 调整深色主题下的样式 */
+[data-theme="dark"] .info-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--lora-border);
 }
 
 .info-item.full-width {
@@ -146,9 +151,15 @@
 /* Update Trigger Words styles */
 .info-item.trigger-words {
     padding: var(--space-2);
-    background: var(--lora-surface);
-    border: 1px solid var(--lora-border);
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: var(--border-radius-sm);
+}
+
+/* 调整 trigger words 样式 */
+[data-theme="dark"] .info-item.trigger-words {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--lora-border);
 }
 
 .trigger-words-tags {
