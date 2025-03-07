@@ -3,7 +3,8 @@ import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
 import { state } from './state/index.js';
-import { showLoraModal, toggleShowcase, scrollToTop } from './components/LoraCard.js';
+import { showLoraModal } from './components/LoraModal.js';
+import { toggleShowcase, scrollToTop } from './components/LoraModal.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
 import { 
     showToast, 
