@@ -72,7 +72,9 @@
 <!-- Add bulk operations panel (initially hidden) -->
 <div id="bulkOperationsPanel" class="bulk-operations-panel hidden">
     <div class="bulk-operations-header">
-        <span id="selectedCount">0 selected</span>
+        <span id="selectedCount" class="selectable-count" title="Click to view selected items">
+            0 selected <i class="fas fa-caret-down dropdown-caret"></i>
+        </span>
         <div class="bulk-operations-actions">
             <button onclick="bulkManager.copyAllLorasSyntax()" title="Copy all selected LoRAs syntax">
                 <i class="fas fa-copy"></i> Copy All

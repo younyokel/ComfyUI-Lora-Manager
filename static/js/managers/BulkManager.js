@@ -6,6 +6,7 @@ export class BulkManager {
     constructor() {
         this.bulkBtn = document.getElementById('bulkOperationsBtn');
         this.bulkPanel = document.getElementById('bulkOperationsPanel');
+        this.isStripVisible = false; // Track strip visibility state
         
         // Initialize selected loras set in state if not already there
         if (!state.selectedLoras) {
@@ -21,6 +22,12 @@ export class BulkManager {
     initialize() {
         // Add event listeners if needed
         // (Already handled via onclick attributes in HTML, but could be moved here)
+        
+        // Add event listeners for the selected count to toggle thumbnail strip
+        const selectedCount = document.getElementById('selectedCount');
+        if (selectedCount) {
+            selectedCount.addEventListener('click', () => this.toggleThumbnailStrip());
+        }
     }
 
     toggleBulkMode() {
@@ -44,6 +51,9 @@ export class BulkManager {
             setTimeout(() => {
                 this.bulkPanel.classList.add('hidden');
             }, 400); // Match this with the transition duration in CSS
+            
+            // Hide thumbnail strip if it's visible
+            this.hideThumbnailStrip();
         }
         
         // Update all cards
@@ -61,13 +71,29 @@ export class BulkManager {
         });
         state.selectedLoras.clear();
         this.updateSelectedCount();
+        
+        // Hide thumbnail strip if it's visible
+        this.hideThumbnailStrip();
     }
 
     updateSelectedCount() {
         const countElement = document.getElementById('selectedCount');
         
         if (countElement) {
-            countElement.textContent = `${state.selectedLoras.size} selected`;
+            // Set text content without the icon
+            countElement.textContent = `${state.selectedLoras.size} selected `;
+            
+            // Re-add the caret icon with proper direction
+            const caretIcon = document.createElement('i');
+            // Use down arrow if strip is visible, up arrow if not
+            caretIcon.className = `fas fa-caret-${this.isStripVisible ? 'down' : 'up'} dropdown-caret`;
+            caretIcon.style.visibility = state.selectedLoras.size > 0 ? 'visible' : 'hidden';
+            countElement.appendChild(caretIcon);
+            
+            // If there are no selections, hide the thumbnail strip
+            if (state.selectedLoras.size === 0) {
+                this.hideThumbnailStrip();
+            }
         }
     }
 
@@ -84,11 +110,31 @@ export class BulkManager {
             // Cache the metadata for this lora
             state.loraMetadataCache.set(filepath, {
                 fileName: card.dataset.file_name,
-                usageTips: card.dataset.usage_tips
+                usageTips: card.dataset.usage_tips,
+                previewUrl: this.getCardPreviewUrl(card),
+                isVideo: this.isCardPreviewVideo(card),
+                modelName: card.dataset.name
             });
         }
         
         this.updateSelectedCount();
+        
+        // Update thumbnail strip if it's visible
+        if (this.isStripVisible) {
+            this.updateThumbnailStrip();
+        }
+    }
+    
+    // Helper method to get preview URL from a card
+    getCardPreviewUrl(card) {
+        const img = card.querySelector('img');
+        const video = card.querySelector('video source');
+        return img ? img.src : (video ? video.src : '/loras_static/images/no-preview.png');
+    }
+    
+    // Helper method to check if preview is a video
+    isCardPreviewVideo(card) {
+        return card.querySelector('video') !== null;
     }
 
     // Apply selection state to cards after they are refreshed
@@ -103,7 +149,10 @@ export class BulkManager {
                 // Update the cache with latest data
                 state.loraMetadataCache.set(filepath, {
                     fileName: card.dataset.file_name,
-                    usageTips: card.dataset.usage_tips
+                    usageTips: card.dataset.usage_tips,
+                    previewUrl: this.getCardPreviewUrl(card),
+                    isVideo: this.isCardPreviewVideo(card),
+                    modelName: card.dataset.name
                 });
             } else {
                 card.classList.remove('selected');
@@ -153,6 +202,131 @@ export class BulkManager {
         } catch (err) {
             console.error('Copy failed:', err);
             showToast('Copy failed', 'error');
+        }
+    }
+    
+    // Create and show the thumbnail strip of selected LoRAs
+    toggleThumbnailStrip() {
+        // If no items are selected, do nothing
+        if (state.selectedLoras.size === 0) return;
+        
+        const existing = document.querySelector('.selected-thumbnails-strip');
+        if (existing) {
+            this.hideThumbnailStrip();
+        } else {
+            this.showThumbnailStrip();
+        }
+    }
+    
+    showThumbnailStrip() {
+        // Create the thumbnail strip container
+        const strip = document.createElement('div');
+        strip.className = 'selected-thumbnails-strip';
+        
+        // Create a container for the thumbnails (for scrolling)
+        const thumbnailContainer = document.createElement('div');
+        thumbnailContainer.className = 'thumbnails-container';
+        strip.appendChild(thumbnailContainer);
+        
+        // Position the strip above the bulk operations panel
+        this.bulkPanel.parentNode.insertBefore(strip, this.bulkPanel);
+        
+        // Populate the thumbnails
+        this.updateThumbnailStrip();
+        
+        // Update strip visibility state and caret direction
+        this.isStripVisible = true;
+        this.updateSelectedCount(); // Update caret
+        
+        // Add animation class after a short delay to trigger transition
+        setTimeout(() => strip.classList.add('visible'), 10);
+    }
+    
+    hideThumbnailStrip() {
+        const strip = document.querySelector('.selected-thumbnails-strip');
+        if (strip) {
+            strip.classList.remove('visible');
+            
+            // Update strip visibility state and caret direction
+            this.isStripVisible = false;
+            this.updateSelectedCount(); // Update caret
+            
+            // Wait for animation to complete before removing
+            setTimeout(() => {
+                if (strip.parentNode) {
+                    strip.parentNode.removeChild(strip);
+                }
+            }, 300);
+        }
+    }
+    
+    updateThumbnailStrip() {
+        const container = document.querySelector('.thumbnails-container');
+        if (!container) return;
+        
+        // Clear existing thumbnails
+        container.innerHTML = '';
+        
+        // Add a thumbnail for each selected LoRA
+        for (const filepath of state.selectedLoras) {
+            const metadata = state.loraMetadataCache.get(filepath);
+            if (!metadata) continue;
+            
+            const thumbnail = document.createElement('div');
+            thumbnail.className = 'selected-thumbnail';
+            thumbnail.dataset.filepath = filepath;
+            
+            // Create the visual element (image or video)
+            if (metadata.isVideo) {
+                thumbnail.innerHTML = `
+                    <video autoplay loop muted playsinline>
+                        <source src="${metadata.previewUrl}" type="video/mp4">
+                    </video>
+                    <span class="thumbnail-name" title="${metadata.modelName}">${metadata.modelName}</span>
+                    <button class="thumbnail-remove"><i class="fas fa-times"></i></button>
+                `;
+            } else {
+                thumbnail.innerHTML = `
+                    <img src="${metadata.previewUrl}" alt="${metadata.modelName}">
+                    <span class="thumbnail-name" title="${metadata.modelName}">${metadata.modelName}</span>
+                    <button class="thumbnail-remove"><i class="fas fa-times"></i></button>
+                `;
+            }
+            
+            // Add click handler for deselection
+            thumbnail.addEventListener('click', (e) => {
+                if (!e.target.closest('.thumbnail-remove')) {
+                    this.deselectItem(filepath);
+                }
+            });
+            
+            // Add click handler for the remove button
+            thumbnail.querySelector('.thumbnail-remove').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deselectItem(filepath);
+            });
+            
+            container.appendChild(thumbnail);
+        }
+    }
+    
+    deselectItem(filepath) {
+        // Find and deselect the corresponding card if it's in the DOM
+        const card = document.querySelector(`.lora-card[data-filepath="${filepath}"]`);
+        if (card) {
+            card.classList.remove('selected');
+        }
+        
+        // Remove from the selection set
+        state.selectedLoras.delete(filepath);
+        
+        // Update UI
+        this.updateSelectedCount();
+        this.updateThumbnailStrip();
+        
+        // Hide the strip if no more selections
+        if (state.selectedLoras.size === 0) {
+            this.hideThumbnailStrip();
         }
     }
 }
