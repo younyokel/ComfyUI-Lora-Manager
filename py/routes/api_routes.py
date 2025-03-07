@@ -609,6 +609,11 @@ class ApiRoutes:
             # Update cache
             await self.scanner.update_single_lora_cache(file_path, file_path, metadata)
 
+            # If model_name was updated, resort the cache
+            if 'model_name' in metadata_updates:
+                cache = await self.scanner.get_cached_data()
+                await cache.resort(name_only=True)
+
             return web.json_response({'success': True})
 
         except Exception as e:

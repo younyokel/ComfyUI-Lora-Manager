@@ -430,25 +430,41 @@ class LoraScanner:
         # Remove old path from hash index if exists
         self._hash_index.remove_by_path(original_path)
         
+        # Remove the old entry from raw_data
         cache.raw_data = [
             item for item in cache.raw_data 
             if item['file_path'] != original_path
         ]
         
         if metadata:
-            metadata['folder'] = self._calculate_folder(new_path)
+            # If this is an update to an existing path (not a move), ensure folder is preserved
+            if original_path == new_path:
+                # Find the folder from existing entries or calculate it
+                existing_folder = next((item['folder'] for item in cache.raw_data 
+                                      if item['file_path'] == original_path), None)
+                if existing_folder:
+                    metadata['folder'] = existing_folder
+                else:
+                    metadata['folder'] = self._calculate_folder(new_path)
+            else:
+                # For moved files, recalculate the folder
+                metadata['folder'] = self._calculate_folder(new_path)
+            
+            # Add the updated metadata to raw_data
             cache.raw_data.append(metadata)
             
             # Update hash index with new path
             if 'sha256' in metadata:
                 self._hash_index.add_entry(metadata['sha256'], new_path)
             
-            all_folders = set(cache.folders)
-            all_folders.add(metadata['folder'])
+            # Update folders list
+            all_folders = set(item['folder'] for item in cache.raw_data)
             cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
         
         # Resort cache
         await cache.resort()
+        
+        return True
 
     async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
         """Update file paths in metadata file"""

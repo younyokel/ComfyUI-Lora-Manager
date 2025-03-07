@@ -426,3 +426,57 @@
     font-size: 0.9em;
     opacity: 0.9;
 }
+
+/* Model name field styles - complete replacement */
+.model-name-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: calc(100% - 40px); /* Reduce width to avoid overlap with close button */
+    position: relative; /* Add position relative for absolute positioning of save button */
+}
+
+.model-name-field h2 {
+    margin: 0;
+    padding: var(--space-1);
+    border-radius: var(--border-radius-xs);
+    transition: background-color 0.2s;
+    flex: 1;
+    font-size: 1.5em !important; /* Increased and forced size */
+    font-weight: 600; /* Make it bolder */
+    min-height: 1.5em;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    line-height: 1.2;
+    color: var(--text-color); /* Ensure correct color */
+}
+
+.model-name-field h2:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    cursor: text;
+}
+
+.model-name-field h2:focus {
+    outline: none;
+    background: var(--bg-color);
+    border: 1px solid var(--lora-accent);
+}
+
+.model-name-field .save-btn {
+    position: absolute;
+    right: 10px; /* Position closer to the end of the field */
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.model-name-field:hover .save-btn,
+.model-name-field h2:focus ~ .save-btn {
+    opacity: 1;
+}
+
+/* Ensure close button is accessible */
+.modal-content .close {
+    z-index: 10; /* Ensure close button is above other elements */
+}

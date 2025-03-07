@@ -9,7 +9,12 @@ export function showLoraModal(lora) {
         <div class="modal-content">
             <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
             <header class="modal-header">
-                <h2>${lora.model_name}</h2>
+                <div class="editable-field model-name-field">
+                    <h2 class="model-name-content" contenteditable="true" spellcheck="false">${lora.model_name}</h2>
+                    <button class="save-btn" onclick="saveModelName('${lora.file_path}')">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </div>
             </header>
 
             <div class="modal-body">
@@ -100,6 +105,49 @@ window.copyFileName = async function(fileName) {
     }
 };
 
+// Add function to save model name
+window.saveModelName = async function(filePath) {
+    const modelNameElement = document.querySelector('.model-name-content');
+    const newModelName = modelNameElement.textContent.trim();
+    
+    // Validate model name
+    if (!newModelName) {
+        showToast('Model name cannot be empty', 'error');
+        return;
+    }
+    
+    // Check if model name is too long (limit to 100 characters)
+    if (newModelName.length > 100) {
+        showToast('Model name is too long (maximum 100 characters)', 'error');
+        // Truncate the displayed text
+        modelNameElement.textContent = newModelName.substring(0, 100);
+        return;
+    }
+    
+    try {
+        await saveModelMetadata(filePath, { model_name: newModelName });
+        
+        // Update the corresponding lora card's dataset and display
+        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        if (loraCard) {
+            loraCard.dataset.model_name = newModelName;
+            const titleElement = loraCard.querySelector('.card-title');
+            if (titleElement) {
+                titleElement.textContent = newModelName;
+            }
+        }
+        
+        showToast('Model name updated successfully', 'success');
+        
+        // Reload the page to reflect the sorted order
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    } catch (error) {
+        showToast('Failed to update model name', 'error');
+    }
+};
+
 function setupEditableFields() {
     const editableFields = document.querySelectorAll('.editable-field [contenteditable]');
     
@@ -113,11 +161,53 @@ function setupEditableFields() {
 
         field.addEventListener('blur', function() {
             if (this.textContent.trim() === '') {
-                this.textContent = this.classList.contains('usage-tips-content') 
-                    ? 'Save usage tips here..' 
-                    : 'Add your notes here...';
+                if (this.classList.contains('model-name-content')) {
+                    // Restore original model name if empty
+                    const filePath = document.querySelector('.modal-content')
+                        .querySelector('.file-path').textContent + 
+                        document.querySelector('.modal-content')
+                        .querySelector('#file-name').textContent + '.safetensors';
+                    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+                    if (loraCard) {
+                        this.textContent = loraCard.dataset.model_name;
+                    }
+                } else if (this.classList.contains('usage-tips-content')) {
+                    this.textContent = 'Save usage tips here..';
+                } else {
+                    this.textContent = 'Add your notes here...';
+                }
             }
         });
+        
+        // Add input validation for model name
+        if (field.classList.contains('model-name-content')) {
+            field.addEventListener('input', function() {
+                // Limit model name length
+                if (this.textContent.length > 100) {
+                    this.textContent = this.textContent.substring(0, 100);
+                    // Place cursor at the end
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    range.setStart(this.childNodes[0], 100);
+                    range.collapse(true);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    
+                    showToast('Model name is limited to 100 characters', 'warning');
+                }
+            });
+            
+            field.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const filePath = document.querySelector('.modal-content')
+                        .querySelector('.file-path').textContent + 
+                        document.querySelector('.modal-content')
+                        .querySelector('#file-name').textContent + '.safetensors';
+                    saveModelName(filePath);
+                }
+            });
+        }
     });
 
     const presetSelector = document.getElementById('preset-selector');
