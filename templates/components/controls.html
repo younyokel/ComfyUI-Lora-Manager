@@ -28,6 +28,11 @@
                 <i class="fas fa-cloud-download-alt"></i> Download
             </button>
         </div>
+        <div class="control-group">
+            <button id="bulkOperationsBtn" onclick="bulkManager.toggleBulkMode()" title="Bulk Operations">
+                <i class="fas fa-th-large"></i> Bulk
+            </button>
+        </div>
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="Search models..." />
             <!-- 清空按钮将由JavaScript动态添加到这里 -->
@@ -61,5 +66,23 @@
         <button class="clear-filters-btn" onclick="filterManager.clearFilters()">
             Clear All Filters
         </button>
+    </div>
+</div>
+
+<!-- Add bulk operations panel (initially hidden) -->
+<div id="bulkOperationsPanel" class="bulk-operations-panel hidden">
+    <div class="bulk-operations-header">
+        <span id="selectedCount">0 selected</span>
+        <div class="bulk-operations-actions">
+            <button onclick="bulkManager.copyAllLorasSyntax()" title="Copy all selected LoRAs syntax">
+                <i class="fas fa-copy"></i> Copy All
+            </button>
+            <button onclick="moveManager.showMoveModal('bulk')" title="Move selected LoRAs to folder">
+                <i class="fas fa-folder-open"></i> Move All
+            </button>
+            <button onclick="bulkManager.clearSelection()" title="Clear selection">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
     </div>
 </div>

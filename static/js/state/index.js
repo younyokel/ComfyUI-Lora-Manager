@@ -10,5 +10,6 @@ export const state = {
     searchManager: null,
     filters: {
         baseModel: []
-    }
+    },
+    bulkMode: false
 };

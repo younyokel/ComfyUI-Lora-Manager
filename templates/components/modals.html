@@ -86,8 +86,10 @@
 <!-- Move Model Modal -->
 <div id="moveModal" class="modal">
     <div class="modal-content">
-        <button class="close" onclick="modalManager.closeModal('moveModal')">&times;</button>
-        <h2>Move Model</h2>
+        <div class="modal-header">
+            <h2 id="moveModalTitle">Move Model</h2>
+            <span class="close" onclick="modalManager.closeModal('moveModal')">&times;</span>
+        </div>
         <div class="location-selection">
             <div class="path-preview">
                 <label>Target Location Preview:</label>

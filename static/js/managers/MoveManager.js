@@ -5,11 +5,13 @@ import { modalManager } from './ModalManager.js';
 class MoveManager {
     constructor() {
         this.currentFilePath = null;
+        this.bulkFilePaths = null;
         this.modal = document.getElementById('moveModal');
         this.loraRootSelect = document.getElementById('moveLoraRoot');
         this.folderBrowser = document.getElementById('moveFolderBrowser');
         this.newFolderInput = document.getElementById('moveNewFolder');
         this.pathDisplay = document.getElementById('moveTargetPathDisplay');
+        this.modalTitle = document.getElementById('moveModalTitle');
 
         this.initializeEventListeners();
     }
@@ -43,7 +45,24 @@ class MoveManager {
     }
 
     async showMoveModal(filePath) {
-        this.currentFilePath = filePath;
+        // Reset state
+        this.currentFilePath = null;
+        this.bulkFilePaths = null;
+        
+        // Handle bulk mode
+        if (filePath === 'bulk') {
+            const selectedPaths = Array.from(state.selectedLoras);
+            if (selectedPaths.length === 0) {
+                showToast('No LoRAs selected', 'warning');
+                return;
+            }
+            this.bulkFilePaths = selectedPaths;
+            this.modalTitle.textContent = `Move ${selectedPaths.length} LoRAs`;
+        } else {
+            // Single file mode
+            this.currentFilePath = filePath;
+            this.modalTitle.textContent = "Move Model";
+        }
         
         // 清除之前的选择
         this.folderBrowser.querySelectorAll('.folder-item').forEach(item => {
@@ -105,36 +124,81 @@ class MoveManager {
             targetPath = `${targetPath}/${newFolder}`;
         }
 
+        try {
+            if (this.bulkFilePaths) {
+                // Bulk move mode
+                await this.moveBulkModels(this.bulkFilePaths, targetPath);
+            } else {
+                // Single move mode
+                await this.moveSingleModel(this.currentFilePath, targetPath);
+            }
+
+            modalManager.closeModal('moveModal');
+            await resetAndReload(true);
+            
+            // If we were in bulk mode, exit it after successful move
+            if (this.bulkFilePaths && state.bulkMode) {
+                toggleBulkMode();
+            }
+
+        } catch (error) {
+            console.error('Error moving model(s):', error);
+            showToast('Failed to move model(s): ' + error.message, 'error');
+        }
+    }
+    
+    async moveSingleModel(filePath, targetPath) {
         // show toast if current path is same as target path
-        if (this.currentFilePath.substring(0, this.currentFilePath.lastIndexOf('/')) === targetPath) {
+        if (filePath.substring(0, filePath.lastIndexOf('/')) === targetPath) {
             showToast('Model is already in the selected folder', 'info');
             return;
         }
 
-        try {
-            const response = await fetch('/api/move_model', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    file_path: this.currentFilePath,
-                    target_path: targetPath
-                })
-            });
+        const response = await fetch('/api/move_model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_path: filePath,
+                target_path: targetPath
+            })
+        });
 
-            if (!response.ok) {
-                throw new Error('Failed to move model');
-            }
-
-            showToast('Model moved successfully', 'success');
-            modalManager.closeModal('moveModal');
-            await resetAndReload(true);
-
-        } catch (error) {
-            console.error('Error moving model:', error);
-            showToast('Failed to move model: ' + error.message, 'error');
+        if (!response.ok) {
+            throw new Error('Failed to move model');
         }
+
+        showToast('Model moved successfully', 'success');
+    }
+    
+    async moveBulkModels(filePaths, targetPath) {
+        // Filter out models already in the target path
+        const movedPaths = filePaths.filter(path => {
+            return path.substring(0, path.lastIndexOf('/')) !== targetPath;
+        });
+        
+        if (movedPaths.length === 0) {
+            showToast('All selected models are already in the target folder', 'info');
+            return;
+        }
+
+        const response = await fetch('/api/move_models_bulk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_paths: movedPaths,
+                target_path: targetPath
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to move models');
+        }
+
+        showToast(`Successfully moved ${movedPaths.length} models`, 'success');
     }
 }
 

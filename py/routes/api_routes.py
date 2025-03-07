@@ -43,6 +43,7 @@ class ApiRoutes:
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
+        app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -653,4 +654,40 @@ class ApiRoutes:
 
         except Exception as e:
             logger.error(f"Error getting lora preview URL: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
+
+    async def move_models_bulk(self, request: web.Request) -> web.Response:
+        """Handle bulk model move request"""
+        try:
+            data = await request.json()
+            file_paths = data.get('file_paths', [])
+            target_path = data.get('target_path')
+            
+            if not file_paths or not target_path:
+                return web.Response(text='File paths and target path are required', status=400)
+
+            results = []
+            for file_path in file_paths:
+                success = await self.scanner.move_model(file_path, target_path)
+                results.append({"path": file_path, "success": success})
+            
+            # Count successes
+            success_count = sum(1 for r in results if r["success"])
+            
+            if success_count == len(file_paths):
+                return web.json_response({
+                    'success': True,
+                    'message': f'Successfully moved {success_count} models'
+                })
+            elif success_count > 0:
+                return web.json_response({
+                    'success': True,
+                    'message': f'Moved {success_count} of {len(file_paths)} models',
+                    'results': results
+                })
+            else:
+                return web.Response(text='Failed to move any models', status=500)
+                
+        except Exception as e:
+            logger.error(f"Error moving models in bulk: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)

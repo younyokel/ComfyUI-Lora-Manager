@@ -88,8 +88,12 @@
             <div class="card-grid" id="loraGrid" style="height: calc(100vh - [header-height]px); overflow-y: auto;">
                 <!-- Cards will be dynamically inserted here -->
             </div>
+            <!-- Bulk operations panel will be inserted here by JavaScript -->
         {% endif %}
     </div>
+
+    <!-- Add after the container div -->
+    <div class="bulk-mode-overlay"></div>
 
     <script type="module" src="/loras_static/js/main.js"></script>
     {% if is_initializing %}

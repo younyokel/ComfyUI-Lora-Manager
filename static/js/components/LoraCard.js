@@ -60,23 +60,30 @@ export function createLoraCard(lora) {
         </div>
     `;
 
-    // Main card click event
+    // Main card click event - modified to handle bulk mode
     card.addEventListener('click', () => {
-        const loraMeta = {
-            sha256: card.dataset.sha256,
-            file_path: card.dataset.filepath,
-            model_name: card.dataset.name,
-            file_name: card.dataset.file_name,
-            folder: card.dataset.folder,
-            modified: card.dataset.modified,
-            file_size: card.dataset.file_size,
-            from_civitai: card.dataset.from_civitai === 'true',
-            base_model: card.dataset.base_model,
-            usage_tips: card.dataset.usage_tips,
-            notes: card.dataset.notes,
-            civitai: JSON.parse(card.dataset.meta || '{}')
-        };
-        showLoraModal(loraMeta);
+        // Check if we're in bulk mode
+        if (state.bulkMode) {
+            // Toggle selection
+            toggleCardSelection(card);
+        } else {
+            // Normal behavior - show modal
+            const loraMeta = {
+                sha256: card.dataset.sha256,
+                file_path: card.dataset.filepath,
+                model_name: card.dataset.name,
+                file_name: card.dataset.file_name,
+                folder: card.dataset.folder,
+                modified: card.dataset.modified,
+                file_size: card.dataset.file_size,
+                from_civitai: card.dataset.from_civitai === 'true',
+                base_model: card.dataset.base_model,
+                usage_tips: card.dataset.usage_tips,
+                notes: card.dataset.notes,
+                civitai: JSON.parse(card.dataset.meta || '{}')
+            };
+            showLoraModal(loraMeta);
+        }
     });
 
     // Copy button click event
@@ -127,6 +134,35 @@ export function createLoraCard(lora) {
         e.stopPropagation();
         replacePreview(lora.file_path);
     });
+    
+    // Apply bulk mode styling if currently in bulk mode
+    if (state.bulkMode) {
+        const actions = card.querySelectorAll('.card-actions');
+        actions.forEach(actionGroup => {
+            actionGroup.style.display = 'none';
+        });
+    }
 
     return card;
+}
+
+// Function to toggle selection of a card
+function toggleCardSelection(card) {
+    card.classList.toggle('selected');
+    updateSelectedCount();
+}
+
+// Add a method to update card appearance based on bulk mode
+export function updateCardsForBulkMode(isBulkMode) {
+    // Update the state
+    state.bulkMode = isBulkMode;
+    
+    document.body.classList.toggle('bulk-mode', isBulkMode);
+    
+    document.querySelectorAll('.lora-card').forEach(card => {
+        const actions = card.querySelectorAll('.card-actions');
+        actions.forEach(actionGroup => {
+            actionGroup.style.display = isBulkMode ? 'none' : 'flex';
+        });
+    });
 }
