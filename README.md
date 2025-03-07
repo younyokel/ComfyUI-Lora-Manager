@@ -11,43 +11,38 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ---
 
-## [Update 0.7.33] Enhanced UI Controls & Trigger Word Management
-- 🎛️ **Enhanced LoRA Loader Node**:
-  - New visual widgets for easier LoRA strength adjustment
-  - Toggle switches for quick LoRA enable/disable
-  - Image tooltips for quick LoRA preview identification
-  - Improved UI for managing multiple LoRAs
+## Release Notes
 
-- 🏷️ **New TriggerWord Toggle Node**:
-  - Visual display of applicable trigger words
-  - Click-to-toggle individual trigger words
-  - Easy exclusion of unwanted trigger words
-  - Connects directly after LoRA Loader node
+### v0.7.35-beta
+* Added base model filtering
+* Implemented bulk operations (copy syntax, move multiple LoRAs)
+* Added ability to edit LoRA model names in details view
+* Added update checker with notification system
+* Added support modal for user feedback and community links
 
-- 🐛 **Bug Fixes and Stability Improvements**
+### v0.7.33
+* Enhanced LoRA Loader node with visual strength adjustment widgets
+* Added toggle switches for LoRA enable/disable
+* Implemented image tooltips for LoRA preview
+* Added TriggerWord Toggle node with visual word selection
+* Fixed various bugs and improved stability
 
-## [Update 0.7.3] One-Click Integration & Workflow Automation
-- ✨ **One-Click LoRA Integration**:
-  - Use "Lora Loader (LoraManager)" custom node in workflows
-  - Copy LoRA syntax directly from manager interface
-  - Auto-applies preset strength values
-  - Auto-loads trigger words when available
-  - Example workflow included
+### v0.7.3
+* Added "Lora Loader (LoraManager)" custom node for workflows
+* Implemented one-click LoRA integration
+* Added direct copying of LoRA syntax from manager interface
+* Added automatic preset strength value application
+* Added automatic trigger word loading
 
-## [Update 0.7.0] Major Features Enhancement
-
-- 🚀 **Direct CivitAI Integration**:
-  - Download LoRAs directly from CivitAI URLs
-  - Version selection support for model downloads
-  - Choose target folder for downloads
-- 📋 **New Context Menu Features**:
-  - Right-click menu for quick actions
-  - Force refresh CivitAI data
-  - Move LoRAs between folders
-- 📝 **Enhanced Model Details**:
-  - Save personal usage tips
-  - Add custom notes for each LoRA
-  - Improved performance for details window
+### v0.7.0
+* Added direct CivitAI integration for downloading LoRAs
+* Implemented version selection for model downloads
+* Added target folder selection for downloads
+* Added context menu with quick actions
+* Added force refresh for CivitAI data
+* Implemented LoRA movement between folders
+* Added personal usage tips and notes for LoRAs
+* Improved performance for details window
 
 [View Update History](./update_logs.md)
 
