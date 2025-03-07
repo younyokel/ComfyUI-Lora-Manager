@@ -31,9 +31,9 @@ export class UpdateService {
         this.checkForUpdates();
         
         // Set up event listener for update button
-        const updateToggle = document.querySelector('.update-toggle');
+        const updateToggle = document.getElementById('updateToggleBtn');
         if (updateToggle) {
-            updateToggle.addEventListener('click', () => this.showUpdateModal());
+            updateToggle.addEventListener('click', () => this.toggleUpdateModal());
         }
 
         // Immediately update modal content with current values (even if from default)
@@ -165,12 +165,30 @@ export class UpdateService {
         }
     }
     
-    showUpdateModal() {
-        // Force a check for updates when showing the modal
+    toggleUpdateModal() {
+        const updateModal = modalManager.getModal('updateModal');
+        
+        // If modal is already open, just close it
+        if (updateModal && updateModal.isOpen) {
+            modalManager.closeModal('updateModal');
+            return;
+        }
+        
+        // Update the modal content immediately with current data
+        this.updateModalContent();
+        
+        // Show the modal with current data
+        modalManager.showModal('updateModal');
+        
+        // Then check for updates in the background
         this.manualCheckForUpdates().then(() => {
-            // Show the modal after update check completes
-            modalManager.showModal('updateModal');
+            // Update the modal content again after the check completes
+            this.updateModalContent();
         });
+    }
+    
+    showUpdateModal() {
+        this.toggleUpdateModal();
     }
     
     async manualCheckForUpdates() {

@@ -72,6 +72,12 @@ export class ModalManager {
             }
         });
 
+        // Set up event listeners for modal toggles
+        const supportToggle = document.getElementById('supportToggleBtn');
+        if (supportToggle) {
+            supportToggle.addEventListener('click', () => this.toggleModal('supportModal'));
+        }
+
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
     }
@@ -172,6 +178,20 @@ export class ModalManager {
                 this.closeModal(this.currentOpenModal);
             }
         }
+    }
+
+    toggleModal(id, content = null, onCloseCallback = null) {
+        const modal = this.getModal(id);
+        if (!modal) return;
+        
+        // If this modal is already open, close it
+        if (modal.isOpen) {
+            this.closeModal(id);
+            return;
+        }
+        
+        // Otherwise, show the modal
+        this.showModal(id, content, onCloseCallback);
     }
 }
 
