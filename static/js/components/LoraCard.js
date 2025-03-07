@@ -159,11 +159,26 @@ export function updateCardsForBulkMode(isBulkMode) {
     
     document.body.classList.toggle('bulk-mode', isBulkMode);
     
-    document.querySelectorAll('.lora-card').forEach(card => {
+    // Get all lora cards
+    const loraCards = document.querySelectorAll('.lora-card');
+    
+    loraCards.forEach(card => {
+        // Get all action containers for this card
         const actions = card.querySelectorAll('.card-actions');
-        actions.forEach(actionGroup => {
-            actionGroup.style.display = isBulkMode ? 'none' : 'flex';
-        });
+        
+        // Handle display property based on mode
+        if (isBulkMode) {
+            // Hide actions when entering bulk mode
+            actions.forEach(actionGroup => {
+                actionGroup.style.display = 'none';
+            });
+        } else {
+            // Ensure actions are visible when exiting bulk mode
+            actions.forEach(actionGroup => {
+                // We need to reset to default display style which is flex
+                actionGroup.style.display = 'flex';
+            });
+        }
     });
     
     // Apply selection state to cards if entering bulk mode

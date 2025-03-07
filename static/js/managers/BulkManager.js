@@ -56,12 +56,20 @@ export class BulkManager {
             this.hideThumbnailStrip();
         }
         
-        // Update all cards
+        // First update all cards' visual state before clearing selection
         updateCardsForBulkMode(state.bulkMode);
         
-        // Clear selection if exiting bulk mode
+        // Clear selection if exiting bulk mode - do this after updating cards
         if (!state.bulkMode) {
             this.clearSelection();
+            
+            // Force a lightweight refresh of the cards to ensure proper display
+            // This is less disruptive than a full resetAndReload()
+            document.querySelectorAll('.lora-card').forEach(card => {
+                // Re-apply normal display mode to all card actions
+                const actions = card.querySelectorAll('.card-actions, .card-button');
+                actions.forEach(action => action.style.display = 'flex');
+            });
         }
     }
 
