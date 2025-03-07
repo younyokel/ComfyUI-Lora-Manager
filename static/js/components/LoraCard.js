@@ -1,6 +1,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showLoraModal } from './LoraModal.js';
+import { bulkManager } from '../managers/BulkManager.js';
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');
@@ -17,6 +18,11 @@ export function createLoraCard(lora) {
     card.dataset.usage_tips = lora.usage_tips;
     card.dataset.notes = lora.notes;
     card.dataset.meta = JSON.stringify(lora.civitai || {});
+
+    // Apply selection state if in bulk mode and this card is in the selected set
+    if (state.bulkMode && state.selectedLoras.has(lora.file_path)) {
+        card.classList.add('selected');
+    }
 
     const version = state.previewVersions.get(lora.file_path);
     const previewUrl = lora.preview_url || '/loras_static/images/no-preview.png';
@@ -64,8 +70,8 @@ export function createLoraCard(lora) {
     card.addEventListener('click', () => {
         // Check if we're in bulk mode
         if (state.bulkMode) {
-            // Toggle selection
-            toggleCardSelection(card);
+            // Toggle selection using the bulk manager
+            bulkManager.toggleCardSelection(card);
         } else {
             // Normal behavior - show modal
             const loraMeta = {
@@ -146,12 +152,6 @@ export function createLoraCard(lora) {
     return card;
 }
 
-// Function to toggle selection of a card
-function toggleCardSelection(card) {
-    card.classList.toggle('selected');
-    updateSelectedCount();
-}
-
 // Add a method to update card appearance based on bulk mode
 export function updateCardsForBulkMode(isBulkMode) {
     // Update the state
@@ -165,4 +165,9 @@ export function updateCardsForBulkMode(isBulkMode) {
             actionGroup.style.display = isBulkMode ? 'none' : 'flex';
         });
     });
+    
+    // Apply selection state to cards if entering bulk mode
+    if (isBulkMode) {
+        bulkManager.applySelectionState();
+    }
 }

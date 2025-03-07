@@ -59,42 +59,61 @@ export class BulkManager {
     }
 
     updateSelectedCount() {
-        const selectedCards = document.querySelectorAll('.lora-card.selected');
         const countElement = document.getElementById('selectedCount');
         
         if (countElement) {
-            countElement.textContent = `${selectedCards.length} selected`;
+            countElement.textContent = `${state.selectedLoras.size} selected`;
         }
-        
-        // Update state with selected loras
-        state.selectedLoras.clear();
-        selectedCards.forEach(card => {
-            state.selectedLoras.add(card.dataset.filepath);
-        });
     }
 
     toggleCardSelection(card) {
-        card.classList.toggle('selected');
+        const filepath = card.dataset.filepath;
+        
+        if (card.classList.contains('selected')) {
+            card.classList.remove('selected');
+            state.selectedLoras.delete(filepath);
+        } else {
+            card.classList.add('selected');
+            state.selectedLoras.add(filepath);
+        }
+        
+        this.updateSelectedCount();
+    }
+
+    // Apply selection state to cards after they are refreshed
+    applySelectionState() {
+        if (!state.bulkMode) return;
+        
+        document.querySelectorAll('.lora-card').forEach(card => {
+            const filepath = card.dataset.filepath;
+            if (state.selectedLoras.has(filepath)) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+        
         this.updateSelectedCount();
     }
 
     async copyAllLorasSyntax() {
-        const selectedCards = document.querySelectorAll('.lora-card.selected');
-        if (selectedCards.length === 0) {
+        if (state.selectedLoras.size === 0) {
             showToast('No LoRAs selected', 'warning');
             return;
         }
         
         const loraSyntaxes = [];
-        selectedCards.forEach(card => {
-            const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
-            const strength = usageTips.strength || 1;
-            loraSyntaxes.push(`<lora:${card.dataset.file_name}:${strength}>`);
+        document.querySelectorAll('.lora-card').forEach(card => {
+            if (state.selectedLoras.has(card.dataset.filepath)) {
+                const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+                const strength = usageTips.strength || 1;
+                loraSyntaxes.push(`<lora:${card.dataset.file_name}:${strength}>`);
+            }
         });
         
         try {
             await navigator.clipboard.writeText(loraSyntaxes.join(', '));
-            showToast(`Copied ${selectedCards.length} LoRA syntaxes to clipboard`, 'success');
+            showToast(`Copied ${state.selectedLoras.size} LoRA syntaxes to clipboard`, 'success');
         } catch (err) {
             console.error('Copy failed:', err);
             showToast('Copy failed', 'error');
