@@ -11,5 +11,7 @@ export const state = {
     filters: {
         baseModel: []
     },
-    bulkMode: false
+    bulkMode: false,
+    selectedLoras: new Set(),
+    loraMetadataCache: new Map()
 };

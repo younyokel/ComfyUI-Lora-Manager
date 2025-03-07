@@ -11,6 +11,11 @@ export class BulkManager {
         if (!state.selectedLoras) {
             state.selectedLoras = new Set();
         }
+        
+        // Cache for lora metadata to handle non-visible selected loras
+        if (!state.loraMetadataCache) {
+            state.loraMetadataCache = new Map();
+        }
     }
 
     initialize() {
@@ -75,6 +80,12 @@ export class BulkManager {
         } else {
             card.classList.add('selected');
             state.selectedLoras.add(filepath);
+            
+            // Cache the metadata for this lora
+            state.loraMetadataCache.set(filepath, {
+                fileName: card.dataset.file_name,
+                usageTips: card.dataset.usage_tips
+            });
         }
         
         this.updateSelectedCount();
@@ -88,6 +99,12 @@ export class BulkManager {
             const filepath = card.dataset.filepath;
             if (state.selectedLoras.has(filepath)) {
                 card.classList.add('selected');
+                
+                // Update the cache with latest data
+                state.loraMetadataCache.set(filepath, {
+                    fileName: card.dataset.file_name,
+                    usageTips: card.dataset.usage_tips
+                });
             } else {
                 card.classList.remove('selected');
             }
@@ -103,17 +120,36 @@ export class BulkManager {
         }
         
         const loraSyntaxes = [];
-        document.querySelectorAll('.lora-card').forEach(card => {
-            if (state.selectedLoras.has(card.dataset.filepath)) {
-                const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+        const missingLoras = [];
+        
+        // Process all selected loras using our metadata cache
+        for (const filepath of state.selectedLoras) {
+            const metadata = state.loraMetadataCache.get(filepath);
+            
+            if (metadata) {
+                const usageTips = JSON.parse(metadata.usageTips || '{}');
                 const strength = usageTips.strength || 1;
-                loraSyntaxes.push(`<lora:${card.dataset.file_name}:${strength}>`);
+                loraSyntaxes.push(`<lora:${metadata.fileName}:${strength}>`);
+            } else {
+                // If we don't have metadata, this is an error case
+                missingLoras.push(filepath);
             }
-        });
+        }
+        
+        // Handle any loras with missing metadata
+        if (missingLoras.length > 0) {
+            console.warn('Missing metadata for some selected loras:', missingLoras);
+            showToast(`Missing data for ${missingLoras.length} LoRAs`, 'warning');
+        }
+        
+        if (loraSyntaxes.length === 0) {
+            showToast('No valid LoRAs to copy', 'error');
+            return;
+        }
         
         try {
             await navigator.clipboard.writeText(loraSyntaxes.join(', '));
-            showToast(`Copied ${state.selectedLoras.size} LoRA syntaxes to clipboard`, 'success');
+            showToast(`Copied ${loraSyntaxes.length} LoRA syntaxes to clipboard`, 'success');
         } catch (err) {
             console.error('Copy failed:', err);
             showToast('Copy failed', 'error');
