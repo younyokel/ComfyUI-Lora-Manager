@@ -154,26 +154,57 @@ export class DownloadManager {
                 </div>
             `;
         }).join('');
+        
+        // Update Next button state based on initial selection
+        this.updateNextButtonState();
     }
 
     selectVersion(versionId) {
         this.currentVersion = this.versions.find(v => v.id.toString() === versionId.toString());
         if (!this.currentVersion) return;
 
-        // Check if version exists locally
-        const existsLocally = this.currentVersion.files[0]?.existsLocally;
-        if (existsLocally) {
-            showToast('This version already exists in your library', 'info');
-        }
+        // Remove the toast notification - it's redundant with the visual indicator
+        // const existsLocally = this.currentVersion.files[0]?.existsLocally;
+        // if (existsLocally) {
+        //     showToast('This version already exists in your library', 'info');
+        // }
 
         document.querySelectorAll('.version-item').forEach(item => {
             item.classList.toggle('selected', item.querySelector('h3').textContent === this.currentVersion.name);
         });
+        
+        // Update Next button state after selection
+        this.updateNextButtonState();
+    }
+    
+    // Add new method to update Next button state
+    updateNextButtonState() {
+        const nextButton = document.querySelector('#versionStep .primary-btn');
+        if (!nextButton) return;
+        
+        const existsLocally = this.currentVersion?.files[0]?.existsLocally;
+        
+        if (existsLocally) {
+            nextButton.disabled = true;
+            nextButton.classList.add('disabled');
+            nextButton.textContent = 'Already in Library';
+        } else {
+            nextButton.disabled = false;
+            nextButton.classList.remove('disabled');
+            nextButton.textContent = 'Next';
+        }
     }
 
     async proceedToLocation() {
         if (!this.currentVersion) {
             showToast('Please select a version', 'error');
+            return;
+        }
+        
+        // Double-check if the version exists locally
+        const existsLocally = this.currentVersion.files[0]?.existsLocally;
+        if (existsLocally) {
+            showToast('This version already exists in your library', 'info');
             return;
         }
 
