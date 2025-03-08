@@ -4,6 +4,7 @@ import jinja2
 from typing import Dict, List
 import logging
 from ..services.lora_scanner import LoraScanner
+from ..services.recipe_scanner import RecipeScanner
 from ..config import config
 from ..services.settings_manager import settings  # Add this import
 
@@ -15,6 +16,7 @@ class LoraRoutes:
     
     def __init__(self):
         self.scanner = LoraScanner()
+        self.recipe_scanner = RecipeScanner(self.scanner)
         self.template_env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(config.templates_path),
             autoescape=True
@@ -87,6 +89,46 @@ class LoraRoutes:
                 status=500
             )
 
+    async def handle_recipes_page(self, request: web.Request) -> web.Response:
+        """Handle GET /loras/recipes request"""
+        try:
+            # Check cache initialization status
+            is_initializing = (
+                self.recipe_scanner._cache is None and 
+                (self.recipe_scanner._initialization_task is not None and 
+                not self.recipe_scanner._initialization_task.done())
+            )
+
+            if is_initializing:
+                # If initializing, return a loading page
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    is_initializing=True,
+                    settings=settings
+                )
+            else:
+                # Normal flow
+                cache = await self.recipe_scanner.get_cached_data()
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    recipes=cache.sorted_by_date[:20],  # Show first 20 recipes by date
+                    is_initializing=False,
+                    settings=settings
+                )
+            
+            return web.Response(
+                text=rendered,
+                content_type='text/html'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error handling recipes request: {e}", exc_info=True)
+            return web.Response(
+                text="Error loading recipes page",
+                status=500
+            )
+
     def setup_routes(self, app: web.Application):
         """Register routes with the application"""
         app.router.add_get('/loras', self.handle_loras_page)
+        app.router.add_get('/loras/recipes', self.handle_recipes_page)

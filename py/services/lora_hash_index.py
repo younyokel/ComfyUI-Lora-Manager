@@ -15,11 +15,13 @@ class LoraHashIndex:
         """Add or update a hash -> path mapping"""
         if not sha256 or not file_path:
             return
-        self._hash_to_path[sha256] = file_path
+        # Always store lowercase hashes for consistency
+        self._hash_to_path[sha256.lower()] = file_path
         
     def remove_entry(self, sha256: str) -> None:
         """Remove a hash entry"""
-        self._hash_to_path.pop(sha256, None)
+        if sha256:
+            self._hash_to_path.pop(sha256.lower(), None)
         
     def remove_by_path(self, file_path: str) -> None:
         """Remove entry by file path"""
@@ -30,7 +32,9 @@ class LoraHashIndex:
                 
     def get_path(self, sha256: str) -> Optional[str]:
         """Get file path for a given hash"""
-        return self._hash_to_path.get(sha256)
+        if not sha256:
+            return None
+        return self._hash_to_path.get(sha256.lower())
         
     def get_hash(self, file_path: str) -> Optional[str]:
         """Get hash for a given file path"""
@@ -41,7 +45,9 @@ class LoraHashIndex:
         
     def has_hash(self, sha256: str) -> bool:
         """Check if hash exists in index"""
-        return sha256 in self._hash_to_path
+        if not sha256:
+            return False
+        return sha256.lower() in self._hash_to_path
         
     def clear(self) -> None:
         """Clear all entries"""

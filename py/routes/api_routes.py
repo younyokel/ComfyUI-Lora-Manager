@@ -14,6 +14,7 @@ from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
+from ..services.recipe_scanner import RecipeScanner
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class ApiRoutes:
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
+        app.router.add_get('/api/recipes', cls.handle_get_recipes)
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -691,3 +693,29 @@ class ApiRoutes:
         except Exception as e:
             logger.error(f"Error moving models in bulk: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)
+
+    @staticmethod
+    async def handle_get_recipes(request):
+        """API endpoint for getting paginated recipes"""
+        try:
+            # Get query parameters with defaults
+            page = int(request.query.get('page', '1'))
+            page_size = int(request.query.get('page_size', '20'))
+            sort_by = request.query.get('sort_by', 'date')
+            search = request.query.get('search', None)
+            
+            # Get scanner instance
+            scanner = RecipeScanner(LoraScanner())
+            
+            # Get paginated data
+            result = await scanner.get_paginated_data(
+                page=page,
+                page_size=page_size,
+                sort_by=sort_by,
+                search=search
+            )
+            
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"Error retrieving recipes: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)

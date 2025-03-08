@@ -168,3 +168,29 @@ class CivitaiClient:
         if self._session is not None:
             await self._session.close()
             self._session = None
+
+    async def _get_hash_from_civitai(self, model_version_id: str) -> Optional[str]:
+        """Get hash from Civitai API"""
+        try:
+            if not self._session:
+                return None
+            
+            logger.info(f"Fetching model version info from Civitai for ID: {model_version_id}")
+            version_info = await self._session.get(f"{self.base_url}/model-versions/{model_version_id}")
+            
+            if not version_info or not version_info.json().get('files'):
+                logger.warning(f"No files found in version info for ID: {model_version_id}")
+                return None
+            
+            # Get hash from the first file
+            for file_info in version_info.json().get('files', []):
+                if file_info.get('hashes', {}).get('SHA256'):
+                    # Convert hash to lowercase to standardize
+                    hash_value = file_info['hashes']['SHA256'].lower()
+                    return hash_value
+                
+            logger.warning(f"No SHA256 hash found in version info for ID: {model_version_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting hash from Civitai: {e}")
+            return None

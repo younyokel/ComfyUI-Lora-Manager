@@ -11,6 +11,7 @@ from ..utils.file_utils import load_metadata, get_file_info
 from .lora_cache import LoraCache
 from difflib import SequenceMatcher
 from .lora_hash_index import LoraHashIndex
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -504,4 +505,39 @@ class LoraScanner:
     def get_lora_hash_by_path(self, file_path: str) -> Optional[str]:
         """Get hash for a LoRA by its file path"""
         return self._hash_index.get_hash(file_path)
+
+    async def diagnose_hash_index(self):
+        """Diagnostic method to verify hash index functionality"""
+        print("\n\n*** DIAGNOSING LORA HASH INDEX ***\n\n", file=sys.stderr)
+        
+        # First check if the hash index has any entries
+        if hasattr(self, '_hash_index'):
+            index_entries = len(self._hash_index._hash_to_path)
+            print(f"Hash index has {index_entries} entries", file=sys.stderr)
+            
+            # Print a few example entries if available
+            if index_entries > 0:
+                print("\nSample hash index entries:", file=sys.stderr)
+                count = 0
+                for hash_val, path in self._hash_index._hash_to_path.items():
+                    if count < 5:  # Just show the first 5
+                        print(f"Hash: {hash_val[:8]}... -> Path: {path}", file=sys.stderr)
+                        count += 1
+                    else:
+                        break
+        else:
+            print("Hash index not initialized", file=sys.stderr)
+        
+        # Try looking up by a known hash for testing
+        if not hasattr(self, '_hash_index') or not self._hash_index._hash_to_path:
+            print("No hash entries to test lookup with", file=sys.stderr)
+            return
+        
+        test_hash = next(iter(self._hash_index._hash_to_path.keys()))
+        test_path = self._hash_index.get_path(test_hash)
+        print(f"\nTest lookup by hash: {test_hash[:8]}... -> {test_path}", file=sys.stderr)
+        
+        # Also test reverse lookup
+        test_hash_result = self._hash_index.get_hash(test_path)
+        print(f"Test reverse lookup: {test_path} -> {test_hash_result[:8]}...\n\n", file=sys.stderr)
 

@@ -4,6 +4,7 @@ from server import PromptServer # type: ignore
 from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
+from .routes.recipe_routes import RecipeRoutes
 from .services.lora_scanner import LoraScanner
 from .services.file_monitor import LoraFileMonitor
 from .services.lora_cache import LoraCache
@@ -63,6 +64,7 @@ class LoraManager:
         
         routes.setup_routes(app)
         ApiRoutes.setup_routes(app, monitor)
+        RecipeRoutes.setup_routes(app)
         
         # Store monitor in app for cleanup
         app['lora_monitor'] = monitor
