@@ -118,37 +118,79 @@ class RecipeManager {
         card.dataset.filePath = recipe.file_path;
         card.dataset.title = recipe.title;
         card.dataset.created = recipe.created_date;
+
+        console.log(recipe);
         
-        // Get base model from first lora if available
-        const baseModel = recipe.loras && recipe.loras.length > 0 
-            ? recipe.loras[0].baseModel 
-            : '';
+        // 获取 base model
+        const baseModel = recipe.base_model || '';
         
+        // 确保 loras 数组存在
+        const lorasCount = recipe.loras ? recipe.loras.length : 0;
+        
+        // Ensure file_url exists, fallback to file_path if needed
+        const imageUrl = recipe.file_url || 
+                         (recipe.file_path ? `/loras_static/root1/preview/${recipe.file_path.split('/').pop()}` : 
+                         '/loras_static/images/no-preview.png');
+
         card.innerHTML = `
             <div class="recipe-indicator" title="Recipe">R</div>
             <div class="card-preview">
-                <img src="${recipe.file_url || recipe.preview_url || '/loras_static/images/no-preview.png'}" alt="${recipe.title}">
+                <img src="${imageUrl}" alt="${recipe.title}">
                 <div class="card-header">
-                    ${baseModel ? `<span class="base-model-label" title="${baseModel}">${baseModel}</span>` : ''}
+                    <div class="base-model-wrapper">
+                        ${baseModel ? `<span class="base-model-label" title="${baseModel}">${baseModel}</span>` : ''}
+                    </div>
+                    <div class="card-actions">
+                        <i class="fas fa-share-alt" title="Share Recipe"></i>
+                        <i class="fas fa-copy" title="Copy Recipe"></i>
+                        <i class="fas fa-trash" title="Delete Recipe"></i>
+                    </div>
                 </div>
                 <div class="card-footer">
                     <div class="model-info">
                         <span class="model-name">${recipe.title}</span>
                     </div>
                     <div class="lora-count" title="Number of LoRAs in this recipe">
-                        <i class="fas fa-layer-group"></i> ${recipe.loras ? recipe.loras.length : 0}
+                        <i class="fas fa-layer-group"></i> ${lorasCount}
                     </div>
                 </div>
             </div>
         `;
         
-        // Recipe card click event - will be implemented later
+        // Recipe card click event
         card.addEventListener('click', () => {
-            console.log('Recipe clicked:', recipe);
-            // For future implementation: showRecipeDetails(recipe);
+            this.showRecipeDetails(recipe);
+        });
+        
+        // Share button click event - prevent propagation to card
+        card.querySelector('.fa-share-alt')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // TODO: Implement share functionality
+            showToast('Share functionality will be implemented later', 'info');
+        });
+        
+        // Copy button click event - prevent propagation to card
+        card.querySelector('.fa-copy')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // TODO: Implement copy functionality
+            showToast('Copy functionality will be implemented later', 'info');
+        });
+        
+        // Delete button click event - prevent propagation to card
+        card.querySelector('.fa-trash')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // TODO: Implement delete functionality
+            showToast('Delete functionality will be implemented later', 'info');
         });
         
         return card;
+    }
+    
+    // Add a placeholder for recipe details method
+    showRecipeDetails(recipe) {
+        // TODO: Implement recipe details view
+        console.log('Recipe details:', recipe);
+        showToast(`Viewing ${recipe.title}`, 'info');
     }
     
     // Will be implemented later:

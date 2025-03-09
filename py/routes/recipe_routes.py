@@ -67,9 +67,19 @@ class RecipeRoutes:
             
             # Format the response data with static URLs for file paths
             for item in result['items']:
-                item['preview_url'] = item['file_path']
-                # Convert file path to URL
-                item['file_url'] = self._format_recipe_file_url(item['file_path'])
+                # Always ensure file_url is set
+                if 'file_path' in item:
+                    item['file_url'] = self._format_recipe_file_url(item['file_path'])
+                else:
+                    item['file_url'] = '/loras_static/images/no-preview.png'
+                
+                # 确保 loras 数组存在
+                if 'loras' not in item:
+                    item['loras'] = []
+                    
+                # 确保有 base_model 字段
+                if 'base_model' not in item:
+                    item['base_model'] = ""
             
             return web.json_response(result)
         except Exception as e:
@@ -101,17 +111,19 @@ class RecipeRoutes:
     
     def _format_recipe_file_url(self, file_path: str) -> str:
         """Format file path for recipe image as a URL"""
-        # This is a simplified example - in real implementation, 
-        # you would map this to a static route that can serve the file
-        
-        # For recipes folder in the first lora root
-        for idx, root in enumerate(config.loras_roots, start=1):
-            recipes_dir = os.path.join(root, "recipes")
-            if file_path.startswith(recipes_dir):
-                relative_path = os.path.relpath(file_path, root)
-                return f"/loras_static/root{idx}/{relative_path}"
-        
-        return file_path  # Return original path if no mapping found
+        try:
+            # Return the file URL directly for the first lora root's preview
+            recipes_dir = os.path.join(config.loras_roots[0], "recipes").replace(os.sep, '/')
+            if file_path.replace(os.sep, '/').startswith(recipes_dir):
+                relative_path = os.path.relpath(file_path, config.loras_roots[0]).replace(os.sep, '/')
+                return f"/loras_static/root1/preview/{relative_path}" 
+            
+            # If not in recipes dir, try to create a valid URL from the file path
+            file_name = os.path.basename(file_path)
+            return f"/loras_static/root1/preview/recipes/{file_name}"
+        except Exception as e:
+            logger.error(f"Error formatting recipe file URL: {e}", exc_info=True)
+            return '/loras_static/images/no-preview.png'  # Return default image on error
     
     def _format_recipe_data(self, recipe: Dict) -> Dict:
         """Format recipe data for API response"""

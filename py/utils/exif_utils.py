@@ -98,7 +98,15 @@ class ExifUtils:
                         # Filter loras and checkpoints
                         for resource in resources:
                             if resource.get('type') == 'lora':
-                                metadata['loras'].append(resource)
+                                # 确保 weight 字段被正确保留
+                                lora_entry = resource.copy()
+                                # 如果找不到 weight，默认为 1.0
+                                if 'weight' not in lora_entry:
+                                    lora_entry['weight'] = 1.0
+                                # Ensure modelVersionName is included
+                                if 'modelVersionName' not in lora_entry:
+                                    lora_entry['modelVersionName'] = ''
+                                metadata['loras'].append(lora_entry)
                             elif resource.get('type') == 'checkpoint':
                                 metadata['checkpoint'] = resource
                     except json.JSONDecodeError:
@@ -107,4 +115,19 @@ class ExifUtils:
             return metadata
         except Exception as e:
             logger.error(f"Error parsing recipe metadata: {e}")
-            return {"prompt": user_comment, "loras": [], "checkpoint": None} 
+            return {"prompt": user_comment, "loras": [], "checkpoint": None}
+    
+    @staticmethod
+    def extract_recipe_metadata(user_comment: str) -> Optional[Dict]:
+        """Extract recipe metadata section from UserComment if it exists"""
+        try:
+            # Look for recipe metadata section
+            recipe_match = re.search(r'recipe metadata: (\{.*\})', user_comment, re.IGNORECASE | re.DOTALL)
+            if not recipe_match:
+                return None
+            
+            recipe_json = recipe_match.group(1)
+            return json.loads(recipe_json)
+        except Exception as e:
+            logger.error(f"Error extracting recipe metadata: {e}")
+            return None

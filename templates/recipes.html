@@ -4,6 +4,7 @@
     <title>LoRA Recipes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/loras_static/css/style.css">
+    <link rel="stylesheet" href="/loras_static/css/components/recipe-card.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="icon" type="image/png" sizes="32x32" href="/loras_static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/loras_static/images/favicon-16x16.png">
@@ -236,11 +237,18 @@
                             <div class="card-preview">
                                 <img src="{{ recipe.file_url }}" alt="{{ recipe.title }}">
                                 <div class="card-header">
-                                    {% if recipe.base_model %}
-                                    <span class="base-model-label" title="{{ recipe.base_model }}">
-                                        {{ recipe.base_model }}
-                                    </span>
-                                    {% endif %}
+                                    <div class="base-model-wrapper">
+                                        {% if recipe.base_model %}
+                                        <span class="base-model-label" title="{{ recipe.base_model }}">
+                                            {{ recipe.base_model }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-actions">
+                                        <i class="fas fa-share-alt" title="Share Recipe"></i>
+                                        <i class="fas fa-copy" title="Copy Recipe"></i>
+                                        <i class="fas fa-trash" title="Delete Recipe"></i>
+                                    </div>
                                 </div>
                                 <div class="card-footer">
                                     <div class="model-info">

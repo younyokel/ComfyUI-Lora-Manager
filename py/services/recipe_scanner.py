@@ -78,11 +78,8 @@ class RecipeScanner:
         if not config.loras_roots:
             return ""
         
-        # Sort the lora roots case-insensitively
-        sorted_roots = sorted(config.loras_roots, key=lambda x: x.lower())
-        
-        # Use the first sorted lora root as base
-        recipes_dir = os.path.join(sorted_roots[0], "recipes")
+        # config.loras_roots already sorted case-insensitively, use the first one
+        recipes_dir = os.path.join(config.loras_roots[0], "recipes")
         os.makedirs(recipes_dir, exist_ok=True)
         logger.info(f"Using recipes directory: {recipes_dir}")
         
@@ -125,9 +122,6 @@ class RecipeScanner:
                     # If cache already exists, continue using old cache
                     if self._cache is None:
                         raise  # If no cache, raise exception
-            
-            logger.info(f"Recipe cache initialized with {len(self._cache.raw_data)} recipes")
-            logger.info(f"Recipe cache: {json.dumps(self._cache, indent=2)}")
             
             return self._cache
     
@@ -238,9 +232,9 @@ class RecipeScanner:
             else:
                 print(f"Found UserComment: {user_comment[:50]}...", file=sys.stderr)
             
-            # Parse metadata from UserComment
-            recipe_data = ExifUtils.parse_recipe_metadata(user_comment)
-            if not recipe_data:
+            # Parse generation parameters from UserComment
+            gen_params = ExifUtils.parse_recipe_metadata(user_comment)
+            if not gen_params:
                 print(f"Failed to parse recipe metadata from {image_path}", file=sys.stderr)
                 logger.warning(f"Failed to parse recipe metadata from {image_path}")
                 return None
@@ -250,15 +244,45 @@ class RecipeScanner:
             file_name = os.path.basename(image_path)
             title = os.path.splitext(file_name)[0]
             
-            # Add common metadata
-            recipe_data.update({
-                'id': file_name,
-                'file_path': image_path,
-                'title': title,
-                'modified': stat.st_mtime,
-                'created_date': stat.st_ctime,
-                'file_size': stat.st_size
-            })
+            # Check for existing recipe metadata
+            recipe_data = self._extract_recipe_metadata(user_comment)
+            if not recipe_data:
+                # Create new recipe data
+                recipe_data = {
+                    'id': file_name,
+                    'file_path': image_path,
+                    'title': title,
+                    'modified': stat.st_mtime,
+                    'created_date': stat.st_ctime,
+                    'file_size': stat.st_size,
+                    'loras': [],
+                    'gen_params': {}
+                }
+                
+                # Copy loras from gen_params to recipe_data with proper structure
+                for lora in gen_params.get('loras', []):
+                    recipe_lora = {
+                        'file_name': '',
+                        'hash': lora.get('hash', '').lower() if lora.get('hash') else '',
+                        'strength': lora.get('weight', 1.0),
+                        'modelVersionId': lora.get('modelVersionId', ''),
+                        'modelName': lora.get('modelName', ''),
+                        'modelVersionName': lora.get('modelVersionName', '')
+                    }
+                    recipe_data['loras'].append(recipe_lora)
+            
+            # Add generation parameters to recipe_data.gen_params instead of top level
+            recipe_data['gen_params'] = {
+                'prompt': gen_params.get('prompt', ''),
+                'negative_prompt': gen_params.get('negative_prompt', ''),
+                'checkpoint': gen_params.get('checkpoint', None),
+                'steps': gen_params.get('steps', ''),
+                'sampler': gen_params.get('sampler', ''),
+                'cfg_scale': gen_params.get('cfg_scale', ''),
+                'seed': gen_params.get('seed', ''),
+                'size': gen_params.get('size', ''),
+                'clip_skip': gen_params.get('clip_skip', '')
+            }
             
             # Update recipe metadata with missing information
             metadata_updated = await self._update_recipe_metadata(recipe_data, user_comment)
@@ -417,51 +441,48 @@ class RecipeScanner:
     def _save_updated_metadata(self, image_path: str, original_comment: str, recipe_data: Dict) -> None:
         """Save updated metadata back to image file"""
         try:
-            # Update the resources section with the updated lora data
-            resources_match = re.search(r'(Civitai resources: )(\[.*?\])(?:,|\})', original_comment)
-            if not resources_match:
-                logger.warning(f"Could not find Civitai resources section in {image_path}")
-                return
+            # Check if we already have a recipe metadata section
+            recipe_metadata_exists = "recipe metadata:" in original_comment.lower()
             
-            resources_prefix = resources_match.group(1)
+            # Prepare recipe metadata
+            recipe_metadata = {
+                'id': recipe_data.get('id', ''),
+                'file_path': recipe_data.get('file_path', ''),
+                'title': recipe_data.get('title', ''),
+                'modified': recipe_data.get('modified', 0),
+                'created_date': recipe_data.get('created_date', 0),
+                'base_model': recipe_data.get('base_model', ''),
+                'loras': [],
+                'gen_params': recipe_data.get('gen_params', {})
+            }
             
-            # Generate updated resources array
-            resources = []
+            # Add lora data with only necessary fields (removing weight, adding modelVersionName)
+            for lora in recipe_data.get('loras', []):
+                lora_entry = {
+                    'file_name': lora.get('file_name', ''),
+                    'hash': lora.get('hash', '').lower() if lora.get('hash') else '',
+                    'strength': lora.get('strength', 1.0),
+                    'modelVersionId': lora.get('modelVersionId', ''),
+                    'modelName': lora.get('modelName', ''),
+                    'modelVersionName': lora.get('modelVersionName', '')
+                }
+                recipe_metadata['loras'].append(lora_entry)
             
-            # Add checkpoint if exists
-            if recipe_data.get('checkpoint'):
-                resources.append(recipe_data['checkpoint'])
+            # Convert to JSON
+            recipe_metadata_json = json.dumps(recipe_metadata)
             
-            # Add all loras
-            resources.extend(recipe_data.get('loras', []))
-            
-            # Generate new resources JSON
-            updated_resources = json.dumps(resources)
-            
-            # Replace resources in original comment
-            updated_comment = original_comment.replace(
-                resources_match.group(0), 
-                f"{resources_prefix}{updated_resources},"
-            )
-            
-            # Update metadata section if it exists
-            metadata_match = re.search(r'(Civitai metadata: )(\{.*?\})', original_comment)
-            if metadata_match:
-                metadata_prefix = metadata_match.group(1)
-                
-                # Create metadata object with base_model
-                metadata = {}
-                if recipe_data.get('base_model'):
-                    metadata['base_model'] = recipe_data['base_model']
-                    
-                # Generate new metadata JSON
-                updated_metadata = json.dumps(metadata)
-                
-                # Replace metadata in original comment
-                updated_comment = updated_comment.replace(
-                    metadata_match.group(0),
-                    f"{metadata_prefix}{updated_metadata}"
+            # Create or update the recipe metadata section
+            if recipe_metadata_exists:
+                # Replace existing recipe metadata
+                updated_comment = re.sub(
+                    r'recipe metadata: \{.*\}',
+                    f'recipe metadata: {recipe_metadata_json}',
+                    original_comment,
+                    flags=re.IGNORECASE | re.DOTALL
                 )
+            else:
+                # Append recipe metadata to the end
+                updated_comment = f"{original_comment}, recipe metadata: {recipe_metadata_json}"
             
             # Save back to image
             logger.info(f"Saving updated metadata to {image_path}")
@@ -537,6 +558,14 @@ class RecipeScanner:
                     else:
                         logger.warning(f"Could not get hash for modelVersionId {model_version_id}")
             
+            # If modelVersionId exists but no modelVersionName, try to get it from Civitai
+            if 'modelVersionId' in lora and not lora.get('modelVersionName'):
+                model_version_id = str(lora['modelVersionId'])
+                model_version_name = await self._get_model_version_name(model_version_id)
+                if model_version_name:
+                    lora['modelVersionName'] = model_version_name
+                    metadata_updated = True
+            
             # If has hash, check if it's in library
             if 'hash' in lora:
                 hash_value = lora['hash'].lower()  # Ensure lowercase when comparing
@@ -551,11 +580,6 @@ class RecipeScanner:
                         logger.info(f"Found lora in library: {file_name}")
                         lora['file_name'] = file_name
                         metadata_updated = True
-                        
-                        # Also get base_model from lora cache if possible
-                        base_model = await self._get_base_model_for_lora(lora_path)
-                        if base_model:
-                            lora['base_model'] = base_model
                 elif not in_library:
                     # Lora not in library
                     logger.info(f"LoRA with hash {hash_value[:8]}... not found in library")
@@ -570,6 +594,24 @@ class RecipeScanner:
                 metadata_updated = True
         
         return metadata_updated
+
+    async def _get_model_version_name(self, model_version_id: str) -> Optional[str]:
+        """Get model version name from Civitai API"""
+        try:
+            if not self._civitai_client:
+                return None
+                
+            logger.info(f"Fetching model version info from Civitai for ID: {model_version_id}")
+            version_info = await self._civitai_client.get_model_version_info(model_version_id)
+            
+            if version_info and 'name' in version_info:
+                return version_info['name']
+                    
+            logger.warning(f"No version name found for modelVersionId {model_version_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting model version name from Civitai: {e}")
+            return None
 
     async def _determine_base_model(self, loras: List[Dict]) -> Optional[str]:
         """Determine the most common base model among LoRAs"""
@@ -607,4 +649,24 @@ class RecipeScanner:
             return None
         except Exception as e:
             logger.error(f"Error getting base model for lora: {e}")
+            return None
+
+    def _extract_recipe_metadata(self, user_comment: str) -> Optional[Dict]:
+        """Extract recipe metadata section from UserComment if it exists"""
+        try:
+            # Look for recipe metadata section
+            recipe_match = re.search(r'recipe metadata: (\{.*\})', user_comment, re.IGNORECASE | re.DOTALL)
+            if not recipe_match:
+                return None
+            
+            recipe_json = recipe_match.group(1)
+            recipe_data = json.loads(recipe_json)
+            
+            # Ensure loras array exists
+            if 'loras' not in recipe_data:
+                recipe_data['loras'] = []
+            
+            return recipe_data
+        except Exception as e:
+            logger.error(f"Error extracting recipe metadata: {e}")
             return None

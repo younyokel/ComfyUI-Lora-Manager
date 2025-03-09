@@ -87,9 +87,9 @@ class Config:
 
     def _init_lora_paths(self) -> List[str]:
         """Initialize and validate LoRA paths from ComfyUI settings"""
-        paths = list(set(path.replace(os.sep, "/") 
+        paths = sorted(set(path.replace(os.sep, "/") 
                 for path in folder_paths.get_folder_paths("loras") 
-                if os.path.exists(path)))
+                if os.path.exists(path)), key=lambda p: p.lower())
         print("Found LoRA roots:", "\n - " + "\n - ".join(paths))
         
         if not paths:
