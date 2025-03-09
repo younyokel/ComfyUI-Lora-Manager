@@ -5,6 +5,7 @@
 @import 'layout.css';
 
 /* Import Components */
+@import 'components/header.css';
 @import 'components/card.css';
 @import 'components/modal.css';
 @import 'components/download-modal.css';

@@ -1,0 +1,21 @@
+<header class="app-header">
+  <div class="header-container">
+    <div class="header-branding">
+      <h1 class="app-title">ComfyUI Manager</h1>
+    </div>
+    <nav class="main-nav">
+      <a href="/loras" class="nav-item {% if current_page == 'loras' %}active{% endif %}">
+        <i class="fas fa-layer-group"></i> LoRAs
+      </a>
+      <a href="/loras/recipes" class="nav-item {% if current_page == 'recipes' %}active{% endif %}">
+        <i class="fas fa-book-open"></i> Recipes
+      </a>
+      <a href="/checkpoints" class="nav-item {% if current_page == 'checkpoints' %}active{% endif %}">
+        <i class="fas fa-check-circle"></i> Checkpoints
+      </a>
+    </nav>
+    <div class="header-actions">
+      <!-- Page-specific action buttons can go here -->
+    </div>
+  </div>
+</header>

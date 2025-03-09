@@ -1,6 +1,7 @@
 // Recipe manager module
 import { showToast } from './utils/uiHelpers.js';
 import { state } from './state/index.js';
+import { initializeCommonComponents } from './common.js';
 
 class RecipeManager {
     constructor() {
@@ -199,10 +200,11 @@ class RecipeManager {
     // - Recipe search and filters
 }
 
-// Initialize recipe manager when DOM is loaded
+// Initialize components
 document.addEventListener('DOMContentLoaded', () => {
+    initializeCommonComponents();
     window.recipeManager = new RecipeManager();
 });
 
 // Export for use in other modules
-export { RecipeManager }; 
+export { RecipeManager };
