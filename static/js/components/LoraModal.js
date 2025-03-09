@@ -81,10 +81,35 @@ export function showLoraModal(lora) {
                             <div class="description-text">${lora.description || 'N/A'}</div>
                         </div>
                     </div>
-
                 </div>
 
-                ${renderShowcaseImages(lora.civitai.images)}
+                <div class="showcase-section" data-lora-id="${lora.civitai?.modelId || ''}">
+                    <div class="showcase-tabs">
+                        <button class="tab-btn active" data-tab="showcase">Examples</button>
+                        <button class="tab-btn" data-tab="description">Model Description</button>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <div id="showcase-tab" class="tab-pane active">
+                            ${renderShowcaseContent(lora.civitai?.images)}
+                        </div>
+                        
+                        <div id="description-tab" class="tab-pane">
+                            <div class="model-description-container">
+                                <div class="model-description-loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading model description...
+                                </div>
+                                <div class="model-description-content">
+                                    ${lora.modelDescription || ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="back-to-top" onclick="scrollToTop(this)">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -92,6 +117,143 @@ export function showLoraModal(lora) {
     modalManager.showModal('loraModal', content);
     setupEditableFields();
     setupShowcaseScroll();
+    setupTabSwitching();
+    
+    // If we have a model ID but no description, fetch it
+    if (lora.civitai?.modelId && !lora.modelDescription) {
+        loadModelDescription(lora.civitai.modelId, lora.file_path);
+    }
+}
+
+// Function to render showcase content
+function renderShowcaseContent(images) {
+    if (!images?.length) return '<div class="no-examples">No example images available</div>';
+    
+    return `
+        <div class="scroll-indicator" onclick="toggleShowcase(this)">
+            <i class="fas fa-chevron-down"></i>
+            <span>Scroll or click to show ${images.length} examples</span>
+        </div>
+        <div class="carousel collapsed">
+            <div class="carousel-container">
+                ${images.map(img => {
+                    // 计算适当的展示高度：
+                    // 1. 保持原始宽高比
+                    // 2. 限制最大高度为视窗高度的60%
+                    // 3. 确保最小高度为容器宽度的40%
+                    const aspectRatio = (img.height / img.width) * 100;
+                    const containerWidth = 800; // modal content的最大宽度
+                    const minHeightPercent = 40; // 最小高度为容器宽度的40%
+                    const maxHeightPercent = (window.innerHeight * 0.6 / containerWidth) * 100;
+                    const heightPercent = Math.max(
+                        minHeightPercent,
+                        Math.min(maxHeightPercent, aspectRatio)
+                    );
+                    
+                    if (img.type === 'video') {
+                        return `
+                            <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
+                                <video controls autoplay muted loop crossorigin="anonymous" 
+                                       referrerpolicy="no-referrer" data-src="${img.url}"
+                                       class="lazy">
+                                    <source data-src="${img.url}" type="video/mp4">
+                                    Your browser does not support video playback
+                                </video>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
+                            <img data-src="${img.url}" 
+                                 alt="Preview" 
+                                 crossorigin="anonymous" 
+                                 referrerpolicy="no-referrer"
+                                 width="${img.width}"
+                                 height="${img.height}"
+                                 class="lazy"> 
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// New function to handle tab switching
+function setupTabSwitching() {
+    const tabButtons = document.querySelectorAll('.showcase-tabs .tab-btn');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.showcase-tabs .tab-btn').forEach(btn => 
+                btn.classList.remove('active')
+            );
+            document.querySelectorAll('.tab-content .tab-pane').forEach(tab => 
+                tab.classList.remove('active')
+            );
+            
+            // Add active class to clicked tab
+            button.classList.add('active');
+            const tabId = `${button.dataset.tab}-tab`;
+            document.getElementById(tabId).classList.add('active');
+            
+            // If switching to description tab, make sure content is properly sized
+            if (button.dataset.tab === 'description') {
+                const descriptionContent = document.querySelector('.model-description-content');
+                if (descriptionContent && descriptionContent.innerHTML.trim() !== '') {
+                    document.querySelector('.model-description-loading')?.classList.add('hidden');
+                }
+            }
+        });
+    });
+}
+
+// New function to load model description
+async function loadModelDescription(modelId, filePath) {
+    try {
+        const descriptionContainer = document.querySelector('.model-description-content');
+        const loadingElement = document.querySelector('.model-description-loading');
+        
+        if (!descriptionContainer || !loadingElement) return;
+        
+        // Show loading indicator
+        loadingElement.classList.remove('hidden');
+        descriptionContainer.classList.add('hidden');
+        
+        // Try to get model description from API
+        const response = await fetch(`/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch model description: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.description) {
+            // Update the description content
+            descriptionContainer.innerHTML = data.description;
+            
+            // Process any links in the description to open in new tab
+            const links = descriptionContainer.querySelectorAll('a');
+            links.forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+            
+            // Show the description and hide loading indicator
+            descriptionContainer.classList.remove('hidden');
+            loadingElement.classList.add('hidden');
+        } else {
+            throw new Error(data.error || 'No description available');
+        }
+    } catch (error) {
+        console.error('Error loading model description:', error);
+        const loadingElement = document.querySelector('.model-description-loading');
+        if (loadingElement) {
+            loadingElement.innerHTML = `<div class="error-message">Failed to load model description. ${error.message}</div>`;
+        }
+    }
 }
 
 // 添加复制文件名的函数
@@ -350,61 +512,7 @@ function renderTriggerWords(words) {
 }
 
 function renderShowcaseImages(images) {
-    if (!images?.length) return '';
-    
-    return `
-        <div class="showcase-section">
-            <div class="scroll-indicator" onclick="toggleShowcase(this)">
-                <i class="fas fa-chevron-down"></i>
-                <span>Scroll or click to show ${images.length} examples</span>
-            </div>
-            <div class="carousel collapsed">
-                <div class="carousel-container">
-                    ${images.map(img => {
-                        // 计算适当的展示高度：
-                        // 1. 保持原始宽高比
-                        // 2. 限制最大高度为视窗高度的60%
-                        // 3. 确保最小高度为容器宽度的40%
-                        const aspectRatio = (img.height / img.width) * 100;
-                        const containerWidth = 800; // modal content的最大宽度
-                        const minHeightPercent = 40; // 最小高度为容器宽度的40%
-                        const maxHeightPercent = (window.innerHeight * 0.6 / containerWidth) * 100;
-                        const heightPercent = Math.max(
-                            minHeightPercent,
-                            Math.min(maxHeightPercent, aspectRatio)
-                        );
-                        
-                        if (img.type === 'video') {
-                            return `
-                                <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
-                                    <video controls autoplay muted loop crossorigin="anonymous" 
-                                           referrerpolicy="no-referrer" data-src="${img.url}"
-                                           class="lazy">
-                                        <source data-src="${img.url}" type="video/mp4">
-                                        Your browser does not support video playback
-                                    </video>
-                                </div>
-                            `;
-                        }
-                        return `
-                            <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
-                                <img data-src="${img.url}" 
-                                     alt="Preview" 
-                                     crossorigin="anonymous" 
-                                     referrerpolicy="no-referrer"
-                                     width="${img.width}"
-                                     height="${img.height}"
-                                     class="lazy"> 
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-            <button class="back-to-top" onclick="scrollToTop(this)">
-                <i class="fas fa-arrow-up"></i>
-            </button>
-        </div>
-    `;
+    return renderShowcaseContent(images);
 }
 
 export function toggleShowcase(element) {
@@ -558,4 +666,4 @@ function formatFileSize(bytes) {
     }
     
     return `${size.toFixed(1)} ${units[unitIndex]}`;
-} 
+}

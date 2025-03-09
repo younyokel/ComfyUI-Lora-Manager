@@ -41,6 +41,7 @@ class ApiRoutes:
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
+        app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
@@ -691,3 +692,61 @@ class ApiRoutes:
         except Exception as e:
             logger.error(f"Error moving models in bulk: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)
+
+    async def get_lora_model_description(self, request: web.Request) -> web.Response:
+        """Get model description for a Lora model"""
+        try:
+            # Get parameters
+            model_id = request.query.get('model_id')
+            file_path = request.query.get('file_path')
+            
+            if not model_id:
+                return web.json_response({
+                    'success': False, 
+                    'error': 'Model ID is required'
+                }, status=400)
+            
+            # Check if we already have the description stored in metadata
+            description = None
+            if file_path:
+                metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                if os.path.exists(metadata_path):
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            description = metadata.get('modelDescription')
+                    except Exception as e:
+                        logger.error(f"Error loading metadata from {metadata_path}: {e}")
+            
+            # If description is not in metadata, fetch from CivitAI
+            if not description:
+                logger.info(f"Fetching model description for model ID: {model_id}")
+                description = await self.civitai_client.get_model_description(model_id)
+                
+                # Save the description to metadata if we have a file path and got a description
+                if file_path and description:
+                    try:
+                        metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                        if os.path.exists(metadata_path):
+                            with open(metadata_path, 'r', encoding='utf-8') as f:
+                                metadata = json.load(f)
+                            
+                            metadata['modelDescription'] = description
+                            
+                            with open(metadata_path, 'w', encoding='utf-8') as f:
+                                json.dump(metadata, f, indent=2, ensure_ascii=False)
+                                logger.info(f"Saved model description to metadata for {file_path}")
+                    except Exception as e:
+                        logger.error(f"Error saving model description to metadata: {e}")
+            
+            return web.json_response({
+                'success': True,
+                'description': description or "<p>No model description available.</p>"
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting model description: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)

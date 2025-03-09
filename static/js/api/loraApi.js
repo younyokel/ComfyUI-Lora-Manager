@@ -326,3 +326,18 @@ export async function refreshSingleLoraMetadata(filePath) {
         state.loadingManager.restoreProgressBar();
     }
 }
+
+export async function fetchModelDescription(modelId, filePath) {
+    try {
+        const response = await fetch(`/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch model description: ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching model description:', error);
+        throw error;
+    }
+}
