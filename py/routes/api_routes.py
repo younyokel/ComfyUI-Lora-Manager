@@ -384,7 +384,7 @@ class ApiRoutes:
             # 准备要处理的 loras
             to_process = [
                 lora for lora in cache.raw_data 
-                if lora.get('sha256') and not lora.get('civitai') and lora.get('from_civitai')
+                if lora.get('sha256') and (not lora.get('civitai') or 'id' not in lora.get('civitai')) and lora.get('from_civitai')  # TODO: for lora not from CivitAI but added traineWords
             ]
             total_to_process = len(to_process)
             
@@ -617,8 +617,15 @@ class ApiRoutes:
             else:
                 metadata = {}
 
-            # Update metadata with new values
-            metadata.update(metadata_updates)
+            # Handle nested updates (for civitai.trainedWords)
+            for key, value in metadata_updates.items():
+                if isinstance(value, dict) and key in metadata and isinstance(metadata[key], dict):
+                    # Deep update for nested dictionaries
+                    for nested_key, nested_value in value.items():
+                        metadata[key][nested_key] = nested_value
+                else:
+                    # Regular update for top-level keys
+                    metadata[key] = value
 
             # Save updated metadata
             with open(metadata_path, 'w', encoding='utf-8') as f:

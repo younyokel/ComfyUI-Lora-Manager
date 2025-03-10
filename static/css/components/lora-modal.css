@@ -163,12 +163,57 @@
     border: 1px solid var(--lora-border);
 }
 
+/* New header style for trigger words */
+.trigger-words-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.edit-trigger-words-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.5;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: var(--border-radius-xs);
+    transition: all 0.2s ease;
+}
+
+.edit-trigger-words-btn:hover {
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .edit-trigger-words-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Edit mode active state */
+.trigger-words.edit-mode .edit-trigger-words-btn {
+    opacity: 0.8;
+    color: var(--lora-accent);
+}
+
+.trigger-words-content {
+    margin-bottom: var(--space-1);
+}
+
 .trigger-words-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-items: flex-start;
-    margin-top: var(--space-1);
+}
+
+/* No trigger words message */
+.no-trigger-words {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-style: italic;
+    font-size: 0.9em;
 }
 
 /* Update Trigger Words styles */
@@ -182,6 +227,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     gap: 6px;
+    position: relative;
 }
 
 /* Update trigger word content color to use theme accent */
@@ -205,6 +251,123 @@
     opacity: 0.5;
     flex-shrink: 0;
     transition: opacity 0.2s;
+}
+
+/* Delete button for trigger word */
+.delete-trigger-word-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 16px;
+    height: 16px;
+    background: var(--lora-error);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    transition: transform 0.2s ease;
+}
+
+.delete-trigger-word-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Edit controls */
+.trigger-words-edit-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.trigger-words-edit-controls button {
+    padding: 3px 8px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.85em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.trigger-words-edit-controls button:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
+}
+
+.trigger-words-edit-controls button i {
+    font-size: 0.8em;
+}
+
+.save-trigger-words-btn {
+    background: var(--lora-accent) !important;
+    color: white !important;
+    border-color: var(--lora-accent) !important;
+}
+
+.save-trigger-words-btn:hover {
+    opacity: 0.9;
+}
+
+/* Add trigger word form */
+.add-trigger-word-form {
+    margin-top: var(--space-2);
+    display: flex;
+    gap: var(--space-1);
+}
+
+.new-trigger-word-input {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.new-trigger-word-input:focus {
+    border-color: var(--lora-accent);
+    outline: none;
+}
+
+.confirm-add-trigger-word-btn,
+.cancel-add-trigger-word-btn {
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.confirm-add-trigger-word-btn {
+    background: var(--lora-accent);
+    color: white;
+    border-color: var(--lora-accent);
+}
+
+.confirm-add-trigger-word-btn:hover {
+    opacity: 0.9;
+}
+
+.cancel-add-trigger-word-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .cancel-add-trigger-word-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Editable Fields */
@@ -724,7 +887,7 @@
 }
 
 .model-description-content blockquote {
-    border-left: 3px solid var(--lora-accent);
+    border-left: 3px solid var (--lora-accent);
     padding-left: 1em;
     margin-left: 0;
     margin-right: 0;

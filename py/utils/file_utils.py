@@ -121,6 +121,15 @@ async def load_metadata(file_path: str) -> Optional[LoraMetadata]:
                 elif preview_url != normalize_path(preview_url):
                     data['preview_url'] = normalize_path(preview_url)
                     needs_update = True
+
+                # Ensure all fields are present, due to updates adding new fields
+                if 'tags' not in data:
+                    data['tags'] = []
+                    needs_update = True
+                    
+                if 'modelDescription' not in data:
+                    data['modelDescription'] = ""
+                    needs_update = True
                 
                 if needs_update:
                     with open(metadata_path, 'w', encoding='utf-8') as f:
