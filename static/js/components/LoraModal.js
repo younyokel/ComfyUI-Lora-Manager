@@ -204,8 +204,15 @@ function setupTabSwitching() {
             // If switching to description tab, make sure content is properly sized
             if (button.dataset.tab === 'description') {
                 const descriptionContent = document.querySelector('.model-description-content');
-                if (descriptionContent && descriptionContent.innerHTML.trim() !== '') {
+                if (descriptionContent) {
+                    const hasContent = descriptionContent.innerHTML.trim() !== '';
                     document.querySelector('.model-description-loading')?.classList.add('hidden');
+                    
+                    // If no content, show a message
+                    if (!hasContent) {
+                        descriptionContent.innerHTML = '<div class="no-description">No model description available</div>';
+                        descriptionContent.classList.remove('hidden');
+                    }
                 }
             }
         });
@@ -255,6 +262,13 @@ async function loadModelDescription(modelId, filePath) {
         const loadingElement = document.querySelector('.model-description-loading');
         if (loadingElement) {
             loadingElement.innerHTML = `<div class="error-message">Failed to load model description. ${error.message}</div>`;
+        }
+        
+        // Show empty state message in the description container
+        const descriptionContainer = document.querySelector('.model-description-content');
+        if (descriptionContainer) {
+            descriptionContainer.innerHTML = '<div class="no-description">No model description available</div>';
+            descriptionContainer.classList.remove('hidden');
         }
     }
 }
@@ -711,22 +725,6 @@ function formatFileSize(bytes) {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
-// Function to render model tags
-function renderTags(tags) {
-    if (!tags || tags.length === 0) return '';
-    
-    return `
-        <div class="model-tags">
-            ${tags.map(tag => `
-                <span class="model-tag" onclick="copyTag('${tag.replace(/'/g, "\\'")}')">
-                    ${tag}
-                    <i class="fas fa-copy"></i>
-                </span>
-            `).join('')}
-        </div>
-    `;
-}
-
 // Add tag copy functionality
 window.copyTag = async function(tag) {
     try {
@@ -989,10 +987,27 @@ async function saveTriggerWords() {
         
         // Update the LoRA card's dataset
         const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard && loraCard.dataset.civitai) {
-            const civitaiData = JSON.parse(loraCard.dataset.civitai);
-            civitaiData.trainedWords = words;
-            loraCard.dataset.civitai = JSON.stringify(civitaiData);
+        if (loraCard) {
+            try {
+                // Create a proper structure for civitai data
+                let civitaiData = {};
+                
+                // Parse existing data if available
+                if (loraCard.dataset.meta) {
+                    civitaiData = JSON.parse(loraCard.dataset.meta);
+                }
+                
+                // Update trainedWords property
+                civitaiData.trainedWords = words;
+                
+                // Update the meta dataset attribute with the full civitai data
+                loraCard.dataset.meta = JSON.stringify(civitaiData);
+                
+                // For debugging, log the updated data to verify it's correct
+                console.log("Updated civitai data:", civitaiData);
+            } catch (e) {
+                console.error('Error updating civitai data:', e);
+            }
         }
         
         // If we saved an empty array and there's a no-trigger-words element, show it
@@ -1005,6 +1020,7 @@ async function saveTriggerWords() {
         
         showToast('Trigger words updated successfully', 'success');
     } catch (error) {
+        console.error('Error saving trigger words:', error);
         showToast('Failed to update trigger words', 'error');
     }
 }

@@ -94,7 +94,16 @@ export function createLoraCard(lora) {
                 base_model: card.dataset.base_model,
                 usage_tips: card.dataset.usage_tips,
                 notes: card.dataset.notes,
-                civitai: JSON.parse(card.dataset.meta || '{}'),
+                // Parse civitai metadata from the card's dataset
+                civitai: (() => {
+                    try {
+                        // Attempt to parse the JSON string
+                        return JSON.parse(card.dataset.meta || '{}');
+                    } catch (e) {
+                        console.error('Failed to parse civitai metadata:', e);
+                        return {}; // Return empty object on error
+                    }
+                })(),
                 tags: JSON.parse(card.dataset.tags || '[]'),
                 modelDescription: card.dataset.modelDescription || ''
             };
