@@ -167,7 +167,8 @@ class LoraScanner:
 
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
                                folder: str = None, search: str = None, fuzzy: bool = False,
-                               recursive: bool = False, base_models: list = None, tags: list = None) -> Dict:
+                               recursive: bool = False, base_models: list = None, tags: list = None,
+                               search_options: dict = None) -> Dict:
         """Get paginated and filtered lora data
         
         Args:
@@ -180,22 +181,31 @@ class LoraScanner:
             recursive: Include subfolders when folder filter is applied
             base_models: List of base models to filter by
             tags: List of tags to filter by
+            search_options: Dictionary with search options (filename, modelname, tags)
         """
         cache = await self.get_cached_data()
 
-        # 先获取基础数据集
+        # Get default search options if not provided
+        if search_options is None:
+            search_options = {
+                'filename': True,
+                'modelname': True,
+                'tags': False
+            }
+
+        # Get the base data set
         filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
         
-        # 应用文件夹过滤
+        # Apply folder filtering
         if folder is not None:
             if recursive:
-                # 递归模式：匹配所有以该文件夹开头的路径
+                # Recursive mode: match all paths starting with this folder
                 filtered_data = [
                     item for item in filtered_data 
                     if item['folder'].startswith(folder + '/') or item['folder'] == folder
                 ]
             else:
-                # 非递归模式：只匹配确切的文件夹
+                # Non-recursive mode: match exact folder
                 filtered_data = [
                     item for item in filtered_data 
                     if item['folder'] == folder
@@ -215,28 +225,20 @@ class LoraScanner:
                 if any(tag in item.get('tags', []) for tag in tags)
             ]
         
-        # 应用搜索过滤
+        # Apply search filtering
         if search:
             if fuzzy:
                 filtered_data = [
                     item for item in filtered_data 
-                    if any(
-                        self.fuzzy_match(str(value), search) 
-                        for value in [
-                            item.get('model_name', ''),
-                            item.get('base_model', '')
-                        ]
-                        if value
-                    )
+                    if self._fuzzy_search_match(item, search, search_options)
                 ]
             else:
-                # Original exact search logic
                 filtered_data = [
                     item for item in filtered_data 
-                    if search in str(item.get('model_name', '')).lower()
+                    if self._exact_search_match(item, search, search_options)
                 ]
 
-        # 计算分页
+        # Calculate pagination
         total_items = len(filtered_data)
         start_idx = (page - 1) * page_size
         end_idx = min(start_idx + page_size, total_items)
@@ -250,6 +252,44 @@ class LoraScanner:
         }
         
         return result
+
+    def _fuzzy_search_match(self, item: Dict, search: str, search_options: Dict) -> bool:
+        """Check if an item matches the search term using fuzzy matching with search options"""
+        # Check filename if enabled
+        if search_options.get('filename', True) and self.fuzzy_match(item.get('file_name', ''), search):
+            return True
+            
+        # Check model name if enabled
+        if search_options.get('modelname', True) and self.fuzzy_match(item.get('model_name', ''), search):
+            return True
+            
+        # Check tags if enabled
+        if search_options.get('tags', False) and item.get('tags'):
+            for tag in item['tags']:
+                if self.fuzzy_match(tag, search):
+                    return True
+                    
+        return False
+
+    def _exact_search_match(self, item: Dict, search: str, search_options: Dict) -> bool:
+        """Check if an item matches the search term using exact matching with search options"""
+        search = search.lower()
+        
+        # Check filename if enabled
+        if search_options.get('filename', True) and search in item.get('file_name', '').lower():
+            return True
+            
+        # Check model name if enabled
+        if search_options.get('modelname', True) and search in item.get('model_name', '').lower():
+            return True
+            
+        # Check tags if enabled
+        if search_options.get('tags', False) and item.get('tags'):
+            for tag in item['tags']:
+                if search in tag.lower():
+                    return True
+                    
+        return False
 
     def invalidate_cache(self):
         """Invalidate the current cache"""
@@ -371,7 +411,7 @@ class LoraScanner:
                 model_metadata = await client.get_model_metadata(model_id)
                 await client.close()
                 
-                if model_metadata:
+                if (model_metadata):
                     logger.info(f"Updating metadata for {file_path} with model ID {model_id}")
                     
                     # Update tags if they were missing

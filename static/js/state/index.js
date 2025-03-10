@@ -8,9 +8,15 @@ export const state = {
     observer: null,
     previewVersions: new Map(),
     searchManager: null,
+    searchOptions: {
+        filename: true,
+        modelname: true,
+        tags: false,
+        recursive: false
+    },
     filters: {
         baseModel: [],
-        tags: []  // Make sure tags are included in state
+        tags: []
     },
     bulkMode: false,
     selectedLoras: new Set(),

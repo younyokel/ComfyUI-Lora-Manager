@@ -132,6 +132,11 @@ class ApiRoutes:
             base_models = request.query.get('base_models', '').split(',')
             base_models = [model.strip() for model in base_models if model.strip()]
             
+            # Parse search options
+            search_filename = request.query.get('search_filename', 'true').lower() == 'true'
+            search_modelname = request.query.get('search_modelname', 'true').lower() == 'true'
+            search_tags = request.query.get('search_tags', 'false').lower() == 'true'
+            
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
                 return web.json_response({
@@ -157,7 +162,12 @@ class ApiRoutes:
                 fuzzy=fuzzy,
                 recursive=recursive,
                 base_models=base_models,  # Pass base models filter
-                tags=tags  # Add tags parameter
+                tags=tags,  # Add tags parameter
+                search_options={
+                    'filename': search_filename,
+                    'modelname': search_modelname,
+                    'tags': search_tags
+                }
             )
             
             # Format the response data
