@@ -32,9 +32,15 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         }
         
         // Add filter parameters if active
-        if (state.filters && state.filters.baseModel && state.filters.baseModel.length > 0) {
-            // Convert the array of base models to a comma-separated string
-            params.append('base_models', state.filters.baseModel.join(','));
+        if (state.filters) {
+            if (state.filters.tags && state.filters.tags.length > 0) {
+                // Convert the array of tags to a comma-separated string
+                params.append('tags', state.filters.tags.join(','));
+            }
+            if (state.filters.baseModel && state.filters.baseModel.length > 0) {
+                // Convert the array of base models to a comma-separated string
+                params.append('base_models', state.filters.baseModel.join(','));
+            }
         }
 
         console.log('Loading loras with params:', params.toString());

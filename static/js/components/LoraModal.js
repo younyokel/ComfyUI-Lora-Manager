@@ -15,6 +15,7 @@ export function showLoraModal(lora) {
                         <i class="fas fa-save"></i>
                     </button>
                 </div>
+                ${renderTags(lora.tags || [])}
             </header>
 
             <div class="modal-body">
@@ -667,3 +668,30 @@ function formatFileSize(bytes) {
     
     return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
+
+// Function to render model tags
+function renderTags(tags) {
+    if (!tags || tags.length === 0) return '';
+    
+    return `
+        <div class="model-tags">
+            ${tags.map(tag => `
+                <span class="model-tag" onclick="copyTag('${tag.replace(/'/g, "\\'")}')">
+                    ${tag}
+                    <i class="fas fa-copy"></i>
+                </span>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Add tag copy functionality
+window.copyTag = async function(tag) {
+    try {
+        await navigator.clipboard.writeText(tag);
+        showToast('Tag copied to clipboard', 'success');
+    } catch (err) {
+        console.error('Copy failed:', err);
+        showToast('Copy failed', 'error');
+    }
+};

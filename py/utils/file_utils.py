@@ -69,6 +69,8 @@ async def get_file_info(file_path: str) -> Optional[LoraMetadata]:
             notes="",
             from_civitai=True,
             preview_url=normalize_path(preview_url),
+            tags=[],
+            modelDescription=""
         )
 
         # create metadata file

@@ -163,40 +163,51 @@ class CivitaiClient:
             logger.error(f"Error fetching model version info: {e}")
             return None
 
-    async def get_model_description(self, model_id: str) -> Optional[str]:
-        """Fetch the model description from Civitai API
+    async def get_model_metadata(self, model_id: str) -> Optional[Dict]:
+        """Fetch model metadata (description and tags) from Civitai API
         
         Args:
             model_id: The Civitai model ID
             
         Returns:
-            Optional[str]: The model description HTML or None if not found
+            Optional[Dict]: A dictionary containing model metadata or None if not found
         """
         try:
             session = await self.session
             headers = self._get_request_headers()
             url = f"{self.base_url}/models/{model_id}"
             
-            logger.info(f"Fetching model description from {url}")
+            logger.info(f"Fetching model metadata from {url}")
             
             async with session.get(url, headers=headers) as response:
                 if response.status != 200:
-                    logger.warning(f"Failed to fetch model description: Status {response.status}")
+                    logger.warning(f"Failed to fetch model metadata: Status {response.status}")
                     return None
                 
                 data = await response.json()
-                description = data.get('description')
                 
-                if description:
-                    logger.info(f"Successfully retrieved description for model {model_id}")
-                    return description
+                # Extract relevant metadata
+                metadata = {
+                    "description": data.get("description", ""),
+                    "tags": data.get("tags", [])
+                }
+                
+                if metadata["description"] or metadata["tags"]:
+                    logger.info(f"Successfully retrieved metadata for model {model_id}")
+                    return metadata
                 else:
-                    logger.warning(f"No description found for model {model_id}")
+                    logger.warning(f"No metadata found for model {model_id}")
                     return None
                 
         except Exception as e:
-            logger.error(f"Error fetching model description: {e}", exc_info=True)
+            logger.error(f"Error fetching model metadata: {e}", exc_info=True)
             return None
+
+    # Keep old method for backward compatibility, delegating to the new one
+    async def get_model_description(self, model_id: str) -> Optional[str]:
+        """Fetch the model description from Civitai API (Legacy method)"""
+        metadata = await self.get_model_metadata(model_id)
+        return metadata.get("description") if metadata else None
 
     async def close(self):
         """Close the session if it exists"""

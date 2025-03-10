@@ -700,3 +700,42 @@
 [data-theme="dark"] .model-description-content code {
     background: rgba(255, 255, 255, 0.05);
 }
+
+/* Model Tags styles */
+.model-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.model-tag {
+    background: var(--lora-surface);
+    border: 1px solid var(--lora-border);
+    border-radius: var(--border-radius-xs);
+    padding: 3px 8px;
+    font-size: 0.8em;
+    color: var(--lora-accent);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+}
+
+.model-tag i {
+    font-size: 0.85em;
+    opacity: 0.6;
+    color: var(--text-color);
+}
+
+.model-tag:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
+}
+
+.model-tag:hover i {
+    opacity: 1;
+    color: var(--lora-accent);
+}

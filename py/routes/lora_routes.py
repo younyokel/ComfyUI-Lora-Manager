@@ -30,6 +30,11 @@ class LoraRoutes:
             "folder": lora["folder"],
             "sha256": lora["sha256"],
             "file_path": lora["file_path"].replace(os.sep, "/"),
+            "size": lora["size"],
+            "tags": lora["tags"],
+            "modelDescription": lora["modelDescription"],
+            "usage_tips": lora["usage_tips"],
+            "notes": lora["notes"],
             "modified": lora["modified"],
             "from_civitai": lora.get("from_civitai", True),
             "civitai": self._filter_civitai_data(lora.get("civitai", {}))

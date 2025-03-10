@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from datetime import datetime
 import os
 from .model_utils import determine_base_model
@@ -17,8 +17,15 @@ class LoraMetadata:
     preview_url: str            # Preview image URL
     usage_tips: str = "{}"      # Usage tips for the model, json string
     notes: str = ""             # Additional notes
-    from_civitai: bool = True  # Whether the lora is from Civitai
+    from_civitai: bool = True   # Whether the lora is from Civitai
     civitai: Optional[Dict] = None  # Civitai API data if available
+    tags: List[str] = None      # Model tags
+    modelDescription: str = ""  # Full model description
+
+    def __post_init__(self):
+        # Initialize empty lists to avoid mutable default parameter issue
+        if self.tags is None:
+            self.tags = []
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'LoraMetadata':

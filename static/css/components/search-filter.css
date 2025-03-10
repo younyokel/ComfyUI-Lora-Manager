@@ -237,6 +237,44 @@
     border-color: var(--lora-accent);
 }
 
+/* Tag filter styles */
+.tag-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 60px;
+}
+
+.tag-count {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+[data-theme="dark"] .tag-count {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tag-filter.active .tag-count {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.tags-loading, .tags-error, .no-tags {
+    width: 100%;
+    padding: 8px;
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.tags-error {
+    color: var(--lora-error);
+}
+
 /* Filter actions */
 .filter-actions {
     display: flex;
@@ -276,4 +314,4 @@
         right: 20px;
         top: 140px;
     }
-} 
+}

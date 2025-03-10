@@ -18,6 +18,14 @@ export function createLoraCard(lora) {
     card.dataset.usage_tips = lora.usage_tips;
     card.dataset.notes = lora.notes;
     card.dataset.meta = JSON.stringify(lora.civitai || {});
+    
+    // Store tags and model description
+    if (lora.tags && Array.isArray(lora.tags)) {
+        card.dataset.tags = JSON.stringify(lora.tags);
+    }
+    if (lora.modelDescription) {
+        card.dataset.modelDescription = lora.modelDescription;
+    }
 
     // Apply selection state if in bulk mode and this card is in the selected set
     if (state.bulkMode && state.selectedLoras.has(lora.file_path)) {
@@ -86,7 +94,9 @@ export function createLoraCard(lora) {
                 base_model: card.dataset.base_model,
                 usage_tips: card.dataset.usage_tips,
                 notes: card.dataset.notes,
-                civitai: JSON.parse(card.dataset.meta || '{}')
+                civitai: JSON.parse(card.dataset.meta || '{}'),
+                tags: JSON.parse(card.dataset.tags || '[]'),
+                modelDescription: card.dataset.modelDescription || ''
             };
             showLoraModal(loraMeta);
         }

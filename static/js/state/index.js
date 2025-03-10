@@ -9,7 +9,8 @@ export const state = {
     previewVersions: new Map(),
     searchManager: null,
     filters: {
-        baseModel: []
+        baseModel: [],
+        tags: []  // Make sure tags are included in state
     },
     bulkMode: false,
     selectedLoras: new Set(),
