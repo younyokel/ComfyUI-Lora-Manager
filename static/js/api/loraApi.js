@@ -113,7 +113,8 @@ export async function fetchCivitai() {
     
     await state.loadingManager.showWithProgress(async (loading) => {
         try {
-            ws = new WebSocket(`ws://${window.location.host}/ws/fetch-progress`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
             
             const operationComplete = new Promise((resolve, reject) => {
                 ws.onmessage = (event) => {
