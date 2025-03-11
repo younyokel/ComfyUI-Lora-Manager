@@ -22,7 +22,12 @@ app.registerExtension({
             node.serialize_widgets = true;
 
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {                 
+            requestAnimationFrame(() => {        
+                node.addInput("trigger_words", 'string', {
+                    "default": "",
+                    "defaultInput": false, // Changed to make it optional
+                    "optional": true // Marking the input as optional
+                });
                 // Get the widget object directly from the returned object
                 const result = addTagsWidget(node, "toggle_trigger_words", {
                     defaultVal: []
@@ -39,11 +44,11 @@ app.registerExtension({
                 // Restore saved value if exists
                 if (node.widgets_values && node.widgets_values.length > 0) {
                     // 0 is group mode, 1 is input, 2 is tag widget, 3 is original message
-                    const savedValue = node.widgets_values[2];
+                    const savedValue = node.widgets_values[1];
                     if (savedValue) {
                         result.widget.value = savedValue;
                     }
-                    const originalMessage = node.widgets_values[3];
+                    const originalMessage = node.widgets_values[2];
                     if (originalMessage) {
                         hiddenWidget.value = originalMessage;
                     }
@@ -51,10 +56,12 @@ app.registerExtension({
 
                 const groupModeWidget = node.widgets[0];
                 groupModeWidget.callback = (value) => {
-                    if (node.widgets[3].value) {
-                        this.updateTagsBasedOnMode(node, node.widgets[3].value, value);
+                    if (node.widgets[2].value) {
+                        this.updateTagsBasedOnMode(node, node.widgets[2].value, value);
                     }
                 }
+
+                console.log("node ", node);
             });
         }
     },
@@ -68,7 +75,7 @@ app.registerExtension({
         }
         
         // Store the original message for mode switching
-        node.widgets[3].value = message;
+        node.widgets[2].value = message;
 
         if (node.tagWidget) {
             // Parse tags based on current group mode

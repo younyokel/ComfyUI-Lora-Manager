@@ -4,7 +4,7 @@ from .utils import FlexibleOptionalInputType, any_type
 
 class TriggerWordToggle:
     NAME = "TriggerWord Toggle (LoraManager)"
-    CATEGORY = "lora manager"
+    CATEGORY = "Lora Manager/utils"
     DESCRIPTION = "Toggle trigger words on/off"
     
     @classmethod
@@ -13,10 +13,7 @@ class TriggerWordToggle:
             "required": {
                 "group_mode": ("BOOLEAN", {"default": True}),
             },
-            "optional": {
-                **FlexibleOptionalInputType(any_type),
-                "trigger_words": ("STRING", {"default": "", "defaultInput": True}),
-            },
+            "optional": FlexibleOptionalInputType(any_type),
             "hidden": {
                 "id": "UNIQUE_ID",  # 会被 ComfyUI 自动替换为唯一ID
             },
@@ -26,7 +23,9 @@ class TriggerWordToggle:
     RETURN_NAMES = ("filtered_trigger_words",)
     FUNCTION = "process_trigger_words"
 
-    def process_trigger_words(self, id, trigger_words="", **kwargs):
+    def process_trigger_words(self, id, **kwargs):
+        print("trigger_words ", kwargs)
+        trigger_words = kwargs.get("trigger_words", "")
         # Send trigger words to frontend
         PromptServer.instance.send_sync("trigger_word_update", {
             "id": id,
