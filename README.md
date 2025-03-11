@@ -13,6 +13,14 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.7.36
+* Enhanced LoRA details view with model descriptions and tags display
+* Added tag filtering system for improved model discovery
+* Implemented editable trigger words functionality
+* Improved TriggerWord Toggle node with new group mode option for granular control
+* Added new Lora Stacker node with cross-compatibility support (works with efficiency nodes, ComfyRoll, easy-use, etc.)
+* Fixed several bugs
+
 ### v0.7.35-beta
 * Added base model filtering
 * Implemented bulk operations (copy syntax, move multiple LoRAs)

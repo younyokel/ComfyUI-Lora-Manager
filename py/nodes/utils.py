@@ -4,6 +4,7 @@ class AnyType(str):
   def __ne__(self, __value: object) -> bool:
     return False
 
+# Credit to Regis Gaughan, III (rgthree)
 class FlexibleOptionalInputType(dict):
   """A special class to make flexible nodes that pass data to our python handlers.
 
