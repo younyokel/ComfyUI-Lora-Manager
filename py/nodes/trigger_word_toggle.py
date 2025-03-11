@@ -10,7 +10,9 @@ class TriggerWordToggle:
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {},
+            "required": {
+                "group_mode": ("BOOLEAN", {"default": True}),
+            },
             "optional": {
                 **FlexibleOptionalInputType(any_type),
                 "trigger_words": ("STRING", {"default": "", "defaultInput": True}),

@@ -72,6 +72,7 @@ class LoraManagerLoader:
                 # Add trigger words to collection
                 all_trigger_words.extend(trigger_words)
         
-        trigger_words_text = ", ".join(all_trigger_words) if all_trigger_words else ""
+        # use ',, ' to separate trigger words for group mode
+        trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
 
         return (model, clip, trigger_words_text)
