@@ -5,8 +5,8 @@ from .py.nodes.lora_stacker import LoraStacker
 
 NODE_CLASS_MAPPINGS = {
     LoraManagerLoader.NAME: LoraManagerLoader,
-    TriggerWordToggle.NAME: TriggerWordToggle
-    # LoraStacker.NAME: LoraStacker
+    TriggerWordToggle.NAME: TriggerWordToggle,
+    LoraStacker.NAME: LoraStacker
 }
 
 WEB_DIRECTORY = "./web/comfyui"

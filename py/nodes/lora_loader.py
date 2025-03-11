@@ -23,10 +23,7 @@ class LoraManagerLoader:
                     "placeholder": "LoRA syntax input: <lora:name:strength>"
                 }),
             },
-            "optional": {
-                **FlexibleOptionalInputType(any_type),
-                "lora_stack": ("LORA_STACK", {"default": None}),
-            }
+            "optional": FlexibleOptionalInputType(any_type),
         }
 
     RETURN_TYPES = ("MODEL", "CLIP", IO.STRING)
@@ -58,12 +55,12 @@ class LoraManagerLoader:
         basename = os.path.basename(lora_path)
         return os.path.splitext(basename)[0]
     
-    def load_loras(self, model, clip, text, lora_stack=None, **kwargs):
-        print("load_loras kwargs: ", kwargs)
+    def load_loras(self, model, clip, text, **kwargs):
         """Loads multiple LoRAs based on the kwargs input and lora_stack."""
         loaded_loras = []
         all_trigger_words = []
         
+        lora_stack = kwargs.get('lora_stack', None)
         # First process lora_stack if available
         if lora_stack:
             for lora_path, model_strength, clip_strength in lora_stack:

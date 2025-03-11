@@ -20,10 +20,7 @@ class LoraStacker:
                     "placeholder": "LoRA syntax input: <lora:name:strength>"
                 }),
             },
-            "optional": {
-                **FlexibleOptionalInputType(any_type),
-                "lora_stack": ("LORA_STACK", {"default": None}),
-            }
+            "optional": FlexibleOptionalInputType(any_type),
         }
 
     RETURN_TYPES = ("LORA_STACK", IO.STRING)
@@ -55,13 +52,13 @@ class LoraStacker:
         basename = os.path.basename(lora_path)
         return os.path.splitext(basename)[0]
     
-    def stack_loras(self, text, lora_stack=None, **kwargs):
-        print("stack_loras kwargs: ", kwargs)
+    def stack_loras(self, text, **kwargs):
         """Stacks multiple LoRAs based on the kwargs input without loading them."""
         stack = []
         all_trigger_words = []
         
         # Process existing lora_stack if available
+        lora_stack = kwargs.get('lora_stack', None)
         if lora_stack:
             stack.extend(lora_stack)
             # Get trigger words from existing stack entries

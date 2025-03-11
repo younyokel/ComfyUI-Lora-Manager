@@ -20,14 +20,13 @@ app.registerExtension({
         if (node.comfyClass === "TriggerWord Toggle (LoraManager)") {
             // Enable widget serialization
             node.serialize_widgets = true;
+            
+            node.addInput("trigger_words", 'string', {
+                "shape": 7  // 7 is the shape of the optional input
+            });
 
             // Wait for node to be properly initialized
             requestAnimationFrame(() => {        
-                node.addInput("trigger_words", 'string', {
-                    "default": "",
-                    "defaultInput": false, // Changed to make it optional
-                    "optional": true // Marking the input as optional
-                });
                 // Get the widget object directly from the returned object
                 const result = addTagsWidget(node, "toggle_trigger_words", {
                     defaultVal: []
@@ -60,8 +59,6 @@ app.registerExtension({
                         this.updateTagsBasedOnMode(node, node.widgets[2].value, value);
                     }
                 }
-
-                console.log("node ", node);
             });
         }
     },

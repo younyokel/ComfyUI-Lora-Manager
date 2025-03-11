@@ -35,8 +35,12 @@ app.registerExtension({
             // Enable widget serialization
             node.serialize_widgets = true;
 
+            node.addInput("lora_stack", 'LORA_STACK', {
+                "shape": 7  // 7 is the shape of the optional input
+            });
+
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {               
+            requestAnimationFrame(() => {
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
