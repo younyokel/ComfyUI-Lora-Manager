@@ -13,6 +13,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.7.37
+* Added NSFW content control settings (blur mature content and SFW-only filter)
+* Implemented intelligent blur effects for previews and showcase media
+* Added manual content rating option through context menu
+* Enhanced user experience with configurable content visibility
+* Fixed various bugs and improved stability
+
 ### v0.7.36
 * Enhanced LoRA details view with model descriptions and tags display
 * Added tag filtering system for improved model discovery
