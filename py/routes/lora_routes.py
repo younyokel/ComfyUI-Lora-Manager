@@ -26,6 +26,7 @@ class LoraRoutes:
             "model_name": lora["model_name"],
             "file_name": lora["file_name"],   
             "preview_url": config.get_preview_static_url(lora["preview_url"]),
+            "preview_nsfw_level": lora.get("preview_nsfw_level", 0),
             "base_model": lora["base_model"],
             "folder": lora["folder"],
             "sha256": lora["sha256"],

@@ -200,6 +200,7 @@ class ApiRoutes:
             "model_name": lora["model_name"],
             "file_name": lora["file_name"],
             "preview_url": config.get_preview_static_url(lora["preview_url"]),
+            "preview_nsfw_level": lora.get("preview_nsfw_level", 0),
             "base_model": lora["base_model"],
             "folder": lora["folder"],
             "sha256": lora["sha256"],
@@ -375,6 +376,7 @@ class ApiRoutes:
                 
                 if await client.download_preview_image(first_preview['url'], preview_path):
                     local_metadata['preview_url'] = preview_path.replace(os.sep, '/')
+                    local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
 
         # Save updated metadata
         with open(metadata_path, 'w', encoding='utf-8') as f:
@@ -572,6 +574,8 @@ class ApiRoutes:
             # Validate and update settings
             if 'civitai_api_key' in data:
                 settings.set('civitai_api_key', data['civitai_api_key'])
+            if 'show_only_sfw' in data:
+                settings.set('show_only_sfw', data['show_only_sfw'])
             
             return web.json_response({'success': True})
         except Exception as e:

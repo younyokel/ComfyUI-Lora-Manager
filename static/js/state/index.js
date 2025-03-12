@@ -20,5 +20,33 @@ export const state = {
     },
     bulkMode: false,
     selectedLoras: new Set(),
-    loraMetadataCache: new Map()
+    loraMetadataCache: new Map(),
+    settings: {
+        blurMatureContent: true
+    }
 };
+
+// Initialize settings from localStorage if available
+export function initSettings() {
+    try {
+        const savedSettings = localStorage.getItem('loraManagerSettings');
+        if (savedSettings) {
+            const parsedSettings = JSON.parse(savedSettings);
+            state.settings = { ...state.settings, ...parsedSettings };
+        }
+    } catch (error) {
+        console.error('Error loading settings from localStorage:', error);
+    }
+}
+
+// Save settings to localStorage
+export function saveSettings() {
+    try {
+        localStorage.setItem('loraManagerSettings', JSON.stringify(state.settings));
+    } catch (error) {
+        console.error('Error saving settings to localStorage:', error);
+    }
+}
+
+// Initialize settings on load
+initSettings();

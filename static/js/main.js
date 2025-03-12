@@ -2,7 +2,7 @@ import { debounce } from './utils/debounce.js';
 import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
-import { state } from './state/index.js';
+import { state, initSettings } from './state/index.js';
 import { showLoraModal } from './components/LoraModal.js';
 import { toggleShowcase, scrollToTop } from './components/LoraModal.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
@@ -67,6 +67,9 @@ window.bulkManager = bulkManager;
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
+    // Ensure settings are initialized
+    initSettings();
+    
     state.loadingManager = new LoadingManager();
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
     updateService.initialize(); // Initialize updateService after modalManager

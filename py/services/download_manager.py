@@ -96,6 +96,7 @@ class DownloadManager:
                 preview_path = os.path.splitext(save_path)[0] + '.preview' + preview_ext
                 if await self.civitai_client.download_preview_image(images[0]['url'], preview_path):
                     metadata.preview_url = preview_path.replace(os.sep, '/')
+                    metadata.preview_nsfw_level = images[0].get('nsfwLevel', 0)
                     with open(metadata_path, 'w', encoding='utf-8') as f:
                         json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
 

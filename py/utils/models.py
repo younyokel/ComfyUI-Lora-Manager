@@ -15,6 +15,7 @@ class LoraMetadata:
     sha256: str                 # SHA256 hash of the file
     base_model: str             # Base model (SD1.5/SD2.1/SDXL/etc.)
     preview_url: str            # Preview image URL
+    preview_nsfw_level: int = 0 # NSFW level of the preview image
     usage_tips: str = "{}"      # Usage tips for the model, json string
     notes: str = ""             # Additional notes
     from_civitai: bool = True   # Whether the lora is from Civitai
@@ -49,6 +50,7 @@ class LoraMetadata:
             sha256=file_info['hashes'].get('SHA256', ''),
             base_model=base_model,
             preview_url=None,  # Will be updated after preview download
+            preview_nsfw_level=0, # Will be updated after preview download, it is decided by the nsfw level of the preview image
             from_civitai=True,
             civitai=version_info
         )

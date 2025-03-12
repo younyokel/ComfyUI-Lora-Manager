@@ -1,5 +1,6 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
+import { NSFW_LEVELS } from '../utils/constants.js';
 
 export function showLoraModal(lora) {
     const escapedWords = lora.civitai?.trainedWords?.length ? 
@@ -153,27 +154,67 @@ function renderShowcaseContent(images) {
                         Math.min(maxHeightPercent, aspectRatio)
                     );
                     
+                    // Check if image should be blurred
+                    const nsfwLevel = img.nsfwLevel !== undefined ? img.nsfwLevel : 0;
+                    const shouldBlur = state.settings.blurMatureContent && nsfwLevel > NSFW_LEVELS.PG13;
+                    
+                    // Determine NSFW warning text based on level
+                    let nsfwText = "Mature Content";
+                    if (nsfwLevel >= NSFW_LEVELS.XXX) {
+                        nsfwText = "XXX-rated Content";
+                    } else if (nsfwLevel >= NSFW_LEVELS.X) {
+                        nsfwText = "X-rated Content";
+                    } else if (nsfwLevel >= NSFW_LEVELS.R) {
+                        nsfwText = "R-rated Content";
+                    }
+                    
                     if (img.type === 'video') {
                         return `
-                            <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
+                            <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
+                                ${shouldBlur ? `
+                                    <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                ` : ''}
                                 <video controls autoplay muted loop crossorigin="anonymous" 
                                        referrerpolicy="no-referrer" data-src="${img.url}"
-                                       class="lazy">
+                                       class="lazy ${shouldBlur ? 'blurred' : ''}">
                                     <source data-src="${img.url}" type="video/mp4">
                                     Your browser does not support video playback
                                 </video>
+                                ${shouldBlur ? `
+                                    <div class="nsfw-overlay">
+                                        <div class="nsfw-warning">
+                                            <p>${nsfwText}</p>
+                                            <button class="show-content-btn">Show</button>
+                                        </div>
+                                    </div>
+                                ` : ''}
                             </div>
                         `;
                     }
                     return `
-                        <div class="media-wrapper" style="padding-bottom: ${heightPercent}%">
+                        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
+                            ${shouldBlur ? `
+                                <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            ` : ''}
                             <img data-src="${img.url}" 
-                                 alt="Preview" 
-                                 crossorigin="anonymous" 
-                                 referrerpolicy="no-referrer"
-                                 width="${img.width}"
-                                 height="${img.height}"
-                                 class="lazy"> 
+                                alt="Preview" 
+                                crossorigin="anonymous" 
+                                referrerpolicy="no-referrer"
+                                width="${img.width}"
+                                height="${img.height}"
+                                class="lazy ${shouldBlur ? 'blurred' : ''}"> 
+                            ${shouldBlur ? `
+                                <div class="nsfw-overlay">
+                                    <div class="nsfw-warning">
+                                        <p>${nsfwText}</p>
+                                        <button class="show-content-btn">Show</button>
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('')}
@@ -585,11 +626,65 @@ export function toggleShowcase(element) {
         indicator.textContent = `Scroll or click to hide examples`;
         icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
         initLazyLoading(carousel);
+        
+        // Initialize NSFW content blur toggle handlers
+        initNsfwBlurHandlers(carousel);
     } else {
         const count = carousel.querySelectorAll('.media-wrapper').length;
         indicator.textContent = `Scroll or click to show ${count} examples`;
         icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
     }
+}
+
+// New function to initialize blur toggle handlers for showcase images/videos
+function initNsfwBlurHandlers(container) {
+    // Handle toggle blur buttons
+    const toggleButtons = container.querySelectorAll('.toggle-blur-btn');
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const wrapper = btn.closest('.media-wrapper');
+            const media = wrapper.querySelector('img, video');
+            const isBlurred = media.classList.toggle('blurred');
+            const icon = btn.querySelector('i');
+            
+            // Update the icon based on blur state
+            if (isBlurred) {
+                icon.className = 'fas fa-eye';
+            } else {
+                icon.className = 'fas fa-eye-slash';
+            }
+            
+            // Toggle the overlay visibility
+            const overlay = wrapper.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = isBlurred ? 'flex' : 'none';
+            }
+        });
+    });
+    
+    // Handle "Show" buttons in overlays
+    const showButtons = container.querySelectorAll('.show-content-btn');
+    showButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const wrapper = btn.closest('.media-wrapper');
+            const media = wrapper.querySelector('img, video');
+            media.classList.remove('blurred');
+            
+            // Update the toggle button icon
+            const toggleBtn = wrapper.querySelector('.toggle-blur-btn');
+            if (toggleBtn) {
+                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+            }
+            
+            // Hide the overlay
+            const overlay = wrapper.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        });
+    });
 }
 
 // Add lazy loading initialization

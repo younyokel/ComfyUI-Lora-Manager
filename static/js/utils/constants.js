@@ -88,3 +88,12 @@ export const BASE_MODEL_CLASSES = {
     // Default
     [BASE_MODELS.UNKNOWN]: "unknown"
 };
+
+export const NSFW_LEVELS = {
+    PG: 1,
+    PG13: 2,
+    R: 4,
+    X: 8,
+    XXX: 16,
+    BLOCKED: 32
+};

@@ -2,6 +2,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showLoraModal } from './LoraModal.js';
 import { bulkManager } from '../managers/BulkManager.js';
+import { NSFW_LEVELS } from '../utils/constants.js';
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');
@@ -27,6 +28,16 @@ export function createLoraCard(lora) {
         card.dataset.modelDescription = lora.modelDescription;
     }
 
+    // Store NSFW level if available
+    const nsfwLevel = lora.preview_nsfw_level !== undefined ? lora.preview_nsfw_level : 0;
+    card.dataset.nsfwLevel = nsfwLevel;
+    
+    // Determine if the preview should be blurred based on NSFW level and user settings
+    const shouldBlur = state.settings.blurMatureContent && nsfwLevel > NSFW_LEVELS.PG13;
+    if (shouldBlur) {
+        card.classList.add('nsfw-content');
+    }
+
     // Apply selection state if in bulk mode and this card is in the selected set
     if (state.bulkMode && state.selectedLoras.has(lora.file_path)) {
         card.classList.add('selected');
@@ -36,8 +47,18 @@ export function createLoraCard(lora) {
     const previewUrl = lora.preview_url || '/loras_static/images/no-preview.png';
     const versionedPreviewUrl = version ? `${previewUrl}?t=${version}` : previewUrl;
 
+    // Determine NSFW warning text based on level
+    let nsfwText = "Mature Content";
+    if (nsfwLevel >= NSFW_LEVELS.XXX) {
+        nsfwText = "XXX-rated Content";
+    } else if (nsfwLevel >= NSFW_LEVELS.X) {
+        nsfwText = "X-rated Content";
+    } else if (nsfwLevel >= NSFW_LEVELS.R) {
+        nsfwText = "R-rated Content";
+    }
+
     card.innerHTML = `
-        <div class="card-preview">
+        <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
             ${previewUrl.endsWith('.mp4') ? 
                 `<video controls autoplay muted loop>
                     <source src="${versionedPreviewUrl}" type="video/mp4">
@@ -45,7 +66,11 @@ export function createLoraCard(lora) {
                 `<img src="${versionedPreviewUrl}" alt="${lora.model_name}">`
             }
             <div class="card-header">
-                <span class="base-model-label" title="${lora.base_model}">
+                ${shouldBlur ? 
+                  `<button class="toggle-blur-btn" title="Toggle blur">
+                      <i class="fas fa-eye"></i>
+                  </button>` : ''}
+                <span class="base-model-label ${shouldBlur ? 'with-toggle' : ''}" title="${lora.base_model}">
                     ${lora.base_model}
                 </span>
                 <div class="card-actions">
@@ -61,6 +86,14 @@ export function createLoraCard(lora) {
                     </i>
                 </div>
             </div>
+            ${shouldBlur ? `
+                <div class="nsfw-overlay">
+                    <div class="nsfw-warning">
+                        <p>${nsfwText}</p>
+                        <button class="show-content-btn">Show</button>
+                    </div>
+                </div>
+            ` : ''}
             <div class="card-footer">
                 <div class="model-info">
                     <span class="model-name">${lora.model_name}</span>
@@ -110,6 +143,52 @@ export function createLoraCard(lora) {
             showLoraModal(loraMeta);
         }
     });
+
+    // Toggle blur button functionality
+    const toggleBlurBtn = card.querySelector('.toggle-blur-btn');
+    if (toggleBlurBtn) {
+        toggleBlurBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const preview = card.querySelector('.card-preview');
+            const isBlurred = preview.classList.toggle('blurred');
+            const icon = toggleBlurBtn.querySelector('i');
+            
+            // Update the icon based on blur state
+            if (isBlurred) {
+                icon.className = 'fas fa-eye';
+            } else {
+                icon.className = 'fas fa-eye-slash';
+            }
+            
+            // Toggle the overlay visibility
+            const overlay = card.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = isBlurred ? 'flex' : 'none';
+            }
+        });
+    }
+
+    // Show content button functionality
+    const showContentBtn = card.querySelector('.show-content-btn');
+    if (showContentBtn) {
+        showContentBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const preview = card.querySelector('.card-preview');
+            preview.classList.remove('blurred');
+            
+            // Update the toggle button icon
+            const toggleBtn = card.querySelector('.toggle-blur-btn');
+            if (toggleBtn) {
+                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+            }
+            
+            // Hide the overlay
+            const overlay = card.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        });
+    }
 
     // Copy button click event
     card.querySelector('.fa-copy')?.addEventListener('click', async e => {
