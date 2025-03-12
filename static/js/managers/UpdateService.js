@@ -28,7 +28,10 @@ export class UpdateService {
         }
         
         // Perform update check if needed
-        this.checkForUpdates();
+        this.checkForUpdates().then(() => {
+            // Ensure badges are updated after checking
+            this.updateBadgeVisibility();
+        });
         
         // Set up event listener for update button
         const updateToggle = document.getElementById('updateToggleBtn');
@@ -43,7 +46,9 @@ export class UpdateService {
     async checkForUpdates() {
         // Check if we should perform an update check
         const now = Date.now();
-        if (now - this.lastCheckTime < this.updateCheckInterval) {
+        const forceCheck = this.lastCheckTime === 0;
+        
+        if (!forceCheck && now - this.lastCheckTime < this.updateCheckInterval) {
             // If we already have update info, just update the UI
             if (this.updateAvailable) {
                 this.updateBadgeVisibility();
@@ -61,8 +66,8 @@ export class UpdateService {
                 this.latestVersion = data.latest_version || "v0.0.0";
                 this.updateInfo = data;
                 
-                // Determine if update is available
-                this.updateAvailable = data.update_available;
+                // Explicitly set update availability based on version comparison
+                this.updateAvailable = this.isNewerVersion(this.latestVersion, this.currentVersion);
                 
                 // Update last check time
                 this.lastCheckTime = now;
@@ -83,6 +88,37 @@ export class UpdateService {
         }
     }
     
+    // Helper method to compare version strings
+    isNewerVersion(latestVersion, currentVersion) {
+        if (!latestVersion || !currentVersion) return false;
+        
+        // Remove 'v' prefix if present
+        const latest = latestVersion.replace(/^v/, '');
+        const current = currentVersion.replace(/^v/, '');
+        
+        // Split version strings into components
+        const latestParts = latest.split(/[-\.]/);
+        const currentParts = current.split(/[-\.]/);
+        
+        // Compare major, minor, patch versions
+        for (let i = 0; i < 3; i++) {
+            const latestNum = parseInt(latestParts[i] || '0', 10);
+            const currentNum = parseInt(currentParts[i] || '0', 10);
+            
+            if (latestNum > currentNum) return true;
+            if (latestNum < currentNum) return false;
+        }
+        
+        // If numeric versions are the same, check for beta/alpha status
+        const latestIsBeta = latest.includes('beta') || latest.includes('alpha');
+        const currentIsBeta = current.includes('beta') || current.includes('alpha');
+        
+        // Release version is newer than beta/alpha
+        if (!latestIsBeta && currentIsBeta) return true;
+        
+        return false;
+    }
+    
     updateBadgeVisibility() {
         const updateToggle = document.querySelector('.update-toggle');
         const updateBadge = document.querySelector('.update-toggle .update-badge');
@@ -94,14 +130,17 @@ export class UpdateService {
                 : "Check Updates";
         }
         
+        // Force updating badges visibility based on current state
+        const shouldShow = this.updateNotificationsEnabled && this.updateAvailable;
+        
         if (updateBadge) {
-            const shouldShow = this.updateNotificationsEnabled && this.updateAvailable;
             updateBadge.classList.toggle('hidden', !shouldShow);
+            console.log("Update badge visibility:", !shouldShow ? "hidden" : "visible");
         }
         
         if (cornerBadge) {
-            const shouldShow = this.updateNotificationsEnabled && this.updateAvailable;
             cornerBadge.classList.toggle('hidden', !shouldShow);
+            console.log("Corner badge visibility:", !shouldShow ? "hidden" : "visible");
         }
     }
     
@@ -194,6 +233,8 @@ export class UpdateService {
     async manualCheckForUpdates() {
         this.lastCheckTime = 0; // Reset last check time to force check
         await this.checkForUpdates();
+        // Ensure badge visibility is updated after manual check
+        this.updateBadgeVisibility();
     }
 }
 

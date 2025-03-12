@@ -25,7 +25,6 @@ class TriggerWordToggle:
     FUNCTION = "process_trigger_words"
 
     def process_trigger_words(self, id, group_mode, **kwargs):
-        print("process_trigger_words kwargs: ", kwargs)
         trigger_words = kwargs.get("trigger_words", "")
         # Send trigger words to frontend
         PromptServer.instance.send_sync("trigger_word_update", {

@@ -177,8 +177,6 @@ class CivitaiClient:
             headers = self._get_request_headers()
             url = f"{self.base_url}/models/{model_id}"
             
-            logger.info(f"Fetching model metadata from {url}")
-            
             async with session.get(url, headers=headers) as response:
                 if response.status != 200:
                     logger.warning(f"Failed to fetch model metadata: Status {response.status}")
@@ -193,7 +191,6 @@ class CivitaiClient:
                 }
                 
                 if metadata["description"] or metadata["tags"]:
-                    logger.info(f"Successfully retrieved metadata for model {model_id}")
                     return metadata
                 else:
                     logger.warning(f"No metadata found for model {model_id}")
