@@ -51,6 +51,16 @@ class DownloadManager:
             # 5. 准备元数据
             metadata = LoraMetadata.from_civitai_info(version_info, file_info, save_path)
             
+            # 5.1 获取并更新模型标签和描述信息
+            model_id = version_info.get('modelId')
+            if model_id:
+                model_metadata, _ = await self.civitai_client.get_model_metadata(str(model_id))
+                if model_metadata:
+                    if model_metadata.get("tags"):
+                        metadata.tags = model_metadata.get("tags", [])
+                    if model_metadata.get("description"):
+                        metadata.modelDescription = model_metadata.get("description", "")
+            
             # 6. 开始下载流程
             result = await self._execute_download(
                 download_url=download_url,

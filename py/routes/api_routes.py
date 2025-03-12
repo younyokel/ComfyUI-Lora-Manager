@@ -356,7 +356,7 @@ class ApiRoutes:
             # Fetch additional model metadata (description and tags) if we have model ID
             model_id = civitai_metadata['modelId']
             if model_id:
-                model_metadata = await client.get_model_metadata(str(model_id))
+                model_metadata, _ = await client.get_model_metadata(str(model_id))
                 if model_metadata:
                     local_metadata['modelDescription'] = model_metadata.get('description', '')
                     local_metadata['tags'] = model_metadata.get('tags', [])
@@ -756,7 +756,7 @@ class ApiRoutes:
             # If description is not in metadata, fetch from CivitAI
             if not description:
                 logger.info(f"Fetching model metadata for model ID: {model_id}")
-                model_metadata = await self.civitai_client.get_model_metadata(model_id)
+                model_metadata, _ = await self.civitai_client.get_model_metadata(model_id)
                 
                 if model_metadata:
                     description = model_metadata.get('description')
