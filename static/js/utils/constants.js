@@ -90,6 +90,7 @@ export const BASE_MODEL_CLASSES = {
 };
 
 export const NSFW_LEVELS = {
+    UNKNOWN: 0,
     PG: 1,
     PG13: 2,
     R: 4,

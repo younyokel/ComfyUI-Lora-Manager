@@ -1,6 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { state, saveSettings } from '../state/index.js';
+import { resetAndReload } from '../api/loraApi.js';
 
 export class SettingsManager {
     constructor() {
@@ -89,6 +90,9 @@ export class SettingsManager {
             
             // Apply frontend settings immediately
             this.applyFrontendSettings();
+            
+            // Reload the loras without updating folders
+            await resetAndReload(false);
         } catch (error) {
             showToast('Failed to save settings: ' + error.message, 'error');
         }

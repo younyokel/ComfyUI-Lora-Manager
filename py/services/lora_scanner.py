@@ -11,6 +11,8 @@ from ..utils.file_utils import load_metadata, get_file_info
 from .lora_cache import LoraCache
 from difflib import SequenceMatcher
 from .lora_hash_index import LoraHashIndex
+from .settings_manager import settings
+from ..utils.constants import NSFW_LEVELS
 
 logger = logging.getLogger(__name__)
 
@@ -195,6 +197,13 @@ class LoraScanner:
 
         # Get the base data set
         filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
+        
+        # Apply SFW filtering if enabled
+        if settings.get('show_only_sfw', False):
+            filtered_data = [
+                item for item in filtered_data
+                if not item.get('preview_nsfw_level') or item.get('preview_nsfw_level') < NSFW_LEVELS['R']
+            ]
         
         # Apply folder filtering
         if folder is not None:
