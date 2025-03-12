@@ -163,14 +163,16 @@ class CivitaiClient:
             logger.error(f"Error fetching model version info: {e}")
             return None
 
-    async def get_model_metadata(self, model_id: str) -> Optional[Dict]:
+    async def get_model_metadata(self, model_id: str) -> Tuple[Optional[Dict], int]:
         """Fetch model metadata (description and tags) from Civitai API
         
         Args:
             model_id: The Civitai model ID
             
         Returns:
-            Optional[Dict]: A dictionary containing model metadata or None if not found
+            Tuple[Optional[Dict], int]: A tuple containing:
+                - A dictionary with model metadata or None if not found
+                - The HTTP status code from the request
         """
         try:
             session = await self.session
@@ -178,9 +180,11 @@ class CivitaiClient:
             url = f"{self.base_url}/models/{model_id}"
             
             async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    logger.warning(f"Failed to fetch model metadata: Status {response.status}")
-                    return None
+                status_code = response.status
+                
+                if status_code != 200:
+                    logger.warning(f"Failed to fetch model metadata: Status {status_code}")
+                    return None, status_code
                 
                 data = await response.json()
                 
@@ -191,19 +195,19 @@ class CivitaiClient:
                 }
                 
                 if metadata["description"] or metadata["tags"]:
-                    return metadata
+                    return metadata, status_code
                 else:
                     logger.warning(f"No metadata found for model {model_id}")
-                    return None
+                    return None, status_code
                 
         except Exception as e:
             logger.error(f"Error fetching model metadata: {e}", exc_info=True)
-            return None
+            return None, 0
 
     # Keep old method for backward compatibility, delegating to the new one
     async def get_model_description(self, model_id: str) -> Optional[str]:
         """Fetch the model description from Civitai API (Legacy method)"""
-        metadata = await self.get_model_metadata(model_id)
+        metadata, _ = await self.get_model_metadata(model_id)
         return metadata.get("description") if metadata else None
 
     async def close(self):

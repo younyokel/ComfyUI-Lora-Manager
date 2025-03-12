@@ -384,6 +384,11 @@ class LoraScanner:
             lora_data: Lora metadata dictionary to update
         """
         try:
+            # Skip if already marked as deleted on Civitai
+            if lora_data.get('civitai_deleted', False):
+                logger.debug(f"Skipping metadata fetch for {file_path}: marked as deleted on Civitai")
+                return
+
             # Check if we need to fetch additional metadata from Civitai
             needs_metadata_update = False
             model_id = None
@@ -408,10 +413,24 @@ class LoraScanner:
                 logger.info(f"Fetching missing metadata for {file_path} with model ID {model_id}")
                 from ..services.civitai_client import CivitaiClient
                 client = CivitaiClient()
-                model_metadata = await client.get_model_metadata(model_id)
+                
+                # Get metadata and status code
+                model_metadata, status_code = await client.get_model_metadata(model_id)
                 await client.close()
                 
-                if (model_metadata):
+                # Handle 404 status (model deleted from Civitai)
+                if status_code == 404:
+                    logger.warning(f"Model {model_id} appears to be deleted from Civitai (404 response)")
+                    # Mark as deleted to avoid future API calls
+                    lora_data['civitai_deleted'] = True
+                    
+                    # Save the updated metadata back to file
+                    metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                    with open(metadata_path, 'w', encoding='utf-8') as f:
+                        json.dump(lora_data, f, indent=2, ensure_ascii=False)
+                
+                # Process valid metadata if available
+                elif model_metadata:
                     logger.info(f"Updating metadata for {file_path} with model ID {model_id}")
                     
                     # Update tags if they were missing
