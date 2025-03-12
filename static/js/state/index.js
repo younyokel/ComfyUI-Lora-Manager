@@ -22,7 +22,8 @@ export const state = {
     selectedLoras: new Set(),
     loraMetadataCache: new Map(),
     settings: {
-        blurMatureContent: true
+        blurMatureContent: true,
+        show_only_sfw: false
     }
 };
 

@@ -133,14 +133,46 @@ export function showLoraModal(lora) {
 function renderShowcaseContent(images) {
     if (!images?.length) return '<div class="no-examples">No example images available</div>';
     
+    // Filter images based on SFW setting
+    const showOnlySFW = state.settings.show_only_sfw;
+    let filteredImages = images;
+    let hiddenCount = 0;
+    
+    if (showOnlySFW) {
+        filteredImages = images.filter(img => {
+            const nsfwLevel = img.nsfwLevel !== undefined ? img.nsfwLevel : 0;
+            const isSfw = nsfwLevel < NSFW_LEVELS.R;
+            if (!isSfw) hiddenCount++;
+            return isSfw;
+        });
+    }
+    
+    // Show message if no images are available after filtering
+    if (filteredImages.length === 0) {
+        return `
+            <div class="no-examples">
+                <p>All example images are filtered due to NSFW content settings</p>
+                <p class="nsfw-filter-info">Your settings are currently set to show only safe-for-work content</p>
+                <p>You can change this in Settings <i class="fas fa-cog"></i></p>
+            </div>
+        `;
+    }
+    
+    // Show hidden content notification if applicable
+    const hiddenNotification = hiddenCount > 0 ? 
+        `<div class="nsfw-filter-notification">
+            <i class="fas fa-eye-slash"></i> ${hiddenCount} ${hiddenCount === 1 ? 'image' : 'images'} hidden due to SFW-only setting
+        </div>` : '';
+    
     return `
         <div class="scroll-indicator" onclick="toggleShowcase(this)">
             <i class="fas fa-chevron-down"></i>
-            <span>Scroll or click to show ${images.length} examples</span>
+            <span>Scroll or click to show ${filteredImages.length} examples</span>
         </div>
         <div class="carousel collapsed">
+            ${hiddenNotification}
             <div class="carousel-container">
-                ${images.map(img => {
+                ${filteredImages.map(img => {
                     // 计算适当的展示高度：
                     // 1. 保持原始宽高比
                     // 2. 限制最大高度为视窗高度的60%

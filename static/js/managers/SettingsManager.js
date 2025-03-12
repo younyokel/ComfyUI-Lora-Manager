@@ -44,6 +44,12 @@ export class SettingsManager {
             blurMatureContentCheckbox.checked = state.settings.blurMatureContent;
         }
         
+        const showOnlySFWCheckbox = document.getElementById('showOnlySFW');
+        if (showOnlySFWCheckbox) {
+            // Sync with state (backend will set this via template)
+            state.settings.show_only_sfw = showOnlySFWCheckbox.checked;
+        }
+        
         // Backend settings are loaded from the template directly
     }
 
@@ -60,13 +66,14 @@ export class SettingsManager {
         // Get frontend settings from UI
         const blurMatureContent = document.getElementById('blurMatureContent').checked;
         
-        // Update frontend state and save to localStorage
-        state.settings.blurMatureContent = blurMatureContent;
-        saveSettings();
-        
         // Get backend settings
         const apiKey = document.getElementById('civitaiApiKey').value;
         const showOnlySFW = document.getElementById('showOnlySFW').checked;
+        
+        // Update frontend state and save to localStorage
+        state.settings.blurMatureContent = blurMatureContent;
+        state.settings.show_only_sfw = showOnlySFW;
+        saveSettings();
         
         try {
             // Save backend settings via API
@@ -108,6 +115,9 @@ export class SettingsManager {
                 img.classList.remove('nsfw-blur');
             }
         });
+        
+        // For show_only_sfw, there's no immediate action needed as it affects content loading
+        // The setting will take effect on next reload
     }
 }
 
