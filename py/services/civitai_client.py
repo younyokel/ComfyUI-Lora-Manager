@@ -190,7 +190,7 @@ class CivitaiClient:
                 
                 # Extract relevant metadata
                 metadata = {
-                    "description": data.get("description", ""),
+                    "description": data.get("description") or "No model description available",
                     "tags": data.get("tags", [])
                 }
                 

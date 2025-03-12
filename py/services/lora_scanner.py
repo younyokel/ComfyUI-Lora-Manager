@@ -410,7 +410,7 @@ class LoraScanner:
             
             # Fetch missing metadata if needed
             if needs_metadata_update and model_id:
-                logger.info(f"Fetching missing metadata for {file_path} with model ID {model_id}")
+                logger.debug(f"Fetching missing metadata for {file_path} with model ID {model_id}")
                 from ..services.civitai_client import CivitaiClient
                 client = CivitaiClient()
                 
@@ -431,7 +431,7 @@ class LoraScanner:
                 
                 # Process valid metadata if available
                 elif model_metadata:
-                    logger.info(f"Updating metadata for {file_path} with model ID {model_id}")
+                    logger.debug(f"Updating metadata for {file_path} with model ID {model_id}")
                     
                     # Update tags if they were missing
                     if model_metadata.get('tags') and (not lora_data.get('tags') or len(lora_data.get('tags', [])) == 0):
