@@ -1,6 +1,8 @@
-/* 强制显示滚动条，防止页面跳动 */
-html {
-    overflow-y: scroll;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden; /* Disable default scrolling */
 }
 
 /* 针对Firefox */
@@ -16,6 +18,7 @@ html {
 
 ::-webkit-scrollbar-track {
     background: transparent;
+    margin-top: 0;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -43,6 +46,7 @@ html {
     
     /* Z-index Scale */
     --z-base: 10;
+    --z-header: 100;
     --z-modal: 1000;
     --z-overlay: 2000;
 
@@ -67,8 +71,10 @@ html {
 }
 
 body {
-    margin: 0;
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg-color);
     color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    padding-top: 0; /* Remove the padding-top */
 }

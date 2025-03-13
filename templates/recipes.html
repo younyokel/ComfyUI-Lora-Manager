@@ -104,47 +104,26 @@
             background: var(--lora-surface-alt);
             border-radius: var(--border-radius-base);
         }
-        
-        .recipes-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .recipes-controls {
-            display: flex;
-            gap: 0.5rem;
-        }
     </style>
 </head>
 <body>
     {% include 'components/header.html' %}
-    <!-- Reuse corner controls component -->
-    {% include 'components/corner_controls.html' %}
-    
-    <!-- Reuse modals, loading, context menu -->
-    {% include 'components/modals.html' %}
-    {% include 'components/loading.html' %}
-    {% include 'components/context_menu.html' %}
 
-    <div class="container">
-        {% if is_initializing %}
-        <div class="initialization-notice">
-            <div class="notice-content">
-                <div class="loading-spinner"></div>
-                <h2>Initializing Recipe Manager</h2>
-                <p>Scanning and building recipe cache. This may take a few moments...</p>
-            </div>
-        </div>
-        {% else %}
-            <div class="recipes-header">
-                <h1>LoRA Recipes</h1>
-                <div class="recipes-controls">
-                    <a href="/loras" class="button"><i class="fas fa-arrow-left"></i> Back to LoRAs</a>
+    <div class="page-content">
+        {% include 'components/modals.html' %}
+        {% include 'components/loading.html' %}
+        {% include 'components/context_menu.html' %}
+
+        <div class="container">
+            {% if is_initializing %}
+            <div class="initialization-notice">
+                <div class="notice-content">
+                    <div class="loading-spinner"></div>
+                    <h2>Initializing Recipe Manager</h2>
+                    <p>Scanning and building recipe cache. This may take a few moments...</p>
                 </div>
             </div>
-            
+            {% else %}           
             <!-- Recipe controls - can reuse structure from loras controls -->
             <div class="controls">
                 <!-- Recipe tags container - similar to folder tags -->
@@ -207,7 +186,8 @@
                     </div>
                 {% endif %}
             </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     <script type="module" src="/loras_static/js/recipes.js"></script>

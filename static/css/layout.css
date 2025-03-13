@@ -1,7 +1,17 @@
+.page-content {
+    height: calc(100vh - 48px); /* Full height minus header */
+    margin-top: 48px; /* Push down below header */
+    overflow-y: auto; /* Enable scrolling here */
+    width: 100%;
+    position: relative;
+}
+
 .container {
     max-width: 1400px;
     margin: 20px auto;
     padding: 0 15px;
+    position: relative;
+    z-index: var(--z-base);
 }
 
 .controls {
@@ -19,109 +29,9 @@
     width: 100%;
 }
 
-/* Search and filter styles moved to components/search-filter.css */
-
-/* Update corner-controls for collapsible behavior */
-.corner-controls {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: var(--z-overlay);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: all 0.3s ease;
-}
-
-.corner-controls-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 2;
-    margin-bottom: 10px;
-}
-
-.corner-controls-toggle:hover {
-    background: var(--lora-accent);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.corner-controls-items {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    opacity: 0;
-    transform: translateY(-10px) scale(0.9);
-    transition: all 0.3s ease;
-    pointer-events: none;
-}
-
-/* Expanded state */
-.corner-controls.expanded .corner-controls-items {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: all;
-}
-
-/* Expanded state - only expand on hover if not already expanded by click */
-.corner-controls:hover:not(.expanded) .corner-controls-items {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: all;
-}
-
 /* Ensure hidden class works properly */
 .hidden {
     display: none !important;
-}
-
-/* Update toggle button styles */
-.update-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color); /* Changed from var(--lora-accent) to match other toggles */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.update-toggle:hover {
-    background: var(--lora-accent);
-    color: white;
-    transform: translateY(-2px);
-}
-
-/* Update badge styles */
-.update-badge {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    background-color: var(--lora-error);
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px var(--card-bg);
-}
-
-/* Badge on corner toggle */
-.corner-badge {
-    top: 0;
-    right: 0;
 }
 
 .folder-tags-container {
@@ -263,81 +173,6 @@
     transform: translateY(-2px);
 }
 
-.theme-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.theme-toggle:hover {
-    background: var(--lora-accent);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.support-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--lora-error);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.support-toggle:hover {
-    background: var(--lora-error);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.support-toggle i {
-    font-size: 1.1em;
-    position: relative;
-    top: 1px;
-    left: -0.5px;
-}
-
-.theme-toggle img {
-    width: 20px;
-    height: 20px;
-}
-
-.theme-toggle .theme-icon {
-    width: 20px;
-    height: 20px;
-    position: absolute;
-    transition: opacity 0.2s ease;
-}
-
-.theme-toggle .light-icon {
-    opacity: 0;
-}
-
-.theme-toggle .dark-icon {
-    opacity: 1;
-}
-
-[data-theme="light"] .theme-toggle .light-icon {
-    opacity: 1;
-}
-
-[data-theme="light"] .theme-toggle .dark-icon {
-    opacity: 0;
-}
-
 @media (max-width: 768px) {
     .actions {
         flex-wrap: wrap;
@@ -367,19 +202,6 @@
     .folder-tags.collapsed + .toggle-folders-btn {
         position: relative;
         transform: none;
-    }
-
-    .corner-controls {
-        top: 10px;
-        right: 10px;
-    }
-    
-    .corner-controls-items {
-        display: none;
-    }
-    
-    .corner-controls.expanded .corner-controls-items {
-        display: flex;
     }
 
     .back-to-top {

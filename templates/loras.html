@@ -47,54 +47,34 @@
 </head>
 <body>
     {% include 'components/header.html' %}
-    <div class="corner-controls">
-        <div class="corner-controls-toggle">
-            <i class="fas fa-ellipsis-v"></i>
-            <span class="update-badge corner-badge hidden"></span>
-        </div>
-        <div class="corner-controls-items">
-            <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                <img src="/loras_static/images/theme-toggle-light.svg" alt="Theme" class="theme-icon light-icon">
-                <img src="/loras_static/images/theme-toggle-dark.svg" alt="Theme" class="theme-icon dark-icon">
-            </div>
-            <div class="update-toggle" id="updateToggleBtn" title="Check Updates">
-                <i class="fas fa-bell"></i>
-                <span class="update-badge hidden"></span>
-            </div>
-            <div class="support-toggle" id="supportToggleBtn" title="Support">
-                <i class="fas fa-heart"></i>
-            </div>
-            <div class="settings-toggle" onclick="settingsManager.toggleSettings()" title="Settings">
-                <i class="fas fa-cog"></i>
-            </div>
-        </div>
-    </div>
-    
-    {% include 'components/modals.html' %}
-    {% include 'components/loading.html' %}
-    {% include 'components/context_menu.html' %}
 
-    <div class="container">
-        {% if is_initializing %}
-        <div class="initialization-notice">
-            <div class="notice-content">
-                <div class="loading-spinner"></div>
-                <h2>Initializing LoRA Manager</h2>
-                <p>Scanning and building LoRA cache. This may take a few minutes...</p>
-            </div>
-        </div>
-        {% else %}
-            {% include 'components/controls.html' %}
-            <!-- Lora卡片容器 -->
-            <div class="card-grid" id="loraGrid">
-                <!-- Cards will be dynamically inserted here -->
-            </div>
-            <!-- Bulk operations panel will be inserted here by JavaScript -->
-        {% endif %}
-    </div>
+    <div class="page-content">
+        {% include 'components/modals.html' %}
+        {% include 'components/loading.html' %}
+        {% include 'components/context_menu.html' %}
 
-    <!-- Add after the container div -->
-    <div class="bulk-mode-overlay"></div>
+        <div class="container">
+            {% if is_initializing %}
+            <div class="initialization-notice">
+                <div class="notice-content">
+                    <div class="loading-spinner"></div>
+                    <h2>Initializing LoRA Manager</h2>
+                    <p>Scanning and building LoRA cache. This may take a few minutes...</p>
+                </div>
+            </div>
+            {% else %}
+                {% include 'components/controls.html' %}
+                <!-- Lora卡片容器 -->
+                <div class="card-grid" id="loraGrid">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+                <!-- Bulk operations panel will be inserted here by JavaScript -->
+            {% endif %}
+        </div>
+
+        <!-- Add after the container div -->
+        <div class="bulk-mode-overlay"></div>
+    </div>
 
     <script type="module" src="/loras_static/js/main.js"></script>
     {% if is_initializing %}
