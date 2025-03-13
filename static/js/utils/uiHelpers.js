@@ -98,16 +98,57 @@ export function openCivitai(modelName) {
     }
 }
 
+/**
+ * Dynamically positions the search options panel and filter panel
+ * based on the current layout and folder tags container height
+ */
+export function updatePanelPositions() {
+    const searchOptionsPanel = document.getElementById('searchOptionsPanel');
+    const filterPanel = document.getElementById('filterPanel');
+    
+    if (!searchOptionsPanel || !filterPanel) return;
+    
+    // Get the controls container
+    const controls = document.querySelector('.controls');
+    if (!controls) return;
+    
+    // Calculate the position based on the bottom of the controls container
+    const controlsRect = controls.getBoundingClientRect();
+    const topPosition = controlsRect.bottom + 10; // Add 10px padding
+    
+    // Set the positions
+    searchOptionsPanel.style.top = `${topPosition}px`;
+    filterPanel.style.top = `${topPosition}px`;
+}
+
+// Update the toggleFolderTags function
 export function toggleFolderTags() {
     const folderTags = document.querySelector('.folder-tags');
-    const btn = document.querySelector('.toggle-folders-btn');
-    const isCollapsed = folderTags.classList.toggle('collapsed');
+    const toggleBtn = document.querySelector('.toggle-folders-btn i');
     
-    // 更新按钮提示文本
-    btn.title = isCollapsed ? 'Expand folder tags' : 'Collapse folder tags';
-    
-    // 保存状态到 localStorage
-    localStorage.setItem('folderTagsCollapsed', isCollapsed);
+    if (folderTags) {
+        folderTags.classList.toggle('collapsed');
+        
+        if (folderTags.classList.contains('collapsed')) {
+            toggleBtn.className = 'fas fa-chevron-down';
+            toggleBtn.parentElement.title = 'Expand folder tags';
+            localStorage.setItem('folderTagsCollapsed', 'true');
+        } else {
+            toggleBtn.className = 'fas fa-chevron-up';
+            toggleBtn.parentElement.title = 'Collapse folder tags';
+            localStorage.setItem('folderTagsCollapsed', 'false');
+        }
+        
+        // Update panel positions after toggling
+        // Use a small delay to ensure the DOM has updated
+        setTimeout(() => {
+            if (window.searchManager && typeof window.searchManager.updatePanelPositions === 'function') {
+                window.searchManager.updatePanelPositions();
+            } else if (typeof updatePanelPositions === 'function') {
+                updatePanelPositions();
+            }
+        }, 50);
+    }
 }
 
 // Add this to your existing initialization code
@@ -128,10 +169,13 @@ export function initBackToTop() {
     button.title = 'Back to top';
     document.body.appendChild(button);
 
+    // Get the scrollable container
+    const scrollContainer = document.querySelector('.page-content');
+
     // Show/hide button based on scroll position
     const toggleBackToTop = () => {
-        const scrollThreshold = window.innerHeight * 0.75;
-        if (window.scrollY > scrollThreshold) {
+        const scrollThreshold = window.innerHeight * 0.3;
+        if (scrollContainer.scrollTop > scrollThreshold) {
             button.classList.add('visible');
         } else {
             button.classList.remove('visible');
@@ -140,14 +184,14 @@ export function initBackToTop() {
 
     // Smooth scroll to top
     button.addEventListener('click', () => {
-        window.scrollTo({
+        scrollContainer.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
     });
 
-    // Listen for scroll events
-    window.addEventListener('scroll', toggleBackToTop);
+    // Listen for scroll events on the scrollable container
+    scrollContainer.addEventListener('scroll', toggleBackToTop);
     
     // Initial check
     toggleBackToTop();

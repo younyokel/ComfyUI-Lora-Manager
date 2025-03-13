@@ -13,6 +13,7 @@ export class FilterManager {
         this.filterPanel = document.getElementById('filterPanel');
         this.filterButton = document.getElementById('filterButton');
         this.activeFiltersCount = document.getElementById('activeFiltersCount');
+        this.tagsLoaded = false;
         
         this.initialize();
     }
@@ -140,20 +141,35 @@ export class FilterManager {
         });
     }
     
-    toggleFilterPanel() {
-        const wasHidden = this.filterPanel.classList.contains('hidden');
-        
-        this.filterPanel.classList.toggle('hidden');
-        
-        // If the panel is being opened, load the top tags and update selections
-        if (wasHidden) {
-            this.loadTopTags();
-            this.updateTagSelections();
+    toggleFilterPanel() {       
+        if (this.filterPanel) {
+            const isHidden = this.filterPanel.classList.contains('hidden');
+            
+            if (isHidden) {
+                // Update panel positions before showing
+                if (window.searchManager && typeof window.searchManager.updatePanelPositions === 'function') {
+                    window.searchManager.updatePanelPositions();
+                } else if (typeof updatePanelPositions === 'function') {
+                    updatePanelPositions();
+                }
+                
+                this.filterPanel.classList.remove('hidden');
+                this.filterButton.classList.add('active');
+                
+                // Load tags if they haven't been loaded yet
+                if (!this.tagsLoaded) {
+                    this.loadTopTags();
+                    this.tagsLoaded = true;
+                }
+            } else {
+                this.closeFilterPanel();
+            }
         }
     }
     
     closeFilterPanel() {
         this.filterPanel.classList.add('hidden');
+        this.filterButton.classList.remove('active');
     }
     
     updateTagSelections() {

@@ -30,6 +30,34 @@ export class SearchManager {
 
         // Initialize search options
         this.initSearchOptions();
+        
+        // Add global click handler to close panels when clicking outside
+        document.addEventListener('click', (e) => {
+            // Close search options panel when clicking outside
+            if (this.searchOptionsPanel && 
+                !this.searchOptionsPanel.contains(e.target) && 
+                e.target !== this.searchOptionsToggle &&
+                !this.searchOptionsToggle.contains(e.target)) {
+                this.closeSearchOptionsPanel();
+            }
+            
+            // Close filter panel when clicking outside (if filterManager exists)
+            const filterPanel = document.getElementById('filterPanel');
+            const filterButton = document.getElementById('filterButton');
+            if (filterPanel && 
+                !filterPanel.contains(e.target) && 
+                e.target !== filterButton &&
+                !filterButton.contains(e.target) &&
+                window.filterManager) {
+                window.filterManager.closeFilterPanel();
+            }
+        });
+
+        // Initialize panel positions
+        this.updatePanelPositions();
+        
+        // Add resize listener
+        window.addEventListener('resize', this.updatePanelPositions.bind(this));
     }
 
     initSearchOptions() {
@@ -103,16 +131,6 @@ export class SearchManager {
         
         // Ensure at least one search option is selected
         this.validateSearchOptions();
-        
-        // Close panel when clicking outside
-        document.addEventListener('click', (e) => {
-            if (this.searchOptionsPanel && 
-                !this.searchOptionsPanel.contains(e.target) && 
-                e.target !== this.searchOptionsToggle &&
-                !this.searchOptionsToggle.contains(e.target)) {
-                this.closeSearchOptionsPanel();
-            }
-        });
     }
     
     // Add method to validate search options
@@ -137,6 +155,8 @@ export class SearchManager {
         if (this.searchOptionsPanel) {
             const isHidden = this.searchOptionsPanel.classList.contains('hidden');
             if (isHidden) {
+                // Update position before showing
+                this.updatePanelPositions();
                 this.searchOptionsPanel.classList.remove('hidden');
                 this.searchOptionsToggle.classList.add('active');
             } else {
@@ -209,6 +229,9 @@ export class SearchManager {
             this.isSearching = true;
             state.loadingManager.showSimpleLoading('Searching...');
 
+            // Store current scroll position
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            
             state.currentPage = 1;
             state.hasMore = true;
 
@@ -250,6 +273,14 @@ export class SearchManager {
                     state.hasMore = state.currentPage < data.total_pages;
                     state.currentPage++;
                 }
+                
+                // Restore scroll position after content is loaded
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: scrollPosition,
+                        behavior: 'instant' // Use 'instant' to prevent animation
+                    });
+                }, 10);
             }
         } catch (error) {
             console.error('Search error:', error);
@@ -258,5 +289,24 @@ export class SearchManager {
             this.isSearching = false;
             state.loadingManager.hide();
         }
+    }
+
+    updatePanelPositions() {
+        const searchOptionsPanel = document.getElementById('searchOptionsPanel');
+        const filterPanel = document.getElementById('filterPanel');
+        
+        if (!searchOptionsPanel || !filterPanel) return;
+        
+        // Get the controls container
+        const controls = document.querySelector('.controls');
+        if (!controls) return;
+        
+        // Calculate the position based on the bottom of the controls container
+        const controlsRect = controls.getBoundingClientRect();
+        const topPosition = controlsRect.bottom + 10; // Add 10px padding
+        
+        // Set the positions
+        searchOptionsPanel.style.top = `${topPosition}px`;
+        filterPanel.style.top = `${topPosition}px`;
     }
 }

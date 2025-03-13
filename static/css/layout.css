@@ -4,6 +4,7 @@
     overflow-y: auto; /* Enable scrolling here */
     width: 100%;
     position: relative;
+    overflow-y: scroll;
 }
 
 .container {

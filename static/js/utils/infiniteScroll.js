@@ -1,16 +1,19 @@
 import { state } from '../state/index.js';
 import { loadMoreLoras } from '../api/loraApi.js';
+import { debounce } from './debounce.js';
 
 export function initializeInfiniteScroll() {
     if (state.observer) {
         state.observer.disconnect();
     }
 
+    const debouncedLoadMore = debounce(loadMoreLoras, 200);
+
     state.observer = new IntersectionObserver(
         (entries) => {
             const target = entries[0];
             if (target.isIntersecting && !state.isLoading && state.hasMore) {
-                loadMoreLoras();
+                debouncedLoadMore();
             }
         },
         { threshold: 0.1 }

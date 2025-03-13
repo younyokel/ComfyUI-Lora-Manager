@@ -17,7 +17,8 @@ import {
     openCivitai,
     toggleFolderTags,
     initFolderTagsVisibility,
-    initBackToTop
+    initBackToTop,
+    updatePanelPositions
 } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
@@ -56,6 +57,7 @@ window.toggleApiKeyVisibility = toggleApiKeyVisibility;
 window.moveManager = moveManager;
 window.toggleShowcase = toggleShowcase;
 window.scrollToTop = scrollToTop;
+window.updatePanelPositions = updatePanelPositions;
 
 // Export bulk manager methods to window
 window.toggleBulkMode = () => bulkManager.toggleBulkMode();
@@ -96,6 +98,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize the bulk manager
     bulkManager.initialize();
+    
+    // Initial positioning
+    updatePanelPositions();
+    
+    // Update positions on window resize
+    window.addEventListener('resize', updatePanelPositions);
 });
 
 // Initialize event listeners

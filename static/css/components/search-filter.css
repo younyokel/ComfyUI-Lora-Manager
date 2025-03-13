@@ -144,10 +144,9 @@
 
 /* Filter Panel Styles */
 .filter-panel {
-    position: absolute;
-    top: 140px; /* Adjust to be closer to the filter button */
+    position: fixed;
     right: 20px;
-    width: 300px;
+    width: 320px;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-base);
@@ -312,7 +311,7 @@
         width: calc(100% - 40px);
         left: 20px;
         right: 20px;
-        top: 140px;
+        top: 160px; /* Adjusted for mobile layout */
     }
 }
 
@@ -351,10 +350,9 @@
 
 /* Search Options Panel */
 .search-options-panel {
-    position: absolute;
-    top: 140px;
-    right: 65px; /* Position it closer to the search options button */
-    width: 280px; /* Slightly wider to accommodate tags better */
+    position: fixed;
+    right: 20px;
+    width: 280px;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-base);
@@ -507,4 +505,15 @@ input:checked + .slider:before {
 
 .slider.round:before {
     border-radius: 50%;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .search-options-panel,
+    .filter-panel {
+        width: calc(100% - 40px);
+        left: 20px;
+        right: 20px;
+        top: 160px; /* Adjusted for mobile layout */
+    }
 }
