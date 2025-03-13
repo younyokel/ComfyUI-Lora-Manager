@@ -25,9 +25,17 @@
 .actions {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-2);
     flex-wrap: nowrap;
     width: 100%;
+}
+
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: nowrap;
 }
 
 /* Ensure hidden class works properly */
@@ -42,11 +50,14 @@
 }
 
 .folder-tags {
+    display: flex;
+    gap: 4px;
+    padding: 2px 0;
+    flex-wrap: wrap;
     transition: max-height 0.3s ease, opacity 0.2s ease;
     max-height: 150px; /* Limit height to prevent overflow */
     opacity: 1;
     overflow-y: auto; /* Enable vertical scrolling */
-    padding-right: 40px; /* Make space for the toggle button */
     margin-bottom: 5px; /* Add margin below the tags */
 }
 
@@ -55,13 +66,15 @@
     opacity: 0;
     margin: 0;
     padding-bottom: 0;
+    overflow: hidden;
+}
+
+.toggle-folders-container {
+    margin-left: auto;
 }
 
 /* Toggle Folders Button */
 .toggle-folders-btn {
-    position: absolute;
-    bottom: 0;      /* 固定在容器底部 */
-    right: 0;       /* 固定在容器右侧 */
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -73,7 +86,6 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 2;
 }
 
 .toggle-folders-btn:hover {
@@ -86,23 +98,16 @@
     transition: transform 0.3s ease;
 }
 
-/* 折叠状态样式 */
-.folder-tags.collapsed + .toggle-folders-btn {
-    position: static;
-    margin-right: auto; /* 确保按钮在左侧 */
-    transform: translateY(0);
+/* Icon-only button style */
+.icon-only {
+    min-width: unset !important;
+    width: 36px !important;
+    padding: 0 !important;
 }
 
-.folder-tags.collapsed + .toggle-folders-btn i {
+/* Rotate icon when folders are collapsed */
+.folder-tags.collapsed ~ .actions .toggle-folders-btn i {
     transform: rotate(180deg);
-}
-
-/* 文件夹标签样式 */
-.folder-tags {
-    display: flex;
-    gap: 4px;
-    padding: 2px 0;
-    flex-wrap: wrap;
 }
 
 /* Add custom scrollbar for better visibility */
@@ -179,30 +184,26 @@
         flex-wrap: wrap;
         gap: var(--space-1);
     }
-
-    .controls {
-        flex-direction: column;
-        gap: 15px;
+    
+    .action-buttons {
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        width: 100%;
+    }
+    
+    .toggle-folders-container {
+        margin-left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
     }
     
     .folder-tags-container {
         order: -1;
     }
     
-    .toggle-folders-btn {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        transform: none; /* 移除transform，防止hover时的位移 */
-    }
-    
     .toggle-folders-btn:hover {
         transform: none; /* 移动端下禁用hover效果 */
-    }
-    
-    .folder-tags.collapsed + .toggle-folders-btn {
-        position: relative;
-        transform: none;
     }
 
     .back-to-top {

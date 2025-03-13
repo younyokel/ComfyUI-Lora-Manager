@@ -5,32 +5,36 @@
             <div class="tag" data-folder="{{ folder }}">{{ folder }}</div>
             {% endfor %}
         </div>
-        <button class="toggle-folders-btn" onclick="toggleFolderTags()" title="Collapse folder tags">
-            <i class="fas fa-chevron-up"></i>
-        </button>
     </div>
     
     <div class="actions">
-        <div title="Sort models by..." class="control-group">
-            <select id="sortSelect">
-            <option value="name">Name</option>
-            <option value="date">Date</option>
-            </select>
+        <div class="action-buttons">
+            <div title="Sort models by..." class="control-group">
+                <select id="sortSelect">
+                <option value="name">Name</option>
+                <option value="date">Date</option>
+                </select>
+            </div>
+            <div title="Refresh model list" class="control-group">
+                <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            <div class="control-group">
+                <button onclick="fetchCivitai()" class="secondary" title="Fetch from Civitai"><i class="fas fa-download"></i> Fetch</button>
+            </div>
+            <div class="control-group">
+                <button onclick="downloadManager.showDownloadModal()" title="Download from URL">
+                    <i class="fas fa-cloud-download-alt"></i> Download
+                </button>
+            </div>
+            <div class="control-group">
+                <button id="bulkOperationsBtn" onclick="bulkManager.toggleBulkMode()" title="Bulk Operations">
+                    <i class="fas fa-th-large"></i> Bulk
+                </button>
+            </div>
         </div>
-        <div title="Refresh model list" class="control-group">
-            <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
-        </div>
-        <div class="control-group">
-            <button onclick="fetchCivitai()" class="secondary" title="Fetch from Civitai"><i class="fas fa-download"></i> Fetch</button>
-        </div>
-        <div class="control-group">
-            <button onclick="downloadManager.showDownloadModal()" title="Download from URL">
-                <i class="fas fa-cloud-download-alt"></i> Download
-            </button>
-        </div>
-        <div class="control-group">
-            <button id="bulkOperationsBtn" onclick="bulkManager.toggleBulkMode()" title="Bulk Operations">
-                <i class="fas fa-th-large"></i> Bulk
+        <div class="toggle-folders-container">
+            <button class="toggle-folders-btn icon-only" onclick="toggleFolderTags()" title="Toggle folder tags">
+                <i class="fas fa-tags"></i>
             </button>
         </div>
     </div>

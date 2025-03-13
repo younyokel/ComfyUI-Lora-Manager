@@ -130,12 +130,14 @@ export function toggleFolderTags() {
         folderTags.classList.toggle('collapsed');
         
         if (folderTags.classList.contains('collapsed')) {
-            toggleBtn.className = 'fas fa-chevron-down';
-            toggleBtn.parentElement.title = 'Expand folder tags';
+            // Change icon to indicate folders are hidden
+            toggleBtn.className = 'fas fa-folder-plus';
+            toggleBtn.parentElement.title = 'Show folder tags';
             localStorage.setItem('folderTagsCollapsed', 'true');
         } else {
-            toggleBtn.className = 'fas fa-chevron-up';
-            toggleBtn.parentElement.title = 'Collapse folder tags';
+            // Change icon to indicate folders are visible
+            toggleBtn.className = 'fas fa-folder-minus';
+            toggleBtn.parentElement.title = 'Hide folder tags';
             localStorage.setItem('folderTagsCollapsed', 'false');
         }
         
@@ -156,9 +158,20 @@ export function initFolderTagsVisibility() {
     const isCollapsed = localStorage.getItem('folderTagsCollapsed') === 'true';
     if (isCollapsed) {
         const folderTags = document.querySelector('.folder-tags');
-        const btn = document.querySelector('.toggle-folders-btn');
-        folderTags.classList.add('collapsed');
-        btn.title = 'Expand folder tags';
+        const toggleBtn = document.querySelector('.toggle-folders-btn i');
+        if (folderTags) {
+            folderTags.classList.add('collapsed');
+        }
+        if (toggleBtn) {
+            toggleBtn.className = 'fas fa-folder-plus';
+            toggleBtn.parentElement.title = 'Show folder tags';
+        }
+    } else {
+        const toggleBtn = document.querySelector('.toggle-folders-btn i');
+        if (toggleBtn) {
+            toggleBtn.className = 'fas fa-folder-minus';
+            toggleBtn.parentElement.title = 'Hide folder tags';
+        }
     }
 }
 
