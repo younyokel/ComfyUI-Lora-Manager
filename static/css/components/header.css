@@ -23,6 +23,7 @@
 .header-branding {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .logo-link {
@@ -48,6 +49,8 @@
 .main-nav {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
+  margin-right: 1rem;
 }
 
 .nav-item {
@@ -62,11 +65,28 @@
   font-size: 0.9rem;
 }
 
+.nav-item:hover {
+  background-color: var(--lora-surface-hover, oklch(95% 0.02 256));
+}
+
+.nav-item.active {
+  background-color: var(--lora-accent);
+  color: white;
+}
+
+/* Header search */
+.header-search {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 1rem;
+}
+
 /* Header controls (formerly corner controls) */
 .header-controls {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .header-controls > div {
@@ -119,5 +139,29 @@
   .header-controls > div {
     width: 28px;
     height: 28px;
+  }
+  
+  .header-search {
+    max-width: none;
+    margin: 0 0.5rem;
+  }
+  
+  .main-nav {
+    margin-right: 0.5rem;
+  }
+}
+
+/* For very small screens */
+@media (max-width: 600px) {
+  .header-container {
+    padding: 0 8px;
+  }
+  
+  .main-nav {
+    display: none; /* Hide navigation on very small screens */
+  }
+  
+  .header-search {
+    flex: 1;
   }
 }

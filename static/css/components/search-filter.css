@@ -1,9 +1,7 @@
 /* Search Container Styles */
 .search-container {
     position: relative;
-    width: 250px;
-    margin-left: auto;
-    flex-shrink: 0; /* 防止搜索框被压缩 */
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -12,14 +10,14 @@
 /* 调整搜索框样式以匹配其他控件 */
 .search-container input {
     width: 100%;
-    padding: 6px 75px 6px 12px; /* Increased right padding to accommodate both buttons */
-    border: 1px solid oklch(65% 0.02 256); /* 更深的边框颜色，提高对比度 */
+    padding: 6px 35px 6px 12px; /* Reduced right padding */
+    border: 1px solid oklch(65% 0.02 256);
     border-radius: var(--border-radius-sm);
     background: var(--lora-surface);
     color: var(--text-color);
     font-size: 0.9em;
     height: 32px;
-    box-sizing: border-box; /* 确保padding不会增加总宽度 */
+    box-sizing: border-box;
 }
 
 .search-container input:focus {
@@ -34,7 +32,7 @@
     transform: translateY(-50%);
     color: oklch(var(--text-color) / 0.5);
     pointer-events: none;
-    line-height: 1; /* 防止图标影响容器高度 */
+    line-height: 1;
 }
 
 /* 修改清空按钮样式 */
@@ -47,8 +45,8 @@
     cursor: pointer;
     border: none;
     background: none;
-    padding: 4px 8px; /* 增加点击区域 */
-    display: none; /* 默认隐藏 */
+    padding: 4px 8px;
+    display: none;
     line-height: 1;
     transition: color 0.2s ease;
 }
@@ -146,16 +144,17 @@
 .filter-panel {
     position: fixed;
     right: 20px;
+    top: 50px; /* Position below header */
     width: 320px;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-base);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    z-index: var(--z-overlay); /* Increase z-index to be above cards */
+    z-index: var(--z-overlay);
     padding: 16px;
     transition: transform 0.3s ease, opacity 0.3s ease;
     transform-origin: top right;
-    max-height: calc(100vh - 160px);
+    max-height: calc(100vh - 70px); /* Adjusted for header height */
     overflow-y: auto;
 }
 
@@ -352,6 +351,7 @@
 .search-options-panel {
     position: fixed;
     right: 20px;
+    top: 50px; /* Position below header */
     width: 280px;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);

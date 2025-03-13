@@ -297,16 +297,32 @@ export class SearchManager {
         
         if (!searchOptionsPanel || !filterPanel) return;
         
-        // Get the controls container
-        const controls = document.querySelector('.controls');
-        if (!controls) return;
+        // Get the header element
+        const header = document.querySelector('.app-header');
+        if (!header) return;
         
-        // Calculate the position based on the bottom of the controls container
-        const controlsRect = controls.getBoundingClientRect();
-        const topPosition = controlsRect.bottom + 10; // Add 10px padding
+        // Calculate the position based on the bottom of the header
+        const headerRect = header.getBoundingClientRect();
+        const topPosition = headerRect.bottom + 5; // Add 5px padding
         
         // Set the positions
         searchOptionsPanel.style.top = `${topPosition}px`;
         filterPanel.style.top = `${topPosition}px`;
+        
+        // Adjust panel horizontal position based on the search container
+        const searchContainer = document.querySelector('.header-search');
+        if (searchContainer) {
+            const searchRect = searchContainer.getBoundingClientRect();
+            
+            // Position the search options panel aligned with the search container
+            searchOptionsPanel.style.right = `${window.innerWidth - searchRect.right}px`;
+            
+            // Position the filter panel aligned with the filter button
+            const filterButton = document.getElementById('filterButton');
+            if (filterButton) {
+                const filterRect = filterButton.getBoundingClientRect();
+                filterPanel.style.right = `${window.innerWidth - filterRect.right}px`;
+            }
+        }
     }
 }
