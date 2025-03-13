@@ -10,10 +10,10 @@ export function showLoraModal(lora) {
         <div class="modal-content">
             <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
             <header class="modal-header">
-                <div class="editable-field model-name-field">
+                <div class="model-name-header">
                     <h2 class="model-name-content" contenteditable="true" spellcheck="false">${lora.model_name}</h2>
-                    <button class="save-btn" onclick="saveModelName('${lora.file_path}')">
-                        <i class="fas fa-save"></i>
+                    <button class="edit-model-name-btn" title="Edit model name">
+                        <i class="fas fa-pencil-alt"></i>
                     </button>
                 </div>
                 ${renderCompactTags(lora.tags || [])}
@@ -122,6 +122,7 @@ export function showLoraModal(lora) {
     setupTabSwitching();
     setupTagTooltip();
     setupTriggerWordsEditMode();
+    setupModelNameEditing();
     
     // If we have a model ID but no description, fetch it
     if (lora.civitai?.modelId && !lora.modelDescription) {
@@ -405,61 +406,18 @@ function setupEditableFields() {
     
     editableFields.forEach(field => {
         field.addEventListener('focus', function() {
-            if (this.textContent === 'Add your notes here...' || 
-                this.textContent === 'Save usage tips here..') {
+            if (this.textContent === 'Add your notes here...') {
                 this.textContent = '';
             }
         });
 
         field.addEventListener('blur', function() {
             if (this.textContent.trim() === '') {
-                if (this.classList.contains('model-name-content')) {
-                    // Restore original model name if empty
-                    const filePath = document.querySelector('.modal-content')
-                        .querySelector('.file-path').textContent + 
-                        document.querySelector('.modal-content')
-                        .querySelector('#file-name').textContent + '.safetensors';
-                    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-                    if (loraCard) {
-                        this.textContent = loraCard.dataset.model_name;
-                    }
-                } else if (this.classList.contains('usage-tips-content')) {
-                    this.textContent = 'Save usage tips here..';
-                } else {
+                if (this.classList.contains('notes-content')) {
                     this.textContent = 'Add your notes here...';
                 }
             }
         });
-        
-        // Add input validation for model name
-        if (field.classList.contains('model-name-content')) {
-            field.addEventListener('input', function() {
-                // Limit model name length
-                if (this.textContent.length > 100) {
-                    this.textContent = this.textContent.substring(0, 100);
-                    // Place cursor at the end
-                    const range = document.createRange();
-                    const sel = window.getSelection();
-                    range.setStart(this.childNodes[0], 100);
-                    range.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                    
-                    showToast('Model name is limited to 100 characters', 'warning');
-                }
-            });
-            
-            field.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const filePath = document.querySelector('.modal-content')
-                        .querySelector('.file-path').textContent + 
-                        document.querySelector('.modal-content')
-                        .querySelector('#file-name').textContent + '.safetensors';
-                    saveModelName(filePath);
-                }
-            });
-        }
     });
 
     const presetSelector = document.getElementById('preset-selector');
@@ -473,7 +431,7 @@ function setupEditableFields() {
             presetValue.style.display = 'inline-block';
             presetValue.min = selected.includes('strength') ? 0 : 1;
             presetValue.max = selected.includes('strength') ? 1 : 12;
-            presetValue.step = selected.includes('strength') ? 0.01 : 1;
+            presetValue.step = selected.includes('strength') ? 0.5 : 1;
             if (selected === 'clip_skip') {
                 presetValue.type = 'number';
                 presetValue.step = 1;
@@ -795,7 +753,7 @@ export function scrollToTop(button) {
 }
 
 function parsePresets(usageTips) {
-    if (!usageTips || usageTips === 'Save usage tips here..') return {};
+    if (!usageTips) return {};
     try {
         return JSON.parse(usageTips);
     } catch {
@@ -851,17 +809,6 @@ function formatFileSize(bytes) {
     
     return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
-
-// Add tag copy functionality
-window.copyTag = async function(tag) {
-    try {
-        await navigator.clipboard.writeText(tag);
-        showToast('Tag copied to clipboard', 'success');
-    } catch (err) {
-        console.error('Copy failed:', err);
-        showToast('Copy failed', 'error');
-    }
-};
 
 // New function to render compact tags with tooltip
 function renderCompactTags(tags) {
@@ -1162,3 +1109,89 @@ window.copyTriggerWord = async function(word) {
         showToast('Copy failed', 'error');
     }
 };
+
+// New function to handle model name editing
+function setupModelNameEditing() {
+    const modelNameContent = document.querySelector('.model-name-content');
+    const editBtn = document.querySelector('.edit-model-name-btn');
+    
+    if (!modelNameContent || !editBtn) return;
+    
+    // Show edit button on hover
+    const modelNameHeader = document.querySelector('.model-name-header');
+    modelNameHeader.addEventListener('mouseenter', () => {
+        editBtn.classList.add('visible');
+    });
+    
+    modelNameHeader.addEventListener('mouseleave', () => {
+        if (!modelNameContent.getAttribute('data-editing')) {
+            editBtn.classList.remove('visible');
+        }
+    });
+    
+    // Handle edit button click
+    editBtn.addEventListener('click', () => {
+        modelNameContent.setAttribute('data-editing', 'true');
+        modelNameContent.focus();
+        
+        // Place cursor at the end
+        const range = document.createRange();
+        const sel = window.getSelection();
+        if (modelNameContent.childNodes.length > 0) {
+            range.setStart(modelNameContent.childNodes[0], modelNameContent.textContent.length);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        
+        editBtn.classList.add('visible');
+    });
+    
+    // Handle focus out
+    modelNameContent.addEventListener('blur', function() {
+        this.removeAttribute('data-editing');
+        editBtn.classList.remove('visible');
+        
+        if (this.textContent.trim() === '') {
+            // Restore original model name if empty
+            const filePath = document.querySelector('.modal-content')
+                .querySelector('.file-path').textContent + 
+                document.querySelector('.modal-content')
+                .querySelector('#file-name').textContent + '.safetensors';
+            const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+            if (loraCard) {
+                this.textContent = loraCard.dataset.model_name;
+            }
+        }
+    });
+    
+    // Handle enter key
+    modelNameContent.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const filePath = document.querySelector('.modal-content')
+                .querySelector('.file-path').textContent + 
+                document.querySelector('.modal-content')
+                .querySelector('#file-name').textContent + '.safetensors';
+            saveModelName(filePath);
+            this.blur();
+        }
+    });
+    
+    // Limit model name length
+    modelNameContent.addEventListener('input', function() {
+        // Limit model name length
+        if (this.textContent.length > 100) {
+            this.textContent = this.textContent.substring(0, 100);
+            // Place cursor at the end
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.setStart(this.childNodes[0], 100);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            
+            showToast('Model name is limited to 100 characters', 'warning');
+        }
+    });
+}

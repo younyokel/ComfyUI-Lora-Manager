@@ -593,56 +593,60 @@
 
 /* Model name field styles - complete replacement */
 .model-name-field {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    width: calc(100% - 40px); /* Reduce width to avoid overlap with close button */
-    position: relative; /* Add position relative for absolute positioning of save button */
+    display: none;
 }
 
-.model-name-field h2 {
+/* New Model Name Header Styles */
+.model-name-header {
+    display: flex;
+    align-items: center;
+    width: calc(100% - 40px); /* Avoid overlap with close button */
+    position: relative;
+    margin-bottom: var(--space-1);
+}
+
+.model-name-content {
     margin: 0;
     padding: var(--space-1);
     border-radius: var(--border-radius-xs);
-    transition: background-color 0.2s;
-    flex: 1;
-    font-size: 1.5em !important; /* Increased and forced size */
-    font-weight: 600; /* Make it bolder */
-    min-height: 1.5em;
-    box-sizing: border-box;
-    border: 1px solid transparent;
+    font-size: 1.5em !important;
+    font-weight: 600;
     line-height: 1.2;
-    color: var(--text-color); /* Ensure correct color */
-}
-
-.model-name-field h2:hover {
-    background: oklch(var(--lora-accent) / 0.1);
-    cursor: text;
-}
-
-.model-name-field h2:focus {
+    color: var(--text-color);
+    border: 1px solid transparent;
     outline: none;
-    background: var(--bg-color);
+    flex: 1;
+}
+
+.model-name-content:focus {
     border: 1px solid var(--lora-accent);
+    background: var(--bg-color);
 }
 
-.model-name-field .save-btn {
-    position: absolute;
-    right: 10px; /* Position closer to the end of the field */
-    top: 50%;
-    transform: translateY(-50%);
+.edit-model-name-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
     opacity: 0;
-    transition: opacity 0.2s;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: var(--border-radius-xs);
+    transition: all 0.2s ease;
+    margin-left: var(--space-1);
 }
 
-.model-name-field:hover .save-btn,
-.model-name-field h2:focus ~ .save-btn {
-    opacity: 1;
+.edit-model-name-btn.visible,
+.model-name-header:hover .edit-model-name-btn {
+    opacity: 0.5;
 }
 
-/* Ensure close button is accessible */
-.modal-content .close {
-    z-index: 10; /* Ensure close button is above other elements */
+.edit-model-name-btn:hover {
+    opacity: 0.8 !important;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .edit-model-name-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Tab System Styling */
