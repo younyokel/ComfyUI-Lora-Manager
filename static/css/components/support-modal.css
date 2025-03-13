@@ -141,7 +141,7 @@
 
 .support-toggle:hover {
     background: var(--lora-accent);
-    color: white;
+    color: var(--lora-error) !important;
     transform: translateY(-2px);
 }
 
