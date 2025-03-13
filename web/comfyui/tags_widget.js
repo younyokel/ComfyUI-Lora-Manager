@@ -142,13 +142,38 @@ export function addTagsWidget(node, name, opts, callback) {
       });
     },
     getMinHeight: function() {
-      // Calculate height based on content with minimal extra space
-      // Use a small buffer instead of explicit padding calculation
-      const buffer = 10; // Small buffer to ensure no overflow
-      return Math.max(
-        150,
-        Math.ceil((container.scrollHeight + buffer) / 5) * 5 // Round up to nearest 5px
-      );
+      const minHeight = 150;
+      // If no tags or only showing the empty message, return a minimum height
+      if (widgetValue.length === 0) {
+        return minHeight; // Height for empty state with message
+      }
+      
+      // Get all tag elements
+      const tagElements = container.querySelectorAll('.comfy-tag');
+      
+      if (tagElements.length === 0) {
+        return minHeight; // Fallback if elements aren't rendered yet
+      }
+      
+      // Calculate the actual height based on tag positions
+      let maxBottom = 0;
+      
+      tagElements.forEach(tag => {
+        const rect = tag.getBoundingClientRect();
+        const tagBottom = rect.bottom - container.getBoundingClientRect().top;
+        maxBottom = Math.max(maxBottom, tagBottom);
+      });
+      
+      // Add padding (top and bottom padding of container)
+      const computedStyle = window.getComputedStyle(container);
+      const paddingTop = parseInt(computedStyle.paddingTop, 10) || 0;
+      const paddingBottom = parseInt(computedStyle.paddingBottom, 10) || 0;
+      
+      // Add extra buffer for potential wrapping issues and to ensure no clipping
+      const extraBuffer = 20;
+      
+      // Round up to nearest 5px for clean sizing and ensure minimum height
+      return Math.max(minHeight, Math.ceil((maxBottom + paddingBottom + extraBuffer) / 5) * 5);
     },
   });
 

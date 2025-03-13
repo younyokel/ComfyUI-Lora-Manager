@@ -262,6 +262,83 @@
     background: var(--lora-accent);
 }
 
+/* NSFW Level Selector */
+.nsfw-level-selector {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-base);
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: var(--z-modal);
+    width: 300px;
+    display: none;
+}
+
+.nsfw-level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.nsfw-level-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.close-nsfw-selector {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius-xs);
+}
+
+.close-nsfw-selector:hover {
+    background: var(--border-color);
+}
+
+.current-level {
+    margin-bottom: 12px;
+    padding: 8px;
+    background: var(--bg-color);
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+}
+
+.nsfw-level-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nsfw-level-btn {
+    flex: 1 0 calc(33% - 8px);
+    padding: 8px;
+    border-radius: var(--border-radius-xs);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nsfw-level-btn:hover {
+    background: var(--lora-border);
+}
+
+.nsfw-level-btn.active {
+    background: var(--lora-accent);
+    color: white;
+    border-color: var(--lora-accent);
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
     .selected-thumbnails-strip {

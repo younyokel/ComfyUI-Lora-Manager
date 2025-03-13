@@ -152,3 +152,14 @@ export function initBackToTop() {
     // Initial check
     toggleBackToTop();
 }
+
+export function getNSFWLevelName(level) {
+    if (level === 0) return 'Unknown';
+    if (level >= 32) return 'Blocked';
+    if (level >= 16) return 'XXX';
+    if (level >= 8) return 'X';
+    if (level >= 4) return 'R';
+    if (level >= 2) return 'PG13';
+    if (level >= 1) return 'PG';
+    return 'Unknown';
+}

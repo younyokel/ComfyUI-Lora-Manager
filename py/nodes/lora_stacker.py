@@ -1,4 +1,3 @@
-from nodes import LoraLoader
 from comfy.comfy_types import IO # type: ignore
 from ..services.lora_scanner import LoraScanner
 from ..config import config
@@ -6,16 +5,14 @@ import asyncio
 import os
 from .utils import FlexibleOptionalInputType, any_type
 
-class LoraManagerLoader:
-    NAME = "Lora Loader (LoraManager)"
-    CATEGORY = "Lora Manager/loaders"
+class LoraStacker:
+    NAME = "Lora Stacker (LoraManager)"
+    CATEGORY = "Lora Manager/stackers"
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "model": ("MODEL",),
-                "clip": ("CLIP",),
                 "text": (IO.STRING, {
                     "multiline": True, 
                     "dynamicPrompts": True, 
@@ -26,9 +23,9 @@ class LoraManagerLoader:
             "optional": FlexibleOptionalInputType(any_type),
         }
 
-    RETURN_TYPES = ("MODEL", "CLIP", IO.STRING)
-    RETURN_NAMES = ("MODEL", "CLIP", "trigger_words")
-    FUNCTION = "load_loras"
+    RETURN_TYPES = ("LORA_STACK", IO.STRING)
+    RETURN_NAMES = ("LORA_STACK", "trigger_words")
+    FUNCTION = "stack_loras"
 
     async def get_lora_info(self, lora_name):
         """Get the lora path and trigger words from cache"""
@@ -55,40 +52,35 @@ class LoraManagerLoader:
         basename = os.path.basename(lora_path)
         return os.path.splitext(basename)[0]
     
-    def load_loras(self, model, clip, text, **kwargs):
-        """Loads multiple LoRAs based on the kwargs input and lora_stack."""
-        loaded_loras = []
+    def stack_loras(self, text, **kwargs):
+        """Stacks multiple LoRAs based on the kwargs input without loading them."""
+        stack = []
         all_trigger_words = []
         
+        # Process existing lora_stack if available
         lora_stack = kwargs.get('lora_stack', None)
-        # First process lora_stack if available
         if lora_stack:
-            for lora_path, model_strength, clip_strength in lora_stack:
-                # Apply the LoRA using the provided path and strengths
-                model, clip = LoraLoader().load_lora(model, clip, lora_path, model_strength, clip_strength)
-                
-                # Extract lora name for trigger words lookup
+            stack.extend(lora_stack)
+            # Get trigger words from existing stack entries
+            for lora_path, _, _ in lora_stack:
                 lora_name = self.extract_lora_name(lora_path)
                 _, trigger_words = asyncio.run(self.get_lora_info(lora_name))
-                
                 all_trigger_words.extend(trigger_words)
-                loaded_loras.append(f"{lora_name}: {model_strength}")
         
-        # Then process loras from kwargs
         if 'loras' in kwargs:
             for lora in kwargs['loras']:
                 if not lora.get('active', False):
                     continue
                     
                 lora_name = lora['name']
-                strength = float(lora['strength'])
+                model_strength = float(lora['strength'])
+                clip_strength = model_strength  # Using same strength for both as in the original loader
                 
                 # Get lora path and trigger words
                 lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
                 
-                # Apply the LoRA using the resolved path
-                model, clip = LoraLoader().load_lora(model, clip, lora_path, strength, strength)
-                loaded_loras.append(f"{lora_name}: {strength}")
+                # Add to stack without loading
+                stack.append((lora_path, model_strength, clip_strength))
                 
                 # Add trigger words to collection
                 all_trigger_words.extend(trigger_words)
@@ -96,4 +88,4 @@ class LoraManagerLoader:
         # use ',, ' to separate trigger words for group mode
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
 
-        return (model, clip, trigger_words_text)
+        return (stack, trigger_words_text)

@@ -31,7 +31,7 @@ export const BASE_MODELS = {
     LUMINA: "Lumina",
     KOLORS: "Kolors",
     NOOBAI: "NoobAI",
-    IL: "IL",
+    ILLUSTRIOUS: "Illustrious",
     PONY: "Pony",
     
     // Video models
@@ -82,9 +82,19 @@ export const BASE_MODEL_CLASSES = {
     [BASE_MODELS.LUMINA]: "lumina",
     [BASE_MODELS.KOLORS]: "kolors",
     [BASE_MODELS.NOOBAI]: "noobai",
-    [BASE_MODELS.IL]: "il",
+    [BASE_MODELS.ILLUSTRIOUS]: "il",
     [BASE_MODELS.PONY]: "pony",
     
     // Default
     [BASE_MODELS.UNKNOWN]: "unknown"
+};
+
+export const NSFW_LEVELS = {
+    UNKNOWN: 0,
+    PG: 1,
+    PG13: 2,
+    R: 4,
+    X: 8,
+    XXX: 16,
+    BLOCKED: 32
 };

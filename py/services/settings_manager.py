@@ -37,7 +37,8 @@ class SettingsManager:
     def _get_default_settings(self) -> Dict[str, Any]:
         """Return default settings"""
         return {
-            "civitai_api_key": ""
+            "civitai_api_key": "",
+            "show_only_sfw": False
         }
 
     def get(self, key: str, default: Any = None) -> Any:

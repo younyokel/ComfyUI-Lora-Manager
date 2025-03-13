@@ -4,6 +4,8 @@ import hashlib
 import json
 from typing import Dict, Optional
 
+from .model_utils import determine_base_model
+
 from .lora_metadata import extract_lora_metadata
 from .models import LoraMetadata
 
@@ -69,6 +71,8 @@ async def get_file_info(file_path: str) -> Optional[LoraMetadata]:
             notes="",
             from_civitai=True,
             preview_url=normalize_path(preview_url),
+            tags=[],
+            modelDescription=""
         )
 
         # create metadata file
@@ -103,9 +107,18 @@ async def load_metadata(file_path: str) -> Optional[LoraMetadata]:
                 data = json.load(f)
                 
                 needs_update = False
+
+                # Check and normalize base model name
+                normalized_base_model = determine_base_model(data['base_model'])
+                if data['base_model'] != normalized_base_model:
+                    data['base_model'] = normalized_base_model
+                    needs_update = True
                 
-                if data['file_path'] != normalize_path(data['file_path']):
-                    data['file_path'] = normalize_path(data['file_path'])
+                # Compare paths without extensions
+                stored_path_base = os.path.splitext(data['file_path'])[0]
+                current_path_base = os.path.splitext(normalize_path(file_path))[0]
+                if stored_path_base != current_path_base:
+                    data['file_path'] = normalize_path(file_path)
                     needs_update = True
                 
                 preview_url = data.get('preview_url', '')
@@ -116,8 +129,21 @@ async def load_metadata(file_path: str) -> Optional[LoraMetadata]:
                     if new_preview_url != preview_url:
                         data['preview_url'] = new_preview_url
                         needs_update = True
-                elif preview_url != normalize_path(preview_url):
-                    data['preview_url'] = normalize_path(preview_url)
+                else:
+                    # Compare preview paths without extensions
+                    stored_preview_base = os.path.splitext(preview_url)[0]
+                    current_preview_base = os.path.splitext(normalize_path(preview_url))[0]
+                    if stored_preview_base != current_preview_base:
+                        data['preview_url'] = normalize_path(preview_url)
+                        needs_update = True
+
+                # Ensure all fields are present
+                if 'tags' not in data:
+                    data['tags'] = []
+                    needs_update = True
+                    
+                if 'modelDescription' not in data:
+                    data['modelDescription'] = ""
                     needs_update = True
                 
                 if needs_update:

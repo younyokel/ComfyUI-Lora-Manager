@@ -269,7 +269,8 @@ export class DownloadManager {
             this.loadingManager.show('Downloading LoRA...', 0);
 
             // Setup WebSocket for progress updates
-            const ws = new WebSocket(`ws://${window.location.host}/ws/fetch-progress`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.status === 'progress') {

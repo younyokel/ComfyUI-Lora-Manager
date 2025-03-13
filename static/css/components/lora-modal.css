@@ -1,8 +1,9 @@
 /* Lora Modal Header */
 .modal-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
     margin-bottom: var(--space-3);
     padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--lora-border);
@@ -162,12 +163,57 @@
     border: 1px solid var(--lora-border);
 }
 
+/* New header style for trigger words */
+.trigger-words-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.edit-trigger-words-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.5;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: var(--border-radius-xs);
+    transition: all 0.2s ease;
+}
+
+.edit-trigger-words-btn:hover {
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .edit-trigger-words-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Edit mode active state */
+.trigger-words.edit-mode .edit-trigger-words-btn {
+    opacity: 0.8;
+    color: var(--lora-accent);
+}
+
+.trigger-words-content {
+    margin-bottom: var(--space-1);
+}
+
 .trigger-words-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-items: flex-start;
-    margin-top: var(--space-1);
+}
+
+/* No trigger words message */
+.no-trigger-words {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-style: italic;
+    font-size: 0.9em;
 }
 
 /* Update Trigger Words styles */
@@ -181,6 +227,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     gap: 6px;
+    position: relative;
 }
 
 /* Update trigger word content color to use theme accent */
@@ -204,6 +251,123 @@
     opacity: 0.5;
     flex-shrink: 0;
     transition: opacity 0.2s;
+}
+
+/* Delete button for trigger word */
+.delete-trigger-word-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 16px;
+    height: 16px;
+    background: var(--lora-error);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    transition: transform 0.2s ease;
+}
+
+.delete-trigger-word-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Edit controls */
+.trigger-words-edit-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.trigger-words-edit-controls button {
+    padding: 3px 8px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.85em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.trigger-words-edit-controls button:hover {
+    background: oklch(var(--lora-accent) / 0.1);
+    border-color: var(--lora-accent);
+}
+
+.trigger-words-edit-controls button i {
+    font-size: 0.8em;
+}
+
+.save-trigger-words-btn {
+    background: var(--lora-accent) !important;
+    color: white !important;
+    border-color: var(--lora-accent) !important;
+}
+
+.save-trigger-words-btn:hover {
+    opacity: 0.9;
+}
+
+/* Add trigger word form */
+.add-trigger-word-form {
+    margin-top: var(--space-2);
+    display: flex;
+    gap: var(--space-1);
+}
+
+.new-trigger-word-input {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.new-trigger-word-input:focus {
+    border-color: var(--lora-accent);
+    outline: none;
+}
+
+.confirm-add-trigger-word-btn,
+.cancel-add-trigger-word-btn {
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.confirm-add-trigger-word-btn {
+    background: var(--lora-accent);
+    color: white;
+    border-color: var(--lora-accent);
+}
+
+.confirm-add-trigger-word-btn:hover {
+    opacity: 0.9;
+}
+
+.cancel-add-trigger-word-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .cancel-add-trigger-word-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Editable Fields */
@@ -479,4 +643,395 @@
 /* Ensure close button is accessible */
 .modal-content .close {
     z-index: 10; /* Ensure close button is above other elements */
+}
+
+/* Tab System Styling */
+.showcase-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--lora-border);
+    margin-bottom: var(--space-2);
+    position: relative;
+    z-index: 2;
+}
+
+.tab-btn {
+    padding: var(--space-1) var(--space-2);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: all 0.2s;
+    opacity: 0.7;
+    position: relative;
+}
+
+.tab-btn:hover {
+    opacity: 1;
+    background: oklch(var(--lora-accent) / 0.05);
+}
+
+.tab-btn.active {
+    border-bottom: 2px solid var(--lora-accent);
+    opacity: 1;
+    font-weight: 600;
+}
+
+.tab-content {
+    position: relative;
+    min-height: 100px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Model Description Styling */
+.model-description-container {
+    background: var(--lora-surface);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    min-height: 200px;
+    position: relative;
+    /* Remove the max-height and overflow-y to allow content to expand naturally */
+}
+
+.model-description-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3);
+    color: var(--text-color);
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.model-description-loading .fa-spinner {
+    margin-right: var(--space-1);
+}
+
+.model-description-content {
+    padding: var(--space-2);
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    font-size: 0.95em;
+}
+
+.model-description-content h1,
+.model-description-content h2,
+.model-description-content h3,
+.model-description-content h4,
+.model-description-content h5,
+.model-description-content h6 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+
+.model-description-content p {
+    margin-bottom: 1em;
+}
+
+.model-description-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius-xs);
+    display: block;
+    margin: 1em 0;
+}
+
+.model-description-content pre {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--border-radius-xs);
+    padding: var(--space-1);
+    white-space: pre-wrap;
+    margin: 1em 0;
+    overflow-x: auto;
+}
+
+.model-description-content code {
+    font-family: monospace;
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+}
+
+.model-description-content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.model-description-content ul,
+.model-description-content ol {
+    margin-left: 1.5em;
+    margin-bottom: 1em;
+}
+
+.model-description-content li {
+    margin-bottom: 0.5em;
+}
+
+.model-description-content blockquote {
+    border-left: 3px solid var(--lora-accent);
+    padding-left: 1em;
+    margin-left: 0;
+    margin-right: 0;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Adjust dark mode for model description */
+[data-theme="dark"] .model-description-content pre,
+[data-theme="dark"] .model-description-content code {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.error-message {
+    color: var(--lora-error);
+    text-align: center;
+    padding: var(--space-2);
+}
+
+.no-examples {
+    text-align: center;
+    padding: var(--space-3);
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+/* Adjust the media wrapper for tab system */
+#showcase-tab .carousel-container {
+    margin-top: var(--space-2);
+}
+
+/* Enhanced Model Description Styling */
+.model-description-container {
+    background: var(--lora-surface);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    min-height: 200px;
+    position: relative;
+    /* Remove the max-height and overflow-y to allow content to expand naturally */
+}
+
+.model-description-content {
+    padding: var(--space-2);
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    font-size: 0.95em;
+}
+
+.model-description-content h1,
+.model-description-content h2,
+.model-description-content h3,
+.model-description-content h4,
+.model-description-content h5,
+.model-description-content h6 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+
+.model-description-content p {
+    margin-bottom: 1em;
+}
+
+.model-description-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius-xs);
+    display: block;
+    margin: 1em 0;
+}
+
+.model-description-content pre {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--border-radius-xs);
+    padding: var(--space-1);
+    white-space: pre-wrap;
+    margin: 1em 0;
+    overflow-x: auto;
+}
+
+.model-description-content code {
+    font-family: monospace;
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+}
+
+.model-description-content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.model-description-content ul,
+.model-description-content ol {
+    margin-left: 1.5em;
+    margin-bottom: 1em;
+}
+
+.model-description-content li {
+    margin-bottom: 0.5em;
+}
+
+.model-description-content blockquote {
+    border-left: 3px solid var (--lora-accent);
+    padding-left: 1em;
+    margin-left: 0;
+    margin-right: 0;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Adjust dark mode for model description */
+[data-theme="dark"] .model-description-content pre,
+[data-theme="dark"] .model-description-content code {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Model Tags styles */
+.model-tags {
+    display: none;
+}
+
+.model-tag {
+    display: none;
+}
+
+/* Updated Model Tags styles - improved visibility in light theme */
+.model-tags-container {
+    position: relative;
+    margin-top: 4px;
+}
+
+.model-tags-compact {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.model-tag-compact {
+    /* Updated styles to match info-item appearance */
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-xs);
+    padding: 2px 8px;
+    font-size: 0.75em;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+/* Adjust dark theme tag styles */
+[data-theme="dark"] .model-tag-compact {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--lora-border);
+}
+
+.model-tag-more {
+    background: var(--lora-accent);
+    color: var(--lora-text);
+    border-radius: var(--border-radius-xs);
+    padding: 2px 8px;
+    font-size: 0.75em;
+    cursor: pointer;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.model-tags-tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow for better visibility */
+    padding: 10px 14px;
+    max-width: 400px;
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.model-tags-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto; /* Enable interactions when visible */
+}
+
+.tooltip-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.tooltip-tag {
+    /* Updated styles to match info-item appearance */
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-xs);
+    padding: 3px 8px;
+    font-size: 0.75em;
+    color: var(--text-color);
+}
+
+/* Adjust dark theme tooltip tag styles */
+[data-theme="dark"] .tooltip-tag {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--lora-border);
+}
+
+/* Add styles for blurred showcase content */
+.nsfw-media-wrapper {
+    position: relative;
+}
+
+.media-wrapper img.blurred,
+.media-wrapper video.blurred {
+    filter: blur(25px);
+}
+
+.media-wrapper .nsfw-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Position the toggle button at the top left of showcase media */
+.showcase-toggle-btn {
+    position: absolute;
+    left: var(--space-1);
+    top: var(--space-1);
+    z-index: 3;
+}
+
+/* Make sure media wrapper maintains position: relative for absolute positioning of children */
+.carousel .media-wrapper {
+    position: relative;
 }

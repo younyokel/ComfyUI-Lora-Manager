@@ -60,6 +60,96 @@
     object-position: center top; /* Align the top of the image with the top of the container */
 }
 
+/* NSFW Content Blur */
+.card-preview.blurred img,
+.card-preview.blurred video {
+    filter: blur(25px);
+}
+
+.nsfw-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.nsfw-warning {
+    text-align: center;
+    color: white;
+    background: rgba(0, 0, 0, 0.6);
+    padding: var(--space-2);
+    border-radius: var(--border-radius-base);
+    backdrop-filter: blur(4px);
+    max-width: 80%;
+    pointer-events: auto;
+}
+
+.nsfw-warning p {
+    margin: 0 0 var(--space-1);
+    font-weight: bold;
+    font-size: 1.1em;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.toggle-blur-btn {
+    position: absolute;
+    left: var(--space-1);
+    top: var(--space-1);
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    z-index: 3;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.toggle-blur-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+.toggle-blur-btn i {
+    font-size: 0.9em;
+}
+
+.show-content-btn {
+    background: var(--lora-accent);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-xs);
+    padding: 4px var(--space-1);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.show-content-btn:hover {
+    background: oklch(58% 0.28 256);
+    transform: scale(1.05);
+}
+
+/* Adjust base model label positioning when toggle button is present */
+.base-model-label.with-toggle {
+    margin-left: 28px; /* Make room for the toggle button */
+}
+
+/* Ensure card actions remain clickable */
+.card-header .card-actions {
+    z-index: 3;
+}
+
 .card-footer {
     position: absolute;
     bottom: 0;

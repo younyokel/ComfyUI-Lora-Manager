@@ -4,6 +4,8 @@ import logging
 from aiohttp import web
 from typing import Dict, List
 
+from ..utils.model_utils import determine_base_model
+
 from ..services.file_monitor import LoraFileMonitor
 from ..services.download_manager import DownloadManager
 from ..services.civitai_client import CivitaiClient
@@ -42,9 +44,11 @@ class ApiRoutes:
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
+        app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
+        app.router.add_get('/api/top-tags', routes.get_top_tags)  # Add new route for top tags
         app.router.add_get('/api/recipes', cls.handle_get_recipes)
 
         # Add update check routes
@@ -132,6 +136,11 @@ class ApiRoutes:
             base_models = request.query.get('base_models', '').split(',')
             base_models = [model.strip() for model in base_models if model.strip()]
             
+            # Parse search options
+            search_filename = request.query.get('search_filename', 'true').lower() == 'true'
+            search_modelname = request.query.get('search_modelname', 'true').lower() == 'true'
+            search_tags = request.query.get('search_tags', 'false').lower() == 'true'
+            
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
                 return web.json_response({
@@ -143,6 +152,10 @@ class ApiRoutes:
                     'error': 'Invalid sort parameter'
                 }, status=400)
             
+            # Parse tags filter parameter
+            tags = request.query.get('tags', '').split(',')
+            tags = [tag.strip() for tag in tags if tag.strip()]
+            
             # Get paginated data with search and filters
             result = await self.scanner.get_paginated_data(
                 page=page,
@@ -152,7 +165,13 @@ class ApiRoutes:
                 search=search,
                 fuzzy=fuzzy,
                 recursive=recursive,
-                base_models=base_models  # Pass base models filter
+                base_models=base_models,  # Pass base models filter
+                tags=tags,  # Add tags parameter
+                search_options={
+                    'filename': search_filename,
+                    'modelname': search_modelname,
+                    'tags': search_tags
+                }
             )
             
             # Format the response data
@@ -185,12 +204,15 @@ class ApiRoutes:
             "model_name": lora["model_name"],
             "file_name": lora["file_name"],
             "preview_url": config.get_preview_static_url(lora["preview_url"]),
+            "preview_nsfw_level": lora.get("preview_nsfw_level", 0),
             "base_model": lora["base_model"],
             "folder": lora["folder"],
             "sha256": lora["sha256"],
             "file_path": lora["file_path"].replace(os.sep, "/"),
             "file_size": lora["size"],
             "modified": lora["modified"],
+            "tags": lora["tags"],
+            "modelDescription": lora["modelDescription"],
             "from_civitai": lora.get("from_civitai", True),
             "usage_tips": lora.get("usage_tips", ""),
             "notes": lora.get("notes", ""),
@@ -333,8 +355,16 @@ class ApiRoutes:
         
         # Update model name if available
         if 'model' in civitai_metadata:
-            local_metadata['model_name'] = civitai_metadata['model'].get('name', 
-                                                                       local_metadata.get('model_name'))
+            if civitai_metadata.get('model', {}).get('name'):
+                local_metadata['model_name'] = determine_base_model(civitai_metadata['model']['name'])
+        
+            # Fetch additional model metadata (description and tags) if we have model ID
+            model_id = civitai_metadata['modelId']
+            if model_id:
+                model_metadata, _ = await client.get_model_metadata(str(model_id))
+                if model_metadata:
+                    local_metadata['modelDescription'] = model_metadata.get('description', '')
+                    local_metadata['tags'] = model_metadata.get('tags', [])
         
         # Update base model
         local_metadata['base_model'] = civitai_metadata.get('baseModel')
@@ -350,6 +380,7 @@ class ApiRoutes:
                 
                 if await client.download_preview_image(first_preview['url'], preview_path):
                     local_metadata['preview_url'] = preview_path.replace(os.sep, '/')
+                    local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
 
         # Save updated metadata
         with open(metadata_path, 'w', encoding='utf-8') as f:
@@ -369,7 +400,7 @@ class ApiRoutes:
             # 准备要处理的 loras
             to_process = [
                 lora for lora in cache.raw_data 
-                if lora.get('sha256') and not lora.get('civitai') and lora.get('from_civitai')
+                if lora.get('sha256') and (not lora.get('civitai') or 'id' not in lora.get('civitai')) and lora.get('from_civitai')  # TODO: for lora not from CivitAI but added traineWords
             ]
             total_to_process = len(to_process)
             
@@ -547,6 +578,8 @@ class ApiRoutes:
             # Validate and update settings
             if 'civitai_api_key' in data:
                 settings.set('civitai_api_key', data['civitai_api_key'])
+            if 'show_only_sfw' in data:
+                settings.set('show_only_sfw', data['show_only_sfw'])
             
             return web.json_response({'success': True})
         except Exception as e:
@@ -602,8 +635,15 @@ class ApiRoutes:
             else:
                 metadata = {}
 
-            # Update metadata with new values
-            metadata.update(metadata_updates)
+            # Handle nested updates (for civitai.trainedWords)
+            for key, value in metadata_updates.items():
+                if isinstance(value, dict) and key in metadata and isinstance(metadata[key], dict):
+                    # Deep update for nested dictionaries
+                    for nested_key, nested_value in value.items():
+                        metadata[key][nested_key] = nested_value
+                else:
+                    # Regular update for top-level keys
+                    metadata[key] = value
 
             # Save updated metadata
             with open(metadata_path, 'w', encoding='utf-8') as f:
@@ -693,6 +733,97 @@ class ApiRoutes:
         except Exception as e:
             logger.error(f"Error moving models in bulk: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)
+
+    async def get_lora_model_description(self, request: web.Request) -> web.Response:
+        """Get model description for a Lora model"""
+        try:
+            # Get parameters
+            model_id = request.query.get('model_id')
+            file_path = request.query.get('file_path')
+            
+            if not model_id:
+                return web.json_response({
+                    'success': False, 
+                    'error': 'Model ID is required'
+                }, status=400)
+            
+            # Check if we already have the description stored in metadata
+            description = None
+            tags = []
+            if file_path:
+                metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                if os.path.exists(metadata_path):
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            description = metadata.get('modelDescription')
+                            tags = metadata.get('tags', [])
+                    except Exception as e:
+                        logger.error(f"Error loading metadata from {metadata_path}: {e}")
+            
+            # If description is not in metadata, fetch from CivitAI
+            if not description:
+                logger.info(f"Fetching model metadata for model ID: {model_id}")
+                model_metadata, _ = await self.civitai_client.get_model_metadata(model_id)
+                
+                if model_metadata:
+                    description = model_metadata.get('description')
+                    tags = model_metadata.get('tags', [])
+                
+                    # Save the metadata to file if we have a file path and got metadata
+                    if file_path:
+                        try:
+                            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                            if os.path.exists(metadata_path):
+                                with open(metadata_path, 'r', encoding='utf-8') as f:
+                                    metadata = json.load(f)
+                                
+                                metadata['modelDescription'] = description
+                                metadata['tags'] = tags
+                                
+                                with open(metadata_path, 'w', encoding='utf-8') as f:
+                                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                                    logger.info(f"Saved model metadata to file for {file_path}")
+                        except Exception as e:
+                            logger.error(f"Error saving model metadata: {e}")
+            
+            return web.json_response({
+                'success': True,
+                'description': description or "<p>No model description available.</p>",
+                'tags': tags
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting model metadata: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    async def get_top_tags(self, request: web.Request) -> web.Response:
+        """Handle request for top tags sorted by frequency"""
+        try:
+            # Parse query parameters
+            limit = int(request.query.get('limit', '20'))
+            
+            # Validate limit
+            if limit < 1 or limit > 100:
+                limit = 20  # Default to a reasonable limit
+                
+            # Get top tags
+            top_tags = await self.scanner.get_top_tags(limit)
+            
+            return web.json_response({
+                'success': True,
+                'tags': top_tags
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting top tags: {str(e)}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': 'Internal server error'
+            }, status=500)
 
     @staticmethod
     async def handle_get_recipes(request):

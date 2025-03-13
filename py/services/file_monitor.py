@@ -98,6 +98,10 @@ class LoraFileHandler(FileSystemEventHandler):
                         # Scan new file
                         lora_data = await self.scanner.scan_single_lora(file_path)
                         if lora_data:
+                            # Update tags count
+                            for tag in lora_data.get('tags', []):
+                                self.scanner._tags_count[tag] = self.scanner._tags_count.get(tag, 0) + 1
+                            
                             cache.raw_data.append(lora_data)
                             new_folders.add(lora_data['folder'])
                             # Update hash index
@@ -109,6 +113,16 @@ class LoraFileHandler(FileSystemEventHandler):
                             needs_resort = True
                             
                     elif action == 'remove':
+                        # Find the lora to remove so we can update tags count
+                        lora_to_remove = next((item for item in cache.raw_data if item['file_path'] == file_path), None)
+                        if lora_to_remove:
+                            # Update tags count by reducing counts
+                            for tag in lora_to_remove.get('tags', []):
+                                if tag in self.scanner._tags_count:
+                                    self.scanner._tags_count[tag] = max(0, self.scanner._tags_count[tag] - 1)
+                                    if self.scanner._tags_count[tag] == 0:
+                                        del self.scanner._tags_count[tag]
+                        
                         # Remove from cache and hash index
                         logger.info(f"Removing {file_path} from cache")
                         self.scanner._hash_index.remove_by_path(file_path)

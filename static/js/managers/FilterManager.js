@@ -6,7 +6,8 @@ import { resetAndReload } from '../api/loraApi.js';
 export class FilterManager {
     constructor() {
         this.filters = {
-            baseModel: []
+            baseModel: [],
+            tags: []
         };
         
         this.filterPanel = document.getElementById('filterPanel');
@@ -32,6 +33,77 @@ export class FilterManager {
         
         // Initialize active filters from localStorage if available
         this.loadFiltersFromStorage();
+    }
+    
+    async loadTopTags() {
+        try {
+            // Show loading state
+            const tagsContainer = document.getElementById('modelTagsFilter');
+            if (tagsContainer) {
+                tagsContainer.innerHTML = '<div class="tags-loading">Loading tags...</div>';
+            }
+            
+            const response = await fetch('/api/top-tags?limit=20');
+            if (!response.ok) throw new Error('Failed to fetch tags');
+            
+            const data = await response.json();
+            console.log('Top tags:', data);
+            if (data.success && data.tags) {
+                this.createTagFilterElements(data.tags);
+                
+                // After creating tag elements, mark any previously selected ones
+                this.updateTagSelections();
+            } else {
+                throw new Error('Invalid response format');
+            }
+        } catch (error) {
+            console.error('Error loading top tags:', error);
+            const tagsContainer = document.getElementById('modelTagsFilter');
+            if (tagsContainer) {
+                tagsContainer.innerHTML = '<div class="tags-error">Failed to load tags</div>';
+            }
+        }
+    }
+    
+    createTagFilterElements(tags) {
+        const tagsContainer = document.getElementById('modelTagsFilter');
+        if (!tagsContainer) return;
+        
+        tagsContainer.innerHTML = '';
+        
+        if (!tags.length) {
+            tagsContainer.innerHTML = '<div class="no-tags">No tags available</div>';
+            return;
+        }
+        
+        tags.forEach(tag => {
+            const tagEl = document.createElement('div');
+            tagEl.className = 'filter-tag tag-filter';
+            // {tag: "name", count: number}
+            const tagName = tag.tag;
+            tagEl.dataset.tag = tagName;
+            tagEl.innerHTML = `${tagName} <span class="tag-count">${tag.count}</span>`;
+            
+            // Add click handler to toggle selection and automatically apply
+            tagEl.addEventListener('click', async () => {
+                tagEl.classList.toggle('active');
+                
+                if (tagEl.classList.contains('active')) {
+                    if (!this.filters.tags.includes(tagName)) {
+                        this.filters.tags.push(tagName);
+                    }
+                } else {
+                    this.filters.tags = this.filters.tags.filter(t => t !== tagName);
+                }
+                
+                this.updateActiveFiltersCount();
+                
+                // Auto-apply filter when tag is clicked
+                await this.applyFilters(false);
+            });
+            
+            tagsContainer.appendChild(tagEl);
+        });
     }
     
     createBaseModelTags() {
@@ -69,10 +141,13 @@ export class FilterManager {
     }
     
     toggleFilterPanel() {
+        const wasHidden = this.filterPanel.classList.contains('hidden');
+        
         this.filterPanel.classList.toggle('hidden');
         
-        // Mark selected filters
-        if (!this.filterPanel.classList.contains('hidden')) {
+        // If the panel is being opened, load the top tags and update selections
+        if (wasHidden) {
+            this.loadTopTags();
             this.updateTagSelections();
         }
     }
@@ -92,10 +167,21 @@ export class FilterManager {
                 tag.classList.remove('active');
             }
         });
+        
+        // Update model tags
+        const modelTags = document.querySelectorAll('.tag-filter');
+        modelTags.forEach(tag => {
+            const tagName = tag.dataset.tag;
+            if (this.filters.tags.includes(tagName)) {
+                tag.classList.add('active');
+            } else {
+                tag.classList.remove('active');
+            }
+        });
     }
     
     updateActiveFiltersCount() {
-        const totalActiveFilters = this.filters.baseModel.length;
+        const totalActiveFilters = this.filters.baseModel.length + this.filters.tags.length;
         
         if (totalActiveFilters > 0) {
             this.activeFiltersCount.textContent = totalActiveFilters;
@@ -119,7 +205,19 @@ export class FilterManager {
         if (this.hasActiveFilters()) {
             this.filterButton.classList.add('active');
             if (showToastNotification) {
-                showToast(`Filtering by ${this.filters.baseModel.length} base models`, 'success');
+                const baseModelCount = this.filters.baseModel.length;
+                const tagsCount = this.filters.tags.length;
+                
+                let message = '';
+                if (baseModelCount > 0 && tagsCount > 0) {
+                    message = `Filtering by ${baseModelCount} base model${baseModelCount > 1 ? 's' : ''} and ${tagsCount} tag${tagsCount > 1 ? 's' : ''}`;
+                } else if (baseModelCount > 0) {
+                    message = `Filtering by ${baseModelCount} base model${baseModelCount > 1 ? 's' : ''}`;
+                } else if (tagsCount > 0) {
+                    message = `Filtering by ${tagsCount} tag${tagsCount > 1 ? 's' : ''}`;
+                }
+                
+                showToast(message, 'success');
             }
         } else {
             this.filterButton.classList.remove('active');
@@ -132,7 +230,8 @@ export class FilterManager {
     async clearFilters() {
         // Clear all filters
         this.filters = {
-            baseModel: []
+            baseModel: [],
+            tags: []
         };
         
         // Update state
@@ -154,7 +253,14 @@ export class FilterManager {
         const savedFilters = localStorage.getItem('loraFilters');
         if (savedFilters) {
             try {
-                this.filters = JSON.parse(savedFilters);
+                const parsedFilters = JSON.parse(savedFilters);
+                
+                // Ensure backward compatibility with older filter format
+                this.filters = {
+                    baseModel: parsedFilters.baseModel || [],
+                    tags: parsedFilters.tags || []
+                };
+                
                 this.updateTagSelections();
                 this.updateActiveFiltersCount();
                 
@@ -168,6 +274,6 @@ export class FilterManager {
     }
     
     hasActiveFilters() {
-        return this.filters.baseModel.length > 0;
+        return this.filters.baseModel.length > 0 || this.filters.tags.length > 0;
     }
 }

@@ -1,5 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
+import { state, saveSettings } from '../state/index.js';
+import { resetAndReload } from '../api/loraApi.js';
 
 export class SettingsManager {
     constructor() {
@@ -20,6 +22,11 @@ export class SettingsManager {
                 mutations.forEach((mutation) => {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                         this.isOpen = settingsModal.style.display === 'block';
+                        
+                        // When modal is opened, update checkbox state from current settings
+                        if (this.isOpen) {
+                            this.loadSettingsToUI();
+                        }
                     }
                 });
             });
@@ -28,6 +35,22 @@ export class SettingsManager {
         }
         
         this.initialized = true;
+    }
+
+    loadSettingsToUI() {
+        // Set frontend settings from state
+        const blurMatureContentCheckbox = document.getElementById('blurMatureContent');
+        if (blurMatureContentCheckbox) {
+            blurMatureContentCheckbox.checked = state.settings.blurMatureContent;
+        }
+        
+        const showOnlySFWCheckbox = document.getElementById('showOnlySFW');
+        if (showOnlySFWCheckbox) {
+            // Sync with state (backend will set this via template)
+            state.settings.show_only_sfw = showOnlySFWCheckbox.checked;
+        }
+        
+        // Backend settings are loaded from the template directly
     }
 
     toggleSettings() {
@@ -40,16 +63,28 @@ export class SettingsManager {
     }
 
     async saveSettings() {
+        // Get frontend settings from UI
+        const blurMatureContent = document.getElementById('blurMatureContent').checked;
+        
+        // Get backend settings
         const apiKey = document.getElementById('civitaiApiKey').value;
+        const showOnlySFW = document.getElementById('showOnlySFW').checked;
+        
+        // Update frontend state and save to localStorage
+        state.settings.blurMatureContent = blurMatureContent;
+        state.settings.show_only_sfw = showOnlySFW;
+        saveSettings();
         
         try {
+            // Save backend settings via API
             const response = await fetch('/api/settings', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    civitai_api_key: apiKey
+                    civitai_api_key: apiKey,
+                    show_only_sfw: showOnlySFW
                 })
             });
 
@@ -59,9 +94,30 @@ export class SettingsManager {
 
             showToast('Settings saved successfully', 'success');
             modalManager.closeModal('settingsModal');
+            
+            // Apply frontend settings immediately
+            this.applyFrontendSettings();
+            
+            // Reload the loras without updating folders
+            await resetAndReload(false);
         } catch (error) {
             showToast('Failed to save settings: ' + error.message, 'error');
         }
+    }
+
+    applyFrontendSettings() {
+        // Apply blur setting to existing content
+        const blurSetting = state.settings.blurMatureContent;
+        document.querySelectorAll('.lora-card[data-nsfw="true"] .card-image').forEach(img => {
+            if (blurSetting) {
+                img.classList.add('nsfw-blur');
+            } else {
+                img.classList.remove('nsfw-blur');
+            }
+        });
+        
+        // For show_only_sfw, there's no immediate action needed as it affects content loading
+        // The setting will take effect on next reload
     }
 }
 

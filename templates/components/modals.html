@@ -147,6 +147,40 @@
                     Used for authentication when downloading models from Civitai
                 </div>
             </div>
+            
+            <div class="settings-section">
+                <h3>Content Filtering</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <label for="blurMatureContent">Blur NSFW Content</label>
+                        <div class="input-help">
+                            Blur mature (NSFW) content preview images
+                        </div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="blurMatureContent" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <label for="showOnlySFW">Show Only SFW Results</label>
+                        <div class="input-help">
+                            Filter out all NSFW content when browsing and searching
+                        </div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="showOnlySFW" value="{{ settings.get('show_only_sfw', False) }}" {% if settings.get('show_only_sfw', False) %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="modal-actions">
             <button class="primary-btn" onclick="settingsManager.saveSettings()">Save</button>

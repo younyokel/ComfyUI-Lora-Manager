@@ -1,17 +1,18 @@
 import json
+import re
 from server import PromptServer # type: ignore
 from .utils import FlexibleOptionalInputType, any_type
 
 class TriggerWordToggle:
     NAME = "TriggerWord Toggle (LoraManager)"
-    CATEGORY = "lora manager"
+    CATEGORY = "Lora Manager/utils"
     DESCRIPTION = "Toggle trigger words on/off"
     
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "trigger_words": ("STRING", {"defaultInput": True, "forceInput": True}),
+                "group_mode": ("BOOLEAN", {"default": True}),
             },
             "optional": FlexibleOptionalInputType(any_type),
             "hidden": {
@@ -23,7 +24,8 @@ class TriggerWordToggle:
     RETURN_NAMES = ("filtered_trigger_words",)
     FUNCTION = "process_trigger_words"
 
-    def process_trigger_words(self, trigger_words, id, **kwargs):
+    def process_trigger_words(self, id, group_mode, **kwargs):
+        trigger_words = kwargs.get("trigger_words", "")
         # Send trigger words to frontend
         PromptServer.instance.send_sync("trigger_word_update", {
             "id": id,
@@ -41,20 +43,33 @@ class TriggerWordToggle:
                 if isinstance(trigger_data, str):
                     trigger_data = json.loads(trigger_data)
                 
-                # Create dictionaries to track active state of words
+                # Create dictionaries to track active state of words or groups
                 active_state = {item['text']: item.get('active', False) for item in trigger_data}
                 
-                # Split original trigger words
-                original_words = [word.strip() for word in trigger_words.split(',')]
-                
-                # Filter words: keep those not in toggle_trigger_words or those that are active
-                filtered_words = [word for word in original_words if word not in active_state or active_state[word]]
-                
-                # Join them in the same format as input
-                if filtered_words:
-                    filtered_triggers = ', '.join(filtered_words)
+                if group_mode:
+                    # Split by two or more consecutive commas to get groups
+                    groups = re.split(r',{2,}', trigger_words)
+                    # Remove leading/trailing whitespace from each group
+                    groups = [group.strip() for group in groups]
+                    
+                    # Filter groups: keep those not in toggle_trigger_words or those that are active
+                    filtered_groups = [group for group in groups if group not in active_state or active_state[group]]
+                    
+                    if filtered_groups:
+                        filtered_triggers = ', '.join(filtered_groups)
+                    else:
+                        filtered_triggers = ""
                 else:
-                    filtered_triggers = ""
+                    # Original behavior for individual words mode
+                    original_words = [word.strip() for word in trigger_words.split(',')]
+                    # Filter out empty strings
+                    original_words = [word for word in original_words if word]
+                    filtered_words = [word for word in original_words if word not in active_state or active_state[word]]
+                    
+                    if filtered_words:
+                        filtered_triggers = ', '.join(filtered_words)
+                    else:
+                        filtered_triggers = ""
                     
             except Exception as e:
                 print(f"Error processing trigger words: {e}")

@@ -28,10 +28,10 @@ function mergeLoras(lorasText, lorasArr) {
 }
 
 app.registerExtension({
-    name: "LoraManager.LoraLoader",
+    name: "LoraManager.LoraStacker",
     
     async nodeCreated(node) {
-        if (node.comfyClass === "Lora Loader (LoraManager)") {
+        if (node.comfyClass === "Lora Stacker (LoraManager)") {
             // Enable widget serialization
             node.serialize_widgets = true;
 
@@ -40,7 +40,7 @@ app.registerExtension({
             });
 
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {
+            requestAnimationFrame(() => {               
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {

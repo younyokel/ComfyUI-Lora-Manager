@@ -32,9 +32,15 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         }
         
         // Add filter parameters if active
-        if (state.filters && state.filters.baseModel && state.filters.baseModel.length > 0) {
-            // Convert the array of base models to a comma-separated string
-            params.append('base_models', state.filters.baseModel.join(','));
+        if (state.filters) {
+            if (state.filters.tags && state.filters.tags.length > 0) {
+                // Convert the array of tags to a comma-separated string
+                params.append('tags', state.filters.tags.join(','));
+            }
+            if (state.filters.baseModel && state.filters.baseModel.length > 0) {
+                // Convert the array of base models to a comma-separated string
+                params.append('base_models', state.filters.baseModel.join(','));
+            }
         }
 
         console.log('Loading loras with params:', params.toString());
@@ -107,7 +113,8 @@ export async function fetchCivitai() {
     
     await state.loadingManager.showWithProgress(async (loading) => {
         try {
-            ws = new WebSocket(`ws://${window.location.host}/ws/fetch-progress`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
             
             const operationComplete = new Promise((resolve, reject) => {
                 ws.onmessage = (event) => {
@@ -324,5 +331,20 @@ export async function refreshSingleLoraMetadata(filePath) {
     } finally {
         state.loadingManager.hide();
         state.loadingManager.restoreProgressBar();
+    }
+}
+
+export async function fetchModelDescription(modelId, filePath) {
+    try {
+        const response = await fetch(`/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch model description: ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching model description:', error);
+        throw error;
     }
 }

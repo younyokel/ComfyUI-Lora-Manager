@@ -237,6 +237,44 @@
     border-color: var(--lora-accent);
 }
 
+/* Tag filter styles */
+.tag-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 60px;
+}
+
+.tag-count {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+[data-theme="dark"] .tag-count {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tag-filter.active .tag-count {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.tags-loading, .tags-error, .no-tags {
+    width: 100%;
+    padding: 8px;
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.tags-error {
+    color: var(--lora-error);
+}
+
 /* Filter actions */
 .filter-actions {
     display: flex;
@@ -276,4 +314,197 @@
         right: 20px;
         top: 140px;
     }
-} 
+}
+
+/* Search Options Toggle */
+.search-options-toggle {
+    background: var(--lora-surface);
+    border: 1px solid oklch(65% 0.02 256);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-options-toggle:hover {
+    background-color: var(--lora-surface-hover, oklch(95% 0.02 256));
+    color: var(--lora-accent);
+    border-color: var(--lora-accent);
+}
+
+.search-options-toggle.active {
+    background-color: oklch(95% 0.05 256);
+    color: var(--lora-accent);
+    border-color: var(--lora-accent);
+}
+
+.search-options-toggle i {
+    font-size: 0.9em;
+}
+
+/* Search Options Panel */
+.search-options-panel {
+    position: absolute;
+    top: 140px;
+    right: 65px; /* Position it closer to the search options button */
+    width: 280px; /* Slightly wider to accommodate tags better */
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: var(--z-overlay);
+    padding: 16px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    transform-origin: top right;
+}
+
+.search-options-panel.hidden {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
+.options-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.options-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.close-options-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-options-btn:hover {
+    color: var(--lora-accent);
+}
+
+.options-section {
+    margin-bottom: 16px;
+}
+
+.options-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.search-option-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; /* Increased gap for better spacing */
+}
+
+.search-option-tag {
+    padding: 6px 8px; /* Adjusted padding for better text display */
+    border-radius: var(--border-radius-sm);
+    background-color: var(--lora-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 13px; /* Slightly smaller font size */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap; /* Prevent text wrapping */
+    min-width: 80px; /* Ensure minimum width for each tag */
+    display: inline-flex; /* Better control over layout */
+    justify-content: center;
+    align-items: center;
+}
+
+.search-option-tag:hover {
+    background-color: var(--lora-surface-hover);
+}
+
+.search-option-tag.active {
+    background-color: var(--lora-accent);
+    color: white;
+    border-color: var(--lora-accent);
+}
+
+/* Switch styles */
+.search-option-switch {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--lora-accent);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--lora-accent);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
