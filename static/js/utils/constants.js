@@ -31,7 +31,7 @@ export const BASE_MODELS = {
     LUMINA: "Lumina",
     KOLORS: "Kolors",
     NOOBAI: "NoobAI",
-    IL: "IL",
+    ILLUSTRIOUS: "Illustrious",
     PONY: "Pony",
     
     // Video models
@@ -82,7 +82,7 @@ export const BASE_MODEL_CLASSES = {
     [BASE_MODELS.LUMINA]: "lumina",
     [BASE_MODELS.KOLORS]: "kolors",
     [BASE_MODELS.NOOBAI]: "noobai",
-    [BASE_MODELS.IL]: "il",
+    [BASE_MODELS.ILLUSTRIOUS]: "il",
     [BASE_MODELS.PONY]: "pony",
     
     // Default

@@ -4,6 +4,8 @@ import hashlib
 import json
 from typing import Dict, Optional
 
+from .model_utils import determine_base_model
+
 from .lora_metadata import extract_lora_metadata
 from .models import LoraMetadata
 
@@ -105,6 +107,12 @@ async def load_metadata(file_path: str) -> Optional[LoraMetadata]:
                 data = json.load(f)
                 
                 needs_update = False
+
+                # Check and normalize base model name
+                normalized_base_model = determine_base_model(data['base_model'])
+                if data['base_model'] != normalized_base_model:
+                    data['base_model'] = normalized_base_model
+                    needs_update = True
                 
                 # Compare paths without extensions
                 stored_path_base = os.path.splitext(data['file_path'])[0]

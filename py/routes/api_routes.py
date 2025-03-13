@@ -4,6 +4,8 @@ import logging
 from aiohttp import web
 from typing import Dict, List
 
+from ..utils.model_utils import determine_base_model
+
 from ..services.file_monitor import LoraFileMonitor
 from ..services.download_manager import DownloadManager
 from ..services.civitai_client import CivitaiClient
@@ -351,8 +353,8 @@ class ApiRoutes:
         
         # Update model name if available
         if 'model' in civitai_metadata:
-            local_metadata['model_name'] = civitai_metadata['model'].get('name', 
-                                                                       local_metadata.get('model_name'))
+            if civitai_metadata.get('model', {}).get('name'):
+                local_metadata['model_name'] = determine_base_model(civitai_metadata['model']['name'])
         
             # Fetch additional model metadata (description and tags) if we have model ID
             model_id = civitai_metadata['modelId']

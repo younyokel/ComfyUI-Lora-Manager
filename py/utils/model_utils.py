@@ -8,7 +8,8 @@ BASE_MODEL_MAPPING = {
     "sd-v2": "SD 2.0",
     "flux1": "Flux.1 D",
     "flux.1 d": "Flux.1 D",
-    "illustrious": "IL",
+    "illustrious": "Illustrious",
+    "il": "Illustrious",
     "pony": "Pony",
     "Hunyuan Video": "Hunyuan Video"
 }
