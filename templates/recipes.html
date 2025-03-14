@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/loras_static/css/style.css">
     <link rel="stylesheet" href="/loras_static/css/components/recipe-card.css">
+    <link rel="stylesheet" href="/loras_static/css/components/import-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="icon" type="image/png" sizes="32x32" href="/loras_static/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/loras_static/images/favicon-16x16.png">
@@ -113,6 +114,7 @@
         {% include 'components/modals.html' %}
         {% include 'components/loading.html' %}
         {% include 'components/context_menu.html' %}
+        {% include 'components/import_modal.html' %}
 
         <div class="container">
             {% if is_initializing %}

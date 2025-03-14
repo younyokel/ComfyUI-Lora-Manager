@@ -72,6 +72,15 @@ export class ModalManager {
             }
         });
 
+        // Add importModal registration
+        this.registerModal('importModal', {
+            element: document.getElementById('importModal'),
+            onClose: () => {
+                this.getModal('importModal').element.style.display = 'none';
+                document.body.classList.remove('modal-open');   
+            }
+        });
+
         // Set up event listeners for modal toggles
         const supportToggle = document.getElementById('supportToggleBtn');
         if (supportToggle) {

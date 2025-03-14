@@ -2,6 +2,7 @@
 import { showToast } from './utils/uiHelpers.js';
 import { state } from './state/index.js';
 import { initializeCommonComponents } from './common.js';
+import { ImportManager } from './managers/ImportManager.js';
 
 class RecipeManager {
     constructor() {
@@ -9,6 +10,9 @@ class RecipeManager {
         this.pageSize = 20;
         this.sortBy = 'date';
         this.filterParams = {};
+        
+        // Initialize ImportManager
+        this.importManager = new ImportManager();
         
         this.init();
     }
@@ -42,6 +46,15 @@ class RecipeManager {
                     this.loadRecipes();
                 }, 300);
             });
+        }
+        
+        // Import button
+        const importButton = document.querySelector('button[onclick="importRecipes()"]');
+        if (importButton) {
+            importButton.onclick = (e) => {
+                e.preventDefault();
+                this.importManager.showImportModal();
+            };
         }
     }
     
@@ -198,12 +211,25 @@ class RecipeManager {
     // - Recipe details view
     // - Recipe tag filtering
     // - Recipe search and filters
+    
+    // Add a method to handle recipe import
+    importRecipes() {
+        this.importManager.showImportModal();
+    }
 }
 
 // Initialize components
 document.addEventListener('DOMContentLoaded', () => {
     initializeCommonComponents();
     window.recipeManager = new RecipeManager();
+    
+    // Make importRecipes function available globally
+    window.importRecipes = () => {
+        window.recipeManager.importRecipes();
+    };
+
+    // Expose ImportManager instance globally for the import modal event handlers
+    window.importManager = window.recipeManager.importManager;
 });
 
 // Export for use in other modules
