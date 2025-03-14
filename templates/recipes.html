@@ -126,24 +126,11 @@
             {% else %}           
             <!-- Recipe controls - can reuse structure from loras controls -->
             <div class="controls">
-                <!-- Recipe tags container - similar to folder tags -->
-                <div class="folder-tags-container">
-                    <div class="recipe-tag-container">
-                        {% if recipe_tags %}
-                            {% for tag in recipe_tags %}
-                            <div class="recipe-tag" data-tag="{{ tag }}">{{ tag }}</div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="recipe-tag" data-tag="all">All</div>
-                        {% endif %}
+                <div class="action-buttons">
+                    <div title="Import recipes" class="control-group">
+                        <button onclick="importRecipes()"><i class="fas fa-file-import"></i> Import</button>
                     </div>
-                    <button class="toggle-folders-btn" onclick="toggleTagsContainer()" title="Collapse tags">
-                        <i class="fas fa-chevron-up"></i>
-                    </button>
                 </div>
-                
-                <!-- Search container - similar structure to loras search -->
-                {% include 'components/search_controls.html' %}
             </div>
             
             <!-- Recipe grid - similar to lora grid -->
@@ -217,52 +204,11 @@
     
     <!-- Recipe page specific scripts -->
     <script>
-        // Toggle recipe tags container
-        function toggleTagsContainer() {
-            const container = document.querySelector('.recipe-tag-container');
-            const button = document.querySelector('.toggle-folders-btn');
-            
-            if (container.style.display === 'none') {
-                container.style.display = 'flex';
-                button.querySelector('i').className = 'fas fa-chevron-up';
-                button.title = 'Collapse tags';
-            } else {
-                container.style.display = 'none';
-                button.querySelector('i').className = 'fas fa-chevron-down';
-                button.title = 'Expand tags';
-            }
-        }
-        
         // Refresh recipes
         function refreshRecipes() {
             // Will be implemented in recipes.js
             window.location.reload();
         }
-        
-        // Simple utility function to handle theme toggling
-        function toggleTheme() {
-            document.body.classList.toggle('dark-theme');
-            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
-        }
-        
-        // Apply saved theme on load
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.body.classList.add('dark-theme');
-            }
-            
-            // Setup recipe tag filtering
-            document.querySelectorAll('.recipe-tag').forEach(tag => {
-                tag.addEventListener('click', () => {
-                    document.querySelectorAll('.recipe-tag').forEach(t => t.classList.remove('active'));
-                    tag.classList.add('active');
-                    
-                    // Implement filtering logic here or in recipes.js
-                    console.log('Filter by tag:', tag.dataset.tag);
-                });
-            });
-        });
         
         // Placeholder for recipe filter manager
         const recipeFilterManager = {

@@ -602,7 +602,6 @@
     align-items: center;
     width: calc(100% - 40px); /* Avoid overlap with close button */
     position: relative;
-    margin-bottom: var(--space-1);
 }
 
 .model-name-content {
@@ -917,7 +916,6 @@
 /* Updated Model Tags styles - improved visibility in light theme */
 .model-tags-container {
     position: relative;
-    margin-top: 4px;
 }
 
 .model-tags-compact {
