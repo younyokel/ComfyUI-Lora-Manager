@@ -40,6 +40,7 @@ class ApiRoutes:
         app.router.add_post('/api/fetch-all-civitai', routes.fetch_all_civitai)
         app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
+        app.router.add_get('/api/folders', routes.get_folders)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
@@ -519,6 +520,13 @@ class ApiRoutes:
         """Get all configured LoRA root directories"""
         return web.json_response({
             'roots': config.loras_roots
+        })
+    
+    async def get_folders(self, request: web.Request) -> web.Response:
+        """Get all folders in the cache"""
+        cache = await self.scanner.get_cached_data()
+        return web.json_response({
+            'folders': cache.folders
         })
 
     async def get_civitai_versions(self, request: web.Request) -> web.Response:

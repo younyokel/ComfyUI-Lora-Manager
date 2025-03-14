@@ -180,7 +180,6 @@ class RecipeRoutes:
             
             # Extract metadata from the image using ExifUtils
             user_comment = ExifUtils.extract_user_comment(temp_path)
-            print(f"User comment: {user_comment}", file=sys.stderr)
             
             # If no metadata found, return a more specific error
             if not user_comment:
@@ -191,7 +190,6 @@ class RecipeRoutes:
             
             # Parse the recipe metadata
             metadata = ExifUtils.parse_recipe_metadata(user_comment)
-            print(f"Metadata: {metadata}", file=sys.stderr)
             
             # Look for Civitai resources in the metadata
             civitai_resources = metadata.get('loras', [])
@@ -220,7 +218,6 @@ class RecipeRoutes:
                 
                 # Get additional info from Civitai
                 civitai_info = await self.civitai_client.get_model_version_info(model_version_id)
-                print(f"Civitai info: {civitai_info}", file=sys.stderr)
 
                 # Check if this LoRA exists locally by SHA256 hash
                 exists_locally = False

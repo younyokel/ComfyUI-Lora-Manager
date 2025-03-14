@@ -20,10 +20,12 @@ export class ImportManager {
         this.loadingManager = new LoadingManager();
         this.folderClickHandler = null;
         this.updateTargetPath = this.updateTargetPath.bind(this);
+        
+        // 添加对注入样式的引用
+        this.injectedStyles = null;
     }
 
     showImportModal() {
-        console.log('Showing import modal...');
         if (!this.initialized) {
             // Check if modal exists
             const modal = document.getElementById('importModal');
@@ -37,13 +39,26 @@ export class ImportManager {
         modalManager.showModal('importModal', null, () => {
             // Cleanup handler when modal closes
             this.cleanupFolderBrowser();
+            
+            // 移除任何强制样式
+            this.removeInjectedStyles();
         });
         this.resetSteps();
     }
 
+    // 添加移除注入样式的方法
+    removeInjectedStyles() {
+        if (this.injectedStyles && this.injectedStyles.parentNode) {
+            this.injectedStyles.parentNode.removeChild(this.injectedStyles);
+            this.injectedStyles = null;
+        }
+    }
+
     resetSteps() {
-        document.querySelectorAll('.import-step').forEach(step => step.style.display = 'none');
-        document.getElementById('uploadStep').style.display = 'block';
+        // 移除可能存在的强制样式
+        this.removeInjectedStyles();
+        
+        this.showStep('uploadStep');
         
         // Reset file input
         const fileInput = document.getElementById('recipeImageUpload');
@@ -147,8 +162,7 @@ export class ImportManager {
     }
 
     showRecipeDetailsStep() {
-        document.getElementById('uploadStep').style.display = 'none';
-        document.getElementById('detailsStep').style.display = 'block';
+        this.showStep('detailsStep');
         
         // Set default recipe name from image filename
         const recipeName = document.getElementById('recipeName');
@@ -277,6 +291,8 @@ export class ImportManager {
             return;
         }
         
+        console.log('Proceeding from details, missing LoRAs:', this.missingLoras.length);
+        
         // If we have missing LoRAs, go to location step
         if (this.missingLoras.length > 0) {
             this.proceedToLocation();
@@ -287,239 +303,242 @@ export class ImportManager {
     }
 
     async proceedToLocation() {
-        document.getElementById('detailsStep').style.display = 'none';
-        document.getElementById('locationStep').style.display = 'block';
+        // 先移除可能已有的样式
+        this.removeInjectedStyles();
+        
+        // 添加强制CSS覆盖
+        this.injectedStyles = document.createElement('style');
+        this.injectedStyles.innerHTML = `
+            #locationStep {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                position: static !important;
+                z-index: 10000 !important;
+                width: auto !important;
+                height: auto !important;
+                overflow: visible !important;
+                transform: none !important;
+            }
+        `;
+        document.head.appendChild(this.injectedStyles);
+        console.log('Added override CSS to force visibility');
+        
+        this.showStep('locationStep');
         
         try {
-            this.loadingManager.showSimpleLoading('Loading download options...');
-            
-            const response = await fetch('/api/lora-roots');
-            if (!response.ok) {
-                throw new Error('Failed to fetch LoRA roots');
+            // Fetch LoRA roots
+            const rootsResponse = await fetch('/api/lora-roots');
+            if (!rootsResponse.ok) {
+                throw new Error(`Failed to fetch LoRA roots: ${rootsResponse.status}`);
             }
             
-            const data = await response.json();
+            const rootsData = await rootsResponse.json();
             const loraRoot = document.getElementById('importLoraRoot');
-            
-            // Check if we have roots
-            if (!data.roots || data.roots.length === 0) {
-                throw new Error('No LoRA root directories configured');
+            if (loraRoot) {
+                loraRoot.innerHTML = rootsData.roots.map(root => 
+                    `<option value="${root}">${root}</option>`
+                ).join('');
             }
             
-            // Populate roots dropdown
-            loraRoot.innerHTML = data.roots.map(root => 
-                `<option value="${root}">${root}</option>`
-            ).join('');
+            // Fetch folders
+            const foldersResponse = await fetch('/api/folders');
+            if (!foldersResponse.ok) {
+                throw new Error(`Failed to fetch folders: ${foldersResponse.status}`);
+            }
+            
+            const foldersData = await foldersResponse.json();
+            const folderBrowser = document.getElementById('importFolderBrowser');
+            if (folderBrowser) {
+                folderBrowser.innerHTML = foldersData.folders.map(folder => 
+                    folder ? `<div class="folder-item" data-folder="${folder}">${folder}</div>` : ''
+                ).join('');
+            }
 
-            // Initialize folder browser after loading roots
-            await this.initializeFolderBrowser();
-            
-            // Display missing LoRAs
-            const missingLorasList = document.getElementById('missingLorasList');
-            if (missingLorasList) {
-                missingLorasList.innerHTML = this.missingLoras.map(lora => `
-                    <div class="missing-lora-item">
-                        <div class="lora-name">${lora.name}</div>
-                        <div class="lora-type">${lora.type || 'lora'}</div>
-                    </div>
-                `).join('');
-            }
-            
-            // Update target path display
-            this.updateTargetPath();
-            
+            // Initialize folder browser after loading data
+            this.initializeFolderBrowser();
         } catch (error) {
-            console.error('Error in proceedToLocation:', error);
+            console.error('Error in API calls:', error);
             showToast(error.message, 'error');
-            // Go back to details step on error
-            this.backToDetails();
-        } finally {
-            this.loadingManager.hide();
         }
     }
 
     backToUpload() {
-        document.getElementById('detailsStep').style.display = 'none';
-        document.getElementById('uploadStep').style.display = 'block';
+        this.showStep('uploadStep');
     }
 
     backToDetails() {
-        document.getElementById('locationStep').style.display = 'none';
-        document.getElementById('detailsStep').style.display = 'block';
+        this.showStep('detailsStep');
     }
 
     async saveRecipe() {
+        if (!this.recipeName) {
+            showToast('Please enter a recipe name', 'error');
+            return;
+        }
+        
         try {
-            // If we're in the location step, we need to download missing LoRAs first
-            if (document.getElementById('locationStep').style.display !== 'none') {
-                const loraRoot = document.getElementById('importLoraRoot').value;
-                const newFolder = document.getElementById('importNewFolder').value.trim();
-                
-                if (!loraRoot) {
-                    showToast('Please select a LoRA root directory', 'error');
-                    return;
-                }
-                
-                // Construct relative path
-                let targetFolder = '';
-                if (this.selectedFolder) {
-                    targetFolder = this.selectedFolder;
-                }
-                if (newFolder) {
-                    targetFolder = targetFolder ? 
-                        `${targetFolder}/${newFolder}` : newFolder;
-                }
-                
-                // Show loading with progress bar for download
-                this.loadingManager.show('Downloading missing LoRAs...', 0);
-                
-                // Setup WebSocket for progress updates
-                const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
-                ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.status === 'progress') {
-                        this.loadingManager.setProgress(data.progress);
-                        this.loadingManager.setStatus(`Downloading: ${data.progress}%`);
-                    }
-                };
-                
-                // Download missing LoRAs
-                const downloadResponse = await fetch('/api/recipes/download-missing-loras', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        loras: this.missingLoras,
-                        lora_root: loraRoot,
-                        relative_path: targetFolder
-                    })
-                });
-                
-                if (!downloadResponse.ok) {
-                    throw new Error(await downloadResponse.text());
-                }
-                
-                // Update missing LoRAs with downloaded paths
-                const downloadResult = await downloadResponse.json();
-                this.recipeData.loras = this.recipeData.loras.map(lora => {
-                    const downloaded = downloadResult.downloaded.find(d => d.id === lora.id);
-                    if (downloaded) {
-                        return {
-                            ...lora,
-                            existsLocally: true,
-                            localPath: downloaded.localPath
-                        };
-                    }
-                    return lora;
-                });
-            }
-            
-            // Now save the recipe
+            // First save the recipe
             this.loadingManager.showSimpleLoading('Saving recipe...');
             
-            // Create form data for recipe save
+            // Create form data for save request
             const formData = new FormData();
             formData.append('image', this.recipeImage);
             formData.append('name', this.recipeName);
             formData.append('tags', JSON.stringify(this.recipeTags));
-            formData.append('recipe_data', JSON.stringify(this.recipeData));
+            formData.append('metadata', JSON.stringify(this.recipeData));
             
-            // Save recipe
-            const saveResponse = await fetch('/api/recipes/save', {
+            // Send save request
+            const response = await fetch('/api/recipes/save', {
                 method: 'POST',
                 body: formData
             });
             
-            if (!saveResponse.ok) {
-                throw new Error(await saveResponse.text());
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to save recipe');
             }
             
-            showToast('Recipe saved successfully', 'success');
+            // Show success message for recipe save
+            showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
+            
+            // Check if we need to download LoRAs
+            if (this.missingLoras.length > 0) {
+                // For download, we need to validate the target path
+                const loraRoot = document.getElementById('importLoraRoot')?.value;
+                if (!loraRoot) {
+                    throw new Error('Please select a LoRA root directory');
+                }
+                
+                // Build target path
+                let targetPath = loraRoot;
+                if (this.selectedFolder) {
+                    targetPath += '/' + this.selectedFolder;
+                }
+                
+                const newFolder = document.getElementById('importNewFolder')?.value?.trim();
+                if (newFolder) {
+                    targetPath += '/' + newFolder;
+                }
+                
+                // Set up WebSocket for progress updates
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+                
+                // Download missing LoRAs sequentially
+                this.loadingManager.show('Downloading LoRAs...', 0);
+                
+                let completedDownloads = 0;
+                for (let i = 0; i < this.missingLoras.length; i++) {
+                    const lora = this.missingLoras[i];
+                    
+                    // Update overall progress
+                    this.loadingManager.setStatus(`Downloading LoRA ${i+1}/${this.missingLoras.length}: ${lora.name}`);
+                    
+                    // Set up progress tracking for current download
+                    ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.status === 'progress') {
+                            // Calculate overall progress: completed files + current file progress
+                            const overallProgress = Math.floor(
+                                (completedDownloads + data.progress/100) / this.missingLoras.length * 100
+                            );
+                            this.loadingManager.setProgress(overallProgress);
+                        }
+                    };
+                    
+                    try {
+                        // Download the LoRA
+                        const response = await fetch('/api/download-lora', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                download_url: lora.downloadUrl,
+                                lora_root: loraRoot,
+                                relative_path: targetPath.replace(loraRoot + '/', '')
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error(`Failed to download LoRA ${lora.name}: ${errorText}`);
+                            // Continue with next download
+                        } else {
+                            completedDownloads++;
+                        }
+                    } catch (downloadError) {
+                        console.error(`Error downloading LoRA ${lora.name}:`, downloadError);
+                        // Continue with next download
+                    }
+                }
+                
+                // Close WebSocket
+                ws.close();
+                
+                // Show final completion message
+                if (completedDownloads === this.missingLoras.length) {
+                    showToast(`All ${completedDownloads} LoRAs downloaded successfully`, 'success');
+                } else {
+                    showToast(`Downloaded ${completedDownloads} of ${this.missingLoras.length} LoRAs`, 'warning');
+                }
+            }
+            
+            // Close modal and reload recipes
             modalManager.closeModal('importModal');
             
-            // Reload recipes
-            window.location.reload();
+            // Refresh the recipe list if needed
+            if (typeof refreshRecipes === 'function') {
+                refreshRecipes();
+            } else {
+                // Fallback to reloading the page
+                resetAndReload();
+            }
             
         } catch (error) {
+            console.error('Error saving recipe:', error);
             showToast(error.message, 'error');
         } finally {
             this.loadingManager.hide();
         }
     }
 
-    // Add new method to handle folder selection
-    async initializeFolderBrowser() {
+    initializeFolderBrowser() {
         const folderBrowser = document.getElementById('importFolderBrowser');
         if (!folderBrowser) return;
 
         // Cleanup existing handler if any
         this.cleanupFolderBrowser();
 
-        try {
-            // Get the selected root
-            const loraRoot = document.getElementById('importLoraRoot').value;
-            if (!loraRoot) {
-                folderBrowser.innerHTML = '<div class="empty-folder">Please select a LoRA root directory</div>';
-                return;
-            }
-            
-            // Fetch folders for the selected root
-            const response = await fetch(`/api/folders?root=${encodeURIComponent(loraRoot)}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch folders');
-            }
-            
-            const data = await response.json();
-            
-            // Display folders
-            if (data.folders && data.folders.length > 0) {
-                folderBrowser.innerHTML = data.folders.map(folder => `
-                    <div class="folder-item" data-folder="${folder}">
-                        <i class="fas fa-folder"></i> ${folder}
-                    </div>
-                `).join('');
+        // Create new handler
+        this.folderClickHandler = (event) => {
+            const folderItem = event.target.closest('.folder-item');
+            if (!folderItem) return;
+
+            if (folderItem.classList.contains('selected')) {
+                folderItem.classList.remove('selected');
+                this.selectedFolder = '';
             } else {
-                folderBrowser.innerHTML = '<div class="empty-folder">No folders found</div>';
+                folderBrowser.querySelectorAll('.folder-item').forEach(f => 
+                    f.classList.remove('selected'));
+                folderItem.classList.add('selected');
+                this.selectedFolder = folderItem.dataset.folder;
             }
             
-            // Create new handler
-            this.folderClickHandler = (event) => {
-                const folderItem = event.target.closest('.folder-item');
-                if (!folderItem) return;
+            // Update path display after folder selection
+            this.updateTargetPath();
+        };
 
-                if (folderItem.classList.contains('selected')) {
-                    folderItem.classList.remove('selected');
-                    this.selectedFolder = '';
-                } else {
-                    folderBrowser.querySelectorAll('.folder-item').forEach(f => 
-                        f.classList.remove('selected'));
-                    folderItem.classList.add('selected');
-                    this.selectedFolder = folderItem.dataset.folder;
-                }
-                
-                // Update path display after folder selection
-                this.updateTargetPath();
-            };
-
-            // Add the new handler
-            folderBrowser.addEventListener('click', this.folderClickHandler);
-            
-        } catch (error) {
-            console.error('Error initializing folder browser:', error);
-            folderBrowser.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
-        }
+        // Add the new handler
+        folderBrowser.addEventListener('click', this.folderClickHandler);
         
         // Add event listeners for path updates
         const loraRoot = document.getElementById('importLoraRoot');
         const newFolder = document.getElementById('importNewFolder');
         
-        loraRoot.addEventListener('change', async () => {
-            await this.initializeFolderBrowser();
-            this.updateTargetPath();
-        });
+        if (loraRoot) loraRoot.addEventListener('change', this.updateTargetPath);
+        if (newFolder) newFolder.addEventListener('input', this.updateTargetPath);
         
-        newFolder.addEventListener('input', this.updateTargetPath);
-        
+        console.log('Initializing folder browser...');
         // Update initial path
         this.updateTargetPath();
     }
@@ -541,15 +560,14 @@ export class ImportManager {
         if (newFolder) newFolder.removeEventListener('input', this.updateTargetPath);
     }
     
-    // Add new method to update target path
     updateTargetPath() {
         const pathDisplay = document.getElementById('importTargetPathDisplay');
         if (!pathDisplay) return;
         
         const loraRoot = document.getElementById('importLoraRoot')?.value || '';
-        const newFolder = document.getElementById('importNewFolder')?.value.trim() || '';
+        const newFolder = document.getElementById('importNewFolder')?.value?.trim() || '';
         
-        let fullPath = loraRoot || 'Select a LoRA root directory';
+        let fullPath = loraRoot || 'Select a LoRA root directory'; 
         
         if (loraRoot) {
             if (this.selectedFolder) {
@@ -559,7 +577,41 @@ export class ImportManager {
                 fullPath += '/' + newFolder;
             }
         }
-
+    
         pathDisplay.innerHTML = `<span class="path-text">${fullPath}</span>`;
+    }
+
+    showStep(stepId) {
+        // 隐藏所有步骤
+        document.querySelectorAll('.import-step').forEach(step => {
+            step.style.display = 'none';
+        });
+        
+        // 显示目标步骤
+        const targetStep = document.getElementById(stepId);
+        if (targetStep) {
+            // 强制显示目标步骤 - 使用 !important 覆盖任何其他CSS规则
+            targetStep.setAttribute('style', 'display: block !important');
+            
+            // 调试信息
+            console.log(`Showing step: ${stepId}`);
+            const rect = targetStep.getBoundingClientRect();
+            console.log('Step dimensions:', {
+                width: rect.width,
+                height: rect.height,
+                top: rect.top,
+                left: rect.left,
+                visible: rect.width > 0 && rect.height > 0
+            });
+            
+            // 强制重新计算布局
+            targetStep.offsetHeight;
+            
+            // 滚动模态内容到顶部
+            const modalContent = document.querySelector('#importModal .modal-content');
+            if (modalContent) {
+                modalContent.scrollTop = 0;
+            }
+        }
     }
 } 
