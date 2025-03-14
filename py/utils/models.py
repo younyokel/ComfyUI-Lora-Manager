@@ -47,7 +47,7 @@ class LoraMetadata:
             file_path=save_path.replace(os.sep, '/'),
             size=file_info.get('sizeKB', 0) * 1024,
             modified=datetime.now().timestamp(),
-            sha256=file_info['hashes'].get('SHA256', ''),
+            sha256=file_info['hashes'].get('SHA256', '').lower(),
             base_model=base_model,
             preview_url=None,  # Will be updated after preview download
             preview_nsfw_level=0, # Will be updated after preview download, it is decided by the nsfw level of the preview image

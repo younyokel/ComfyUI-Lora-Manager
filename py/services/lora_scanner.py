@@ -103,7 +103,7 @@ class LoraScanner:
             # Build hash index and tags count
             for lora_data in raw_data:
                 if 'sha256' in lora_data and 'file_path' in lora_data:
-                    self._hash_index.add_entry(lora_data['sha256'], lora_data['file_path'])
+                    self._hash_index.add_entry(lora_data['sha256'].lower(), lora_data['file_path'])
                 
                 # Count tags
                 if 'tags' in lora_data and lora_data['tags']:
@@ -650,15 +650,15 @@ class LoraScanner:
     # Add new methods for hash index functionality
     def has_lora_hash(self, sha256: str) -> bool:
         """Check if a LoRA with given hash exists"""
-        return self._hash_index.has_hash(sha256)
+        return self._hash_index.has_hash(sha256.lower())
         
     def get_lora_path_by_hash(self, sha256: str) -> Optional[str]:
         """Get file path for a LoRA by its hash"""
-        return self._hash_index.get_path(sha256)
+        return self._hash_index.get_path(sha256.lower())
         
     def get_lora_hash_by_path(self, file_path: str) -> Optional[str]:
         """Get hash for a LoRA by its file path"""
-        return self._hash_index.get_hash(file_path)
+        return self._hash_index.get_hash(file_path) 
 
     # Add new method to get top tags
     async def get_top_tags(self, limit: int = 20) -> List[Dict[str, any]]:
