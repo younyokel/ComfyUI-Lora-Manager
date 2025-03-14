@@ -354,7 +354,7 @@ class ApiRoutes:
         # Update model name if available
         if 'model' in civitai_metadata:
             if civitai_metadata.get('model', {}).get('name'):
-                local_metadata['model_name'] = determine_base_model(civitai_metadata['model']['name'])
+                local_metadata['model_name'] = civitai_metadata['model']['name']
         
             # Fetch additional model metadata (description and tags) if we have model ID
             model_id = civitai_metadata['modelId']
@@ -365,7 +365,7 @@ class ApiRoutes:
                     local_metadata['tags'] = model_metadata.get('tags', [])
         
         # Update base model
-        local_metadata['base_model'] = civitai_metadata.get('baseModel')
+        local_metadata['base_model'] = determine_base_model(civitai_metadata.get('baseModel'))
         
         # Update preview if needed
         if not local_metadata.get('preview_url') or not os.path.exists(local_metadata['preview_url']):
