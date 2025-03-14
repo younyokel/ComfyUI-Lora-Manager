@@ -37,7 +37,6 @@ class RecipeRoutes:
         app.router.add_get('/api/recipes', routes.get_recipes)
         app.router.add_get('/api/recipe/{recipe_id}', routes.get_recipe_detail)
         app.router.add_post('/api/recipes/analyze-image', routes.analyze_recipe_image)
-        app.router.add_post('/api/recipes/download-missing-loras', routes.download_missing_loras)
         app.router.add_post('/api/recipes/save', routes.save_recipe)
         
         # Start cache initialization
@@ -221,15 +220,12 @@ class RecipeRoutes:
 
                 # Check if this LoRA exists locally by SHA256 hash
                 exists_locally = False
-                local_path = ""
                 
                 if civitai_info and 'files' in civitai_info and civitai_info['files']:
                     sha256 = civitai_info['files'][0].get('hashes', {}).get('SHA256', '')
                     if sha256:
                         sha256 = sha256.lower()  # Convert to lowercase for consistency
                         exists_locally = self.recipe_scanner._lora_scanner.has_lora_hash(sha256)
-                        if exists_locally:
-                            local_path = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(sha256) or ""
                 
                 # Create LoRA entry
                 lora_entry = {
@@ -239,7 +235,6 @@ class RecipeRoutes:
                     'type': resource.get('type', 'lora'),
                     'weight': resource.get('weight', 1.0),
                     'existsLocally': exists_locally,
-                    'localPath': local_path,
                     'thumbnailUrl': '',
                     'baseModel': '',
                     'size': 0,
@@ -283,62 +278,6 @@ class RecipeRoutes:
                 except Exception as e:
                     logger.error(f"Error deleting temporary file: {e}")
 
-    async def download_missing_loras(self, request: web.Request) -> web.Response:
-        """Download missing LoRAs for a recipe"""
-        try:
-            data = await request.json()
-            loras = data.get('loras', [])
-            lora_root = data.get('lora_root', '')
-            relative_path = data.get('relative_path', '')
-            
-            if not loras:
-                return web.json_response({"error": "No LoRAs specified"}, status=400)
-            
-            if not lora_root:
-                return web.json_response({"error": "No LoRA root directory specified"}, status=400)
-            
-            # Create target directory if it doesn't exist
-            target_dir = os.path.join(lora_root, relative_path) if relative_path else lora_root
-            os.makedirs(target_dir, exist_ok=True)
-            
-            # Download each LoRA
-            downloaded = []
-            for lora in loras:
-                download_url = lora.get('downloadUrl')
-                if not download_url:
-                    continue
-                
-                # Generate filename from LoRA name
-                filename = f"{lora.get('name', 'lora')}.safetensors"
-                filename = filename.replace(' ', '_').replace('/', '_').replace('\\', '_')
-                
-                # Download the file
-                target_path = os.path.join(target_dir, filename)
-                
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(download_url, allow_redirects=True) as response:
-                        if response.status != 200:
-                            continue
-                        
-                        with open(target_path, 'wb') as f:
-                            while True:
-                                chunk = await response.content.read(1024 * 1024)  # 1MB chunks
-                                if not chunk:
-                                    break
-                                f.write(chunk)
-                
-                downloaded.append({
-                    'id': lora.get('id'),
-                    'localPath': target_path
-                })
-            
-            return web.json_response({
-                'downloaded': downloaded
-            })
-            
-        except Exception as e:
-            logger.error(f"Error downloading missing LoRAs: {e}", exc_info=True)
-            return web.json_response({"error": str(e)}, status=500)
 
     async def save_recipe(self, request: web.Request) -> web.Response:
         """Save a recipe to the recipes folder"""
@@ -349,7 +288,7 @@ class RecipeRoutes:
             image = None
             name = None
             tags = []
-            recipe_data = None
+            metadata = None
             
             while True:
                 field = await reader.next()
@@ -376,68 +315,60 @@ class RecipeRoutes:
                     except:
                         tags = []
                     
-                elif field.name == 'recipe_data':
-                    recipe_data_text = await field.text()
+                elif field.name == 'metadata':
+                    metadata_text = await field.text()
                     try:
-                        recipe_data = json.loads(recipe_data_text)
+                        metadata = json.loads(metadata_text)
                     except:
-                        recipe_data = {}
+                        metadata = {}
             
-            if not image or not name or not recipe_data:
+            if not image or not name or not metadata:
                 return web.json_response({"error": "Missing required fields"}, status=400)
             
             # Create recipes directory if it doesn't exist
-            recipes_dir = os.path.join(config.loras_roots[0], "recipes")
+            recipes_dir = self.recipe_scanner.recipes_dir
             os.makedirs(recipes_dir, exist_ok=True)
             
-            # Generate filename from recipe name
-            filename = f"{name}.jpg"
-            filename = filename.replace(' ', '_').replace('/', '_').replace('\\', '_')
-            
-            # Ensure filename is unique
-            counter = 1
-            base_name, ext = os.path.splitext(filename)
-            while os.path.exists(os.path.join(recipes_dir, filename)):
-                filename = f"{base_name}_{counter}{ext}"
-                counter += 1
+            # Generate UUID for the recipe
+            import uuid
+            recipe_id = str(uuid.uuid4())
             
             # Save the image
-            target_path = os.path.join(recipes_dir, filename)
-            with open(target_path, 'wb') as f:
+            image_ext = ".jpg"
+            image_filename = f"{recipe_id}{image_ext}"
+            image_path = os.path.join(recipes_dir, image_filename)
+            with open(image_path, 'wb') as f:
                 f.write(image)
             
-            # Add metadata to the image
-            from PIL import Image
-            from PIL.ExifTags import TAGS
-            from piexif import dump, load
-            import piexif.helper
-            
-            # Prepare metadata
-            metadata = {
-                'recipe_name': name,
-                'recipe_tags': json.dumps(tags),
-                'recipe_data': json.dumps(recipe_data),
-                'created_date': str(time.time())
+            # Create the recipe JSON
+            current_time = time.time()
+            recipe_data = {
+                "id": recipe_id,
+                "file_path": image_path,
+                "title": name,
+                "modified": current_time,
+                "created_date": current_time,
+                "base_model": metadata.get("base_model", ""),
+                "loras": metadata.get("loras", []),
+                "gen_params": metadata.get("gen_params", {})
             }
             
-            # Write metadata to image
-            img = Image.open(target_path)
-            exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "thumbnail": None}
+            # Add tags if provided
+            if tags:
+                recipe_data["tags"] = tags
             
-            for key, value in metadata.items():
-                exif_dict["0th"][piexif.ImageIFD.XPComment] = piexif.helper.UserComment.dump(
-                    json.dumps({key: value})
-                )
-            
-            exif_bytes = dump(exif_dict)
-            img.save(target_path, exif=exif_bytes)
-            
+            # Save the recipe JSON
+            json_filename = f"{recipe_id}.recipe.json"
+            json_path = os.path.join(recipes_dir, json_filename)
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(recipe_data, f, indent=4, ensure_ascii=False)
             # Force refresh the recipe cache
             await self.recipe_scanner.get_cached_data(force_refresh=True)
-            
             return web.json_response({
                 'success': True,
-                'file_path': target_path
+                'recipe_id': recipe_id,
+                'image_path': image_path,
+                'json_path': json_path
             })
             
         except Exception as e:
