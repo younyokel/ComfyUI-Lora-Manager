@@ -136,6 +136,9 @@ class DownloadManager:
             all_folders.add(relative_path)
             cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
 
+            # Update the hash index with the new LoRA entry
+            self.file_monitor.scanner._hash_index.add_entry(metadata_dict['sha256'], metadata_dict['file_path'])
+
             # Report 100% completion
             if progress_callback:
                 await progress_callback(100)
