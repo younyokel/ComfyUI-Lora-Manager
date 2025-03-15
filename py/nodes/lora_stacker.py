@@ -80,7 +80,8 @@ class LoraStacker:
                 lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
                 
                 # Add to stack without loading
-                stack.append((lora_path, model_strength, clip_strength))
+                # replace '/' with os.sep to avoid different OS path format
+                stack.append((lora_path.replace('/', os.sep), model_strength, clip_strength))
                 
                 # Add trigger words to collection
                 all_trigger_words.extend(trigger_words)
