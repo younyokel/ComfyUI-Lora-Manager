@@ -8,7 +8,7 @@
     height: calc(100% - 48px); /* Adjust height to exclude header */
     background: rgba(0, 0, 0, 0.2); /* 调整为更淡的半透明黑色 */
     z-index: var(--z-modal);
-    overflow: hidden; /* 改为 hidden，防止双滚动条 */
+    overflow: auto; /* Change from hidden to auto to allow scrolling */
 }
 
 /* 当模态窗口打开时，禁止body滚动 */
@@ -23,8 +23,8 @@ body.modal-open {
     position: relative;
     max-width: 800px;
     height: auto;
-    max-height: 90vh;
-    margin: 1rem auto; /* Reduce top margin from 5rem to 1rem */
+    max-height: calc(90vh - 48px); /* Adjust to account for header height */
+    margin: 1rem auto; /* Keep reduced top margin */
     background: var(--lora-surface);
     border-radius: var(--border-radius-base);
     padding: var(--space-3);
