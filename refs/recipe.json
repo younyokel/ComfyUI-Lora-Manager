@@ -1,7 +1,7 @@
 {
-    "id": "3",
-    "file_path": "D:/Workspace/ComfyUI/models/loras/recipes/3.jpg",
-    "title": "3",
+    "id": "0448c06d-de1b-46ab-975c-c5aa60d90dbc",
+    "file_path": "D:/Workspace/ComfyUI/models/loras/recipes/0448c06d-de1b-46ab-975c-c5aa60d90dbc.jpg",
+    "title": "a mysterious, steampunk-inspired character standing in a dramatic pose",
     "modified": 1741837612.3931093,
     "created_date": 1741492786.5581934,
     "base_model": "Flux.1 D",
@@ -23,7 +23,7 @@
             "modelVersionName": "ink-dynamic"
         },
         {
-            "file_name": "",
+            "file_name": "ck-painterly-fantasy-000017",
             "hash": "48c67064e2936aec342580a2a729d91d75eb818e45ecf993b9650cc66c94c420",
             "strength": 0.2,
             "modelVersionId": 1189379,
@@ -39,7 +39,7 @@
             "modelVersionName": "v1.0"
         },
         {
-            "file_name": "",
+            "file_name": "Mezzotint_Artstyle_for_Flux_-_by_Ethanar",
             "hash": "e6961502769123bf23a66c5c5298d76264fd6b9610f018319a0ccb091bfc308e",
             "strength": 0.2,
             "modelVersionId": 757030,

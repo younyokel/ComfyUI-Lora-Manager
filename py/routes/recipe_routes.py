@@ -48,14 +48,26 @@ class RecipeRoutes:
         """Initialize cache on startup"""
         print("Pre-warming recipe cache...", file=sys.stderr)
         try:
-            # Diagnose lora scanner first
-            await self.recipe_scanner._lora_scanner.diagnose_hash_index()
+            # First, ensure the lora scanner is fully initialized
+            print("Initializing lora scanner...", file=sys.stderr)
+            lora_scanner = self.recipe_scanner._lora_scanner
             
-            # Force a cache refresh
+            # Get lora cache to ensure it's initialized
+            lora_cache = await lora_scanner.get_cached_data()
+            print(f"Lora scanner initialized with {len(lora_cache.raw_data)} loras", file=sys.stderr)
+            
+            # Verify hash index is built
+            if hasattr(lora_scanner, '_hash_index'):
+                hash_index_size = len(lora_scanner._hash_index._hash_to_path) if hasattr(lora_scanner._hash_index, '_hash_to_path') else 0
+                print(f"Lora hash index contains {hash_index_size} entries", file=sys.stderr)
+            
+            # Now that lora scanner is initialized, initialize recipe cache
+            print("Initializing recipe cache...", file=sys.stderr)
             await self.recipe_scanner.get_cached_data(force_refresh=True)
             print("Recipe cache pre-warming complete", file=sys.stderr)
         except Exception as e:
             print(f"Error pre-warming recipe cache: {e}", file=sys.stderr)
+            logger.error(f"Error pre-warming recipe cache: {e}", exc_info=True)
     
     async def get_recipes(self, request: web.Request) -> web.Response:
         """API endpoint for getting paginated recipes"""
@@ -221,6 +233,7 @@ class RecipeRoutes:
                 # Check if this LoRA exists locally by SHA256 hash
                 exists_locally = False
                 local_path = None
+                sha256 = ''
                 
                 if civitai_info and 'files' in civitai_info:
                     # Find the model file (type="Model") in the files list
@@ -234,7 +247,7 @@ class RecipeRoutes:
                             if exists_locally:
                                 local_path = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(sha256)
                 
-                # Create LoRA entry
+                # Create LoRA entry for frontend display
                 lora_entry = {
                     'id': model_version_id,
                     'name': resource.get('modelName', ''),
@@ -243,6 +256,8 @@ class RecipeRoutes:
                     'weight': resource.get('weight', 1.0),
                     'existsLocally': exists_locally,
                     'localPath': local_path,
+                    'file_name': os.path.splitext(os.path.basename(local_path))[0] if local_path else '',
+                    'hash': sha256,
                     'thumbnailUrl': '',
                     'baseModel': '',
                     'size': 0,
@@ -267,9 +282,24 @@ class RecipeRoutes:
                 
                 loras.append(lora_entry)
             
+            # Extract generation parameters for recipe metadata
+            gen_params = {
+                'prompt': metadata.get('prompt', ''),
+                'negative_prompt': metadata.get('negative_prompt', ''),
+                'checkpoint': checkpoint,
+                'steps': metadata.get('steps', ''),
+                'sampler': metadata.get('sampler', ''),
+                'cfg_scale': metadata.get('cfg_scale', ''),
+                'seed': metadata.get('seed', ''),
+                'size': metadata.get('size', ''),
+                'clip_skip': metadata.get('clip_skip', '')
+            }
+            
             return web.json_response({
                 'base_model': base_model,
-                'loras': loras
+                'loras': loras,
+                'gen_params': gen_params,
+                'raw_metadata': metadata  # Include the raw metadata for saving
             })
             
         except Exception as e:
@@ -350,6 +380,39 @@ class RecipeRoutes:
             
             # Create the recipe JSON
             current_time = time.time()
+            
+            # Format loras data according to the recipe.json format
+            loras_data = []
+            for lora in metadata.get("loras", []):
+                # Convert frontend lora format to recipe format
+                lora_entry = {
+                    "file_name": lora.get("file_name", "") or os.path.splitext(os.path.basename(lora.get("localPath", "")))[0],
+                    "hash": lora.get("hash", "").lower() if lora.get("hash") else "",
+                    "strength": float(lora.get("weight", 1.0)),
+                    "modelVersionId": lora.get("id", ""),
+                    "modelName": lora.get("name", ""),
+                    "modelVersionName": lora.get("version", "")
+                }
+                loras_data.append(lora_entry)
+            
+            # Format gen_params according to the recipe.json format
+            gen_params = metadata.get("gen_params", {})
+            if not gen_params and "raw_metadata" in metadata:
+                # Extract from raw metadata if available
+                raw_metadata = metadata.get("raw_metadata", {})
+                gen_params = {
+                    "prompt": raw_metadata.get("prompt", ""),
+                    "negative_prompt": raw_metadata.get("negative_prompt", ""),
+                    "checkpoint": raw_metadata.get("checkpoint", {}),
+                    "steps": raw_metadata.get("steps", ""),
+                    "sampler": raw_metadata.get("sampler", ""),
+                    "cfg_scale": raw_metadata.get("cfg_scale", ""),
+                    "seed": raw_metadata.get("seed", ""),
+                    "size": raw_metadata.get("size", ""),
+                    "clip_skip": raw_metadata.get("clip_skip", "")
+                }
+            
+            # Create the recipe data structure
             recipe_data = {
                 "id": recipe_id,
                 "file_path": image_path,
@@ -357,8 +420,8 @@ class RecipeRoutes:
                 "modified": current_time,
                 "created_date": current_time,
                 "base_model": metadata.get("base_model", ""),
-                "loras": metadata.get("loras", []),
-                "gen_params": metadata.get("gen_params", {})
+                "loras": loras_data,
+                "gen_params": gen_params
             }
             
             # Add tags if provided
@@ -370,8 +433,11 @@ class RecipeRoutes:
             json_path = os.path.join(recipes_dir, json_filename)
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(recipe_data, f, indent=4, ensure_ascii=False)
-            # Force refresh the recipe cache
-            await self.recipe_scanner.get_cached_data(force_refresh=True)
+                
+            # Add the new recipe directly to the cache instead of forcing a refresh
+            cache = await self.recipe_scanner.get_cached_data()
+            await cache.add_recipe(recipe_data)
+            
             return web.json_response({
                 'success': True,
                 'recipe_id': recipe_id,

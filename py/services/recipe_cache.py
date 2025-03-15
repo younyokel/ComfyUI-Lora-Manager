@@ -27,11 +27,11 @@ class RecipeCache:
                     reverse=True
                 )
     
-    async def update_recipe_metadata(self, file_path: str, metadata: Dict) -> bool:
+    async def update_recipe_metadata(self, recipe_id: str, metadata: Dict) -> bool:
         """Update metadata for a specific recipe in all cached data
         
         Args:
-            file_path: The file path of the recipe to update
+            recipe_id: The ID of the recipe to update
             metadata: The new metadata
             
         Returns:
@@ -40,7 +40,7 @@ class RecipeCache:
         async with self._lock:
             # Update in raw_data
             for item in self.raw_data:
-                if item['file_path'] == file_path:
+                if item.get('id') == recipe_id:
                     item.update(metadata)
                     break
             else:
@@ -48,4 +48,14 @@ class RecipeCache:
                 
             # Resort to reflect changes
             await self.resort()
-            return True 
+            return True
+            
+    async def add_recipe(self, recipe_data: Dict) -> None:
+        """Add a new recipe to the cache
+        
+        Args:
+            recipe_data: The recipe data to add
+        """
+        async with self._lock:
+            self.raw_data.append(recipe_data)
+            await self.resort() 

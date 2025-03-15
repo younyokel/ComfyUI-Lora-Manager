@@ -5,49 +5,13 @@ import json
 import re
 from typing import List, Dict, Optional, Any
 from datetime import datetime
-from ..utils.exif_utils import ExifUtils
 from ..config import config
 from .recipe_cache import RecipeCache
 from .lora_scanner import LoraScanner
 from .civitai_client import CivitaiClient
 import sys
 
-print("Recipe Scanner module loaded", file=sys.stderr)
-
-def setup_logger():
-    """Configure logger for recipe scanner"""
-    # First, print directly to stderr
-    print("Setting up recipe scanner logger", file=sys.stderr)
-    
-    # Create a stderr handler
-    handler = logging.StreamHandler(sys.stderr)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    
-    # Configure recipe logger
-    recipe_logger = logging.getLogger(__name__)
-    recipe_logger.setLevel(logging.INFO)
-    
-    # Remove existing handlers if any
-    for h in recipe_logger.handlers:
-        recipe_logger.removeHandler(h)
-    
-    recipe_logger.addHandler(handler)
-    recipe_logger.propagate = False
-    
-    # Also ensure the root logger has a handler
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    
-    # Check if the root logger already has handlers
-    if not root_logger.handlers:
-        root_logger.addHandler(handler)
-    
-    print(f"Logger setup complete: {__name__}", file=sys.stderr)
-    return recipe_logger
-
-# Use our configured logger
-logger = setup_logger()
+logger = logging.getLogger(__name__)
 
 class RecipeScanner:
     """Service for scanning and managing recipe images"""
@@ -132,13 +96,7 @@ class RecipeScanner:
             if self._lora_scanner:
                 logger.info("Recipe Manager: Waiting for lora scanner initialization to complete")
                 
-                # Force a fresh initialization of the lora scanner to ensure it's complete
-                lora_cache = await self._lora_scanner.get_cached_data(force_refresh=True)
-                
-                # Add a delay to ensure any background tasks complete
-                await asyncio.sleep(2)
-                
-                # Get the cache again to ensure we have the latest data
+                # Get the lora cache to ensure it's initialized
                 lora_cache = await self._lora_scanner.get_cached_data()
                 logger.info(f"Recipe Manager: Lora scanner initialized with {len(lora_cache.raw_data)} loras")
                 
@@ -146,18 +104,6 @@ class RecipeScanner:
                 if hasattr(self._lora_scanner, '_hash_index'):
                     hash_index_size = len(self._lora_scanner._hash_index._hash_to_path) if hasattr(self._lora_scanner._hash_index, '_hash_to_path') else 0
                     logger.info(f"Recipe Manager: Lora hash index contains {hash_index_size} entries")
-                    
-                    # If hash index is empty but we have loras, consider this an error condition
-                    if hash_index_size == 0 and len(lora_cache.raw_data) > 0:
-                        logger.error("Recipe Manager: Lora hash index is empty despite having loras in cache")
-                        await self._lora_scanner.diagnose_hash_index()
-                        
-                        # Wait another moment for hash index to potentially initialize
-                        await asyncio.sleep(1)
-                        
-                        # Try to check again
-                        hash_index_size = len(self._lora_scanner._hash_index._hash_to_path) if hasattr(self._lora_scanner._hash_index, '_hash_to_path') else 0
-                        logger.info(f"Recipe Manager: Lora hash index now contains {hash_index_size} entries")
                 else:
                     logger.warning("Recipe Manager: No lora hash index available")
             else:
@@ -187,7 +133,7 @@ class RecipeScanner:
             )
     
     async def scan_all_recipes(self) -> List[Dict]:
-        """Scan all recipe images and return metadata"""
+        """Scan all recipe JSON files and return metadata"""
         recipes = []
         recipes_dir = self.recipes_dir
         
@@ -195,20 +141,20 @@ class RecipeScanner:
             logger.warning(f"Recipes directory not found: {recipes_dir}")
             return recipes
         
-        # Get all jpg/jpeg files in the recipes directory
-        image_files = []
-        logger.info(f"Scanning for recipe images in {recipes_dir}")
+        # Get all recipe JSON files in the recipes directory
+        recipe_files = []
+        logger.info(f"Scanning for recipe JSON files in {recipes_dir}")
         for root, _, files in os.walk(recipes_dir):
-            image_count = sum(1 for f in files if f.lower().endswith(('.jpg', '.jpeg')))
-            if image_count > 0:
-                logger.info(f"Found {image_count} potential recipe images in {root}")
+            recipe_count = sum(1 for f in files if f.lower().endswith('.recipe.json'))
+            if recipe_count > 0:
+                logger.info(f"Found {recipe_count} recipe files in {root}")
                 for file in files:
-                    if file.lower().endswith(('.jpg', '.jpeg')):
-                        image_files.append(os.path.join(root, file))
+                    if file.lower().endswith('.recipe.json'):
+                        recipe_files.append(os.path.join(root, file))
         
-        # Process each image
-        for image_path in image_files:
-            recipe_data = await self._process_recipe_image(image_path)
+        # Process each recipe file
+        for recipe_path in recipe_files:
+            recipe_data = await self._load_recipe_file(recipe_path)
             if recipe_data:
                 recipes.append(recipe_data)
                 logger.info(f"Processed recipe: {recipe_data.get('title')}")
@@ -217,87 +163,54 @@ class RecipeScanner:
         
         return recipes
     
-    async def _process_recipe_image(self, image_path: str) -> Optional[Dict]:
-        """Process a single recipe image and return metadata"""
+    async def _load_recipe_file(self, recipe_path: str) -> Optional[Dict]:
+        """Load recipe data from a JSON file"""
         try:
-            print(f"Processing recipe image: {image_path}", file=sys.stderr)
-            logger.info(f"Processing recipe image: {image_path}")
+            logger.info(f"Loading recipe file: {recipe_path}")
             
-            # Extract EXIF UserComment
-            user_comment = ExifUtils.extract_user_comment(image_path)
-            if not user_comment:
-                print(f"No EXIF UserComment found in {image_path}", file=sys.stderr)
-                logger.warning(f"No EXIF UserComment found in {image_path}")
-                return None
-            else:
-                print(f"Found UserComment: {user_comment[:50]}...", file=sys.stderr)
+            with open(recipe_path, 'r', encoding='utf-8') as f:
+                recipe_data = json.load(f)
             
-            # Parse generation parameters from UserComment
-            gen_params = ExifUtils.parse_recipe_metadata(user_comment)
-            if not gen_params:
-                print(f"Failed to parse recipe metadata from {image_path}", file=sys.stderr)
-                logger.warning(f"Failed to parse recipe metadata from {image_path}")
+            # Validate recipe data
+            if not recipe_data or not isinstance(recipe_data, dict):
+                logger.warning(f"Invalid recipe data in {recipe_path}")
                 return None
             
-            # Get file info
-            stat = os.stat(image_path)
-            file_name = os.path.basename(image_path)
-            title = os.path.splitext(file_name)[0]
+            # Ensure required fields exist
+            required_fields = ['id', 'file_path', 'title']
+            for field in required_fields:
+                if field not in recipe_data:
+                    logger.warning(f"Missing required field '{field}' in {recipe_path}")
+                    return None
             
-            # Check for existing recipe metadata
-            recipe_data = self._extract_recipe_metadata(user_comment)
-            if not recipe_data:
-                # Create new recipe data
-                recipe_data = {
-                    'id': file_name,
-                    'file_path': image_path,
-                    'title': title,
-                    'modified': stat.st_mtime,
-                    'created_date': stat.st_ctime,
-                    'file_size': stat.st_size,
-                    'loras': [],
-                    'gen_params': {}
-                }
-                
-                # Copy loras from gen_params to recipe_data with proper structure
-                for lora in gen_params.get('loras', []):
-                    recipe_lora = {
-                        'file_name': '',
-                        'hash': lora.get('hash', '').lower() if lora.get('hash') else '',
-                        'strength': lora.get('weight', 1.0),
-                        'modelVersionId': lora.get('modelVersionId', ''),
-                        'modelName': lora.get('modelName', ''),
-                        'modelVersionName': lora.get('modelVersionName', '')
-                    }
-                    recipe_data['loras'].append(recipe_lora)
+            # Ensure the image file exists
+            image_path = recipe_data.get('file_path')
+            if not os.path.exists(image_path):
+                logger.warning(f"Recipe image not found: {image_path}")
+                # Try to find the image in the same directory as the recipe
+                recipe_dir = os.path.dirname(recipe_path)
+                image_filename = os.path.basename(image_path)
+                alternative_path = os.path.join(recipe_dir, image_filename)
+                if os.path.exists(alternative_path):
+                    logger.info(f"Found alternative image path: {alternative_path}")
+                    recipe_data['file_path'] = alternative_path
+                else:
+                    logger.warning(f"Could not find alternative image path for {image_path}")
             
-            # Add generation parameters to recipe_data.gen_params instead of top level
-            recipe_data['gen_params'] = {
-                'prompt': gen_params.get('prompt', ''),
-                'negative_prompt': gen_params.get('negative_prompt', ''),
-                'checkpoint': gen_params.get('checkpoint', None),
-                'steps': gen_params.get('steps', ''),
-                'sampler': gen_params.get('sampler', ''),
-                'cfg_scale': gen_params.get('cfg_scale', ''),
-                'seed': gen_params.get('seed', ''),
-                'size': gen_params.get('size', ''),
-                'clip_skip': gen_params.get('clip_skip', '')
-            }
+            # Ensure loras array exists
+            if 'loras' not in recipe_data:
+                recipe_data['loras'] = []
             
-            # Update recipe metadata with missing information
-            metadata_updated = await self._update_recipe_metadata(recipe_data, user_comment)
-            recipe_data['_metadata_updated'] = metadata_updated
+            # Ensure gen_params exists
+            if 'gen_params' not in recipe_data:
+                recipe_data['gen_params'] = {}
             
-            # If metadata was updated, save back to image
-            if metadata_updated:
-                print(f"Updating metadata for {image_path}", file=sys.stderr)
-                logger.info(f"Updating metadata for {image_path}")
-                self._save_updated_metadata(image_path, user_comment, recipe_data)
+            # Update lora information with local paths and availability
+            await self._update_lora_information(recipe_data)
             
             return recipe_data
         except Exception as e:
-            print(f"Error processing recipe image {image_path}: {e}", file=sys.stderr)
-            logger.error(f"Error processing recipe image {image_path}: {e}")
+            logger.error(f"Error loading recipe file {recipe_path}: {e}")
             import traceback
             traceback.print_exc(file=sys.stderr)
             return None
@@ -438,97 +351,7 @@ class RecipeScanner:
             logger.error(f"Error getting hash from Civitai: {e}")
             return None
     
-    def _save_updated_metadata(self, image_path: str, original_comment: str, recipe_data: Dict) -> None:
-        """Save updated metadata back to image file"""
-        try:
-            # Check if we already have a recipe metadata section
-            recipe_metadata_exists = "recipe metadata:" in original_comment.lower()
-            
-            # Prepare recipe metadata
-            recipe_metadata = {
-                'id': recipe_data.get('id', ''),
-                'file_path': recipe_data.get('file_path', ''),
-                'title': recipe_data.get('title', ''),
-                'modified': recipe_data.get('modified', 0),
-                'created_date': recipe_data.get('created_date', 0),
-                'base_model': recipe_data.get('base_model', ''),
-                'loras': [],
-                'gen_params': recipe_data.get('gen_params', {})
-            }
-            
-            # Add lora data with only necessary fields (removing weight, adding modelVersionName)
-            for lora in recipe_data.get('loras', []):
-                lora_entry = {
-                    'file_name': lora.get('file_name', ''),
-                    'hash': lora.get('hash', '').lower() if lora.get('hash') else '',
-                    'strength': lora.get('strength', 1.0),
-                    'modelVersionId': lora.get('modelVersionId', ''),
-                    'modelName': lora.get('modelName', ''),
-                    'modelVersionName': lora.get('modelVersionName', '')
-                }
-                recipe_metadata['loras'].append(lora_entry)
-            
-            # Convert to JSON
-            recipe_metadata_json = json.dumps(recipe_metadata)
-            
-            # Create or update the recipe metadata section
-            if recipe_metadata_exists:
-                # Replace existing recipe metadata
-                updated_comment = re.sub(
-                    r'recipe metadata: \{.*\}',
-                    f'recipe metadata: {recipe_metadata_json}',
-                    original_comment,
-                    flags=re.IGNORECASE | re.DOTALL
-                )
-            else:
-                # Append recipe metadata to the end
-                updated_comment = f"{original_comment}, recipe metadata: {recipe_metadata_json}"
-            
-            # Save back to image
-            logger.info(f"Saving updated metadata to {image_path}")
-            ExifUtils.update_user_comment(image_path, updated_comment)
-            
-        except Exception as e:
-            logger.error(f"Error saving updated metadata: {e}", exc_info=True)
-            
-    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None):
-        """Get paginated and filtered recipe data
-        
-        Args:
-            page: Current page number (1-based)
-            page_size: Number of items per page
-            sort_by: Sort method ('name' or 'date')
-            search: Search term
-        """
-        cache = await self.get_cached_data()
-
-        # Get base dataset
-        filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
-        
-        # Apply search filter
-        if search:
-            filtered_data = [
-                item for item in filtered_data 
-                if search.lower() in str(item.get('title', '')).lower() or
-                   search.lower() in str(item.get('prompt', '')).lower()
-            ]
-
-        # Calculate pagination
-        total_items = len(filtered_data)
-        start_idx = (page - 1) * page_size
-        end_idx = min(start_idx + page_size, total_items)
-        
-        result = {
-            'items': filtered_data[start_idx:end_idx],
-            'total': total_items,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_items + page_size - 1) // page_size
-        }
-        
-        return result 
-
-    async def _update_recipe_metadata(self, recipe_data: Dict, original_comment: str) -> bool:
+    async def _update_recipe_metadata(self, recipe_data: Dict) -> bool:
         """Update recipe metadata with missing information
         
         Returns:
@@ -587,9 +410,9 @@ class RecipeScanner:
                     metadata_updated = True
         
         # Determine the base_model for the recipe based on loras
-        if recipe_data.get('loras'):
+        if recipe_data.get('loras') and not recipe_data.get('base_model'):
             base_model = await self._determine_base_model(recipe_data.get('loras', []))
-            if base_model and (not recipe_data.get('base_model') or recipe_data['base_model'] != base_model):
+            if base_model:
                 recipe_data['base_model'] = base_model
                 metadata_updated = True
         
@@ -651,22 +474,49 @@ class RecipeScanner:
             logger.error(f"Error getting base model for lora: {e}")
             return None
 
-    def _extract_recipe_metadata(self, user_comment: str) -> Optional[Dict]:
-        """Extract recipe metadata section from UserComment if it exists"""
-        try:
-            # Look for recipe metadata section
-            recipe_match = re.search(r'recipe metadata: (\{.*\})', user_comment, re.IGNORECASE | re.DOTALL)
-            if not recipe_match:
-                return None
-            
-            recipe_json = recipe_match.group(1)
-            recipe_data = json.loads(recipe_json)
-            
-            # Ensure loras array exists
-            if 'loras' not in recipe_data:
-                recipe_data['loras'] = []
-            
-            return recipe_data
-        except Exception as e:
-            logger.error(f"Error extracting recipe metadata: {e}")
-            return None
+    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None):
+        """Get paginated and filtered recipe data
+        
+        Args:
+            page: Current page number (1-based)
+            page_size: Number of items per page
+            sort_by: Sort method ('name' or 'date')
+            search: Search term
+        """
+        cache = await self.get_cached_data()
+
+        # Get base dataset
+        filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
+        
+        # Apply search filter
+        if search:
+            filtered_data = [
+                item for item in filtered_data 
+                if search.lower() in str(item.get('title', '')).lower() or
+                   search.lower() in str(item.get('prompt', '')).lower()
+            ]
+
+        # Calculate pagination
+        total_items = len(filtered_data)
+        start_idx = (page - 1) * page_size
+        end_idx = min(start_idx + page_size, total_items)
+        
+        # Get paginated items
+        paginated_items = filtered_data[start_idx:end_idx]
+        
+        # Add inLibrary information for each lora
+        for item in paginated_items:
+            if 'loras' in item:
+                for lora in item['loras']:
+                    if 'hash' in lora and lora['hash']:
+                        lora['inLibrary'] = self._lora_scanner.has_lora_hash(lora['hash'].lower())
+        
+        result = {
+            'items': paginated_items,
+            'total': total_items,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total_items + page_size - 1) // page_size
+        }
+        
+        return result 

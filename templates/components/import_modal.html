@@ -68,13 +68,15 @@
         <!-- Step 3: Download Location (if needed) -->
         <div class="import-step" id="locationStep" style="display: none;">
             <div class="location-selection">
-                <!-- Add missing LoRAs summary section -->
+                <!-- Improved missing LoRAs summary section -->
                 <div class="missing-loras-summary">
-                    <h3>Missing LoRAs to Download</h3>
-                    <div class="total-size-info">
-                        Total download size: <span id="totalDownloadSize">Calculating...</span>
+                    <div class="summary-header">
+                        <h3>Missing LoRAs <span class="lora-count-badge">(0)</span> <span id="totalDownloadSize" class="total-size-badge">Calculating...</span></h3>
+                        <button id="toggleMissingLorasList" class="toggle-list-btn">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
                     </div>
-                    <div id="missingLorasList" class="missing-loras-list">
+                    <div id="missingLorasList" class="missing-loras-list collapsed">
                         <!-- Missing LoRAs will be populated here -->
                     </div>
                 </div>

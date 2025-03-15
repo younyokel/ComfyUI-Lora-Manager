@@ -395,26 +395,77 @@
     opacity: 0.8;
 }
 
-/* Missing LoRAs summary section */
+/* Improved Missing LoRAs summary section */
 .missing-loras-summary {
     margin-bottom: var(--space-3);
     padding: var(--space-2);
     background: var(--bg-color);
     border-radius: var(--border-radius-sm);
-    border: 1px solid var(--lora-error);
+    border: 1px solid var(--border-color);
 }
 
-.missing-loras-summary h3 {
-    margin-top: 0;
-    margin-bottom: var(--space-2);
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+}
+
+.summary-header h3 {
+    margin: 0;
     font-size: 1.1em;
     color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
 }
 
-.total-size-info {
-    margin-bottom: var(--space-2);
+.lora-count-badge {
     font-size: 0.9em;
+    font-weight: normal;
+    opacity: 0.7;
+}
+
+.total-size-badge {
+    font-size: 0.85em;
+    font-weight: normal;
+    background: var(--lora-surface);
+    padding: 2px 8px;
+    border-radius: var(--border-radius-xs);
+    margin-left: var(--space-1);
+}
+
+.toggle-list-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
     color: var(--text-color);
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+}
+
+.toggle-list-btn:hover {
+    background: var(--lora-surface);
+}
+
+.missing-loras-list {
+    max-height: 200px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.missing-loras-list.collapsed {
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0;
+}
+
+.missing-loras-list:not(.collapsed) {
+    margin-top: var(--space-1);
+    padding-top: var(--space-1);
+    border-top: 1px solid var(--border-color);
 }
 
 .missing-lora-item {
@@ -429,13 +480,45 @@
     border-bottom: none;
 }
 
+.missing-lora-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .missing-lora-name {
     font-weight: 500;
-    flex: 1;
+}
+
+.lora-base-model {
+    font-size: 0.85em;
+    color: var(--lora-accent);
+    background: oklch(var(--lora-accent) / 0.1);
+    padding: 2px 6px;
+    border-radius: var(--border-radius-xs);
+    display: inline-block;
 }
 
 .missing-lora-size {
     font-size: 0.9em;
     color: var(--text-color);
     opacity: 0.8;
+}
+
+/* Recipe name input select-all behavior */
+#recipeName:focus {
+    outline: 2px solid var(--lora-accent);
+}
+
+/* Prevent layout shift with scrollbar */
+.modal-content {
+    overflow-y: scroll; /* Always show scrollbar */
+    scrollbar-gutter: stable; /* Reserve space for scrollbar */
+}
+
+/* For browsers that don't support scrollbar-gutter */
+@supports not (scrollbar-gutter: stable) {
+    .modal-content {
+        padding-right: calc(var(--space-2) + var(--scrollbar-width)); /* Add extra padding for scrollbar */
+    }
 }

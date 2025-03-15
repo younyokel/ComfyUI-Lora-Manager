@@ -186,6 +186,11 @@ export class ImportManager {
                 throw new Error('No LoRA information found in this image');
             }
             
+            // Store generation parameters if available
+            if (this.recipeData.gen_params) {
+                console.log('Generation parameters found:', this.recipeData.gen_params);
+            }
+            
             // Find missing LoRAs
             this.missingLoras = this.recipeData.loras.filter(lora => !lora.existsLocally);
             
@@ -202,9 +207,24 @@ export class ImportManager {
     showRecipeDetailsStep() {
         this.showStep('detailsStep');
         
-        // Set default recipe name from image filename
+        // Set default recipe name from prompt or image filename
         const recipeName = document.getElementById('recipeName');
-        if (this.recipeImage && !recipeName.value) {
+        if (this.recipeData && this.recipeData.gen_params && this.recipeData.gen_params.prompt) {
+            // Use the first 15 words from the prompt as the default recipe name
+            const promptWords = this.recipeData.gen_params.prompt.split(' ');
+            const truncatedPrompt = promptWords.slice(0, 15).join(' ');
+            recipeName.value = truncatedPrompt;
+            this.recipeName = truncatedPrompt;
+            
+            // Set up click handler to select all text for easy editing
+            if (!recipeName.hasSelectAllHandler) {
+                recipeName.addEventListener('click', function() {
+                    this.select();
+                });
+                recipeName.hasSelectAllHandler = true;
+            }
+        } else if (this.recipeImage && !recipeName.value) {
+            // Fallback to image filename if no prompt is available
             const fileName = this.recipeImage.name.split('.')[0];
             recipeName.value = fileName;
             this.recipeName = fileName;
@@ -386,17 +406,40 @@ export class ImportManager {
                     totalSizeDisplay.textContent = this.formatFileSize(totalSize);
                 }
                 
+                // Update header to include count of missing LoRAs
+                const missingLorasHeader = document.querySelector('.summary-header h3');
+                if (missingLorasHeader) {
+                    missingLorasHeader.innerHTML = `Missing LoRAs <span class="lora-count-badge">(${this.missingLoras.length})</span> <span id="totalDownloadSize" class="total-size-badge">${this.formatFileSize(totalSize)}</span>`;
+                }
+                
                 // Generate missing LoRAs list
                 missingLorasList.innerHTML = this.missingLoras.map(lora => {
                     const sizeDisplay = lora.size ? this.formatFileSize(lora.size) : 'Unknown size';
+                    const baseModel = lora.baseModel ? `<span class="lora-base-model">${lora.baseModel}</span>` : '';
                     
                     return `
                         <div class="missing-lora-item">
-                            <div class="missing-lora-name">${lora.name}</div>
+                            <div class="missing-lora-info">
+                                <div class="missing-lora-name">${lora.name}</div>
+                                ${baseModel}
+                            </div>
                             <div class="missing-lora-size">${sizeDisplay}</div>
                         </div>
                     `;
                 }).join('');
+                
+                // Set up toggle for missing LoRAs list
+                const toggleBtn = document.getElementById('toggleMissingLorasList');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', () => {
+                        missingLorasList.classList.toggle('collapsed');
+                        const icon = toggleBtn.querySelector('i');
+                        if (icon) {
+                            icon.classList.toggle('fa-chevron-down');
+                            icon.classList.toggle('fa-chevron-up');
+                        }
+                    });
+                }
             }
             
             // Fetch LoRA roots
@@ -470,7 +513,16 @@ export class ImportManager {
             formData.append('image', this.recipeImage);
             formData.append('name', this.recipeName);
             formData.append('tags', JSON.stringify(this.recipeTags));
-            formData.append('metadata', JSON.stringify(this.recipeData));
+            
+            // Prepare complete metadata including generation parameters
+            const completeMetadata = {
+                base_model: this.recipeData.base_model || "",
+                loras: this.recipeData.loras || [],
+                gen_params: this.recipeData.gen_params || {},
+                raw_metadata: this.recipeData.raw_metadata || {}
+            };
+            
+            formData.append('metadata', JSON.stringify(completeMetadata));
             
             // Send save request
             const response = await fetch('/api/recipes/save', {
@@ -481,8 +533,7 @@ export class ImportManager {
             const result = await response.json();
             if (result.success) {
                 // Handle successful save
-                // Show success message for recipe save
-                showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
+                
                 
                 // Check if we need to download LoRAs
                 if (this.missingLoras.length > 0) {
@@ -602,6 +653,9 @@ export class ImportManager {
                         showToast(`Downloaded ${completedDownloads} of ${this.missingLoras.length} LoRAs`, 'warning');
                     }
                 }
+
+                // Show success message for recipe save
+                showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
                 
                 // Close modal and reload recipes
                 modalManager.closeModal('importModal');
