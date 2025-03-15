@@ -20,29 +20,76 @@ class LoraFileHandler(FileSystemEventHandler):
         self.pending_changes = set()  # 待处理的变更
         self.lock = Lock()  # 线程安全锁
         self.update_task = None  # 异步更新任务
-        self._ignore_paths = set()  # Add ignore paths set
+        self._ignore_paths = {}  # Change to dictionary to store expiration times
         self._min_ignore_timeout = 5  # minimum timeout in seconds
         self._download_speed = 1024 * 1024  # assume 1MB/s as base speed
 
     def _should_ignore(self, path: str) -> bool:
         """Check if path should be ignored"""
         real_path = os.path.realpath(path)  # Resolve any symbolic links
-        return real_path.replace(os.sep, '/') in self._ignore_paths
+        normalized_path = real_path.replace(os.sep, '/')
+        
+        # Also check with backslashes for Windows compatibility
+        alt_path = real_path.replace('/', '\\')
+        
+        current_time = asyncio.get_event_loop().time()
+        
+        # Check if path is in ignore list and not expired
+        if normalized_path in self._ignore_paths and self._ignore_paths[normalized_path] > current_time:
+            return True
+        
+        # Also check alternative path format
+        if alt_path in self._ignore_paths and self._ignore_paths[alt_path] > current_time:
+            return True
+            
+        return False
 
     def add_ignore_path(self, path: str, file_size: int = 0):
         """Add path to ignore list with dynamic timeout based on file size"""
         real_path = os.path.realpath(path)  # Resolve any symbolic links
-        self._ignore_paths.add(real_path.replace(os.sep, '/'))
+        normalized_path = real_path.replace(os.sep, '/')
         
-        # Short timeout (e.g. 5 seconds) is sufficient to ignore the CREATE event
-        timeout = 5
+        # Calculate timeout based on file size
+        # For small files, use minimum timeout
+        # For larger files, estimate download time + buffer
+        if file_size > 0:
+            # Estimate download time in seconds (size / speed) + buffer
+            estimated_time = (file_size / self._download_speed) + 10
+            timeout = max(self._min_ignore_timeout, estimated_time)
+        else:
+            timeout = self._min_ignore_timeout
         
+        # Store expiration time instead of just the path
+        current_time = asyncio.get_event_loop().time()
+        expiration_time = current_time + timeout
+        
+        # Store both normalized and alternative path formats
+        self._ignore_paths[normalized_path] = expiration_time
+        
+        # Also store with backslashes for Windows compatibility
+        alt_path = real_path.replace('/', '\\')
+        self._ignore_paths[alt_path] = expiration_time
+        
+        logger.debug(f"Added ignore path: {normalized_path} (expires in {timeout:.1f}s)")
+        
+        # Schedule cleanup after timeout
         asyncio.get_event_loop().call_later(
             timeout,
-            self._ignore_paths.discard,
-            real_path.replace(os.sep, '/')
+            self._remove_ignore_path,
+            normalized_path
         )
+    
+    def _remove_ignore_path(self, path: str):
+        """Remove path from ignore list after timeout"""
+        if path in self._ignore_paths:
+            del self._ignore_paths[path]
+            logger.debug(f"Removed ignore path: {path}")
         
+        # Also remove alternative path format
+        alt_path = path.replace('/', '\\')
+        if alt_path in self._ignore_paths:
+            del self._ignore_paths[alt_path]
+
     def on_created(self, event):
         if event.is_directory or not event.src_path.endswith('.safetensors'):
             return
