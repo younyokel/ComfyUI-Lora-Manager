@@ -539,13 +539,24 @@ class ApiRoutes:
             
             # Check local availability for each version
             for version in versions:
-                for file in version.get('files', []):
-                    sha256 = file.get('hashes', {}).get('SHA256')
+                # Find the model file (type="Model") in the files list
+                model_file = next((file for file in version.get('files', []) 
+                                  if file.get('type') == 'Model'), None)
+                
+                if model_file:
+                    sha256 = model_file.get('hashes', {}).get('SHA256')
                     if sha256:
-                        file['existsLocally'] = self.scanner.has_lora_hash(sha256)
-                        if file['existsLocally']:
-                            file['localPath'] = self.scanner.get_lora_path_by_hash(sha256)
+                        # Set existsLocally and localPath at the version level
+                        version['existsLocally'] = self.scanner.has_lora_hash(sha256)
+                        if version['existsLocally']:
+                            version['localPath'] = self.scanner.get_lora_path_by_hash(sha256)
                         
+                        # Also set the model file size at the version level for easier access
+                        version['modelSizeKB'] = model_file.get('sizeKB')
+                else:
+                    # No model file found in this version
+                    version['existsLocally'] = False
+                    
             return web.json_response(versions)
         except Exception as e:
             logger.error(f"Error fetching model versions: {e}")

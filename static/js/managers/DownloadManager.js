@@ -120,16 +120,21 @@ export class DownloadManager {
         versionList.innerHTML = this.versions.map(version => {
             const firstImage = version.images?.find(img => !img.url.endsWith('.mp4'));
             const thumbnailUrl = firstImage ? firstImage.url : '/loras_static/images/no-preview.png';
-            const fileSize = (version.files[0]?.sizeKB / 1024).toFixed(2);
             
-            const existsLocally = version.files[0]?.existsLocally;
-            const localPath = version.files[0]?.localPath;
+            // Use version-level size or fallback to first file
+            const fileSize = version.modelSizeKB ? 
+                (version.modelSizeKB / 1024).toFixed(2) : 
+                (version.files[0]?.sizeKB / 1024).toFixed(2);
+            
+            // Use version-level existsLocally flag
+            const existsLocally = version.existsLocally;
+            const localPath = version.localPath;
             
             // 更新本地状态指示器为badge样式
             const localStatus = existsLocally ? 
                 `<div class="local-badge">
                     <i class="fas fa-check"></i> In Library
-                    <div class="local-path">${localPath}</div>
+                    <div class="local-path">${localPath || ''}</div>
                  </div>` : '';
 
             return `
@@ -177,12 +182,12 @@ export class DownloadManager {
         this.updateNextButtonState();
     }
     
-    // Add new method to update Next button state
+    // Update this method to use version-level existsLocally
     updateNextButtonState() {
         const nextButton = document.querySelector('#versionStep .primary-btn');
         if (!nextButton) return;
         
-        const existsLocally = this.currentVersion?.files[0]?.existsLocally;
+        const existsLocally = this.currentVersion?.existsLocally;
         
         if (existsLocally) {
             nextButton.disabled = true;
@@ -202,7 +207,7 @@ export class DownloadManager {
         }
         
         // Double-check if the version exists locally
-        const existsLocally = this.currentVersion.files[0]?.existsLocally;
+        const existsLocally = this.currentVersion.existsLocally;
         if (existsLocally) {
             showToast('This version already exists in your library', 'info');
             return;
