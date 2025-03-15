@@ -36,14 +36,22 @@ export class ImportManager {
             this.initialized = true;
         }
         
+        // Always reset the state when opening the modal
+        this.resetSteps();
+        
+        // Show the modal
         modalManager.showModal('importModal', null, () => {
             // Cleanup handler when modal closes
             this.cleanupFolderBrowser();
             
-            // 移除任何强制样式
+            // Remove any injected styles
             this.removeInjectedStyles();
         });
-        this.resetSteps();
+        
+        // Verify the modal is properly shown
+        setTimeout(() => {
+            this.ensureModalVisible();
+        }, 50);
     }
 
     // 添加移除注入样式的方法
@@ -52,12 +60,18 @@ export class ImportManager {
             this.injectedStyles.parentNode.removeChild(this.injectedStyles);
             this.injectedStyles = null;
         }
+        
+        // Also reset any inline styles that might have been set with !important
+        document.querySelectorAll('.import-step').forEach(step => {
+            step.style.cssText = '';
+        });
     }
 
     resetSteps() {
-        // 移除可能存在的强制样式
+        // Remove any existing injected styles
         this.removeInjectedStyles();
         
+        // Show the first step
         this.showStep('uploadStep');
         
         // Reset file input
@@ -78,6 +92,18 @@ export class ImportManager {
             previewElement.innerHTML = '<div class="placeholder">Image preview will appear here</div>';
         }
         
+        // Reset recipe name input
+        const recipeName = document.getElementById('recipeName');
+        if (recipeName) {
+            recipeName.value = '';
+        }
+        
+        // Reset tags container
+        const tagsContainer = document.getElementById('tagsContainer');
+        if (tagsContainer) {
+            tagsContainer.innerHTML = '<div class="empty-tags">No tags added</div>';
+        }
+        
         // Reset state variables
         this.recipeImage = null;
         this.recipeData = null;
@@ -91,6 +117,18 @@ export class ImportManager {
         if (folderBrowser) {
             folderBrowser.querySelectorAll('.folder-item').forEach(f => 
                 f.classList.remove('selected'));
+        }
+        
+        // Clear missing LoRAs list if it exists
+        const missingLorasList = document.getElementById('missingLorasList');
+        if (missingLorasList) {
+            missingLorasList.innerHTML = '';
+        }
+        
+        // Reset total download size
+        const totalSizeDisplay = document.getElementById('totalDownloadSize');
+        if (totalSizeDisplay) {
+            totalSizeDisplay.textContent = 'Calculating...';
         }
     }
 
@@ -207,6 +245,10 @@ export class ImportManager {
                         <i class="fas fa-exclamation-triangle"></i> Not in Library
                      </div>`;
 
+                // Format size if available
+                const sizeDisplay = lora.size ? 
+                    `<div class="size-badge">${this.formatFileSize(lora.size)}</div>` : '';
+
                 return `
                     <div class="lora-item ${existsLocally ? 'exists-locally' : 'missing-locally'}">
                         <div class="lora-thumbnail">
@@ -220,6 +262,7 @@ export class ImportManager {
                             ${lora.version ? `<div class="lora-version">${lora.version}</div>` : ''}
                             <div class="lora-info">
                                 ${lora.baseModel ? `<div class="base-model">${lora.baseModel}</div>` : ''}
+                                ${sizeDisplay}
                                 <div class="weight-badge">Weight: ${lora.weight || 1.0}</div>
                             </div>
                         </div>
@@ -291,8 +334,6 @@ export class ImportManager {
             return;
         }
         
-        console.log('Proceeding from details, missing LoRAs:', this.missingLoras.length);
-        
         // If we have missing LoRAs, go to location step
         if (this.missingLoras.length > 0) {
             this.proceedToLocation();
@@ -303,30 +344,61 @@ export class ImportManager {
     }
 
     async proceedToLocation() {
-        // 先移除可能已有的样式
-        this.removeInjectedStyles();
         
-        // 添加强制CSS覆盖
-        this.injectedStyles = document.createElement('style');
-        this.injectedStyles.innerHTML = `
-            #locationStep {
-                display: block !important;
-                opacity: 1 !important;
-                visibility: visible !important;
-                position: static !important;
-                z-index: 10000 !important;
-                width: auto !important;
-                height: auto !important;
-                overflow: visible !important;
-                transform: none !important;
-            }
-        `;
-        document.head.appendChild(this.injectedStyles);
-        console.log('Added override CSS to force visibility');
-        
+        // Show the location step with special handling
         this.showStep('locationStep');
         
+        // Double-check after a short delay to ensure the step is visible
+        setTimeout(() => {
+            const locationStep = document.getElementById('locationStep');
+            if (locationStep.style.display !== 'block' || 
+                window.getComputedStyle(locationStep).display !== 'block') {
+                // Force display again
+                locationStep.style.display = 'block';
+                
+                // If still not visible, try with injected style
+                if (window.getComputedStyle(locationStep).display !== 'block') {
+                    this.injectedStyles = document.createElement('style');
+                    this.injectedStyles.innerHTML = `
+                        #locationStep {
+                            display: block !important;
+                            opacity: 1 !important;
+                            visibility: visible !important;
+                        }
+                    `;
+                    document.head.appendChild(this.injectedStyles);
+                }
+            }
+        }, 100);
+        
         try {
+            // Display missing LoRAs that will be downloaded
+            const missingLorasList = document.getElementById('missingLorasList');
+            if (missingLorasList && this.missingLoras.length > 0) {
+                // Calculate total size
+                const totalSize = this.missingLoras.reduce((sum, lora) => {
+                    return sum + (lora.size ? parseInt(lora.size) : 0);
+                }, 0);
+                
+                // Update total size display
+                const totalSizeDisplay = document.getElementById('totalDownloadSize');
+                if (totalSizeDisplay) {
+                    totalSizeDisplay.textContent = this.formatFileSize(totalSize);
+                }
+                
+                // Generate missing LoRAs list
+                missingLorasList.innerHTML = this.missingLoras.map(lora => {
+                    const sizeDisplay = lora.size ? this.formatFileSize(lora.size) : 'Unknown size';
+                    
+                    return `
+                        <div class="missing-lora-item">
+                            <div class="missing-lora-name">${lora.name}</div>
+                            <div class="missing-lora-size">${sizeDisplay}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
             // Fetch LoRA roots
             const rootsResponse = await fetch('/api/lora-roots');
             if (!rootsResponse.ok) {
@@ -365,6 +437,18 @@ export class ImportManager {
 
     backToUpload() {
         this.showStep('uploadStep');
+        
+        // Reset file input to ensure it can trigger change events again
+        const fileInput = document.getElementById('recipeImageUpload');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Clear any previous error messages
+        const errorElement = document.getElementById('uploadError');
+        if (errorElement) {
+            errorElement.textContent = '';
+        }
     }
 
     backToDetails() {
@@ -397,7 +481,6 @@ export class ImportManager {
             const result = await response.json();
             if (result.success) {
                 // Handle successful save
-                console.log(`Recipe saved with ID: ${result.recipe_id}`);
                 // Show success message for recipe save
                 showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
                 
@@ -544,7 +627,6 @@ export class ImportManager {
         if (loraRoot) loraRoot.addEventListener('change', this.updateTargetPath);
         if (newFolder) newFolder.addEventListener('input', this.updateTargetPath);
         
-        console.log('Initializing folder browser...');
         // Update initial path
         this.updateTargetPath();
     }
@@ -588,36 +670,80 @@ export class ImportManager {
     }
 
     showStep(stepId) {
-        // 隐藏所有步骤
+        
+        // First, remove any injected styles to prevent conflicts
+        this.removeInjectedStyles();
+        
+        // Hide all steps first
         document.querySelectorAll('.import-step').forEach(step => {
             step.style.display = 'none';
         });
         
-        // 显示目标步骤
+        // Show target step with a monitoring mechanism
         const targetStep = document.getElementById(stepId);
         if (targetStep) {
-            // 强制显示目标步骤 - 使用 !important 覆盖任何其他CSS规则
-            targetStep.setAttribute('style', 'display: block !important');
+            // Use direct style setting
+            targetStep.style.display = 'block';
             
-            // 调试信息
-            console.log(`Showing step: ${stepId}`);
-            const rect = targetStep.getBoundingClientRect();
-            console.log('Step dimensions:', {
-                width: rect.width,
-                height: rect.height,
-                top: rect.top,
-                left: rect.left,
-                visible: rect.width > 0 && rect.height > 0
-            });
+            // For the locationStep specifically, we need additional measures
+            if (stepId === 'locationStep') {
+                // Create a more persistent style to override any potential conflicts
+                this.injectedStyles = document.createElement('style');
+                this.injectedStyles.innerHTML = `
+                    #locationStep {
+                        display: block !important;
+                        opacity: 1 !important;
+                        visibility: visible !important;
+                    }
+                `;
+                document.head.appendChild(this.injectedStyles);
+                
+                // Force layout recalculation
+                targetStep.offsetHeight;
+                
+                // Set up a monitor to ensure the step remains visible
+                setTimeout(() => {
+                    if (targetStep.style.display !== 'block') {
+                        targetStep.style.display = 'block';
+                    }
+                    
+                    // Check dimensions again after a short delay
+                    const newRect = targetStep.getBoundingClientRect();
+                }, 50);
+            }
             
-            // 强制重新计算布局
-            targetStep.offsetHeight;
-            
-            // 滚动模态内容到顶部
+            // Scroll modal content to top
             const modalContent = document.querySelector('#importModal .modal-content');
             if (modalContent) {
                 modalContent.scrollTop = 0;
             }
         }
+    }
+
+    // Add a helper method to format file sizes
+    formatFileSize(bytes) {
+        if (!bytes || isNaN(bytes)) return '';
+        
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
+    // Add this method to ensure the modal is fully visible and initialized
+    ensureModalVisible() {
+        const importModal = document.getElementById('importModal');
+        if (!importModal) {
+            console.error('Import modal element not found');
+            return false;
+        }
+        
+        // Check if modal is actually visible
+        const modalDisplay = window.getComputedStyle(importModal).display;
+        if (modalDisplay !== 'block') {
+            console.error('Import modal is not visible, display: ' + modalDisplay);
+            return false;
+        }
+        
+        return true;
     }
 } 

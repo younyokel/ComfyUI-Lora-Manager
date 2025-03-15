@@ -1,6 +1,7 @@
 /* Import Modal Styles */
 .import-step {
     margin: var(--space-2) 0;
+    transition: none !important; /* Disable any transitions that might affect display */
 }
 
 /* File Input Styles */
@@ -364,14 +365,6 @@
     margin-top: 4px;
 }
 
-/* Modal Actions */
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    margin-top: var(--space-3);
-}
-
 /* Dark theme adjustments */
 [data-theme="dark"] .lora-item {
     background: var(--lora-surface);
@@ -390,4 +383,59 @@
     .recipe-image-container {
         height: 150px;
     }
+}
+
+/* Size badge for LoRA items */
+.size-badge {
+    background: var(--lora-surface);
+    padding: 2px 8px;
+    border-radius: var(--border-radius-xs);
+    font-size: 0.85em;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+/* Missing LoRAs summary section */
+.missing-loras-summary {
+    margin-bottom: var(--space-3);
+    padding: var(--space-2);
+    background: var(--bg-color);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--lora-error);
+}
+
+.missing-loras-summary h3 {
+    margin-top: 0;
+    margin-bottom: var(--space-2);
+    font-size: 1.1em;
+    color: var(--text-color);
+}
+
+.total-size-info {
+    margin-bottom: var(--space-2);
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+
+.missing-lora-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.missing-lora-item:last-child {
+    border-bottom: none;
+}
+
+.missing-lora-name {
+    font-weight: 500;
+    flex: 1;
+}
+
+.missing-lora-size {
+    font-size: 0.9em;
+    color: var(--text-color);
+    opacity: 0.8;
 }

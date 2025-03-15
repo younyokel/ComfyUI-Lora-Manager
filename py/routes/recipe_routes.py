@@ -220,12 +220,19 @@ class RecipeRoutes:
 
                 # Check if this LoRA exists locally by SHA256 hash
                 exists_locally = False
+                local_path = None
                 
-                if civitai_info and 'files' in civitai_info and civitai_info['files']:
-                    sha256 = civitai_info['files'][0].get('hashes', {}).get('SHA256', '')
-                    if sha256:
-                        sha256 = sha256.lower()  # Convert to lowercase for consistency
-                        exists_locally = self.recipe_scanner._lora_scanner.has_lora_hash(sha256)
+                if civitai_info and 'files' in civitai_info:
+                    # Find the model file (type="Model") in the files list
+                    model_file = next((file for file in civitai_info.get('files', []) 
+                                      if file.get('type') == 'Model'), None)
+                    
+                    if model_file:
+                        sha256 = model_file.get('hashes', {}).get('SHA256', '')
+                        if sha256:
+                            exists_locally = self.recipe_scanner._lora_scanner.has_lora_hash(sha256)
+                            if exists_locally:
+                                local_path = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(sha256)
                 
                 # Create LoRA entry
                 lora_entry = {
@@ -235,6 +242,7 @@ class RecipeRoutes:
                     'type': resource.get('type', 'lora'),
                     'weight': resource.get('weight', 1.0),
                     'existsLocally': exists_locally,
+                    'localPath': local_path,
                     'thumbnailUrl': '',
                     'baseModel': '',
                     'size': 0,
@@ -250,9 +258,9 @@ class RecipeRoutes:
                     # Get base model
                     lora_entry['baseModel'] = civitai_info.get('baseModel', '')
                     
-                    # Get file size
-                    if 'files' in civitai_info and civitai_info['files']:
-                        lora_entry['size'] = civitai_info['files'][0].get('sizeKB', 0) * 1024
+                    # Get file size from model file
+                    if model_file:
+                        lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
                     
                     # Get download URL
                     lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')

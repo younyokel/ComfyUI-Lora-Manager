@@ -68,6 +68,17 @@
         <!-- Step 3: Download Location (if needed) -->
         <div class="import-step" id="locationStep" style="display: none;">
             <div class="location-selection">
+                <!-- Add missing LoRAs summary section -->
+                <div class="missing-loras-summary">
+                    <h3>Missing LoRAs to Download</h3>
+                    <div class="total-size-info">
+                        Total download size: <span id="totalDownloadSize">Calculating...</span>
+                    </div>
+                    <div id="missingLorasList" class="missing-loras-list">
+                        <!-- Missing LoRAs will be populated here -->
+                    </div>
+                </div>
+
                 <!-- Move path preview to top -->
                 <div class="path-preview">
                     <label>Download Location Preview:</label>
