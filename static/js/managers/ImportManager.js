@@ -507,27 +507,56 @@ export class ImportManager {
                     const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
                     const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
                     
-                    // Download missing LoRAs sequentially
-                    this.loadingManager.show('Downloading LoRAs...', 0);
+                    // Show enhanced loading with progress details for multiple items
+                    const updateProgress = this.loadingManager.showDownloadProgress(this.missingLoras.length);
                     
                     let completedDownloads = 0;
+                    let currentLoraProgress = 0;
+                    
+                    // Set up progress tracking for current download
+                    ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.status === 'progress') {
+                            // Update current LoRA progress
+                            currentLoraProgress = data.progress;
+                            
+                            // Get current LoRA name
+                            const currentLora = this.missingLoras[completedDownloads];
+                            const loraName = currentLora ? currentLora.name : '';
+                            
+                            // Update progress display
+                            updateProgress(currentLoraProgress, completedDownloads, loraName);
+                            
+                            // Add more detailed status messages based on progress
+                            if (currentLoraProgress < 3) {
+                                this.loadingManager.setStatus(
+                                    `Preparing download for LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                );
+                            } else if (currentLoraProgress === 3) {
+                                this.loadingManager.setStatus(
+                                    `Downloaded preview for LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                );
+                            } else if (currentLoraProgress > 3 && currentLoraProgress < 100) {
+                                this.loadingManager.setStatus(
+                                    `Downloading LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                );
+                            } else {
+                                this.loadingManager.setStatus(
+                                    `Finalizing LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                );
+                            }
+                        }
+                    };
+                    
                     for (let i = 0; i < this.missingLoras.length; i++) {
                         const lora = this.missingLoras[i];
                         
-                        // Update overall progress
-                        this.loadingManager.setStatus(`Downloading LoRA ${i+1}/${this.missingLoras.length}: ${lora.name}`);
+                        // Reset current LoRA progress for new download
+                        currentLoraProgress = 0;
                         
-                        // Set up progress tracking for current download
-                        ws.onmessage = (event) => {
-                            const data = JSON.parse(event.data);
-                            if (data.status === 'progress') {
-                                // Calculate overall progress: completed files + current file progress
-                                const overallProgress = Math.floor(
-                                    (completedDownloads + data.progress/100) / this.missingLoras.length * 100
-                                );
-                                this.loadingManager.setProgress(overallProgress);
-                            }
-                        };
+                        // Initial status update for new LoRA
+                        this.loadingManager.setStatus(`Starting download for LoRA ${i+1}/${this.missingLoras.length}`);
+                        updateProgress(0, completedDownloads, lora.name);
                         
                         try {
                             // Download the LoRA
@@ -547,6 +576,15 @@ export class ImportManager {
                                 // Continue with next download
                             } else {
                                 completedDownloads++;
+                                
+                                // Update progress to show completion of current LoRA
+                                updateProgress(100, completedDownloads, '');
+                                
+                                if (completedDownloads < this.missingLoras.length) {
+                                    this.loadingManager.setStatus(
+                                        `Completed ${completedDownloads}/${this.missingLoras.length} LoRAs. Starting next download...`
+                                    );
+                                }
                             }
                         } catch (downloadError) {
                             console.error(`Error downloading LoRA ${lora.name}:`, downloadError);

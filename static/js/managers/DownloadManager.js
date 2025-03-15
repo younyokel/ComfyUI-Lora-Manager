@@ -270,18 +270,36 @@ export class DownloadManager {
                 throw new Error('No download URL available');
             }
 
-            // Show loading with progress bar for download
-            this.loadingManager.show('Downloading LoRA...', 0);
+            // Show enhanced loading with progress details
+            const updateProgress = this.loadingManager.showDownloadProgress(1);
+            updateProgress(0, 0, this.currentVersion.name);
 
             // Setup WebSocket for progress updates
             const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+            
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.status === 'progress') {
-                    this.loadingManager.setProgress(data.progress);
-                    this.loadingManager.setStatus(`Downloading: ${data.progress}%`);
+                    // Update progress display with current progress
+                    updateProgress(data.progress, 0, this.currentVersion.name);
+                    
+                    // Add more detailed status messages based on progress
+                    if (data.progress < 3) {
+                        this.loadingManager.setStatus(`Preparing download...`);
+                    } else if (data.progress === 3) {
+                        this.loadingManager.setStatus(`Downloaded preview image`);
+                    } else if (data.progress > 3 && data.progress < 100) {
+                        this.loadingManager.setStatus(`Downloading LoRA file`);
+                    } else {
+                        this.loadingManager.setStatus(`Finalizing download...`);
+                    }
                 }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                // Continue with download even if WebSocket fails
             };
 
             // Start download
