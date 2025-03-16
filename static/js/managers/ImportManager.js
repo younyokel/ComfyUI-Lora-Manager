@@ -255,31 +255,39 @@ export class ImportManager {
         if (lorasList) {
             lorasList.innerHTML = this.recipeData.loras.map(lora => {
                 const existsLocally = lora.existsLocally;
+                const isDeleted = lora.isDeleted;
                 const localPath = lora.localPath || '';
                 
-                // Create local status badge
-                const localStatus = existsLocally ? 
-                    `<div class="local-badge">
-                        <i class="fas fa-check"></i> In Library
-                        <div class="local-path">${localPath}</div>
-                     </div>` : 
-                    `<div class="missing-badge">
-                        <i class="fas fa-exclamation-triangle"></i> Not in Library
-                     </div>`;
+                // Create status badge based on LoRA status
+                let statusBadge;
+                if (isDeleted) {
+                    statusBadge = `<div class="deleted-badge">
+                        <i class="fas fa-exclamation-circle"></i> Deleted from Civitai
+                    </div>`;
+                } else {
+                    statusBadge = existsLocally ? 
+                        `<div class="local-badge">
+                            <i class="fas fa-check"></i> In Library
+                            <div class="local-path">${localPath}</div>
+                        </div>` :
+                        `<div class="missing-badge">
+                            <i class="fas fa-exclamation-triangle"></i> Not in Library
+                        </div>`;
+                }
 
                 // Format size if available
                 const sizeDisplay = lora.size ? 
                     `<div class="size-badge">${this.formatFileSize(lora.size)}</div>` : '';
 
                 return `
-                    <div class="lora-item ${existsLocally ? 'exists-locally' : 'missing-locally'}">
+                    <div class="lora-item ${existsLocally ? 'exists-locally' : isDeleted ? 'is-deleted' : 'missing-locally'}">
                         <div class="lora-thumbnail">
                             <img src="${lora.thumbnailUrl || '/loras_static/images/no-preview.png'}" alt="LoRA preview">
                         </div>
                         <div class="lora-content">
                             <div class="lora-header">
                                 <h3>${lora.name}</h3>
-                                ${localStatus}
+                                ${statusBadge}
                             </div>
                             ${lora.version ? `<div class="lora-version">${lora.version}</div>` : ''}
                             <div class="lora-info">
@@ -301,12 +309,55 @@ export class ImportManager {
         const nextButton = document.querySelector('#detailsStep .primary-btn');
         if (!nextButton) return;
         
-        // If we have missing LoRAs, show "Download Missing LoRAs"
-        // Otherwise show "Save Recipe"
-        if (this.missingLoras.length > 0) {
-            nextButton.textContent = 'Download Missing LoRAs';
+        // Count deleted LoRAs
+        const deletedLoras = this.recipeData.loras.filter(lora => lora.isDeleted).length;
+        
+        // If we have deleted LoRAs, show a warning and update button text
+        if (deletedLoras > 0) {
+            // Remove any existing warning
+            const existingWarning = document.getElementById('deletedLorasWarning');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+            
+            // Create a new warning container above the buttons
+            const buttonsContainer = document.querySelector('#detailsStep .modal-actions') || nextButton.parentNode;
+            const warningContainer = document.createElement('div');
+            warningContainer.id = 'deletedLorasWarning';
+            warningContainer.className = 'deleted-loras-warning';
+            
+            // Create warning message
+            warningContainer.innerHTML = `
+                <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="warning-content">
+                    <div class="warning-title">${deletedLoras} LoRA(s) have been deleted from Civitai</div>
+                    <div class="warning-text">These LoRAs cannot be downloaded. If you continue, they will be removed from the recipe.</div>
+                </div>
+            `;
+            
+            // Insert before the buttons container
+            buttonsContainer.parentNode.insertBefore(warningContainer, buttonsContainer);
+            
+            // Update next button text to be more clear
+            nextButton.textContent = 'Continue Without Deleted LoRAs';
         } else {
-            nextButton.textContent = 'Save Recipe';
+            // Remove warning if no deleted LoRAs
+            const warningMsg = document.getElementById('deletedLorasWarning');
+            if (warningMsg) {
+                warningMsg.remove();
+            }
+            
+            // If we have missing LoRAs (not deleted), show "Download Missing LoRAs"
+            // Otherwise show "Save Recipe"
+            const missingNotDeleted = this.recipeData.loras.filter(
+                lora => !lora.existsLocally && !lora.isDeleted
+            ).length;
+            
+            if (missingNotDeleted > 0) {
+                nextButton.textContent = 'Download Missing LoRAs';
+            } else {
+                nextButton.textContent = 'Save Recipe';
+            }
         }
     }
 
@@ -356,8 +407,23 @@ export class ImportManager {
             return;
         }
         
-        // If we have missing LoRAs, go to location step
+        // Automatically mark all deleted LoRAs as excluded
+        if (this.recipeData && this.recipeData.loras) {
+            this.recipeData.loras.forEach(lora => {
+                if (lora.isDeleted) {
+                    lora.exclude = true;
+                }
+            });
+        }
+        
+        // Update missing LoRAs list to exclude deleted LoRAs
+        this.missingLoras = this.recipeData.loras.filter(lora => 
+            !lora.existsLocally && !lora.isDeleted);
+        
+        // If we have downloadable missing LoRAs, go to location step
         if (this.missingLoras.length > 0) {
+            // Store only downloadable LoRAs for the download step
+            this.downloadableLoRAs = this.missingLoras;
             this.proceedToLocation();
         } else {
             // Otherwise, save the recipe directly
@@ -396,9 +462,9 @@ export class ImportManager {
         try {
             // Display missing LoRAs that will be downloaded
             const missingLorasList = document.getElementById('missingLorasList');
-            if (missingLorasList && this.missingLoras.length > 0) {
+            if (missingLorasList && this.downloadableLoRAs.length > 0) {
                 // Calculate total size
-                const totalSize = this.missingLoras.reduce((sum, lora) => {
+                const totalSize = this.downloadableLoRAs.reduce((sum, lora) => {
                     return sum + (lora.size ? parseInt(lora.size) : 0);
                 }, 0);
                 
@@ -411,11 +477,11 @@ export class ImportManager {
                 // Update header to include count of missing LoRAs
                 const missingLorasHeader = document.querySelector('.summary-header h3');
                 if (missingLorasHeader) {
-                    missingLorasHeader.innerHTML = `Missing LoRAs <span class="lora-count-badge">(${this.missingLoras.length})</span> <span id="totalDownloadSize" class="total-size-badge">${this.formatFileSize(totalSize)}</span>`;
+                    missingLorasHeader.innerHTML = `Missing LoRAs <span class="lora-count-badge">(${this.downloadableLoRAs.length})</span> <span id="totalDownloadSize" class="total-size-badge">${this.formatFileSize(totalSize)}</span>`;
                 }
                 
                 // Generate missing LoRAs list
-                missingLorasList.innerHTML = this.missingLoras.map(lora => {
+                missingLorasList.innerHTML = this.downloadableLoRAs.map(lora => {
                     const sizeDisplay = lora.size ? this.formatFileSize(lora.size) : 'Unknown size';
                     const baseModel = lora.baseModel ? `<span class="lora-base-model">${lora.baseModel}</span>` : '';
                     
@@ -538,7 +604,7 @@ export class ImportManager {
                 
                 
                 // Check if we need to download LoRAs
-                if (this.missingLoras.length > 0) {
+                if (this.downloadableLoRAs && this.downloadableLoRAs.length > 0) {
                     // For download, we need to validate the target path
                     const loraRoot = document.getElementById('importLoraRoot')?.value;
                     if (!loraRoot) {
@@ -561,7 +627,7 @@ export class ImportManager {
                     const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
                     
                     // Show enhanced loading with progress details for multiple items
-                    const updateProgress = this.loadingManager.showDownloadProgress(this.missingLoras.length);
+                    const updateProgress = this.loadingManager.showDownloadProgress(this.downloadableLoRAs.length);
                     
                     let completedDownloads = 0;
                     let currentLoraProgress = 0;
@@ -574,7 +640,7 @@ export class ImportManager {
                             currentLoraProgress = data.progress;
                             
                             // Get current LoRA name
-                            const currentLora = this.missingLoras[completedDownloads];
+                            const currentLora = this.downloadableLoRAs[completedDownloads];
                             const loraName = currentLora ? currentLora.name : '';
                             
                             // Update progress display
@@ -583,32 +649,32 @@ export class ImportManager {
                             // Add more detailed status messages based on progress
                             if (currentLoraProgress < 3) {
                                 this.loadingManager.setStatus(
-                                    `Preparing download for LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                    `Preparing download for LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
                                 );
                             } else if (currentLoraProgress === 3) {
                                 this.loadingManager.setStatus(
-                                    `Downloaded preview for LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                    `Downloaded preview for LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
                                 );
                             } else if (currentLoraProgress > 3 && currentLoraProgress < 100) {
                                 this.loadingManager.setStatus(
-                                    `Downloading LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                    `Downloading LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
                                 );
                             } else {
                                 this.loadingManager.setStatus(
-                                    `Finalizing LoRA ${completedDownloads+1}/${this.missingLoras.length}`
+                                    `Finalizing LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
                                 );
                             }
                         }
                     };
                     
-                    for (let i = 0; i < this.missingLoras.length; i++) {
-                        const lora = this.missingLoras[i];
+                    for (let i = 0; i < this.downloadableLoRAs.length; i++) {
+                        const lora = this.downloadableLoRAs[i];
                         
                         // Reset current LoRA progress for new download
                         currentLoraProgress = 0;
                         
                         // Initial status update for new LoRA
-                        this.loadingManager.setStatus(`Starting download for LoRA ${i+1}/${this.missingLoras.length}`);
+                        this.loadingManager.setStatus(`Starting download for LoRA ${i+1}/${this.downloadableLoRAs.length}`);
                         updateProgress(0, completedDownloads, lora.name);
                         
                         try {
@@ -633,9 +699,9 @@ export class ImportManager {
                                 // Update progress to show completion of current LoRA
                                 updateProgress(100, completedDownloads, '');
                                 
-                                if (completedDownloads < this.missingLoras.length) {
+                                if (completedDownloads < this.downloadableLoRAs.length) {
                                     this.loadingManager.setStatus(
-                                        `Completed ${completedDownloads}/${this.missingLoras.length} LoRAs. Starting next download...`
+                                        `Completed ${completedDownloads}/${this.downloadableLoRAs.length} LoRAs. Starting next download...`
                                     );
                                 }
                             }
@@ -649,10 +715,10 @@ export class ImportManager {
                     ws.close();
                     
                     // Show final completion message
-                    if (completedDownloads === this.missingLoras.length) {
+                    if (completedDownloads === this.downloadableLoRAs.length) {
                         showToast(`All ${completedDownloads} LoRAs downloaded successfully`, 'success');
                     } else {
-                        showToast(`Downloaded ${completedDownloads} of ${this.missingLoras.length} LoRAs`, 'warning');
+                        showToast(`Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs`, 'warning');
                     }
                 }
 

@@ -231,42 +231,49 @@ class RecipeRoutes:
                 # Get additional info from Civitai
                 civitai_info = await self.civitai_client.get_model_version_info(model_version_id)
 
-                # Check if this LoRA exists locally by SHA256 hash
-                exists_locally = False
-                local_path = None
-                sha256 = ''
-                
-                if civitai_info and 'files' in civitai_info:
-                    # Find the model file (type="Model") in the files list
-                    model_file = next((file for file in civitai_info.get('files', []) 
-                                      if file.get('type') == 'Model'), None)
-                    
-                    if model_file:
-                        sha256 = model_file.get('hashes', {}).get('SHA256', '')
-                        if sha256:
-                            exists_locally = self.recipe_scanner._lora_scanner.has_lora_hash(sha256)
-                            if exists_locally:
-                                local_path = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(sha256)
-                
-                # Create LoRA entry for frontend display
+                # Initialize lora entry with default values
                 lora_entry = {
                     'id': model_version_id,
                     'name': resource.get('modelName', ''),
                     'version': resource.get('modelVersionName', ''),
                     'type': resource.get('type', 'lora'),
                     'weight': resource.get('weight', 1.0),
-                    'existsLocally': exists_locally,
-                    'localPath': local_path,
-                    'file_name': os.path.splitext(os.path.basename(local_path))[0] if local_path else '',
-                    'hash': sha256,
+                    'existsLocally': False,
+                    'localPath': None,
+                    'file_name': '',
+                    'hash': '',
                     'thumbnailUrl': '',
                     'baseModel': '',
                     'size': 0,
-                    'downloadUrl': ''
+                    'downloadUrl': '',
+                    'isDeleted': False  # New flag to indicate if the LoRA is deleted from Civitai
                 }
                 
-                # Add Civitai info if available
-                if civitai_info:
+                # Check if this LoRA exists locally by SHA256 hash
+                if civitai_info and civitai_info.get("error") != "Model not found":
+                    # LoRA exists on Civitai, process its information
+                    if 'files' in civitai_info:
+                        # Find the model file (type="Model") in the files list
+                        model_file = next((file for file in civitai_info.get('files', []) 
+                                          if file.get('type') == 'Model'), None)
+                        
+                        if model_file:
+                            sha256 = model_file.get('hashes', {}).get('SHA256', '')
+                            if sha256:
+                                exists_locally = self.recipe_scanner._lora_scanner.has_lora_hash(sha256)
+                                if exists_locally:
+                                    local_path = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(sha256)
+                                    lora_entry['existsLocally'] = True
+                                    lora_entry['localPath'] = local_path
+                                    lora_entry['file_name'] = os.path.splitext(os.path.basename(local_path))[0]
+                                else:
+                                    # For missing LoRAs, get file_name from model_file.name
+                                    file_name = model_file.get('name', '')
+                                    lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else ''
+                            
+                            lora_entry['hash'] = sha256
+                            lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
+                    
                     # Get thumbnail URL from first image
                     if 'images' in civitai_info and civitai_info['images']:
                         lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
@@ -274,12 +281,12 @@ class RecipeRoutes:
                     # Get base model
                     lora_entry['baseModel'] = civitai_info.get('baseModel', '')
                     
-                    # Get file size from model file
-                    if model_file:
-                        lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
-                    
                     # Get download URL
                     lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
+                else:
+                    # LoRA is deleted from Civitai or not found
+                    lora_entry['isDeleted'] = True
+                    lora_entry['thumbnailUrl'] = '/loras_static/images/no-preview.png'
                 
                 loras.append(lora_entry)
             
@@ -385,6 +392,10 @@ class RecipeRoutes:
             # Format loras data according to the recipe.json format
             loras_data = []
             for lora in metadata.get("loras", []):
+                # Skip deleted LoRAs if they're marked to be excluded
+                if lora.get("isDeleted", False) and lora.get("exclude", False):
+                    continue
+                
                 # Convert frontend lora format to recipe format
                 lora_entry = {
                     "file_name": lora.get("file_name", "") or os.path.splitext(os.path.basename(lora.get("localPath", "")))[0],
@@ -392,7 +403,8 @@ class RecipeRoutes:
                     "strength": float(lora.get("weight", 1.0)),
                     "modelVersionId": lora.get("id", ""),
                     "modelName": lora.get("name", ""),
-                    "modelVersionName": lora.get("version", "")
+                    "modelVersionName": lora.get("version", ""),
+                    "isDeleted": lora.get("isDeleted", False)  # Preserve deletion status in saved recipe
                 }
                 loras_data.append(lora_entry)
             
@@ -434,15 +446,17 @@ class RecipeRoutes:
             json_path = os.path.join(recipes_dir, json_filename)
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(recipe_data, f, indent=4, ensure_ascii=False)
-                
-            # Add the new recipe directly to the cache instead of forcing a refresh
-            try:
-                # Use a timeout to prevent deadlocks
-                async with asyncio.timeout(5.0):
-                    cache = await self.recipe_scanner.get_cached_data()
-                    await cache.add_recipe(recipe_data)
-            except asyncio.TimeoutError:
-                logger.warning("Timeout adding recipe to cache - will be picked up on next refresh")
+            
+            # Simplified cache update approach
+            # Instead of trying to update the cache directly, just set it to None
+            # to force a refresh on the next get_cached_data call
+            if self.recipe_scanner._cache is not None:
+                # Add the recipe to the raw data if the cache exists
+                # This is a simple direct update without locks or timeouts
+                self.recipe_scanner._cache.raw_data.append(recipe_data)
+                # Schedule a background task to resort the cache
+                asyncio.create_task(self.recipe_scanner._cache.resort())
+                logger.info(f"Added recipe {recipe_id} to cache")
             
             return web.json_response({
                 'success': True,
@@ -486,14 +500,16 @@ class RecipeRoutes:
                 os.remove(image_path)
                 logger.info(f"Deleted recipe image: {image_path}")
             
-            # Remove from cache without forcing a full refresh
-            try:
-                # Use a timeout to prevent deadlocks
-                async with asyncio.timeout(5.0):
-                    cache = await self.recipe_scanner.get_cached_data(force_refresh=False)
-                    await cache.remove_recipe(recipe_id)
-            except asyncio.TimeoutError:
-                logger.warning("Timeout removing recipe from cache - will be picked up on next refresh")
+            # Simplified cache update approach
+            if self.recipe_scanner._cache is not None:
+                # Remove the recipe from raw_data if it exists
+                self.recipe_scanner._cache.raw_data = [
+                    r for r in self.recipe_scanner._cache.raw_data 
+                    if str(r.get('id', '')) != recipe_id
+                ]
+                # Schedule a background task to resort the cache
+                asyncio.create_task(self.recipe_scanner._cache.resort())
+                logger.info(f"Removed recipe {recipe_id} from cache")
             
             return web.json_response({"success": True, "message": "Recipe deleted successfully"})
         except Exception as e:
