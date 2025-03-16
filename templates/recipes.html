@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/loras_static/css/style.css">
     <link rel="stylesheet" href="/loras_static/css/components/recipe-card.css">
+    <link rel="stylesheet" href="/loras_static/css/components/recipe-modal.css">
     <link rel="stylesheet" href="/loras_static/css/components/import-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="icon" type="image/png" sizes="32x32" href="/loras_static/images/favicon-32x32.png">
@@ -33,79 +34,6 @@
     
     <!-- Resource loading strategy -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-
-    <style>
-        /* Recipe-specific styles */
-        .recipe-tag-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .recipe-tag {
-            background: var(--lora-surface-hover);
-            color: var(--lora-text-secondary);
-            padding: 0.25rem 0.5rem;
-            border-radius: var(--border-radius-sm);
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .recipe-tag:hover, .recipe-tag.active {
-            background: var(--lora-primary);
-            color: var(--lora-text-on-primary);
-        }
-
-        .recipe-card {
-            position: relative;
-            background: var(--lora-surface);
-            border-radius: var(--border-radius-base);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.2s ease;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .recipe-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .recipe-indicator {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            width: 24px;
-            height: 24px;
-            background: var(--lora-primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            z-index: 2;
-        }
-        
-        .recipe-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
-        
-        .placeholder-message {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 2rem;
-            background: var(--lora-surface-alt);
-            border-radius: var(--border-radius-base);
-        }
-    </style>
 </head>
 <body>
     {% include 'components/header.html' %}
@@ -115,6 +43,7 @@
         {% include 'components/loading.html' %}
         {% include 'components/context_menu.html' %}
         {% include 'components/import_modal.html' %}
+        {% include 'components/recipe_modal.html' %}
 
         <div class="container">
             {% if is_initializing %}

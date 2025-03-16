@@ -38,6 +38,7 @@ class RecipeRoutes:
         app.router.add_get('/api/recipe/{recipe_id}', routes.get_recipe_detail)
         app.router.add_post('/api/recipes/analyze-image', routes.analyze_recipe_image)
         app.router.add_post('/api/recipes/save', routes.save_recipe)
+        app.router.add_delete('/api/recipe/{recipe_id}', routes.delete_recipe)
         
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
@@ -435,8 +436,13 @@ class RecipeRoutes:
                 json.dump(recipe_data, f, indent=4, ensure_ascii=False)
                 
             # Add the new recipe directly to the cache instead of forcing a refresh
-            cache = await self.recipe_scanner.get_cached_data()
-            await cache.add_recipe(recipe_data)
+            try:
+                # Use a timeout to prevent deadlocks
+                async with asyncio.timeout(5.0):
+                    cache = await self.recipe_scanner.get_cached_data()
+                    await cache.add_recipe(recipe_data)
+            except asyncio.TimeoutError:
+                logger.warning("Timeout adding recipe to cache - will be picked up on next refresh")
             
             return web.json_response({
                 'success': True,
@@ -447,4 +453,49 @@ class RecipeRoutes:
             
         except Exception as e:
             logger.error(f"Error saving recipe: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500) 
+
+    async def delete_recipe(self, request: web.Request) -> web.Response:
+        """Delete a recipe by ID"""
+        try:
+            recipe_id = request.match_info['recipe_id']
+            
+            # Get recipes directory
+            recipes_dir = self.recipe_scanner.recipes_dir
+            if not recipes_dir or not os.path.exists(recipes_dir):
+                return web.json_response({"error": "Recipes directory not found"}, status=404)
+            
+            # Find recipe JSON file
+            recipe_json_path = os.path.join(recipes_dir, f"{recipe_id}.recipe.json")
+            if not os.path.exists(recipe_json_path):
+                return web.json_response({"error": "Recipe not found"}, status=404)
+            
+            # Load recipe data to get image path
+            with open(recipe_json_path, 'r', encoding='utf-8') as f:
+                recipe_data = json.load(f)
+            
+            # Get image path
+            image_path = recipe_data.get('file_path')
+            
+            # Delete recipe JSON file
+            os.remove(recipe_json_path)
+            logger.info(f"Deleted recipe JSON file: {recipe_json_path}")
+            
+            # Delete recipe image if it exists
+            if image_path and os.path.exists(image_path):
+                os.remove(image_path)
+                logger.info(f"Deleted recipe image: {image_path}")
+            
+            # Remove from cache without forcing a full refresh
+            try:
+                # Use a timeout to prevent deadlocks
+                async with asyncio.timeout(5.0):
+                    cache = await self.recipe_scanner.get_cached_data(force_refresh=False)
+                    await cache.remove_recipe(recipe_id)
+            except asyncio.TimeoutError:
+                logger.warning("Timeout removing recipe from cache - will be picked up on next refresh")
+            
+            return web.json_response({"success": True, "message": "Recipe deleted successfully"})
+        except Exception as e:
+            logger.error(f"Error deleting recipe: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500) 

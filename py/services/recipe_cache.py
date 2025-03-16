@@ -59,3 +59,27 @@ class RecipeCache:
         async with self._lock:
             self.raw_data.append(recipe_data)
             await self.resort() 
+
+    async def remove_recipe(self, recipe_id: str) -> bool:
+        """Remove a recipe from the cache by ID
+        
+        Args:
+            recipe_id: The ID of the recipe to remove
+            
+        Returns:
+            bool: True if the recipe was found and removed, False otherwise
+        """
+        # Find the recipe in raw_data
+        recipe_index = next((i for i, recipe in enumerate(self.raw_data) 
+                             if recipe.get('id') == recipe_id), None)
+        
+        if recipe_index is None:
+            return False
+        
+        # Remove from raw_data
+        self.raw_data.pop(recipe_index)
+        
+        # Resort to update sorted lists
+        await self.resort()
+        
+        return True 

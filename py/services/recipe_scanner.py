@@ -32,9 +32,12 @@ class RecipeScanner:
             self._cache: Optional[RecipeCache] = None
             self._initialization_lock = asyncio.Lock()
             self._initialization_task: Optional[asyncio.Task] = None
+            self._is_initializing = False
             if lora_scanner:
                 self._lora_scanner = lora_scanner
             self._initialized = True
+            
+            # Initialization will be scheduled by LoraManager
     
     @property
     def recipes_dir(self) -> str:
@@ -51,86 +54,79 @@ class RecipeScanner:
     
     async def get_cached_data(self, force_refresh: bool = False) -> RecipeCache:
         """Get cached recipe data, refresh if needed"""
-        async with self._initialization_lock:
-            
-            # If cache is unitialized but needs to respond to request, return empty cache
-            if self._cache is None and not force_refresh:
-                return RecipeCache(
-                    raw_data=[],
-                    sorted_by_name=[],
-                    sorted_by_date=[]
-                )
-
-            # If initializing, wait for completion
-            if self._initialization_task and not self._initialization_task.done():
-                try:
-                    await self._initialization_task
-                except Exception as e:
-                    logger.error(f"Recipe cache initialization failed: {e}")
-                    self._initialization_task = None
-            
-            if (self._cache is None or force_refresh):
-                
-                # Create new initialization task
-                if not self._initialization_task or self._initialization_task.done():
-                    # First ensure the lora scanner is initialized
-                    if self._lora_scanner:
-                        await self._lora_scanner.get_cached_data()
-                        
-                    self._initialization_task = asyncio.create_task(self._initialize_cache())
-                
-                try:
-                    await self._initialization_task
-                except Exception as e:
-                    logger.error(f"Recipe cache initialization failed: {e}")
-                    # If cache already exists, continue using old cache
-                    if self._cache is None:
-                        raise  # If no cache, raise exception
-            
+        # If cache is already initialized and no refresh is needed, return it immediately
+        if self._cache is not None and not force_refresh:
             return self._cache
-    
-    async def _initialize_cache(self) -> None:
-        """Initialize or refresh the cache"""
-        try:
-            # Ensure lora scanner is fully initialized first
-            if self._lora_scanner:
-                logger.info("Recipe Manager: Waiting for lora scanner initialization to complete")
-                
-                # Get the lora cache to ensure it's initialized
-                lora_cache = await self._lora_scanner.get_cached_data()
-                logger.info(f"Recipe Manager: Lora scanner initialized with {len(lora_cache.raw_data)} loras")
-                
-                # Verify hash index is built
-                if hasattr(self._lora_scanner, '_hash_index'):
-                    hash_index_size = len(self._lora_scanner._hash_index._hash_to_path) if hasattr(self._lora_scanner._hash_index, '_hash_to_path') else 0
-                    logger.info(f"Recipe Manager: Lora hash index contains {hash_index_size} entries")
-                else:
-                    logger.warning("Recipe Manager: No lora hash index available")
-            else:
-                logger.warning("Recipe Manager: No lora scanner available")
-            
-            # Scan for recipe data
-            raw_data = await self.scan_all_recipes()
-            
-            # Update cache
-            self._cache = RecipeCache(
-                raw_data=raw_data,
-                sorted_by_name=[],
-                sorted_by_date=[]
-            )
-            
-            # Resort cache
-            await self._cache.resort()
 
-            self._initialization_task = None
-            logger.info("Recipe Manager: Cache initialization completed")
+        # If another initialization is already in progress, wait for it to complete
+        if self._is_initializing and not force_refresh:
+            logger.info("Initialization already in progress, returning current cache state")
+            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
+
+        # Try to acquire the lock with a timeout to prevent deadlocks
+        try:
+            # Use a timeout for acquiring the lock
+            async with asyncio.timeout(1.0):
+                async with self._initialization_lock:
+                    # Check again after acquiring the lock
+                    if self._cache is not None and not force_refresh:
+                        return self._cache
+                    
+                    # Mark as initializing to prevent concurrent initializations
+                    self._is_initializing = True
+                    
+                    try:
+                        # First ensure the lora scanner is initialized
+                        if self._lora_scanner:
+                            try:
+                                logger.info("Recipe Manager: Waiting for lora scanner initialization")
+                                lora_cache = await asyncio.wait_for(
+                                    self._lora_scanner.get_cached_data(), 
+                                    timeout=10.0
+                                )
+                                logger.info(f"Recipe Manager: Lora scanner initialized with {len(lora_cache.raw_data)} loras")
+                            except asyncio.TimeoutError:
+                                logger.error("Timeout waiting for lora scanner initialization")
+                            except Exception as e:
+                                logger.error(f"Error waiting for lora scanner: {e}")
+                        
+                        # Scan for recipe data
+                        logger.info("Recipe Manager: Starting recipe scan")
+                        raw_data = await self.scan_all_recipes()
+                        
+                        # Update cache
+                        self._cache = RecipeCache(
+                            raw_data=raw_data,
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        
+                        # Resort cache
+                        await self._cache.resort()
+                        
+                        logger.info(f"Recipe Manager: Cache initialization completed with {len(raw_data)} recipes")
+                        return self._cache
+                    
+                    except Exception as e:
+                        logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
+                        # Create empty cache on error
+                        self._cache = RecipeCache(
+                            raw_data=[],
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        return self._cache
+                    finally:
+                        # Mark initialization as complete
+                        self._is_initializing = False
+        
+        except asyncio.TimeoutError:
+            # If we can't acquire the lock in time, return the current cache or an empty one
+            logger.warning("Timeout acquiring initialization lock - returning current cache state")
+            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
         except Exception as e:
-            logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
-            self._cache = RecipeCache(
-                raw_data=[],
-                sorted_by_name=[],
-                sorted_by_date=[]
-            )
+            logger.error(f"Unexpected error in get_cached_data: {e}")
+            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
     
     async def scan_all_recipes(self) -> List[Dict]:
         """Scan all recipe JSON files and return metadata"""
@@ -214,35 +210,6 @@ class RecipeScanner:
             import traceback
             traceback.print_exc(file=sys.stderr)
             return None
-    
-    def _create_basic_recipe_data(self, image_path: str) -> Dict:
-        """Create basic recipe data from file information"""
-        file_name = os.path.basename(image_path)
-        title = os.path.splitext(file_name)[0]
-        
-        return {
-            'file_path': image_path.replace(os.sep, '/'),
-            'title': title,
-            'file_name': file_name,
-            'modified': os.path.getmtime(image_path),
-            'created_date': os.path.getctime(image_path),
-            'loras': []
-        }
-    
-    def _extract_created_date(self, user_comment: str) -> Optional[float]:
-        """Extract creation date from UserComment if present"""
-        try:
-            # Look for Created Date pattern
-            created_date_match = re.search(r'Created Date: ([^,}]+)', user_comment)
-            if created_date_match:
-                date_str = created_date_match.group(1).strip()
-                # Parse ISO format date
-                dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                return dt.timestamp()
-        except Exception as e:
-            logger.error(f"Error extracting creation date: {e}")
-        
-        return None
     
     async def _update_lora_information(self, recipe_data: Dict) -> bool:
         """Update LoRA information with hash and file_name
@@ -510,6 +477,7 @@ class RecipeScanner:
                 for lora in item['loras']:
                     if 'hash' in lora and lora['hash']:
                         lora['inLibrary'] = self._lora_scanner.has_lora_hash(lora['hash'].lower())
+                        lora['preview_url'] = self._lora_scanner.get_preview_url_by_hash(lora['hash'].lower())
         
         result = {
             'items': paginated_items,

@@ -175,6 +175,8 @@ export class ImportManager {
             
             // Get recipe data from response
             this.recipeData = await response.json();
+
+            console.log('Recipe data:', this.recipeData);
             
             // Check if we have an error message
             if (this.recipeData.error) {

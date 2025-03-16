@@ -81,6 +81,15 @@ export class ModalManager {
             }
         });
 
+        // Add recipeModal registration
+        this.registerModal('recipeModal', {
+            element: document.getElementById('recipeModal'),
+            onClose: () => {
+                this.getModal('recipeModal').element.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
+
         // Set up event listeners for modal toggles
         const supportToggle = document.getElementById('supportToggleBtn');
         if (supportToggle) {
