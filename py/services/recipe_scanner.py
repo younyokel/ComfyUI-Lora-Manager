@@ -374,7 +374,7 @@ class RecipeScanner:
             logger.error(f"Error getting base model for lora: {e}")
             return None
 
-    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None):
+    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None):
         """Get paginated and filtered recipe data
         
         Args:
@@ -382,6 +382,7 @@ class RecipeScanner:
             page_size: Number of items per page
             sort_by: Sort method ('name' or 'date')
             search: Search term
+            filters: Dictionary of filters to apply
         """
         cache = await self.get_cached_data()
 
@@ -395,6 +396,22 @@ class RecipeScanner:
                 if search.lower() in str(item.get('title', '')).lower() or
                    search.lower() in str(item.get('prompt', '')).lower()
             ]
+        
+        # Apply additional filters
+        if filters:
+            # Filter by base model
+            if 'base_model' in filters and filters['base_model']:
+                filtered_data = [
+                    item for item in filtered_data
+                    if item.get('base_model', '') in filters['base_model']
+                ]
+            
+            # Filter by tags
+            if 'tags' in filters and filters['tags']:
+                filtered_data = [
+                    item for item in filtered_data
+                    if any(tag in item.get('tags', []) for tag in filters['tags'])
+                ]
 
         # Calculate pagination
         total_items = len(filtered_data)
