@@ -217,9 +217,9 @@ class RecipeRoutes:
             loras = []
             base_model = None
             
-            # Set base model from checkpoint if available
-            if checkpoint:
-                base_model = checkpoint.get('modelName', '')
+            # Process LoRAs and collect base models
+            base_model_counts = {}
+            loras = []
             
             # Process LoRAs
             for resource in civitai_resources:
@@ -278,8 +278,11 @@ class RecipeRoutes:
                     if 'images' in civitai_info and civitai_info['images']:
                         lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
                     
-                    # Get base model
-                    lora_entry['baseModel'] = civitai_info.get('baseModel', '')
+                    # Get base model and update counts
+                    current_base_model = civitai_info.get('baseModel', '')
+                    lora_entry['baseModel'] = current_base_model
+                    if current_base_model:
+                        base_model_counts[current_base_model] = base_model_counts.get(current_base_model, 0) + 1
                     
                     # Get download URL
                     lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
@@ -289,6 +292,10 @@ class RecipeRoutes:
                     lora_entry['thumbnailUrl'] = '/loras_static/images/no-preview.png'
                 
                 loras.append(lora_entry)
+            
+            # Set base_model to the most common one from civitai_info
+            if base_model_counts:
+                base_model = max(base_model_counts.items(), key=lambda x: x[1])[0]
             
             # Extract generation parameters for recipe metadata
             gen_params = {
