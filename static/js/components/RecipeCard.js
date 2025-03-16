@@ -1,5 +1,6 @@
 // Recipe Card Component
 import { showToast } from '../utils/uiHelpers.js';
+import { modalManager } from '../managers/ModalManager.js';
 
 class RecipeCard {
     constructor(recipe, clickHandler) {
@@ -134,32 +135,49 @@ class RecipeCard {
                 return;
             }
             
-            // Set up delete modal content
-            const deleteModal = document.getElementById('deleteModal');
-            const deleteMessage = deleteModal.querySelector('.delete-message');
-            const deleteModelInfo = deleteModal.querySelector('.delete-model-info');
-            
-            // Update modal content
-            deleteMessage.textContent = 'Are you sure you want to delete this recipe?';
-            deleteModelInfo.innerHTML = `
-                <div class="delete-preview">
-                    <img src="${this.recipe.file_url || '/loras_static/images/no-preview.png'}" alt="${this.recipe.title}">
-                </div>
-                <div class="delete-info">
-                    <h3>${this.recipe.title}</h3>
-                    <p>This action cannot be undone.</p>
+            // Create delete modal content
+            const deleteModalContent = `
+                <div class="modal-content delete-modal-content">
+                    <h2>Delete Recipe</h2>
+                    <p class="delete-message">Are you sure you want to delete this recipe?</p>
+                    <div class="delete-model-info">
+                        <div class="delete-preview">
+                            <img src="${this.recipe.file_url || '/loras_static/images/no-preview.png'}" alt="${this.recipe.title}">
+                        </div>
+                        <div class="delete-info">
+                            <h3>${this.recipe.title}</h3>
+                            <p>This action cannot be undone.</p>
+                        </div>
+                    </div>
+                    <p class="delete-note">Note: Deleting this recipe will not affect the LoRA files used in it.</p>
+                    <div class="modal-actions">
+                        <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+                        <button class="delete-btn" onclick="confirmDelete()">Delete</button>
+                    </div>
                 </div>
             `;
+            
+            // Show the modal with custom content and setup callbacks
+            modalManager.showModal('deleteModal', deleteModalContent, () => {
+                // This is the onClose callback
+                const deleteModal = document.getElementById('deleteModal');
+                const deleteBtn = deleteModal.querySelector('.delete-btn');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.disabled = false;
+            });
+            
+            // Set up the delete and cancel buttons with proper event handlers
+            const deleteModal = document.getElementById('deleteModal');
+            const cancelBtn = deleteModal.querySelector('.cancel-btn');
+            const deleteBtn = deleteModal.querySelector('.delete-btn');
             
             // Store recipe ID in the modal for the delete confirmation handler
             deleteModal.dataset.recipeId = recipeId;
             
-            // Update the confirm delete button to use recipe delete handler
-            const deleteBtn = deleteModal.querySelector('.delete-btn');
+            // Update button event handlers
+            cancelBtn.onclick = () => modalManager.closeModal('deleteModal');
             deleteBtn.onclick = () => this.confirmDeleteRecipe();
             
-            // Show the modal
-            deleteModal.style.display = 'flex';
         } catch (error) {
             console.error('Error showing delete confirmation:', error);
             showToast('Error showing delete confirmation', 'error');
@@ -172,7 +190,7 @@ class RecipeCard {
         
         if (!recipeId) {
             showToast('Cannot delete recipe: Missing recipe ID', 'error');
-            closeDeleteModal();
+            modalManager.closeModal('deleteModal');
             return;
         }
         
@@ -203,7 +221,7 @@ class RecipeCard {
                 window.recipeManager.loadRecipes();
             }
             
-            closeDeleteModal();
+            modalManager.closeModal('deleteModal');
         })
         .catch(error => {
             console.error('Error deleting recipe:', error);
@@ -213,17 +231,6 @@ class RecipeCard {
             deleteBtn.textContent = originalText;
             deleteBtn.disabled = false;
         });
-    }
-
-    closeDeleteModal() {
-        const deleteModal = document.getElementById('deleteModal');
-        deleteModal.style.display = 'none';
-        
-        // Reset the delete button handler
-        const deleteBtn = deleteModal.querySelector('.delete-btn');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.disabled = false;
-        deleteBtn.onclick = null;
     }
 }
 

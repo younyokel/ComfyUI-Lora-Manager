@@ -444,3 +444,42 @@ input:checked + .toggle-slider:before {
 .nsfw-blur:hover {
     filter: blur(8px);
 }
+
+/* Add styles for delete preview image */
+.delete-preview {
+    max-width: 150px;
+    margin: 0 auto var(--space-2);
+    overflow: hidden;
+}
+
+.delete-preview img {
+    width: 100%;
+    height: auto;
+    max-height: 150px;
+    object-fit: contain;
+    border-radius: var(--border-radius-sm);
+}
+
+.delete-info {
+    text-align: center;
+}
+
+.delete-info h3 {
+    margin-bottom: var(--space-1);
+    word-break: break-word;
+}
+
+.delete-info p {
+    margin: var(--space-1) 0;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.delete-note {
+    font-size: 0.85em;
+    color: var(--text-color);
+    opacity: 0.7;
+    font-style: italic;
+    margin-top: var(--space-1);
+    text-align: center;
+}
