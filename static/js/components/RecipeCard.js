@@ -78,8 +78,7 @@ class RecipeCard {
         // Share button click event - prevent propagation to card
         card.querySelector('.fa-share-alt')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            // TODO: Implement share functionality
-            showToast('Share functionality will be implemented later', 'info');
+            this.shareRecipe();
         });
         
         // Copy button click event - prevent propagation to card
@@ -231,6 +230,34 @@ class RecipeCard {
             deleteBtn.textContent = originalText;
             deleteBtn.disabled = false;
         });
+    }
+
+    shareRecipe() {
+        try {
+            // Get the image URL
+            const imageUrl = this.recipe.file_url || 
+                            (this.recipe.file_path ? `/loras_static/root1/preview/${this.recipe.file_path.split('/').pop()}` : 
+                            '/loras_static/images/no-preview.png');
+            
+            // Create a temporary anchor element
+            const downloadLink = document.createElement('a');
+            downloadLink.href = imageUrl;
+            
+            // Set the download attribute with the recipe title as filename
+            const fileExtension = imageUrl.split('.').pop();
+            const safeFileName = this.recipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            downloadLink.download = `recipe_${safeFileName}.${fileExtension}`;
+            
+            // Append to body, click and remove
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            showToast('Recipe image download started', 'success');
+        } catch (error) {
+            console.error('Error sharing recipe:', error);
+            showToast('Error downloading recipe image', 'error');
+        }
     }
 }
 
