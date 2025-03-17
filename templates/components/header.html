@@ -36,11 +36,11 @@
     <div class="header-actions">
       <!-- Integrated corner controls -->
       <div class="header-controls">
-        <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <div class="theme-toggle" title="Toggle theme">
           <i class="fas fa-moon dark-icon"></i>
           <i class="fas fa-sun light-icon"></i>
         </div>
-        <div class="settings-toggle" onclick="settingsManager.toggleSettings()" title="Settings">
+        <div class="settings-toggle" title="Settings">
           <i class="fas fa-cog"></i>
         </div>
         <div class="update-toggle" id="updateToggleBtn" title="Check Updates">
@@ -148,32 +148,6 @@
       recipesNavItem.classList.add('active');
     } else if (currentPath === '/checkpoints') {
       checkpointsNavItem.classList.add('active');
-    }
-    
-    // Initialize search options panel toggle
-    const searchOptionsToggle = document.getElementById('searchOptionsToggle');
-    const searchOptionsPanel = document.getElementById('searchOptionsPanel');
-    
-    if (searchOptionsToggle && searchOptionsPanel) {
-      searchOptionsToggle.addEventListener('click', function() {
-        const isHidden = searchOptionsPanel.classList.contains('hidden');
-        if (isHidden) {
-          searchOptionsPanel.classList.remove('hidden');
-          searchOptionsToggle.classList.add('active');
-        } else {
-          searchOptionsPanel.classList.add('hidden');
-          searchOptionsToggle.classList.remove('active');
-        }
-      });
-      
-      // Close search options panel when clicking the close button
-      const closeSearchOptions = document.getElementById('closeSearchOptions');
-      if (closeSearchOptions) {
-        closeSearchOptions.addEventListener('click', function() {
-          searchOptionsPanel.classList.add('hidden');
-          searchOptionsToggle.classList.remove('active');
-        });
-      }
     }
   });
 </script>

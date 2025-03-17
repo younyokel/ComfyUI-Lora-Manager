@@ -34,10 +34,10 @@ export class UpdateService {
         });
         
         // Set up event listener for update button
-        const updateToggle = document.getElementById('updateToggleBtn');
-        if (updateToggle) {
-            updateToggle.addEventListener('click', () => this.toggleUpdateModal());
-        }
+        // const updateToggle = document.getElementById('updateToggleBtn');
+        // if (updateToggle) {
+        //     updateToggle.addEventListener('click', () => this.toggleUpdateModal());
+        // }
 
         // Immediately update modal content with current values (even if from default)
         this.updateModalContent();
@@ -224,10 +224,6 @@ export class UpdateService {
             // Update the modal content again after the check completes
             this.updateModalContent();
         });
-    }
-    
-    showUpdateModal() {
-        this.toggleUpdateModal();
     }
     
     async manualCheckForUpdates() {

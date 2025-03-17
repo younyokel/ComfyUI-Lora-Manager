@@ -161,6 +161,7 @@ class RecipeManager {
 // Initialize components
 document.addEventListener('DOMContentLoaded', () => {
     initializeCommonComponents();
+    window.headerManager = new HeaderManager();
     window.recipeManager = new RecipeManager();
     
     // Make importRecipes function available globally

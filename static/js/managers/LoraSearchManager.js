@@ -10,7 +10,6 @@ import { showToast } from '../utils/uiHelpers.js';
 
 export class LoraSearchManager extends SearchManager {
   constructor(options = {}) {
-    console.log("initializing lora search manager");
     super({
       page: 'loras',
       ...options

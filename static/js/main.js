@@ -3,6 +3,7 @@ import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
 import { state, initSettings } from './state/index.js';
+import { initializeCommonComponents } from './common.js';
 import { showLoraModal } from './components/LoraModal.js';
 import { toggleShowcase, scrollToTop } from './components/LoraModal.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
@@ -22,16 +23,13 @@ import {
 } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
-import { SearchManager } from './managers/SearchManager.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { SettingsManager, toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { LoraContextMenu } from './components/ContextMenu.js';
 import { moveManager } from './managers/MoveManager.js';
-import { FilterManager } from './managers/FilterManager.js';
 import { createLoraCard, updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { HeaderManager } from './components/Header.js';
-
 // Add bulk mode to state
 state.bulkMode = false;
 state.selectedLoras = new Set();
@@ -73,6 +71,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Ensure settings are initialized
     initSettings();
     
+    initializeCommonComponents();
+    window.headerManager = new HeaderManager();
     state.loadingManager = new LoadingManager();
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
     updateService.initialize(); // Initialize updateService after modalManager
@@ -103,19 +103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Update positions on window resize
     window.addEventListener('resize', updatePanelPositions);
-
-    // Initialize search manager with LoRA-specific options
-    const loraSearchManager = new SearchManager({
-        searchCallback: (query, options, recursive) => {
-            // LoRA-specific search implementation
-            // This could call your API with the right parameters
-            fetchLoras({
-                search: query,
-                search_options: options,
-                recursive: recursive
-            });
-        }
-    });
 
     // Set the current page for proper context
     document.body.dataset.page = 'loras';

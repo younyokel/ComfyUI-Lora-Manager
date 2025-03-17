@@ -1,3 +1,5 @@
+import { updateService } from '../managers/UpdateService.js';
+
 /**
  * Header.js - Manages the application header behavior across different pages
  * Handles initialization of appropriate search and filter managers based on current page
@@ -76,7 +78,7 @@ export class HeaderManager {
       const settingsToggle = document.querySelector('.settings-toggle');
       if (settingsToggle) {
         settingsToggle.addEventListener('click', () => {
-          if (window.settingsManager && typeof window.settingsManager.toggleSettings === 'function') {
+          if (window.settingsManager) {
             window.settingsManager.toggleSettings();
           }
         });
@@ -86,7 +88,7 @@ export class HeaderManager {
       const updateToggle = document.getElementById('updateToggleBtn');
       if (updateToggle) {
         updateToggle.addEventListener('click', () => {
-          // Handle update check logic
+          updateService.toggleUpdateModal();
         });
       }
       
@@ -148,8 +150,3 @@ export class HeaderManager {
       }
     }
   }
-  
-// Initialize the header manager when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-window.headerManager = new HeaderManager();
-});
