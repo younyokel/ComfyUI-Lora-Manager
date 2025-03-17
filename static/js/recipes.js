@@ -5,7 +5,6 @@ import { initializeCommonComponents } from './common.js';
 import { ImportManager } from './managers/ImportManager.js';
 import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
-import { SearchManager } from './managers/SearchManager.js';
 import { HeaderManager } from './components/Header.js';
 
 class RecipeManager {
@@ -30,18 +29,6 @@ class RecipeManager {
         
         // Load initial set of recipes
         this.loadRecipes();
-
-        // Initialize search manager with Recipe-specific options
-        const recipeSearchManager = new SearchManager({
-            searchCallback: (query, options, recursive) => {
-            // Recipe-specific search implementation
-            fetchRecipes({
-                search: query,
-                search_options: options,
-                recursive: recursive
-            });
-            }
-        });
   
         // Set the current page for proper context
         document.body.dataset.page = 'recipes';
