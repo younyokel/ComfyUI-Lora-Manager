@@ -142,19 +142,38 @@
     const recipesNavItem = document.getElementById('recipesNavItem');
     const checkpointsNavItem = document.getElementById('checkpointsNavItem');
     
-    const lorasIndicator = document.getElementById('lorasIndicator');
-    const recipesIndicator = document.getElementById('recipesIndicator');
-    const checkpointsIndicator = document.getElementById('checkpointsIndicator');
-    
     if (currentPath === '/loras') {
       lorasNavItem.classList.add('active');
-      lorasIndicator.style.display = 'block';
     } else if (currentPath === '/loras/recipes') {
       recipesNavItem.classList.add('active');
-      recipesIndicator.style.display = 'block';
     } else if (currentPath === '/checkpoints') {
       checkpointsNavItem.classList.add('active');
-      checkpointsIndicator.style.display = 'block';
+    }
+    
+    // Initialize search options panel toggle
+    const searchOptionsToggle = document.getElementById('searchOptionsToggle');
+    const searchOptionsPanel = document.getElementById('searchOptionsPanel');
+    
+    if (searchOptionsToggle && searchOptionsPanel) {
+      searchOptionsToggle.addEventListener('click', function() {
+        const isHidden = searchOptionsPanel.classList.contains('hidden');
+        if (isHidden) {
+          searchOptionsPanel.classList.remove('hidden');
+          searchOptionsToggle.classList.add('active');
+        } else {
+          searchOptionsPanel.classList.add('hidden');
+          searchOptionsToggle.classList.remove('active');
+        }
+      });
+      
+      // Close search options panel when clicking the close button
+      const closeSearchOptions = document.getElementById('closeSearchOptions');
+      if (closeSearchOptions) {
+        closeSearchOptions.addEventListener('click', function() {
+          searchOptionsPanel.classList.add('hidden');
+          searchOptionsToggle.classList.remove('active');
+        });
+      }
     }
   });
 </script>

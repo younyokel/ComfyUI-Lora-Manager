@@ -361,6 +361,7 @@
     padding: 16px;
     transition: transform 0.3s ease, opacity 0.3s ease;
     transform-origin: top right;
+    display: block; /* Ensure it's block by default */
 }
 
 .search-options-panel.hidden {

@@ -30,6 +30,7 @@ import { moveManager } from './managers/MoveManager.js';
 import { FilterManager } from './managers/FilterManager.js';
 import { createLoraCard, updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
+import { HeaderManager } from './components/Header.js';
 
 // Add bulk mode to state
 state.bulkMode = false;
@@ -76,7 +77,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     modalManager.initialize();  // Initialize modalManager after DOM is loaded
     updateService.initialize(); // Initialize updateService after modalManager
     window.downloadManager = new DownloadManager();  // Move this after modalManager initialization
-    window.filterManager = new FilterManager(); // Initialize filter manager
     
     // Initialize state filters from filterManager if available
     if (window.filterManager && window.filterManager.filters) {
@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTheme();
     initFolderTagsVisibility();
     initBackToTop();
-    window.searchManager = new SearchManager();
     new LoraContextMenu();
     
     // Initialize cards for current bulk mode state (should be false initially)
