@@ -35,7 +35,7 @@
     <!-- Resource loading strategy -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 </head>
-<body>
+<body data-page="recipes">
     {% include 'components/header.html' %}
 
     <div class="page-content">
@@ -134,6 +134,16 @@
     {% endif %}
     
     <!-- Recipe page specific scripts -->
+    <script type="module">
+        import { RecipeFilterManager } from '/loras_static/js/managers/RecipeFilterManager.js';
+        
+        // Initialize the recipe filter manager
+        window.recipeFilterManager = new RecipeFilterManager();
+        
+        // Make it globally available
+        window.filterManager = window.recipeFilterManager; // For compatibility with existing code
+    </script>
+
     <script>
         // Refresh recipes
         function refreshRecipes() {
@@ -141,29 +151,14 @@
             window.location.reload();
         }
         
-        // Placeholder for recipe filter manager
-        const recipeFilterManager = {
-            toggleFilterPanel() {
-                const panel = document.getElementById('filterPanel');
-                panel.classList.toggle('hidden');
-            },
-            
-            closeFilterPanel() {
-                document.getElementById('filterPanel').classList.add('hidden');
-            },
-            
-            clearFilters() {
-                // Clear filters and reset UI
-                document.querySelectorAll('.filter-tags .tag.active').forEach(tag => {
-                    tag.classList.remove('active');
-                });
-                
-                document.getElementById('activeFiltersCount').style.display = 'none';
-                
-                // Reapply default view
-                refreshRecipes();
+        // Import recipes
+        function importRecipes() {
+            // Show import modal
+            const importModal = document.getElementById('importModal');
+            if (importModal) {
+                importModal.classList.remove('hidden');
             }
-        };
+        }
     </script>
 </body>
 </html>

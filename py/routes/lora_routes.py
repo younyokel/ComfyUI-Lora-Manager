@@ -71,7 +71,8 @@ class LoraRoutes:
                 rendered = template.render(
                     folders=[],  # 空文件夹列表
                     is_initializing=True,  # 新增标志
-                    settings=settings  # Pass settings to template
+                    settings=settings,  # Pass settings to template
+                    request=request  # Pass the request object to the template
                 )
             else:
                 # 正常流程
@@ -80,7 +81,8 @@ class LoraRoutes:
                 rendered = template.render(
                     folders=cache.folders,
                     is_initializing=False,
-                    settings=settings  # Pass settings to template
+                    settings=settings,  # Pass settings to template
+                    request=request  # Pass the request object to the template
                 )
             
             return web.Response(
@@ -110,7 +112,8 @@ class LoraRoutes:
                 template = self.template_env.get_template('recipes.html')
                 rendered = template.render(
                     is_initializing=True,
-                    settings=settings
+                    settings=settings,
+                    request=request  # Pass the request object to the template
                 )
             else:
                 # Normal flow - get recipes with the same formatting as the API endpoint
@@ -137,7 +140,8 @@ class LoraRoutes:
                 rendered = template.render(
                     recipes=recipes_data,
                     is_initializing=False,
-                    settings=settings
+                    settings=settings,
+                    request=request  # Pass the request object to the template
                 )
             
             return web.Response(

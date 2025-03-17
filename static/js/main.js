@@ -22,7 +22,7 @@ import {
 } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
-import { SearchManager } from './utils/search.js';
+import { SearchManager } from './managers/SearchManager.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { SettingsManager, toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { LoraContextMenu } from './components/ContextMenu.js';
@@ -104,6 +104,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Update positions on window resize
     window.addEventListener('resize', updatePanelPositions);
+
+    // Initialize search manager with LoRA-specific options
+    const loraSearchManager = new SearchManager({
+        searchCallback: (query, options, recursive) => {
+            // LoRA-specific search implementation
+            // This could call your API with the right parameters
+            fetchLoras({
+                search: query,
+                search_options: options,
+                recursive: recursive
+            });
+        }
+    });
+
+    // Set the current page for proper context
+    document.body.dataset.page = 'loras';
 });
 
 // Initialize event listeners
