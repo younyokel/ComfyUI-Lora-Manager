@@ -21,6 +21,13 @@ export class FilterManager {
     initialize() {
         // Create base model filter tags
         this.createBaseModelTags();
+
+        // Add click handler for filter button
+        if (this.filterButton) {
+            this.filterButton.addEventListener('click', () => {
+                this.toggleFilterPanel();
+            });
+        }
         
         // Close filter panel when clicking outside
         document.addEventListener('click', (e) => {

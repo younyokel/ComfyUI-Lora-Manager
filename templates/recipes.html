@@ -132,17 +132,6 @@
         checkInitStatus();
     </script>
     {% endif %}
-    
-    <!-- Recipe page specific scripts -->
-    <script type="module">
-        import { RecipeFilterManager } from '/loras_static/js/managers/RecipeFilterManager.js';
-        
-        // Initialize the recipe filter manager
-        window.recipeFilterManager = new RecipeFilterManager();
-        
-        // Make it globally available
-        window.filterManager = window.recipeFilterManager; // For compatibility with existing code
-    </script>
 
     <script>
         // Refresh recipes
