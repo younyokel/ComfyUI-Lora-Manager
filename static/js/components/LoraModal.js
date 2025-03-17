@@ -1,5 +1,6 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
+import { modalManager } from '../managers/ModalManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
 
 export function showLoraModal(lora) {

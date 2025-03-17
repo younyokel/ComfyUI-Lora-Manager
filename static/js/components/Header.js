@@ -1,4 +1,5 @@
 import { updateService } from '../managers/UpdateService.js';
+import { toggleTheme } from '../utils/uiHelpers.js';
 
 /**
  * Header.js - Manages the application header behavior across different pages

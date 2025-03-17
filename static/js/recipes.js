@@ -1,11 +1,8 @@
 // Recipe manager module
-import { showToast } from './utils/uiHelpers.js';
-import { state } from './state/index.js';
-import { initializeCommonComponents } from './common.js';
+import { appCore } from './core.js';
 import { ImportManager } from './managers/ImportManager.js';
 import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
-import { HeaderManager } from './components/Header.js';
 
 class RecipeManager {
     constructor() {
@@ -19,19 +16,24 @@ class RecipeManager {
         
         // Initialize RecipeModal
         this.recipeModal = new RecipeModal();
-        
-        this.init();
     }
     
-    init() {
+    async initialize() {
         // Initialize event listeners
         this.initEventListeners();
         
         // Load initial set of recipes
-        this.loadRecipes();
-  
-        // Set the current page for proper context
-        document.body.dataset.page = 'recipes';
+        await this.loadRecipes();
+        
+        // Expose necessary functions to the page
+        this._exposeGlobalFunctions();
+    }
+    
+    _exposeGlobalFunctions() {
+        // Only expose what's needed for the page
+        window.recipeManager = this;
+        window.importRecipes = () => this.importRecipes();
+        window.importManager = this.importManager;
     }
     
     initEventListeners() {
@@ -103,7 +105,7 @@ class RecipeManager {
             
         } catch (error) {
             console.error('Error loading recipes:', error);
-            showToast('Failed to load recipes', 'error');
+            appCore.showToast('Failed to load recipes', 'error');
         } finally {
             // Hide loading indicator
             document.body.classList.remove('loading');
@@ -146,18 +148,13 @@ class RecipeManager {
 }
 
 // Initialize components
-document.addEventListener('DOMContentLoaded', () => {
-    initializeCommonComponents();
-    window.headerManager = new HeaderManager();
-    window.recipeManager = new RecipeManager();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize core application
+    await appCore.initialize();
     
-    // Make importRecipes function available globally
-    window.importRecipes = () => {
-        window.recipeManager.importRecipes();
-    };
-
-    // Expose ImportManager instance globally for the import modal event handlers
-    window.importManager = window.recipeManager.importManager;
+    // Initialize recipe manager
+    const recipeManager = new RecipeManager();
+    await recipeManager.initialize();
 });
 
 // Export for use in other modules
