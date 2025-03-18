@@ -430,11 +430,11 @@ class A1111MetadataParser(RecipeMetadataParser):
                         civitai_info = await civitai_client.get_model_by_hash(hash_value)
                         if civitai_info and civitai_info.get("error") != "Model not found":
                             # Get model version ID
-                            lora_entry['id'] = civitai_info.get('modelVersionId', '')
+                            lora_entry['id'] = civitai_info.get('id', '')
                             
                             # Get model name and version
-                            lora_entry['name'] = civitai_info.get('modelName', lora_name)
-                            lora_entry['version'] = civitai_info.get('modelVersionName', '')
+                            lora_entry['name'] = civitai_info.get('model', {}).get('name', lora_name)
+                            lora_entry['version'] = civitai_info.get('name', '')
                             
                             # Get thumbnail URL
                             if 'images' in civitai_info and civitai_info['images']:
@@ -476,7 +476,7 @@ class A1111MetadataParser(RecipeMetadataParser):
                         logger.error(f"Error fetching Civitai info for LoRA hash {hash_value}: {e}")
                 
                 loras.append(lora_entry)
-            
+
             # Set base_model to the most common one from civitai_info
             base_model = None
             if base_model_counts:
