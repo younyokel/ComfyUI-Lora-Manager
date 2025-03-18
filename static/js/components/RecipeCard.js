@@ -234,29 +234,48 @@ class RecipeCard {
 
     shareRecipe() {
         try {
-            // Get the image URL
-            const imageUrl = this.recipe.file_url || 
-                            (this.recipe.file_path ? `/loras_static/root1/preview/${this.recipe.file_path.split('/').pop()}` : 
-                            '/loras_static/images/no-preview.png');
+            // Get recipe ID
+            const recipeId = this.recipe.id;
+            if (!recipeId) {
+                showToast('Cannot share recipe: Missing recipe ID', 'error');
+                return;
+            }
             
-            // Create a temporary anchor element
-            const downloadLink = document.createElement('a');
-            downloadLink.href = imageUrl;
+            // Show loading toast
+            showToast('Preparing recipe for sharing...', 'info');
             
-            // Set the download attribute with the recipe title as filename
-            const fileExtension = imageUrl.split('.').pop();
-            const safeFileName = this.recipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            downloadLink.download = `recipe_${safeFileName}.${fileExtension}`;
-            
-            // Append to body, click and remove
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            showToast('Recipe image download started', 'success');
+            // Call the API to process the image with metadata
+            fetch(`/api/recipe/${recipeId}/share`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to prepare recipe for sharing');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.success) {
+                        throw new Error(data.error || 'Unknown error');
+                    }
+                    
+                    // Create a temporary anchor element for download
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = data.download_url;
+                    downloadLink.download = data.filename;
+                    
+                    // Append to body, click and remove
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    
+                    showToast('Recipe download started', 'success');
+                })
+                .catch(error => {
+                    console.error('Error sharing recipe:', error);
+                    showToast('Error sharing recipe: ' + error.message, 'error');
+                });
         } catch (error) {
             console.error('Error sharing recipe:', error);
-            showToast('Error downloading recipe image', 'error');
+            showToast('Error preparing recipe for sharing', 'error');
         }
     }
 }

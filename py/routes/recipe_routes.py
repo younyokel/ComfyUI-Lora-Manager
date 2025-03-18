@@ -44,6 +44,10 @@ class RecipeRoutes:
         app.router.add_get('/api/recipes/top-tags', routes.get_top_tags)
         app.router.add_get('/api/recipes/base-models', routes.get_base_models)
         
+        # Add new sharing endpoints
+        app.router.add_get('/api/recipe/{recipe_id}/share', routes.share_recipe)
+        app.router.add_get('/api/recipe/{recipe_id}/share/download', routes.download_shared_recipe)
+        
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
         
@@ -598,3 +602,122 @@ class RecipeRoutes:
                 'success': False,
                 'error': str(e)
             }, status=500) 
+
+    async def share_recipe(self, request: web.Request) -> web.Response:
+        """Process a recipe image for sharing by adding metadata to EXIF"""
+        try:
+            recipe_id = request.match_info['recipe_id']
+            
+            # Get all recipes from cache
+            cache = await self.recipe_scanner.get_cached_data()
+            
+            # Find the specific recipe
+            recipe = next((r for r in cache.raw_data if str(r.get('id', '')) == recipe_id), None)
+            
+            if not recipe:
+                return web.json_response({"error": "Recipe not found"}, status=404)
+            
+            # Get the image path
+            image_path = recipe.get('file_path')
+            if not image_path or not os.path.exists(image_path):
+                return web.json_response({"error": "Recipe image not found"}, status=404)
+            
+            # Create a temporary copy of the image to modify
+            import tempfile
+            import shutil
+            
+            # Create temp file with same extension
+            ext = os.path.splitext(image_path)[1]
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as temp_file:
+                temp_path = temp_file.name
+            
+            # Copy the original image to temp file
+            shutil.copy2(image_path, temp_path)
+            
+            # Add recipe metadata to the image
+            from ..utils.exif_utils import ExifUtils
+            processed_path = ExifUtils.append_recipe_metadata(temp_path, recipe)
+            
+            # Create a URL for the processed image
+            # Use a timestamp to prevent caching
+            timestamp = int(time.time())
+            filename = os.path.basename(processed_path)
+            url_path = f"/api/recipe/{recipe_id}/share/download?t={timestamp}"
+            
+            # Store the temp path in a dictionary to serve later
+            if not hasattr(self, '_shared_recipes'):
+                self._shared_recipes = {}
+            
+            self._shared_recipes[recipe_id] = {
+                'path': processed_path,
+                'timestamp': timestamp,
+                'expires': time.time() + 300  # Expire after 5 minutes
+            }
+            
+            # Clean up old entries
+            self._cleanup_shared_recipes()
+            
+            return web.json_response({
+                'success': True,
+                'download_url': url_path,
+                'filename': f"recipe_{recipe.get('title', '').replace(' ', '_').lower()}{ext}"
+            })
+        except Exception as e:
+            logger.error(f"Error sharing recipe: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def download_shared_recipe(self, request: web.Request) -> web.Response:
+        """Serve a processed recipe image for download"""
+        try:
+            recipe_id = request.match_info['recipe_id']
+            
+            # Check if we have this shared recipe
+            if not hasattr(self, '_shared_recipes') or recipe_id not in self._shared_recipes:
+                return web.json_response({"error": "Shared recipe not found or expired"}, status=404)
+            
+            shared_info = self._shared_recipes[recipe_id]
+            file_path = shared_info['path']
+            
+            if not os.path.exists(file_path):
+                return web.json_response({"error": "Shared recipe file not found"}, status=404)
+            
+            # Get recipe to determine filename
+            cache = await self.recipe_scanner.get_cached_data()
+            recipe = next((r for r in cache.raw_data if str(r.get('id', '')) == recipe_id), None)
+            
+            # Set filename for download
+            filename = f"recipe_{recipe.get('title', '').replace(' ', '_').lower() if recipe else recipe_id}"
+            ext = os.path.splitext(file_path)[1]
+            download_filename = f"{filename}{ext}"
+            
+            # Serve the file
+            return web.FileResponse(
+                file_path,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{download_filename}"'
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error downloading shared recipe: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
+
+    def _cleanup_shared_recipes(self):
+        """Clean up expired shared recipes"""
+        if not hasattr(self, '_shared_recipes'):
+            return
+        
+        current_time = time.time()
+        expired_ids = [rid for rid, info in self._shared_recipes.items() 
+                      if current_time > info.get('expires', 0)]
+        
+        for rid in expired_ids:
+            try:
+                # Delete the temporary file
+                file_path = self._shared_recipes[rid]['path']
+                if os.path.exists(file_path):
+                    os.unlink(file_path)
+                
+                # Remove from dictionary
+                del self._shared_recipes[rid]
+            except Exception as e:
+                logger.error(f"Error cleaning up shared recipe {rid}: {e}") 

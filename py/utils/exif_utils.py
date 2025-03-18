@@ -42,11 +42,9 @@ class ExifUtils:
                 if 'Exif' not in exif_dict:
                     exif_dict['Exif'] = {}
                 
-                # Update the UserComment field
-                if isinstance(user_comment, str):
-                    user_comment_bytes = user_comment.encode('utf-8')
-                else:
-                    user_comment_bytes = user_comment
+                # Update the UserComment field - use UNICODE format
+                unicode_bytes = user_comment.encode('utf-16be')
+                user_comment_bytes = b'UNICODE\0' + unicode_bytes
                 
                 exif_dict['Exif'][piexif.ExifIFD.UserComment] = user_comment_bytes
                 
@@ -122,7 +120,7 @@ class ExifUtils:
         """Extract recipe metadata section from UserComment if it exists"""
         try:
             # Look for recipe metadata section
-            recipe_match = re.search(r'recipe metadata: (\{.*\})', user_comment, re.IGNORECASE | re.DOTALL)
+            recipe_match = re.search(r'Recipe metadata: (\{.*\})', user_comment, re.IGNORECASE | re.DOTALL)
             if not recipe_match:
                 return None
             
@@ -131,3 +129,36 @@ class ExifUtils:
         except Exception as e:
             logger.error(f"Error extracting recipe metadata: {e}")
             return None
+            
+    @staticmethod
+    def append_recipe_metadata(image_path: str, recipe_data: Dict) -> str:
+        """Append recipe metadata to image EXIF data and return the path to the modified image"""
+        try:
+            # Extract existing user comment
+            existing_comment = ExifUtils.extract_user_comment(image_path) or ""
+            
+            # Prepare recipe metadata to append
+            recipe_metadata = {
+                "title": recipe_data.get("title", ""),
+                "base_model": recipe_data.get("base_model", ""),
+                "loras": recipe_data.get("loras", []),
+                "gen_params": recipe_data.get("gen_params", {}),
+                "tags": recipe_data.get("tags", [])
+            }
+            
+            # Convert to JSON string
+            recipe_json = json.dumps(recipe_metadata, ensure_ascii=False)
+            
+            # Append to existing comment
+            if existing_comment and not existing_comment.endswith("\n"):
+                existing_comment += "\n"
+            
+            new_comment = existing_comment + "Recipe metadata: " + recipe_json
+            
+            # Update the image with new comment
+            ExifUtils.update_user_comment(image_path, new_comment)
+            
+            return image_path
+        except Exception as e:
+            logger.error(f"Error appending recipe metadata: {e}")
+            return image_path  # Return original path on error
