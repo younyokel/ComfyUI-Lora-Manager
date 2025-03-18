@@ -211,7 +211,21 @@ export class ImportManager {
         
         // Set default recipe name from prompt or image filename
         const recipeName = document.getElementById('recipeName');
-        if (this.recipeData && this.recipeData.gen_params && this.recipeData.gen_params.prompt) {
+        
+        // Check if we have recipe metadata from a shared recipe
+        if (this.recipeData && this.recipeData.from_recipe_metadata) {
+            // Use title from recipe metadata
+            if (this.recipeData.title) {
+                recipeName.value = this.recipeData.title;
+                this.recipeName = this.recipeData.title;
+            }
+            
+            // Use tags from recipe metadata
+            if (this.recipeData.tags && Array.isArray(this.recipeData.tags)) {
+                this.recipeTags = [...this.recipeData.tags];
+                this.updateTagsDisplay();
+            }
+        } else if (this.recipeData && this.recipeData.gen_params && this.recipeData.gen_params.prompt) {
             // Use the first 15 words from the prompt as the default recipe name
             const promptWords = this.recipeData.gen_params.prompt.split(' ');
             const truncatedPrompt = promptWords.slice(0, 15).join(' ');
@@ -230,6 +244,14 @@ export class ImportManager {
             const fileName = this.recipeImage.name.split('.')[0];
             recipeName.value = fileName;
             this.recipeName = fileName;
+        }
+        
+        // Always set up click handler for easy editing if not already set
+        if (!recipeName.hasSelectAllHandler) {
+            recipeName.addEventListener('click', function() {
+                this.select();
+            });
+            recipeName.hasSelectAllHandler = true;
         }
         
         // Display the uploaded image in the preview

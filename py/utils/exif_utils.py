@@ -31,7 +31,7 @@ class ExifUtils:
             return None
     
     @staticmethod
-    def update_user_comment(image_path: str, user_comment: str) -> bool:
+    def update_user_comment(image_path: str, user_comment: str) -> str:
         """Update UserComment field in image EXIF data"""
         try:
             # Load the image and its EXIF data
@@ -54,10 +54,10 @@ class ExifUtils:
                 # Save the image with updated EXIF data
                 img.save(image_path, exif=exif_bytes)
                 
-            return True
+            return image_path
         except Exception as e:
             logger.error(f"Error updating EXIF data in {image_path}: {e}")
-            return False
+            return image_path
     
     @staticmethod
     def parse_recipe_metadata(user_comment: str) -> Dict[str, Any]:
@@ -131,34 +131,71 @@ class ExifUtils:
             return None
             
     @staticmethod
-    def append_recipe_metadata(image_path: str, recipe_data: Dict) -> str:
-        """Append recipe metadata to image EXIF data and return the path to the modified image"""
+    def append_recipe_metadata(image_path, recipe_data) -> str:
+        """Append recipe metadata to an image's EXIF data"""
         try:
-            # Extract existing user comment
-            existing_comment = ExifUtils.extract_user_comment(image_path) or ""
+            # First, extract existing user comment
+            user_comment = ExifUtils.extract_user_comment(image_path)
             
-            # Prepare recipe metadata to append
+            # Check if there's already recipe metadata in the user comment
+            if user_comment:
+                # Remove any existing recipe metadata
+                user_comment = ExifUtils.remove_recipe_metadata(user_comment)
+            
+            # Prepare simplified loras data
+            simplified_loras = []
+            for lora in recipe_data.get("loras", []):
+                simplified_lora = {
+                    "file_name": lora.get("file_name", ""),
+                    "hash": lora.get("hash", "").lower() if lora.get("hash") else "",
+                    "strength": float(lora.get("strength", 1.0)),
+                    "modelVersionId": lora.get("modelVersionId", ""),
+                    "modelName": lora.get("modelName", ""),
+                    "modelVersionName": lora.get("modelVersionName", ""),
+                }
+                simplified_loras.append(simplified_lora)            
+            
+            # Create recipe metadata JSON
             recipe_metadata = {
-                "title": recipe_data.get("title", ""),
-                "base_model": recipe_data.get("base_model", ""),
-                "loras": recipe_data.get("loras", []),
-                "gen_params": recipe_data.get("gen_params", {}),
-                "tags": recipe_data.get("tags", [])
+                'title': recipe_data.get('title', ''),
+                'base_model': recipe_data.get('base_model', ''),
+                'loras': simplified_loras,
+                'gen_params': recipe_data.get('gen_params', {}),
+                'tags': recipe_data.get('tags', [])
             }
             
             # Convert to JSON string
-            recipe_json = json.dumps(recipe_metadata, ensure_ascii=False)
+            recipe_metadata_json = json.dumps(recipe_metadata)
             
-            # Append to existing comment
-            if existing_comment and not existing_comment.endswith("\n"):
-                existing_comment += "\n"
+            # Create the recipe metadata marker
+            recipe_metadata_marker = f"Recipe metadata: {recipe_metadata_json}"
             
-            new_comment = existing_comment + "Recipe metadata: " + recipe_json
+            # Append to existing user comment or create new one
+            new_user_comment = user_comment + "\n" + recipe_metadata_marker if user_comment else recipe_metadata_marker
             
-            # Update the image with new comment
-            ExifUtils.update_user_comment(image_path, new_comment)
-            
-            return image_path
+            # Write back to the image
+            return ExifUtils.update_user_comment(image_path, new_user_comment)
         except Exception as e:
-            logger.error(f"Error appending recipe metadata: {e}")
-            return image_path  # Return original path on error
+            logger.error(f"Error appending recipe metadata: {e}", exc_info=True)
+            return image_path
+
+    @staticmethod
+    def remove_recipe_metadata(user_comment):
+        """Remove recipe metadata from user comment"""
+        if not user_comment:
+            return ""
+        
+        # Find the recipe metadata marker
+        recipe_marker_index = user_comment.find("Recipe metadata: ")
+        if recipe_marker_index == -1:
+            return user_comment
+        
+        # Remove the recipe metadata part
+        # First, find where the metadata ends (next line or end of string)
+        next_line_index = user_comment.find("\n", recipe_marker_index)
+        if next_line_index == -1:
+            # Metadata is at the end of the string
+            return user_comment[:recipe_marker_index].rstrip()
+        else:
+            # Metadata is in the middle of the string
+            return user_comment[:recipe_marker_index] + user_comment[next_line_index:]
