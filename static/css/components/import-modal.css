@@ -389,6 +389,32 @@
     margin-bottom: var(--space-2);
 }
 
+.input-with-button {
+    display: flex;
+    gap: 8px;
+}
+
+.input-with-button input {
+    flex: 1;
+    min-width: 0;
+}
+
+.input-with-button button {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 16px;
+    background: var(--lora-accent);
+    color: var(--lora-text);
+    border: none;
+    border-radius: var(--border-radius-xs);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.input-with-button button:hover {
+    background: oklch(from var(--lora-accent) l c h / 0.9);
+}
+
 .input-group label {
     display: block;
     margin-bottom: 8px;
@@ -403,14 +429,6 @@
     border-radius: var(--border-radius-xs);
     background: var(--bg-color);
     color: var(--text-color);
-}
-
-.input-group button {
-    background: var(--lora-accent);
-    color: var(--lora-text);
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--border-radius-xs);
 }
 
 .error-message {

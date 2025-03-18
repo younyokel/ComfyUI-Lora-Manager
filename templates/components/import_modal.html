@@ -34,13 +34,13 @@
                 <p>Input a Civitai image URL to import as a recipe.</p>
                 <div class="input-group">
                     <label for="imageUrlInput">Image URL:</label>
-                    <input type="text" id="imageUrlInput" placeholder="https://civitai.com/images/...">
+                    <div class="input-with-button">
+                        <input type="text" id="imageUrlInput" placeholder="https://civitai.com/images/...">
+                        <button class="primary-btn" onclick="importManager.handleUrlInput()">
+                            <i class="fas fa-download"></i> Fetch Image
+                        </button>
+                    </div>
                     <div class="error-message" id="urlError"></div>
-                </div>
-                <div class="input-group">
-                    <button class="primary-btn" onclick="importManager.handleUrlInput()">
-                        <i class="fas fa-download"></i> Fetch Image
-                    </button>
                 </div>
             </div>
             
