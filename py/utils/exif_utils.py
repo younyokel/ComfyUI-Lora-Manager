@@ -15,17 +15,33 @@ class ExifUtils:
     def extract_user_comment(image_path: str) -> Optional[str]:
         """Extract UserComment field from image EXIF data"""
         try:
-            exif_dict = piexif.load(image_path)
-            
-            if piexif.ExifIFD.UserComment in exif_dict.get('Exif', {}):
-                user_comment = exif_dict['Exif'][piexif.ExifIFD.UserComment]
-                if isinstance(user_comment, bytes):
-                    if user_comment.startswith(b'UNICODE\0'):
-                        user_comment = user_comment[8:].decode('utf-16be')
-                    else:
-                        user_comment = user_comment.decode('utf-8', errors='ignore')
-                return user_comment
-            return None
+            # First try to open as image to check format
+            with Image.open(image_path) as img:
+                if img.format not in ['JPEG', 'TIFF']:
+                    # For non-JPEG/TIFF images, try to get EXIF through PIL
+                    exif = img._getexif()
+                    if exif and piexif.ExifIFD.UserComment in exif:
+                        user_comment = exif[piexif.ExifIFD.UserComment]
+                        if isinstance(user_comment, bytes):
+                            if user_comment.startswith(b'UNICODE\0'):
+                                return user_comment[8:].decode('utf-16be')
+                            return user_comment.decode('utf-8', errors='ignore')
+                        return user_comment
+                    return None
+                
+                # For JPEG/TIFF, use piexif
+                exif_dict = piexif.load(image_path)
+                
+                if piexif.ExifIFD.UserComment in exif_dict.get('Exif', {}):
+                    user_comment = exif_dict['Exif'][piexif.ExifIFD.UserComment]
+                    if isinstance(user_comment, bytes):
+                        if user_comment.startswith(b'UNICODE\0'):
+                            user_comment = user_comment[8:].decode('utf-16be')
+                        else:
+                            user_comment = user_comment.decode('utf-8', errors='ignore')
+                    return user_comment
+                return None
+                
         except Exception as e:
             logger.error(f"Error extracting EXIF data from {image_path}: {e}")
             return None
