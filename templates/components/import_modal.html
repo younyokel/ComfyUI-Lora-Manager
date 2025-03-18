@@ -3,19 +3,45 @@
         <button class="close" onclick="modalManager.closeModal('importModal')">&times;</button>
         <h2>Import Recipe</h2>
         
-        <!-- Step 1: Upload Image -->
+        <!-- Step 1: Upload Image or Input URL -->
         <div class="import-step" id="uploadStep">
-            <p>Upload an image with LoRA metadata to import as a recipe.</p>
+            <div class="import-mode-toggle">
+                <button class="toggle-btn active" data-mode="upload" onclick="importManager.toggleImportMode('upload')">
+                    <i class="fas fa-upload"></i> Upload Image
+                </button>
+                <button class="toggle-btn" data-mode="url" onclick="importManager.toggleImportMode('url')">
+                    <i class="fas fa-link"></i> Input URL
+                </button>
+            </div>
             
-            <div class="input-group">
-                <label for="recipeImageUpload">Select Image:</label>
-                <div class="file-input-wrapper">
-                    <input type="file" id="recipeImageUpload" accept="image/*" onchange="importManager.handleImageUpload(event)">
-                    <div class="file-input-button">
-                        <i class="fas fa-upload"></i> Select Image
+            <!-- Upload Image Section -->
+            <div class="import-section" id="uploadSection">
+                <p>Upload an image with LoRA metadata to import as a recipe.</p>
+                <div class="input-group">
+                    <label for="recipeImageUpload">Select Image:</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="recipeImageUpload" accept="image/*" onchange="importManager.handleImageUpload(event)">
+                        <div class="file-input-button">
+                            <i class="fas fa-upload"></i> Select Image
+                        </div>
                     </div>
+                    <div class="error-message" id="uploadError"></div>
                 </div>
-                <div class="error-message" id="uploadError"></div>
+            </div>
+            
+            <!-- Input URL Section -->
+            <div class="import-section" id="urlSection" style="display: none;">
+                <p>Input a Civitai image URL to import as a recipe.</p>
+                <div class="input-group">
+                    <label for="imageUrlInput">Image URL:</label>
+                    <input type="text" id="imageUrlInput" placeholder="https://civitai.com/images/...">
+                    <div class="error-message" id="urlError"></div>
+                </div>
+                <div class="input-group">
+                    <button class="primary-btn" onclick="importManager.handleUrlInput()">
+                        <i class="fas fa-download"></i> Fetch Image
+                    </button>
+                </div>
             </div>
             
             <div class="modal-actions">
@@ -113,4 +139,4 @@
             </div>
         </div>
     </div>
-</div> 
+</div>

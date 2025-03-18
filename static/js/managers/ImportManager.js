@@ -23,6 +23,9 @@ export class ImportManager {
         
         // 添加对注入样式的引用
         this.injectedStyles = null;
+        
+        // Add import mode tracking
+        this.importMode = 'upload'; // Default mode: 'upload' or 'url'
     }
 
     showImportModal() {
@@ -80,16 +83,21 @@ export class ImportManager {
             fileInput.value = '';
         }
         
-        // Reset error message
-        const errorElement = document.getElementById('uploadError');
-        if (errorElement) {
-            errorElement.textContent = '';
+        // Reset URL input
+        const urlInput = document.getElementById('imageUrlInput');
+        if (urlInput) {
+            urlInput.value = '';
         }
         
-        // Reset preview
-        const previewElement = document.getElementById('imagePreview');
-        if (previewElement) {
-            previewElement.innerHTML = '<div class="placeholder">Image preview will appear here</div>';
+        // Reset error messages
+        const uploadError = document.getElementById('uploadError');
+        if (uploadError) {
+            uploadError.textContent = '';
+        }
+        
+        const urlError = document.getElementById('urlError');
+        if (urlError) {
+            urlError.textContent = '';
         }
         
         // Reset recipe name input
@@ -111,6 +119,10 @@ export class ImportManager {
         this.recipeTags = [];
         this.missingLoras = [];
         
+        // Reset import mode to upload
+        this.importMode = 'upload';
+        this.toggleImportMode('upload');
+        
         // Clear selected folder and remove selection from UI
         this.selectedFolder = '';
         const folderBrowser = document.getElementById('importFolderBrowser');
@@ -130,6 +142,45 @@ export class ImportManager {
         if (totalSizeDisplay) {
             totalSizeDisplay.textContent = 'Calculating...';
         }
+    }
+
+    toggleImportMode(mode) {
+        this.importMode = mode;
+        
+        // Update toggle buttons
+        const uploadBtn = document.querySelector('.toggle-btn[data-mode="upload"]');
+        const urlBtn = document.querySelector('.toggle-btn[data-mode="url"]');
+        
+        if (uploadBtn && urlBtn) {
+            if (mode === 'upload') {
+                uploadBtn.classList.add('active');
+                urlBtn.classList.remove('active');
+            } else {
+                uploadBtn.classList.remove('active');
+                urlBtn.classList.add('active');
+            }
+        }
+        
+        // Show/hide appropriate sections
+        const uploadSection = document.getElementById('uploadSection');
+        const urlSection = document.getElementById('urlSection');
+        
+        if (uploadSection && urlSection) {
+            if (mode === 'upload') {
+                uploadSection.style.display = 'block';
+                urlSection.style.display = 'none';
+            } else {
+                uploadSection.style.display = 'none';
+                urlSection.style.display = 'block';
+            }
+        }
+        
+        // Clear error messages
+        const uploadError = document.getElementById('uploadError');
+        const urlError = document.getElementById('urlError');
+        
+        if (uploadError) uploadError.textContent = '';
+        if (urlError) urlError.textContent = '';
     }
 
     handleImageUpload(event) {
@@ -154,6 +205,85 @@ export class ImportManager {
         this.uploadAndAnalyzeImage();
     }
 
+    async handleUrlInput() {
+        const urlInput = document.getElementById('imageUrlInput');
+        const errorElement = document.getElementById('urlError');
+        const url = urlInput.value.trim();
+        
+        // Validate URL
+        if (!url) {
+            errorElement.textContent = 'Please enter a URL';
+            return;
+        }
+        
+        // Basic URL validation
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            errorElement.textContent = 'Please enter a valid URL';
+            return;
+        }
+        
+        // Reset error
+        errorElement.textContent = '';
+        
+        // Show loading indicator
+        this.loadingManager.showSimpleLoading('Fetching image from URL...');
+        
+        try {
+            // Call API to analyze the URL
+            await this.analyzeImageFromUrl(url);
+        } catch (error) {
+            errorElement.textContent = error.message || 'Failed to fetch image from URL';
+        } finally {
+            this.loadingManager.hide();
+        }
+    }
+
+    async analyzeImageFromUrl(url) {
+        try {
+            // Call the API with URL data
+            const response = await fetch('/api/recipes/analyze-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: url })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to analyze image from URL');
+            }
+            
+            // Get recipe data from response
+            this.recipeData = await response.json();
+            
+            // Check if we have an error message
+            if (this.recipeData.error) {
+                throw new Error(this.recipeData.error);
+            }
+            
+            // Check if we have valid recipe data
+            if (!this.recipeData || !this.recipeData.loras || this.recipeData.loras.length === 0) {
+                throw new Error('No LoRA information found in this image');
+            }
+            
+            // Store generation parameters if available
+            if (this.recipeData.gen_params) {
+                console.log('Generation parameters found:', this.recipeData.gen_params);
+            }
+            
+            // Find missing LoRAs
+            this.missingLoras = this.recipeData.loras.filter(lora => !lora.existsLocally);
+            
+            // Proceed to recipe details step
+            this.showRecipeDetailsStep();
+            
+        } catch (error) {
+            console.error('Error analyzing URL:', error);
+            throw error;
+        }
+    }
+
     async uploadAndAnalyzeImage() {
         if (!this.recipeImage) {
             showToast('Please select an image first', 'error');
@@ -172,7 +302,7 @@ export class ImportManager {
                 method: 'POST',
                 body: formData
             });
-            
+             
             // Get recipe data from response
             this.recipeData = await response.json();
 
@@ -256,12 +386,24 @@ export class ImportManager {
         
         // Display the uploaded image in the preview
         const imagePreview = document.getElementById('recipeImagePreview');
-        if (imagePreview && this.recipeImage) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imagePreview.innerHTML = `<img src="${e.target.result}" alt="Recipe preview">`;
-            };
-            reader.readAsDataURL(this.recipeImage);
+        if (imagePreview) {
+            if (this.recipeImage) {
+                // For file upload mode
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.innerHTML = `<img src="${e.target.result}" alt="Recipe preview">`;
+                };
+                reader.readAsDataURL(this.recipeImage);
+            } else if (this.recipeData && this.recipeData.image_base64) {
+                // For URL mode - use the base64 image data returned from the backend
+                imagePreview.innerHTML = `<img src="data:image/jpeg;base64,${this.recipeData.image_base64}" alt="Recipe preview">`;
+            } else if (this.importMode === 'url') {
+                // Fallback for URL mode if no base64 data
+                const urlInput = document.getElementById('imageUrlInput');
+                if (urlInput && urlInput.value) {
+                    imagePreview.innerHTML = `<img src="${urlInput.value}" alt="Recipe preview" crossorigin="anonymous">`;
+                }
+            }
         }
         
         // Update LoRA count information
@@ -577,10 +719,21 @@ export class ImportManager {
             fileInput.value = '';
         }
         
+        // Reset URL input
+        const urlInput = document.getElementById('imageUrlInput');
+        if (urlInput) {
+            urlInput.value = '';
+        }
+        
         // Clear any previous error messages
-        const errorElement = document.getElementById('uploadError');
-        if (errorElement) {
-            errorElement.textContent = '';
+        const uploadError = document.getElementById('uploadError');
+        if (uploadError) {
+            uploadError.textContent = '';
+        }
+        
+        const urlError = document.getElementById('urlError');
+        if (urlError) {
+            urlError.textContent = '';
         }
     }
 
@@ -600,7 +753,26 @@ export class ImportManager {
             
             // Create form data for save request
             const formData = new FormData();
-            formData.append('image', this.recipeImage);
+            
+            // Handle image data - either from file upload or from URL mode
+            if (this.recipeImage) {
+                // File upload mode
+                formData.append('image', this.recipeImage);
+            } else if (this.recipeData && this.recipeData.image_base64) {
+                // URL mode with base64 data
+                formData.append('image_base64', this.recipeData.image_base64);
+            } else if (this.importMode === 'url') {
+                // Fallback for URL mode - tell backend to fetch the image again
+                const urlInput = document.getElementById('imageUrlInput');
+                if (urlInput && urlInput.value) {
+                    formData.append('image_url', urlInput.value);
+                } else {
+                    throw new Error('No image data available');
+                }
+            } else {
+                throw new Error('No image data available');
+            }
+            
             formData.append('name', this.recipeName);
             formData.append('tags', JSON.stringify(this.recipeTags));
             

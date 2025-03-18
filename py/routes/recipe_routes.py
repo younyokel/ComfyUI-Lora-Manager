@@ -190,45 +190,90 @@ class RecipeRoutes:
         return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S') 
 
     async def analyze_recipe_image(self, request: web.Request) -> web.Response:
-        """Analyze an uploaded image for recipe metadata"""
+        """Analyze an uploaded image or URL for recipe metadata"""
         temp_path = None
         try:
-            reader = await request.multipart()
-            field = await reader.next()
+            # Check if request contains multipart data (image) or JSON data (url)
+            content_type = request.headers.get('Content-Type', '')
             
-            if field.name != 'image':
-                return web.json_response({
-                    "error": "No image field found",
-                    "loras": []
-                }, status=400)
+            is_url_mode = False
             
-            # Create a temporary file to store the uploaded image
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
-                while True:
-                    chunk = await field.read_chunk()
-                    if not chunk:
-                        break
-                    temp_file.write(chunk)
-                temp_path = temp_file.name
+            if 'multipart/form-data' in content_type:
+                # Handle image upload
+                reader = await request.multipart()
+                field = await reader.next()
+                
+                if field.name != 'image':
+                    return web.json_response({
+                        "error": "No image field found",
+                        "loras": []
+                    }, status=400)
+                
+                # Create a temporary file to store the uploaded image
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                    while True:
+                        chunk = await field.read_chunk()
+                        if not chunk:
+                            break
+                        temp_file.write(chunk)
+                    temp_path = temp_file.name
+                    
+            elif 'application/json' in content_type:
+                # Handle URL input
+                data = await request.json()
+                url = data.get('url')
+                is_url_mode = True
+                
+                if not url:
+                    return web.json_response({
+                        "error": "No URL provided",
+                        "loras": []
+                    }, status=400)
+                
+                # Download image from URL
+                from ..utils.utils import download_twitter_image
+                temp_path = download_twitter_image(url)
+                
+                if not temp_path:
+                    return web.json_response({
+                        "error": "Failed to download image from URL",
+                        "loras": []
+                    }, status=400)
             
             # Extract metadata from the image using ExifUtils
             user_comment = ExifUtils.extract_user_comment(temp_path)
             
             # If no metadata found, return a more specific error
             if not user_comment:
-                return web.json_response({
+                result = {
                     "error": "No metadata found in this image",
                     "loras": []  # Return empty loras array to prevent client-side errors
-                }, status=200)  # Return 200 instead of 400 to handle gracefully
+                }
+                
+                # For URL mode, include the image data as base64
+                if is_url_mode and temp_path:
+                    import base64
+                    with open(temp_path, "rb") as image_file:
+                        result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
+                    
+                return web.json_response(result, status=200)
             
             # Use the parser factory to get the appropriate parser
             parser = RecipeParserFactory.create_parser(user_comment)
 
             if parser is None:
-                return web.json_response({
+                result = {
                     "error": "No parser found for this image",
                     "loras": []  # Return empty loras array to prevent client-side errors
-                }, status=200)  # Return 200 instead of 400 to handle gracefully
+                }
+                
+                # For URL mode, include the image data as base64
+                if is_url_mode and temp_path:
+                    import base64
+                    with open(temp_path, "rb") as image_file:
+                        result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
+                    
+                return web.json_response(result, status=200)
             
             # Parse the metadata
             result = await parser.parse_metadata(
@@ -236,6 +281,12 @@ class RecipeRoutes:
                 recipe_scanner=self.recipe_scanner, 
                 civitai_client=self.civitai_client
             )
+            
+            # For URL mode, include the image data as base64
+            if is_url_mode and temp_path:
+                import base64
+                with open(temp_path, "rb") as image_file:
+                    result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
             
             # Check for errors
             if "error" in result and not result.get("loras"):
@@ -265,6 +316,8 @@ class RecipeRoutes:
             
             # Process form data
             image = None
+            image_base64 = None
+            image_url = None
             name = None
             tags = []
             metadata = None
@@ -284,6 +337,14 @@ class RecipeRoutes:
                         image_data += chunk
                     image = image_data
                     
+                elif field.name == 'image_base64':
+                    # Get base64 image data
+                    image_base64 = await field.text()
+                    
+                elif field.name == 'image_url':
+                    # Get image URL
+                    image_url = await field.text()
+                    
                 elif field.name == 'name':
                     name = await field.text()
                     
@@ -301,8 +362,44 @@ class RecipeRoutes:
                     except:
                         metadata = {}
             
-            if not image or not name or not metadata:
-                return web.json_response({"error": "Missing required fields"}, status=400)
+            missing_fields = []
+            if not name:
+                missing_fields.append("name")
+            if not metadata:
+                missing_fields.append("metadata")
+            if missing_fields:
+                return web.json_response({"error": f"Missing required fields: {', '.join(missing_fields)}"}, status=400)
+            
+            # Handle different image sources
+            if not image:
+                if image_base64:
+                    # Convert base64 to binary
+                    import base64
+                    try:
+                        # Remove potential data URL prefix
+                        if ',' in image_base64:
+                            image_base64 = image_base64.split(',', 1)[1]
+                        image = base64.b64decode(image_base64)
+                    except Exception as e:
+                        return web.json_response({"error": f"Invalid base64 image data: {str(e)}"}, status=400)
+                elif image_url:
+                    # Download image from URL
+                    from ..utils.utils import download_twitter_image
+                    temp_path = download_twitter_image(image_url)
+                    if not temp_path:
+                        return web.json_response({"error": "Failed to download image from URL"}, status=400)
+                    
+                    # Read the downloaded image
+                    with open(temp_path, 'rb') as f:
+                        image = f.read()
+                    
+                    # Clean up temp file
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
+                else:
+                    return web.json_response({"error": "No image data provided"}, status=400)
             
             # Create recipes directory if it doesn't exist
             recipes_dir = self.recipe_scanner.recipes_dir
@@ -625,4 +722,4 @@ class RecipeRoutes:
                 # Remove from dictionary
                 del self._shared_recipes[rid]
             except Exception as e:
-                logger.error(f"Error cleaning up shared recipe {rid}: {e}") 
+                logger.error(f"Error cleaning up shared recipe {rid}: {e}")
