@@ -48,7 +48,6 @@ class RecipeScanner:
         # config.loras_roots already sorted case-insensitively, use the first one
         recipes_dir = os.path.join(config.loras_roots[0], "recipes")
         os.makedirs(recipes_dir, exist_ok=True)
-        logger.info(f"Using recipes directory: {recipes_dir}")
         
         return recipes_dir
     
@@ -60,7 +59,6 @@ class RecipeScanner:
 
         # If another initialization is already in progress, wait for it to complete
         if self._is_initializing and not force_refresh:
-            logger.info("Initialization already in progress, returning current cache state")
             return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
 
         # Try to acquire the lock with a timeout to prevent deadlocks
@@ -79,19 +77,16 @@ class RecipeScanner:
                         # First ensure the lora scanner is initialized
                         if self._lora_scanner:
                             try:
-                                logger.info("Recipe Manager: Waiting for lora scanner initialization")
                                 lora_cache = await asyncio.wait_for(
                                     self._lora_scanner.get_cached_data(), 
                                     timeout=10.0
                                 )
-                                logger.info(f"Recipe Manager: Lora scanner initialized with {len(lora_cache.raw_data)} loras")
                             except asyncio.TimeoutError:
                                 logger.error("Timeout waiting for lora scanner initialization")
                             except Exception as e:
                                 logger.error(f"Error waiting for lora scanner: {e}")
                         
                         # Scan for recipe data
-                        logger.info("Recipe Manager: Starting recipe scan")
                         raw_data = await self.scan_all_recipes()
                         
                         # Update cache
@@ -104,7 +99,6 @@ class RecipeScanner:
                         # Resort cache
                         await self._cache.resort()
                         
-                        logger.info(f"Recipe Manager: Cache initialization completed with {len(raw_data)} recipes")
                         return self._cache
                     
                     except Exception as e:
@@ -139,11 +133,9 @@ class RecipeScanner:
         
         # Get all recipe JSON files in the recipes directory
         recipe_files = []
-        logger.info(f"Scanning for recipe JSON files in {recipes_dir}")
         for root, _, files in os.walk(recipes_dir):
             recipe_count = sum(1 for f in files if f.lower().endswith('.recipe.json'))
             if recipe_count > 0:
-                logger.info(f"Found {recipe_count} recipe files in {root}")
                 for file in files:
                     if file.lower().endswith('.recipe.json'):
                         recipe_files.append(os.path.join(root, file))
@@ -153,17 +145,12 @@ class RecipeScanner:
             recipe_data = await self._load_recipe_file(recipe_path)
             if recipe_data:
                 recipes.append(recipe_data)
-                logger.info(f"Processed recipe: {recipe_data.get('title')}")
-        
-        logger.info(f"Successfully processed {len(recipes)} recipes")
         
         return recipes
     
     async def _load_recipe_file(self, recipe_path: str) -> Optional[Dict]:
         """Load recipe data from a JSON file"""
         try:
-            logger.info(f"Loading recipe file: {recipe_path}")
-            
             with open(recipe_path, 'r', encoding='utf-8') as f:
                 recipe_data = json.load(f)
             
@@ -188,7 +175,6 @@ class RecipeScanner:
                 image_filename = os.path.basename(image_path)
                 alternative_path = os.path.join(recipe_dir, image_filename)
                 if os.path.exists(alternative_path):
-                    logger.info(f"Found alternative image path: {alternative_path}")
                     recipe_data['file_path'] = alternative_path
                 else:
                     logger.warning(f"Could not find alternative image path for {image_path}")
@@ -223,30 +209,23 @@ class RecipeScanner:
         metadata_updated = False
         
         for lora in recipe_data['loras']:
-            logger.info(f"Processing LoRA: {lora.get('modelName', 'Unknown')}, ID: {lora.get('modelVersionId', 'No ID')}")
-            
             # Skip if already has complete information
             if 'hash' in lora and 'file_name' in lora and lora['file_name']:
-                logger.info(f"LoRA already has complete information")
                 continue
                 
             # If has modelVersionId but no hash, look in lora cache first, then fetch from Civitai
             if 'modelVersionId' in lora and not lora.get('hash'):
                 model_version_id = lora['modelVersionId']
-                logger.info(f"Looking up hash for modelVersionId: {model_version_id}")
-                
+
                 # Try to find in lora cache first
                 hash_from_cache = await self._find_hash_in_lora_cache(model_version_id)
                 if hash_from_cache:
-                    logger.info(f"Found hash in lora cache: {hash_from_cache}")
                     lora['hash'] = hash_from_cache
                     metadata_updated = True
                 else:
                     # If not in cache, fetch from Civitai
-                    logger.info(f"Fetching hash from Civitai for {model_version_id}")
                     hash_from_civitai = await self._get_hash_from_civitai(model_version_id)
                     if hash_from_civitai:
-                        logger.info(f"Got hash from Civitai: {hash_from_civitai}")
                         lora['hash'] = hash_from_civitai
                         metadata_updated = True
                     else:
@@ -255,18 +234,15 @@ class RecipeScanner:
             # If has hash but no file_name, look up in lora library
             if 'hash' in lora and (not lora.get('file_name') or not lora['file_name']):
                 hash_value = lora['hash']
-                logger.info(f"Looking up file_name for hash: {hash_value}")
                 
                 if self._lora_scanner.has_lora_hash(hash_value):
                     lora_path = self._lora_scanner.get_lora_path_by_hash(hash_value)
                     if lora_path:
                         file_name = os.path.splitext(os.path.basename(lora_path))[0]
-                        logger.info(f"Found lora in library: {file_name}")
                         lora['file_name'] = file_name
                         metadata_updated = True
                 else:
                     # Lora not in library
-                    logger.info(f"LoRA with hash {hash_value} not found in library")
                     lora['file_name'] = ''
                     metadata_updated = True
         
@@ -300,7 +276,6 @@ class RecipeScanner:
             if not self._civitai_client:
                 return None
                 
-            logger.info(f"Fetching model version info from Civitai for ID: {model_version_id}")
             version_info = await self._civitai_client.get_model_version_info(model_version_id)
             
             if not version_info or not version_info.get('files'):
@@ -324,7 +299,6 @@ class RecipeScanner:
             if not self._civitai_client:
                 return None
                 
-            logger.info(f"Fetching model version info from Civitai for ID: {model_version_id}")
             version_info = await self._civitai_client.get_model_version_info(model_version_id)
             
             if version_info and 'name' in version_info:
