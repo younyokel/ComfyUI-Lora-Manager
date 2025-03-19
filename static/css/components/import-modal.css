@@ -4,14 +4,6 @@
     transition: none !important; /* Disable any transitions that might affect display */
 }
 
-/* Ensure error messages maintain proper height and visibility */
-.import-section .error-message {
-    min-height: 1.2em;
-    visibility: visible !important;
-    opacity: 1 !important;
-    display: block !important;
-}
-
 /* Import Mode Toggle */
 .import-mode-toggle {
     display: flex;
@@ -680,4 +672,13 @@
 .deleted-badge i {
     margin-right: 4px;
     font-size: 0.9em;
+}
+
+/* Error message styling */
+.error-message {
+    color: var(--lora-error);
+    font-size: 0.9em;
+    margin-top: 8px;
+    min-height: 20px; /* Ensure there's always space for the error message */
+    font-weight: 500;
 }

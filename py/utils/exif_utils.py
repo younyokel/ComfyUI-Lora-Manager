@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Dict, Optional, Any
 from io import BytesIO
+import os
 from PIL import Image
 import re
 
@@ -17,8 +18,8 @@ class ExifUtils:
         try:
             # First try to open as image to check format
             with Image.open(image_path) as img:
-                if img.format not in ['JPEG', 'TIFF']:
-                    # For non-JPEG/TIFF images, try to get EXIF through PIL
+                if img.format not in ['JPEG', 'TIFF', 'WEBP']:
+                    # For non-JPEG/TIFF/WEBP images, try to get EXIF through PIL
                     exif = img._getexif()
                     if exif and piexif.ExifIFD.UserComment in exif:
                         user_comment = exif[piexif.ExifIFD.UserComment]
@@ -29,7 +30,7 @@ class ExifUtils:
                         return user_comment
                     return None
                 
-                # For JPEG/TIFF, use piexif
+                # For JPEG/TIFF/WEBP, use piexif
                 exif_dict = piexif.load(image_path)
                 
                 if piexif.ExifIFD.UserComment in exif_dict.get('Exif', {}):
@@ -52,7 +53,25 @@ class ExifUtils:
         try:
             # Load the image and its EXIF data
             with Image.open(image_path) as img:
-                exif_dict = piexif.load(img.info.get('exif', b''))
+                # Get original format
+                img_format = img.format
+                
+                # For WebP format, we need a different approach
+                if img_format == 'WEBP':
+                    # WebP doesn't support standard EXIF through piexif
+                    # We'll use PIL's exif parameter directly
+                    exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + user_comment.encode('utf-16be')}}
+                    exif_bytes = piexif.dump(exif_dict)
+                    
+                    # Save with the exif data
+                    img.save(image_path, format='WEBP', exif=exif_bytes, quality=85)
+                    return image_path
+                
+                # For other formats, use the standard approach
+                try:
+                    exif_dict = piexif.load(img.info.get('exif', b''))
+                except:
+                    exif_dict = {'0th':{}, 'Exif':{}, 'GPS':{}, 'Interop':{}, '1st':{}}
                 
                 # If no Exif dictionary exists, create one
                 if 'Exif' not in exif_dict:
@@ -144,3 +163,115 @@ class ExifUtils:
         else:
             # Metadata is in the middle of the string
             return user_comment[:recipe_marker_index] + user_comment[next_line_index:]
+            
+    @staticmethod
+    def optimize_image(image_data, target_width=250, format='webp', quality=85, preserve_metadata=True):
+        """
+        Optimize an image by resizing and converting to WebP format
+        
+        Args:
+            image_data: Binary image data or path to image file
+            target_width: Width to resize the image to (preserves aspect ratio)
+            format: Output format (default: webp)
+            quality: Output quality (0-100)
+            preserve_metadata: Whether to preserve EXIF metadata
+            
+        Returns:
+            Tuple of (optimized_image_data, extension)
+        """
+        try:
+            # Extract metadata if needed
+            user_comment = None
+            if preserve_metadata:
+                if isinstance(image_data, str) and os.path.exists(image_data):
+                    # It's a file path
+                    user_comment = ExifUtils.extract_user_comment(image_data)
+                    img = Image.open(image_data)
+                else:
+                    # It's binary data
+                    temp_img = BytesIO(image_data)
+                    img = Image.open(temp_img)
+                    # Save to a temporary file to extract metadata
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                        temp_path = temp_file.name
+                        temp_file.write(image_data)
+                    user_comment = ExifUtils.extract_user_comment(temp_path)
+                    os.unlink(temp_path)
+            else:
+                # Just open the image without extracting metadata
+                if isinstance(image_data, str) and os.path.exists(image_data):
+                    img = Image.open(image_data)
+                else:
+                    img = Image.open(BytesIO(image_data))
+            
+            # Calculate new height to maintain aspect ratio
+            width, height = img.size
+            new_height = int(height * (target_width / width))
+            
+            # Resize the image
+            resized_img = img.resize((target_width, new_height), Image.LANCZOS)
+            
+            # Save to BytesIO in the specified format
+            output = BytesIO()
+            
+            # WebP format
+            if format.lower() == 'webp':
+                resized_img.save(output, format='WEBP', quality=quality)
+                extension = '.webp'
+            # JPEG format
+            elif format.lower() in ('jpg', 'jpeg'):
+                resized_img.save(output, format='JPEG', quality=quality)
+                extension = '.jpg'
+            # PNG format
+            elif format.lower() == 'png':
+                resized_img.save(output, format='PNG', optimize=True)
+                extension = '.png'
+            else:
+                # Default to WebP
+                resized_img.save(output, format='WEBP', quality=quality)
+                extension = '.webp'
+            
+            # Get the optimized image data
+            optimized_data = output.getvalue()
+            
+            # If we need to preserve metadata, write it to a temporary file
+            if preserve_metadata and user_comment:
+                # For WebP format, we'll directly save with metadata
+                if format.lower() == 'webp':
+                    # Create a new BytesIO with metadata
+                    output_with_metadata = BytesIO()
+                    
+                    # Create EXIF data with user comment
+                    exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + user_comment.encode('utf-16be')}}
+                    exif_bytes = piexif.dump(exif_dict)
+                    
+                    # Save with metadata
+                    resized_img.save(output_with_metadata, format='WEBP', exif=exif_bytes, quality=quality)
+                    optimized_data = output_with_metadata.getvalue()
+                else:
+                    # For other formats, use the temporary file approach
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as temp_file:
+                        temp_path = temp_file.name
+                        temp_file.write(optimized_data)
+                    
+                    # Add the metadata back
+                    ExifUtils.update_user_comment(temp_path, user_comment)
+                    
+                    # Read the file with metadata
+                    with open(temp_path, 'rb') as f:
+                        optimized_data = f.read()
+                    
+                    # Clean up
+                    os.unlink(temp_path)
+            
+            return optimized_data, extension
+            
+        except Exception as e:
+            logger.error(f"Error optimizing image: {e}", exc_info=True)
+            # Return original data if optimization fails
+            if isinstance(image_data, str) and os.path.exists(image_data):
+                with open(image_data, 'rb') as f:
+                    return f.read(), os.path.splitext(image_data)[1]
+            return image_data, '.jpg'

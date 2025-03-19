@@ -409,12 +409,20 @@ class RecipeRoutes:
             import uuid
             recipe_id = str(uuid.uuid4())
             
-            # Save the image
-            image_ext = ".jpg"
-            image_filename = f"{recipe_id}{image_ext}"
+            # Optimize the image (resize and convert to WebP)
+            optimized_image, extension = ExifUtils.optimize_image(
+                image_data=image,
+                target_width=250,
+                format='webp',
+                quality=85,
+                preserve_metadata=True
+            )
+            
+            # Save the optimized image
+            image_filename = f"{recipe_id}{extension}"
             image_path = os.path.join(recipes_dir, image_filename)
             with open(image_path, 'wb') as f:
-                f.write(image)
+                f.write(optimized_image)
             
             # Create the recipe JSON
             current_time = time.time()
@@ -638,7 +646,6 @@ class RecipeRoutes:
             shutil.copy2(image_path, temp_path)
             
             # Add recipe metadata to the image
-            from ..utils.exif_utils import ExifUtils
             processed_path = ExifUtils.append_recipe_metadata(temp_path, recipe)
             
             # Create a URL for the processed image

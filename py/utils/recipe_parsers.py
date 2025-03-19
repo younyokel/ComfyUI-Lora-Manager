@@ -74,8 +74,6 @@ class RecipeFormatParser(RecipeMetadataParser):
             if not recipe_metadata:
                 return {"error": "No recipe metadata found", "loras": []}
                 
-            logger.info("Found existing recipe metadata in image")
-            
             # Process the recipe metadata
             loras = []
             for lora in recipe_metadata.get('loras', []):
@@ -96,7 +94,7 @@ class RecipeFormatParser(RecipeMetadataParser):
                     exists_locally = lora_scanner.has_lora_hash(lora['hash'])
                     if exists_locally:
                         lora_cache = await lora_scanner.get_cached_data()
-                        lora_item = next((item for item in lora_cache.raw_data if item['sha256'] == lora['hash']), None)
+                        lora_item = next((item for item in lora_cache.raw_data if item['sha256'].lower() == lora['hash'].lower()), None)
                         if lora_item:
                             lora_entry['existsLocally'] = True
                             lora_entry['localPath'] = lora_item['file_path']
