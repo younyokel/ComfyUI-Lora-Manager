@@ -65,9 +65,7 @@ class LoraPageManager {
     
     async initialize() {
         // Initialize page-specific components
-        initializeInfiniteScroll();
         initializeEventListeners();
-        lazyLoadImages();
         restoreFolderFilter();
         initFolderTagsVisibility();
         new LoraContextMenu();
@@ -77,6 +75,9 @@ class LoraPageManager {
         
         // Initialize the bulk manager
         bulkManager.initialize();
+        
+        // Initialize common page features (lazy loading, infinite scroll)
+        appCore.initializePageFeatures();
     }
 }
 

@@ -16,6 +16,10 @@ class RecipeManager {
         
         // Initialize RecipeModal
         this.recipeModal = new RecipeModal();
+        
+        // Add state tracking for infinite scroll
+        this.isLoading = false;
+        this.hasMore = true;
     }
     
     async initialize() {
@@ -27,6 +31,9 @@ class RecipeManager {
         
         // Expose necessary functions to the page
         this._exposeGlobalFunctions();
+        
+        // Initialize common page features (lazy loading, infinite scroll)
+        appCore.initializePageFeatures();
     }
     
     _exposeGlobalFunctions() {
@@ -34,6 +41,7 @@ class RecipeManager {
         window.recipeManager = this;
         window.importRecipes = () => this.importRecipes();
         window.importManager = this.importManager;
+        window.loadMoreRecipes = () => this.loadMoreRecipes();
     }
     
     initEventListeners() {
@@ -69,10 +77,19 @@ class RecipeManager {
         }
     }
     
-    async loadRecipes() {
+    async loadRecipes(resetPage = true) {
         try {
             // Show loading indicator
             document.body.classList.add('loading');
+            this.isLoading = true;
+            
+            // Reset to first page if requested
+            if (resetPage) {
+                this.currentPage = 1;
+                // Clear grid if resetting
+                const grid = document.getElementById('recipeGrid');
+                if (grid) grid.innerHTML = '';
+            }
             
             // Build query parameters
             const params = new URLSearchParams({
@@ -101,7 +118,10 @@ class RecipeManager {
             const data = await response.json();
             
             // Update recipes grid
-            this.updateRecipesGrid(data);
+            this.updateRecipesGrid(data, resetPage);
+            
+            // Update pagination state
+            this.hasMore = data.has_more || false;
             
         } catch (error) {
             console.error('Error loading recipes:', error);
@@ -109,32 +129,61 @@ class RecipeManager {
         } finally {
             // Hide loading indicator
             document.body.classList.remove('loading');
+            this.isLoading = false;
         }
     }
     
-    updateRecipesGrid(data) {
+    // Load more recipes for infinite scroll
+    async loadMoreRecipes() {
+        if (this.isLoading || !this.hasMore) return;
+        
+        this.currentPage++;
+        await this.loadRecipes(false);
+    }
+    
+    updateRecipesGrid(data, resetGrid = true) {
         const grid = document.getElementById('recipeGrid');
         if (!grid) return;
         
         // Check if data exists and has items
         if (!data.items || data.items.length === 0) {
-            grid.innerHTML = `
-                <div class="placeholder-message">
-                    <p>No recipes found</p>
-                    <p>Add recipe images to your recipes folder to see them here.</p>
-                </div>
-            `;
+            if (resetGrid) {
+                grid.innerHTML = `
+                    <div class="placeholder-message">
+                        <p>No recipes found</p>
+                        <p>Add recipe images to your recipes folder to see them here.</p>
+                    </div>
+                `;
+            }
             return;
         }
         
-        // Clear grid
-        grid.innerHTML = '';
+        // Clear grid if resetting
+        if (resetGrid) {
+            grid.innerHTML = '';
+        }
         
         // Create recipe cards
         data.items.forEach(recipe => {
             const recipeCard = new RecipeCard(recipe, (recipe) => this.showRecipeDetails(recipe));
             grid.appendChild(recipeCard.element);
         });
+        
+        // Add sentinel for infinite scroll if needed
+        if (this.hasMore) {
+            let sentinel = document.getElementById('scroll-sentinel');
+            if (!sentinel) {
+                sentinel = document.createElement('div');
+                sentinel.id = 'scroll-sentinel';
+                sentinel.style.height = '10px';
+                grid.appendChild(sentinel);
+                
+                // Re-observe the sentinel if we have an observer
+                if (window.state && window.state.observer) {
+                    window.state.observer.observe(sentinel);
+                }
+            }
+        }
     }
     
     showRecipeDetails(recipe) {

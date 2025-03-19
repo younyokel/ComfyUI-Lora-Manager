@@ -27,7 +27,7 @@
     <div class="controls">
         <div class="action-buttons">
             <div title="Import recipes" class="control-group">
-                <button onclick="importRecipes()"><i class="fas fa-file-import"></i> Import</button>
+                <button onclick="modalManager.showModal('importModal')"><i class="fas fa-file-import"></i> Import</button>
             </div>
         </div>
     </div>
@@ -84,16 +84,6 @@
     function refreshRecipes() {
         // Will be implemented in recipes.js
         window.location.reload();
-    }
-    
-    // Import recipes
-    function importRecipes() {
-        // Show import modal
-        const importModal = document.getElementById('importModal');
-        if (importModal) {
-            importModal.classList.remove('hidden');
-            importModal.style.display = 'block';
-        }
     }
 </script>
 {% endblock %}
