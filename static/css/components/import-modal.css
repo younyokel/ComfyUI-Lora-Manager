@@ -4,6 +4,14 @@
     transition: none !important; /* Disable any transitions that might affect display */
 }
 
+/* Ensure error messages maintain proper height and visibility */
+.import-section .error-message {
+    min-height: 1.2em;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+}
+
 /* Import Mode Toggle */
 .import-mode-toggle {
     display: flex;
@@ -429,12 +437,6 @@
     border-radius: var(--border-radius-xs);
     background: var(--bg-color);
     color: var(--text-color);
-}
-
-.error-message {
-    color: var(--lora-error);
-    font-size: 0.9em;
-    margin-top: 4px;
 }
 
 /* Dark theme adjustments */

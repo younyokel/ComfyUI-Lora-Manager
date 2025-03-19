@@ -23,12 +23,6 @@
     color: var(--text-color);
 }
 
-.error-message {
-    color: var(--lora-error);
-    font-size: 0.9em;
-    margin-top: 4px;
-}
-
 /* Version List Styles */
 .version-list {
     max-height: 400px;

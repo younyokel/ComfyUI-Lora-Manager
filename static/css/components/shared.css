@@ -41,3 +41,9 @@
 .local-badge:hover .local-path {
     display: block;
 }
+
+.error-message {
+    color: var(--lora-error);
+    font-size: 0.9em;
+    margin-top: 4px;
+}
