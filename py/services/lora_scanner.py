@@ -658,7 +658,7 @@ class LoraScanner:
         
     def get_lora_hash_by_path(self, file_path: str) -> Optional[str]:
         """Get hash for a LoRA by its file path"""
-        return self._hash_index.get_hash(file_path)
+        return self._hash_index.get_hash(file_path) 
 
     def get_preview_url_by_hash(self, sha256: str) -> Optional[str]:
         """Get preview static URL for a LoRA by its hash"""

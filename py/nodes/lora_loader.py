@@ -26,8 +26,8 @@ class LoraManagerLoader:
             "optional": FlexibleOptionalInputType(any_type),
         }
 
-    RETURN_TYPES = ("MODEL", "CLIP", IO.STRING)
-    RETURN_NAMES = ("MODEL", "CLIP", "trigger_words")
+    RETURN_TYPES = ("MODEL", "CLIP", IO.STRING, IO.STRING)
+    RETURN_NAMES = ("MODEL", "CLIP", "trigger_words", "loaded_loras")
     FUNCTION = "load_loras"
 
     async def get_lora_info(self, lora_name):
@@ -95,5 +95,9 @@ class LoraManagerLoader:
         
         # use ',, ' to separate trigger words for group mode
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
+        
+        # Format loaded_loras as <lora:lora_name:strength> separated by spaces
+        formatted_loras = " ".join([f"<lora:{name.split(':')[0].strip()}:{str(strength).strip()}>" 
+                                  for name, strength in [item.split(':') for item in loaded_loras]])
 
-        return (model, clip, trigger_words_text)
+        return (model, clip, trigger_words_text, formatted_loras)
