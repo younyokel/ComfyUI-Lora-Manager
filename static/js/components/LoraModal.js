@@ -706,9 +706,10 @@ function initLazyLoading(container) {
 }
 
 export function setupShowcaseScroll() {
-    // Change from modal-content to window/document level
+    // Add event listener to document for wheel events
     document.addEventListener('wheel', (event) => {
-        const modalContent = document.querySelector('.modal-content');
+        // Find the active modal content
+        const modalContent = document.querySelector('#loraModal .modal-content');
         if (!modalContent) return;
 
         const showcase = modalContent.querySelector('.showcase-section');
@@ -725,22 +726,50 @@ export function setupShowcaseScroll() {
                 event.preventDefault();
             }
         }
-    }, { passive: false }); // Add passive: false option here
+    }, { passive: false });
 
-    // Keep the existing scroll tracking code
-    const modalContent = document.querySelector('.modal-content');
-    if (modalContent) {
-        modalContent.addEventListener('scroll', () => {
-            const backToTopBtn = modalContent.querySelector('.back-to-top');
-            if (backToTopBtn) {
-                if (modalContent.scrollTop > 300) {
-                    backToTopBtn.classList.add('visible');
-                } else {
-                    backToTopBtn.classList.remove('visible');
+    // Use MutationObserver instead of deprecated DOMNodeInserted
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length) {
+                // Check if loraModal content was added
+                const loraModal = document.getElementById('loraModal');
+                if (loraModal && loraModal.querySelector('.modal-content')) {
+                    setupBackToTopButton(loraModal.querySelector('.modal-content'));
                 }
             }
-        });
+        }
+    });
+    
+    // Start observing the document body for changes
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Also try to set up the button immediately in case the modal is already open
+    const modalContent = document.querySelector('#loraModal .modal-content');
+    if (modalContent) {
+        setupBackToTopButton(modalContent);
     }
+}
+
+// New helper function to set up the back to top button
+function setupBackToTopButton(modalContent) {
+    // Remove any existing scroll listeners to avoid duplicates
+    modalContent.onscroll = null;
+    
+    // Add new scroll listener
+    modalContent.addEventListener('scroll', () => {
+        const backToTopBtn = modalContent.querySelector('.back-to-top');
+        if (backToTopBtn) {
+            if (modalContent.scrollTop > 300) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        }
+    });
+    
+    // Trigger a scroll event to check initial position
+    modalContent.dispatchEvent(new Event('scroll'));
 }
 
 export function scrollToTop(button) {

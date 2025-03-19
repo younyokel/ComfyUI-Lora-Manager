@@ -111,13 +111,11 @@ export class RecipeSearchManager extends SearchManager {
   }
   
   resetAndReloadRecipes() {
-    // This function would be implemented in the recipes page
-    // Similar to resetAndReload for loras
-    if (typeof window.loadRecipes === 'function') {
-      window.loadRecipes();
+    if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
+      window.recipeManager.loadRecipes();
     } else {
       // Fallback to reloading the page
-      window.location.reload();
+      window.location.reload(); 
     }
   }
   
