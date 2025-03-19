@@ -402,6 +402,7 @@ class RecipeScanner:
                     if 'hash' in lora and lora['hash']:
                         lora['inLibrary'] = self._lora_scanner.has_lora_hash(lora['hash'].lower())
                         lora['preview_url'] = self._lora_scanner.get_preview_url_by_hash(lora['hash'].lower())
+                        lora['localPath'] = self._lora_scanner.get_lora_path_by_hash(lora['hash'].lower())
         
         result = {
             'items': paginated_items,

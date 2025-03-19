@@ -293,24 +293,7 @@
     font-size: 0.85em;
 }
 
-.local-badge {
-    display: inline-flex;
-    align-items: center;
-    background: var(--lora-accent);
-    color: white;
-    padding: 3px 6px;
-    border-radius: var(--border-radius-xs);
-    font-size: 0.75em;
-    font-weight: 500;
-    white-space: nowrap;
-    flex-shrink: 0;
-    position: relative;
-}
 
-.local-badge i {
-    margin-right: 4px;
-    font-size: 0.9em;
-}
 
 .missing-badge {
     display: inline-flex;
@@ -328,26 +311,6 @@
 .missing-badge i {
     margin-right: 4px;
     font-size: 0.9em;
-}
-
-.local-path {
-    display: none;
-    position: absolute;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    padding: 4px 8px;
-    border-radius: var(--border-radius-xs);
-    font-size: 0.85em;
-    z-index: 10;
-    top: 100%;
-    left: 0;
-    margin-top: 4px;
-    white-space: normal;
-    max-width: 250px;
-}
-
-.local-badge:hover .local-path {
-    display: block;
 }
 
 /* Responsive adjustments */

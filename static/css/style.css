@@ -17,6 +17,7 @@
 @import 'components/support-modal.css';
 @import 'components/search-filter.css';
 @import 'components/bulk.css';
+@import 'components/shared.css';
 
 .initialization-notice {
     display: flex;
