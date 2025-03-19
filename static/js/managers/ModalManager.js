@@ -10,85 +10,114 @@ export class ModalManager {
         
         this.boundHandleEscape = this.handleEscape.bind(this);
         
-        // Register all modals
-        this.registerModal('loraModal', {
-            element: document.getElementById('loraModal'),
-            onClose: () => {
-                this.getModal('loraModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        // Register all modals - only if they exist in the current page
+        const loraModal = document.getElementById('loraModal');
+        if (loraModal) {
+            this.registerModal('loraModal', {
+                element: loraModal,
+                onClose: () => {
+                    this.getModal('loraModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
+        }
         
-        this.registerModal('deleteModal', {
-            element: document.getElementById('deleteModal'),
-            onClose: () => {
-                this.getModal('deleteModal').element.classList.remove('show');
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const deleteModal = document.getElementById('deleteModal');
+        if (deleteModal) {
+            this.registerModal('deleteModal', {
+                element: deleteModal,
+                onClose: () => {
+                    this.getModal('deleteModal').element.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
 
         // Add downloadModal registration
-        this.registerModal('downloadModal', {
-            element: document.getElementById('downloadModal'),
-            onClose: () => {
-                this.getModal('downloadModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const downloadModal = document.getElementById('downloadModal');
+        if (downloadModal) {
+            this.registerModal('downloadModal', {
+                element: downloadModal,
+                onClose: () => {
+                    this.getModal('downloadModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
 
         // Add settingsModal registration
-        this.registerModal('settingsModal', {
-            element: document.getElementById('settingsModal'),
-            onClose: () => {
-                this.getModal('settingsModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal) {
+            this.registerModal('settingsModal', {
+                element: settingsModal,
+                onClose: () => {
+                    this.getModal('settingsModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
 
         // Add moveModal registration
-        this.registerModal('moveModal', {
-            element: document.getElementById('moveModal'),
-            onClose: () => {
-                this.getModal('moveModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const moveModal = document.getElementById('moveModal');
+        if (moveModal) {
+            this.registerModal('moveModal', {
+                element: moveModal,
+                onClose: () => {
+                    this.getModal('moveModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
         
         // Add supportModal registration
-        this.registerModal('supportModal', {
-            element: document.getElementById('supportModal'),
-            onClose: () => {
-                this.getModal('supportModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const supportModal = document.getElementById('supportModal');
+        if (supportModal) {
+            this.registerModal('supportModal', {
+                element: supportModal,
+                onClose: () => {
+                    this.getModal('supportModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
 
         // Add updateModal registration
-        this.registerModal('updateModal', {
-            element: document.getElementById('updateModal'),
-            onClose: () => {
-                this.getModal('updateModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const updateModal = document.getElementById('updateModal');
+        if (updateModal) {
+            this.registerModal('updateModal', {
+                element: updateModal,
+                onClose: () => {
+                    this.getModal('updateModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
 
         // Add importModal registration
-        this.registerModal('importModal', {
-            element: document.getElementById('importModal'),
-            onClose: () => {
-                this.getModal('importModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');   
-            }
-        });
+        const importModal = document.getElementById('importModal');
+        if (importModal) {
+            this.registerModal('importModal', {
+                element: importModal,
+                onClose: () => {
+                    this.getModal('importModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');   
+                }
+            });
+        }
 
         // Add recipeModal registration
-        this.registerModal('recipeModal', {
-            element: document.getElementById('recipeModal'),
-            onClose: () => {
-                this.getModal('recipeModal').element.style.display = 'none';
-                document.body.classList.remove('modal-open');
-            }
-        });
+        const recipeModal = document.getElementById('recipeModal');
+        if (recipeModal) {
+            this.registerModal('recipeModal', {
+                element: recipeModal,
+                onClose: () => {
+                    this.getModal('recipeModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
+        }
 
         // Set up event listeners for modal toggles
         const supportToggle = document.getElementById('supportToggleBtn');
@@ -107,8 +136,8 @@ export class ModalManager {
             isOpen: false
         });
 
-        // Only add click outside handler if it's the lora modal
-        if (id == 'loraModal') {
+        // Add click outside handler if specified in config
+        if (config.closeOnOutsideClick) {
             config.element.addEventListener('click', (e) => {
                 if (e.target === config.element) {
                     this.closeModal(id);
