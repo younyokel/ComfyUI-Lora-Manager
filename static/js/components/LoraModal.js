@@ -430,9 +430,9 @@ function setupEditableFields() {
         const selected = this.value;
         if (selected) {
             presetValue.style.display = 'inline-block';
-            presetValue.min = selected.includes('strength') ? 0 : 1;
-            presetValue.max = selected.includes('strength') ? 1 : 12;
-            presetValue.step = selected.includes('strength') ? 0.5 : 1;
+            presetValue.min = selected.includes('strength') ? -10 : 0;
+            presetValue.max = selected.includes('strength') ? 10 : 10;
+            presetValue.step = 0.5;
             if (selected === 'clip_skip') {
                 presetValue.type = 'number';
                 presetValue.step = 1;
@@ -450,10 +450,10 @@ function setupEditableFields() {
         
         if (!key || !value) return;
 
-        const filePath = document.querySelector('.modal-content')
-            .querySelector('.file-path').textContent + 
-            document.querySelector('.modal-content')
-            .querySelector('#file-name').textContent + '.safetensors';
+                const filePath = document.querySelector('#loraModal .modal-content')
+                    .querySelector('.file-path').textContent + 
+                    document.querySelector('#loraModal .modal-content')
+                    .querySelector('#file-name').textContent + '.safetensors';
 
         const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
         const currentPresets = parsePresets(loraCard.dataset.usage_tips);
@@ -483,9 +483,9 @@ function setupEditableFields() {
                     return;
                 }
                 e.preventDefault();
-                const filePath = document.querySelector('.modal-content')
+                const filePath = document.querySelector('#loraModal .modal-content')
                     .querySelector('.file-path').textContent + 
-                    document.querySelector('.modal-content')
+                    document.querySelector('#loraModal .modal-content')
                     .querySelector('#file-name').textContent + '.safetensors';
                 await saveNotes(filePath);
             }
@@ -807,9 +807,9 @@ function formatPresetKey(key) {
 }
 
 window.removePreset = async function(key) {
-    const filePath = document.querySelector('.modal-content')
+    const filePath = document.querySelector('#loraModal .modal-content')
             .querySelector('.file-path').textContent + 
-            document.querySelector('.modal-content')
+            document.querySelector('#loraModal .modal-content')
             .querySelector('#file-name').textContent + '.safetensors';
     const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
     const currentPresets = parsePresets(loraCard.dataset.usage_tips);
@@ -1184,9 +1184,9 @@ function setupModelNameEditing() {
         
         if (this.textContent.trim() === '') {
             // Restore original model name if empty
-            const filePath = document.querySelector('.modal-content')
+            const filePath = document.querySelector('#loraModal .modal-content')
                 .querySelector('.file-path').textContent + 
-                document.querySelector('.modal-content')
+                document.querySelector('#loraModal .modal-content')
                 .querySelector('#file-name').textContent + '.safetensors';
             const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
             if (loraCard) {
@@ -1199,9 +1199,9 @@ function setupModelNameEditing() {
     modelNameContent.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const filePath = document.querySelector('.modal-content')
+            const filePath = document.querySelector('#loraModal .modal-content')
                 .querySelector('.file-path').textContent + 
-                document.querySelector('.modal-content')
+                document.querySelector('#loraModal .modal-content')
                 .querySelector('#file-name').textContent + '.safetensors';
             saveModelName(filePath);
             this.blur();
