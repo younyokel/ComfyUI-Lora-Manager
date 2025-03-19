@@ -1,11 +1,12 @@
 import { BASE_MODELS, BASE_MODEL_CLASSES } from '../utils/constants.js';
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { resetAndReload } from '../api/loraApi.js';
 
 export class FilterManager {
     constructor() {
-        this.filters = {
+        const pageState = getCurrentPageState();
+        this.filters = pageState.filters || {
             baseModel: [],
             tags: []
         };
@@ -219,7 +220,8 @@ export class FilterManager {
         localStorage.setItem('loraFilters', JSON.stringify(this.filters));
         
         // Update state with current filters
-        state.filters = { ...this.filters };
+        const pageState = getCurrentPageState();
+        pageState.filters = { ...this.filters };
         
         // Reload loras with filters applied
         await resetAndReload();
@@ -258,7 +260,8 @@ export class FilterManager {
         };
         
         // Update state
-        state.filters = { ...this.filters };
+        const pageState = getCurrentPageState();
+        pageState.filters = { ...this.filters };
         
         // Update UI
         this.updateTagSelections();

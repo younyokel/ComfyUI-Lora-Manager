@@ -1,23 +1,21 @@
-import { appCore, state } from './core.js';
+import { appCore } from './core.js';
+import { state, initPageState } from './state/index.js';
 import { showLoraModal, toggleShowcase, scrollToTop } from './components/LoraModal.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
 import { 
-    lazyLoadImages, 
     restoreFolderFilter, 
     toggleFolder,
     copyTriggerWord,
     openCivitai,
     toggleFolderTags,
     initFolderTagsVisibility,
-    updatePanelPositions
 } from './utils/uiHelpers.js';
-import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
-import { showDeleteModal, confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
+import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { LoraContextMenu } from './components/ContextMenu.js';
 import { moveManager } from './managers/MoveManager.js';
-import { createLoraCard, updateCardsForBulkMode } from './components/LoraCard.js';
+import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 
 // Initialize the LoRA page
@@ -99,6 +97,9 @@ function initializeEventListeners() {
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize page state
+    initPageState('loras');
+
     // Initialize core application
     await appCore.initialize();
     

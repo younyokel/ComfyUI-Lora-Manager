@@ -1,5 +1,5 @@
 // Core application functionality
-import { state, initSettings } from './state/index.js';
+import { state } from './state/index.js';
 import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
@@ -17,9 +17,6 @@ export class AppCore {
     // Initialize core functionality
     async initialize() {
         if (this.initialized) return;
-        
-        // Initialize settings
-        initSettings();
         
         // Initialize managers
         state.loadingManager = new LoadingManager();
@@ -80,4 +77,4 @@ export class AppCore {
 export const appCore = new AppCore();
 
 // Export common utilities for global use
-export { showToast, modalManager, state, lazyLoadImages, initializeInfiniteScroll }; 
+export { showToast, lazyLoadImages, initializeInfiniteScroll }; 

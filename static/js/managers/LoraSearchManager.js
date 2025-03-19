@@ -5,7 +5,7 @@
 import { SearchManager } from './SearchManager.js';
 import { appendLoraCards } from '../api/loraApi.js';
 import { resetAndReload } from '../api/loraApi.js';
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 
 export class LoraSearchManager extends SearchManager {
@@ -19,12 +19,14 @@ export class LoraSearchManager extends SearchManager {
     
     // Store this instance in the state
     if (state) {
-      state.searchManager = this;
+      const pageState = getCurrentPageState();
+      pageState.searchManager = this;
     }
   }
   
   async performSearch() {
     const searchTerm = this.searchInput.value.trim().toLowerCase();
+    const pageState = getCurrentPageState();
     
     // Log the search attempt for debugging
     console.log('LoraSearchManager performSearch called with:', searchTerm);
@@ -42,8 +44,8 @@ export class LoraSearchManager extends SearchManager {
     }
     
     if (!searchTerm) {
-      if (state) {
-        state.currentPage = 1;
+      if (pageState) {
+        pageState.currentPage = 1;
       }
       await resetAndReload();
       return;
@@ -58,15 +60,15 @@ export class LoraSearchManager extends SearchManager {
       // Store current scroll position
       const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
       
-      if (state) {
-        state.currentPage = 1;
-        state.hasMore = true;
+      if (pageState) {
+        pageState.currentPage = 1;
+        pageState.hasMore = true;
       }
 
       const url = new URL('/api/loras', window.location.origin);
       url.searchParams.set('page', '1');
       url.searchParams.set('page_size', '20');
-      url.searchParams.set('sort_by', state ? state.sortBy : 'name');
+      url.searchParams.set('sort_by', pageState ? pageState.sortBy : 'name');
       url.searchParams.set('search', searchTerm);
       url.searchParams.set('fuzzy', 'true');
       
@@ -80,8 +82,8 @@ export class LoraSearchManager extends SearchManager {
       url.searchParams.set('search_tags', searchOptions.tags ? 'true' : 'false');
 
       // Always send folder parameter if there is an active folder
-      if (state && state.activeFolder) {
-        url.searchParams.set('folder', state.activeFolder);
+      if (pageState && pageState.activeFolder) {
+        url.searchParams.set('folder', pageState.activeFolder);
         // Add recursive parameter when recursive search is enabled
         const recursive = this.recursiveSearchToggle ? this.recursiveSearchToggle.checked : false;
         url.searchParams.set('recursive', recursive.toString());
@@ -102,14 +104,14 @@ export class LoraSearchManager extends SearchManager {
         
         if (data.items.length === 0) {
           grid.innerHTML = '<div class="no-results">No matching loras found</div>';
-          if (state) {
-            state.hasMore = false;
+          if (pageState) {
+            pageState.hasMore = false;
           }
         } else {
           appendLoraCards(data.items);
-          if (state) {
-            state.hasMore = state.currentPage < data.total_pages;
-            state.currentPage++;
+          if (pageState) {
+            pageState.hasMore = pageState.currentPage < data.total_pages;
+            pageState.currentPage++;
           }
         }
         

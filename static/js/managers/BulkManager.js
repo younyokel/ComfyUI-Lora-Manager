@@ -91,16 +91,17 @@ export class BulkManager {
             // Set text content without the icon
             countElement.textContent = `${state.selectedLoras.size} selected `;
             
-            // Re-add the caret icon with proper direction
-            const caretIcon = document.createElement('i');
-            // Use down arrow if strip is visible, up arrow if not
-            caretIcon.className = `fas fa-caret-${this.isStripVisible ? 'down' : 'up'} dropdown-caret`;
-            caretIcon.style.visibility = state.selectedLoras.size > 0 ? 'visible' : 'hidden';
-            countElement.appendChild(caretIcon);
-            
-            // If there are no selections, hide the thumbnail strip
-            if (state.selectedLoras.size === 0) {
-                this.hideThumbnailStrip();
+            // Update caret icon if it exists
+            const existingCaret = countElement.querySelector('.dropdown-caret');
+            if (existingCaret) {
+                existingCaret.className = `fas fa-caret-${this.isStripVisible ? 'down' : 'up'} dropdown-caret`;
+                existingCaret.style.visibility = state.selectedLoras.size > 0 ? 'visible' : 'hidden';
+            } else {
+                // Create new caret icon if it doesn't exist
+                const caretIcon = document.createElement('i');
+                caretIcon.className = `fas fa-caret-${this.isStripVisible ? 'down' : 'up'} dropdown-caret`;
+                caretIcon.style.visibility = state.selectedLoras.size > 0 ? 'visible' : 'hidden';
+                countElement.appendChild(caretIcon);
             }
         }
     }
@@ -252,12 +253,20 @@ export class BulkManager {
     
     hideThumbnailStrip() {
         const strip = document.querySelector('.selected-thumbnails-strip');
-        if (strip) {
+        if (strip && this.isStripVisible) {  // Only hide if actually visible
             strip.classList.remove('visible');
             
-            // Update strip visibility state and caret direction
+            // Update strip visibility state
             this.isStripVisible = false;
-            this.updateSelectedCount(); // Update caret
+            
+            // Update caret without triggering another hide
+            const countElement = document.getElementById('selectedCount');
+            if (countElement) {
+                const caret = countElement.querySelector('.dropdown-caret');
+                if (caret) {
+                    caret.className = 'fas fa-caret-up dropdown-caret';
+                }
+            }
             
             // Wait for animation to complete before removing
             setTimeout(() => {
@@ -340,4 +349,4 @@ export class BulkManager {
 }
 
 // Create a singleton instance
-export const bulkManager = new BulkManager(); 
+export const bulkManager = new BulkManager();

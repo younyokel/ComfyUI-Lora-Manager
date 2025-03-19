@@ -1,4 +1,4 @@
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { createLoraCard } from '../components/LoraCard.js';
 import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
@@ -6,21 +6,23 @@ import { showDeleteModal } from '../utils/modalUtils.js';
 import { toggleFolder } from '../utils/uiHelpers.js';
 
 export async function loadMoreLoras(boolUpdateFolders = false) {
-    if (state.isLoading || !state.hasMore) return;
+    const pageState = getCurrentPageState();
     
-    state.isLoading = true;
+    if (pageState.isLoading || !pageState.hasMore) return;
+    
+    pageState.isLoading = true;
     try {
         const params = new URLSearchParams({
-            page: state.currentPage,
+            page: pageState.currentPage,
             page_size: 20,
-            sort_by: state.sortBy
+            sort_by: pageState.sortBy
         });
         
-        // 使用 state 中的 searchManager 获取递归搜索状态
-        const isRecursiveSearch = state.searchManager?.isRecursiveSearch ?? false;
+        // Use pageState instead of state
+        const isRecursiveSearch = pageState.searchManager?.isRecursiveSearch ?? false;
         
-        if (state.activeFolder !== null) {
-            params.append('folder', state.activeFolder);
+        if (pageState.activeFolder !== null) {
+            params.append('folder', pageState.activeFolder);
             params.append('recursive', isRecursiveSearch.toString());
         }
 
@@ -32,14 +34,14 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         }
         
         // Add filter parameters if active
-        if (state.filters) {
-            if (state.filters.tags && state.filters.tags.length > 0) {
+        if (pageState.filters) {
+            if (pageState.filters.tags && pageState.filters.tags.length > 0) {
                 // Convert the array of tags to a comma-separated string
-                params.append('tags', state.filters.tags.join(','));
+                params.append('tags', pageState.filters.tags.join(','));
             }
-            if (state.filters.baseModel && state.filters.baseModel.length > 0) {
+            if (pageState.filters.baseModel && pageState.filters.baseModel.length > 0) {
                 // Convert the array of base models to a comma-separated string
-                params.append('base_models', state.filters.baseModel.join(','));
+                params.append('base_models', pageState.filters.baseModel.join(','));
             }
         }
 
@@ -53,13 +55,13 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         const data = await response.json();
         console.log('Received data:', data);
         
-        if (data.items.length === 0 && state.currentPage === 1) {
+        if (data.items.length === 0 && pageState.currentPage === 1) {
             const grid = document.getElementById('loraGrid');
             grid.innerHTML = '<div class="no-results">No loras found in this folder</div>';
-            state.hasMore = false;
+            pageState.hasMore = false;
         } else if (data.items.length > 0) {
-            state.hasMore = state.currentPage < data.total_pages;
-            state.currentPage++;
+            pageState.hasMore = pageState.currentPage < data.total_pages;
+            pageState.currentPage++;
             appendLoraCards(data.items);
             
             const sentinel = document.getElementById('scroll-sentinel');
@@ -67,7 +69,7 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
                 state.observer.observe(sentinel);
             }
         } else {
-            state.hasMore = false;
+            pageState.hasMore = false;
         }
 
         if (boolUpdateFolders && data.folders) {
@@ -78,7 +80,7 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         console.error('Error loading loras:', error);
         showToast('Failed to load loras: ' + error.message, 'error');
     } finally {
-        state.isLoading = false;
+        pageState.isLoading = false;
     }
 }
 
@@ -87,7 +89,8 @@ function updateFolderTags(folders) {
     if (!folderTagsContainer) return;
 
     // Keep track of currently selected folder
-    const currentFolder = state.activeFolder;
+    const pageState = getCurrentPageState();
+    const currentFolder = pageState.activeFolder;
 
     // Create HTML for folder tags
     const tagsHTML = folders.map(folder => {
@@ -269,11 +272,12 @@ export function appendLoraCards(loras) {
 }
 
 export async function resetAndReload(boolUpdateFolders = false) {
-    console.log('Resetting with state:', { ...state });
+    const pageState = getCurrentPageState();
+    console.log('Resetting with state:', { ...pageState });
     
-    state.currentPage = 1;
-    state.hasMore = true;
-    state.isLoading = false;
+    pageState.currentPage = 1;
+    pageState.hasMore = true;
+    pageState.isLoading = false;
     
     const grid = document.getElementById('loraGrid');
     grid.innerHTML = '';

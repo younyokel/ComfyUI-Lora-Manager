@@ -1,4 +1,4 @@
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { loadMoreLoras } from '../api/loraApi.js';
 import { debounce } from './debounce.js';
 
@@ -6,6 +6,12 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     if (state.observer) {
         state.observer.disconnect();
     }
+
+    // Set the current page type
+    state.currentPageType = pageType;
+    
+    // Get the current page state
+    const pageState = getCurrentPageState();
 
     // Determine the load more function and grid ID based on page type
     let loadMoreFunction;
@@ -32,7 +38,7 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     state.observer = new IntersectionObserver(
         (entries) => {
             const target = entries[0];
-            if (target.isIntersecting && !state.isLoading && state.hasMore) {
+            if (target.isIntersecting && !pageState.isLoading && pageState.hasMore) {
                 debouncedLoadMore();
             }
         },

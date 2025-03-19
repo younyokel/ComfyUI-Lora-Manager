@@ -1,6 +1,6 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
-import { state, saveSettings } from '../state/index.js';
+import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
 
 export class SettingsManager {
@@ -41,13 +41,13 @@ export class SettingsManager {
         // Set frontend settings from state
         const blurMatureContentCheckbox = document.getElementById('blurMatureContent');
         if (blurMatureContentCheckbox) {
-            blurMatureContentCheckbox.checked = state.settings.blurMatureContent;
+            blurMatureContentCheckbox.checked = state.global.settings.blurMatureContent;
         }
         
         const showOnlySFWCheckbox = document.getElementById('showOnlySFW');
         if (showOnlySFWCheckbox) {
             // Sync with state (backend will set this via template)
-            state.settings.show_only_sfw = showOnlySFWCheckbox.checked;
+            state.global.settings.show_only_sfw = showOnlySFWCheckbox.checked;
         }
         
         // Backend settings are loaded from the template directly
@@ -71,9 +71,11 @@ export class SettingsManager {
         const showOnlySFW = document.getElementById('showOnlySFW').checked;
         
         // Update frontend state and save to localStorage
-        state.settings.blurMatureContent = blurMatureContent;
-        state.settings.show_only_sfw = showOnlySFW;
-        saveSettings();
+        state.global.settings.blurMatureContent = blurMatureContent;
+        state.global.settings.show_only_sfw = showOnlySFW;
+        
+        // Save settings to localStorage
+        localStorage.setItem('settings', JSON.stringify(state.global.settings));
         
         try {
             // Save backend settings via API
@@ -107,7 +109,7 @@ export class SettingsManager {
 
     applyFrontendSettings() {
         // Apply blur setting to existing content
-        const blurSetting = state.settings.blurMatureContent;
+        const blurSetting = state.global.settings.blurMatureContent;
         document.querySelectorAll('.lora-card[data-nsfw="true"] .card-image').forEach(img => {
             if (blurSetting) {
                 img.classList.add('nsfw-blur');
