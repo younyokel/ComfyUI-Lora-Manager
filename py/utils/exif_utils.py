@@ -135,7 +135,7 @@ class ExifUtils:
             recipe_metadata_marker = f"Recipe metadata: {recipe_metadata_json}"
             
             # Append to existing user comment or create new one
-            new_user_comment = user_comment + "\n" + recipe_metadata_marker if user_comment else recipe_metadata_marker
+            new_user_comment = f"{user_comment}, {recipe_metadata_marker}" if user_comment else recipe_metadata_marker
             
             # Write back to the image
             return ExifUtils.update_user_comment(image_path, new_user_comment)
@@ -153,6 +153,10 @@ class ExifUtils:
         recipe_marker_index = user_comment.find("Recipe metadata: ")
         if recipe_marker_index == -1:
             return user_comment
+        
+        # If recipe metadata is not at the start, remove the preceding ", "
+        if recipe_marker_index >= 2 and user_comment[recipe_marker_index-2:recipe_marker_index] == ", ":
+            recipe_marker_index -= 2
         
         # Remove the recipe metadata part
         # First, find where the metadata ends (next line or end of string)

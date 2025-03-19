@@ -17,13 +17,11 @@ from ..config import config
 import time  # Add this import at the top
 
 logger = logging.getLogger(__name__)
-print("Recipe Routes module loaded", file=sys.stderr)
 
 class RecipeRoutes:
     """API route handlers for Recipe management"""
 
     def __init__(self):
-        print("Initializing RecipeRoutes", file=sys.stderr)
         self.recipe_scanner = RecipeScanner(LoraScanner())
         self.civitai_client = CivitaiClient()
         
@@ -33,7 +31,6 @@ class RecipeRoutes:
     @classmethod
     def setup_routes(cls, app: web.Application):
         """Register API routes"""
-        print("Setting up recipe routes", file=sys.stderr)
         routes = cls()
         app.router.add_get('/api/recipes', routes.get_recipes)
         app.router.add_get('/api/recipe/{recipe_id}', routes.get_recipe_detail)
@@ -51,38 +48,28 @@ class RecipeRoutes:
         
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
-        
-        print("Recipe routes setup complete", file=sys.stderr)
     
     async def _init_cache(self, app):
         """Initialize cache on startup"""
-        print("Pre-warming recipe cache...", file=sys.stderr)
         try:
             # First, ensure the lora scanner is fully initialized
-            print("Initializing lora scanner...", file=sys.stderr)
             lora_scanner = self.recipe_scanner._lora_scanner
             
             # Get lora cache to ensure it's initialized
             lora_cache = await lora_scanner.get_cached_data()
-            print(f"Lora scanner initialized with {len(lora_cache.raw_data)} loras", file=sys.stderr)
             
             # Verify hash index is built
             if hasattr(lora_scanner, '_hash_index'):
                 hash_index_size = len(lora_scanner._hash_index._hash_to_path) if hasattr(lora_scanner._hash_index, '_hash_to_path') else 0
-                print(f"Lora hash index contains {hash_index_size} entries", file=sys.stderr)
             
             # Now that lora scanner is initialized, initialize recipe cache
-            print("Initializing recipe cache...", file=sys.stderr)
             await self.recipe_scanner.get_cached_data(force_refresh=True)
-            print("Recipe cache pre-warming complete", file=sys.stderr)
         except Exception as e:
-            print(f"Error pre-warming recipe cache: {e}", file=sys.stderr)
             logger.error(f"Error pre-warming recipe cache: {e}", exc_info=True)
     
     async def get_recipes(self, request: web.Request) -> web.Response:
         """API endpoint for getting paginated recipes"""
         try:
-            print("API: GET /api/recipes", file=sys.stderr)
             # Get query parameters with defaults
             page = int(request.query.get('page', '1'))
             page_size = int(request.query.get('page_size', '20'))
@@ -128,7 +115,6 @@ class RecipeRoutes:
             return web.json_response(result)
         except Exception as e:
             logger.error(f"Error retrieving recipes: {e}", exc_info=True)
-            print(f"API Error: {e}", file=sys.stderr)
             return web.json_response({"error": str(e)}, status=500)
 
     async def get_recipe_detail(self, request: web.Request) -> web.Response:
@@ -412,7 +398,7 @@ class RecipeRoutes:
             # Optimize the image (resize and convert to WebP)
             optimized_image, extension = ExifUtils.optimize_image(
                 image_data=image,
-                target_width=250,
+                target_width=480,
                 format='webp',
                 quality=85,
                 preserve_metadata=True
