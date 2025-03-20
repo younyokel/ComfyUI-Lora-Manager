@@ -3,13 +3,15 @@ import { appCore } from './core.js';
 import { ImportManager } from './managers/ImportManager.js';
 import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
+import { state, getCurrentPageState, setCurrentPageType, initPageState } from './state/index.js';
 
 class RecipeManager {
     constructor() {
-        this.currentPage = 1;
-        this.pageSize = 20;
-        this.sortBy = 'date';
-        this.filterParams = {};
+        // Initialize recipe page state
+        initPageState('recipes');
+        
+        // Get page state
+        this.pageState = getCurrentPageState();
         
         // Initialize ImportManager
         this.importManager = new ImportManager();
@@ -18,13 +20,16 @@ class RecipeManager {
         this.recipeModal = new RecipeModal();
         
         // Add state tracking for infinite scroll
-        this.isLoading = false;
-        this.hasMore = true;
+        this.pageState.isLoading = false;
+        this.pageState.hasMore = true;
     }
     
     async initialize() {
         // Initialize event listeners
         this.initEventListeners();
+        
+        // Set default search options if not already defined
+        this._initSearchOptions();
         
         // Load initial set of recipes
         await this.loadRecipes();
@@ -34,6 +39,18 @@ class RecipeManager {
         
         // Initialize common page features (lazy loading, infinite scroll)
         appCore.initializePageFeatures();
+    }
+    
+    _initSearchOptions() {
+        // Ensure recipes search options are properly initialized
+        if (!this.pageState.searchOptions) {
+            this.pageState.searchOptions = {
+                title: true,       // Recipe title
+                tags: true,        // Recipe tags
+                loraName: true,    // LoRA file name
+                loraModel: true    // LoRA model name
+            };
+        }
     }
     
     _exposeGlobalFunctions() {
@@ -49,7 +66,7 @@ class RecipeManager {
         const sortSelect = document.getElementById('sortSelect');
         if (sortSelect) {
             sortSelect.addEventListener('change', () => {
-                this.sortBy = sortSelect.value;
+                this.pageState.sortBy = sortSelect.value;
                 this.loadRecipes();
             });
         }
@@ -61,7 +78,7 @@ class RecipeManager {
             searchInput.addEventListener('input', () => {
                 clearTimeout(debounceTimeout);
                 debounceTimeout = setTimeout(() => {
-                    this.filterParams.search = searchInput.value;
+                    this.pageState.filters.search = searchInput.value;
                     this.loadRecipes();
                 }, 300);
             });
@@ -81,11 +98,11 @@ class RecipeManager {
         try {
             // Show loading indicator
             document.body.classList.add('loading');
-            this.isLoading = true;
+            this.pageState.isLoading = true;
             
             // Reset to first page if requested
             if (resetPage) {
-                this.currentPage = 1;
+                this.pageState.currentPage = 1;
                 // Clear grid if resetting
                 const grid = document.getElementById('recipeGrid');
                 if (grid) grid.innerHTML = '';
@@ -93,19 +110,24 @@ class RecipeManager {
             
             // Build query parameters
             const params = new URLSearchParams({
-                page: this.currentPage,
-                page_size: this.pageSize,
-                sort_by: this.sortBy
+                page: this.pageState.currentPage,
+                page_size: this.pageState.pageSize || 20,
+                sort_by: this.pageState.sortBy
             });
             
             // Add search filter if present
-            if (this.filterParams.search) {
-                params.append('search', this.filterParams.search);
+            if (this.pageState.filters.search) {
+                params.append('search', this.pageState.filters.search);
             }
             
-            // Add other filters
-            if (this.filterParams.baseModels && this.filterParams.baseModels.length) {
-                params.append('base_models', this.filterParams.baseModels.join(','));
+            // Add base model filters
+            if (this.pageState.filters.baseModel && this.pageState.filters.baseModel.length) {
+                params.append('base_models', this.pageState.filters.baseModel.join(','));
+            }
+            
+            // Add tag filters
+            if (this.pageState.filters.tags && this.pageState.filters.tags.length) {
+                params.append('tags', this.pageState.filters.tags.join(','));
             }
             
             // Fetch recipes
@@ -121,7 +143,7 @@ class RecipeManager {
             this.updateRecipesGrid(data, resetPage);
             
             // Update pagination state
-            this.hasMore = data.has_more || false;
+            this.pageState.hasMore = data.has_more || false;
             
         } catch (error) {
             console.error('Error loading recipes:', error);
@@ -129,15 +151,15 @@ class RecipeManager {
         } finally {
             // Hide loading indicator
             document.body.classList.remove('loading');
-            this.isLoading = false;
+            this.pageState.isLoading = false;
         }
     }
     
     // Load more recipes for infinite scroll
     async loadMoreRecipes() {
-        if (this.isLoading || !this.hasMore) return;
+        if (this.pageState.isLoading || !this.pageState.hasMore) return;
         
-        this.currentPage++;
+        this.pageState.currentPage++;
         await this.loadRecipes(false);
     }
     
@@ -170,7 +192,7 @@ class RecipeManager {
         });
         
         // Add sentinel for infinite scroll if needed
-        if (this.hasMore) {
+        if (this.pageState.hasMore) {
             let sentinel = document.getElementById('scroll-sentinel');
             if (!sentinel) {
                 sentinel = document.createElement('div');
@@ -179,8 +201,8 @@ class RecipeManager {
                 grid.appendChild(sentinel);
                 
                 // Re-observe the sentinel if we have an observer
-                if (window.state && window.state.observer) {
-                    window.state.observer.observe(sentinel);
+                if (state && state.observer) {
+                    state.observer.observe(sentinel);
                 }
             }
         }

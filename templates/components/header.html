@@ -66,18 +66,23 @@
   <div class="options-section">
     <h4>Search In:</h4>
     <div class="search-option-tags">
-      <div class="search-option-tag active" data-option="filename">Filename</div>
-      {% if request.path == '/loras' or request.path == '/loras/recipes' %}
-      <div class="search-option-tag active" data-option="tags">Tags</div>
-      {% endif %}
-      <div class="search-option-tag active" data-option="modelname">
-        {% if request.path == '/loras/recipes' %}Recipe Name{% elif request.path == '/checkpoints' %}Checkpoint Name{% else %}Model Name{% endif %}
-      </div>
       {% if request.path == '/loras/recipes' %}
-      <div class="search-option-tag active" data-option="loras">Included LoRAs</div>
+      <div class="search-option-tag active" data-option="title">Recipe Title</div>
+      <div class="search-option-tag active" data-option="tags">Tags</div>
+      <div class="search-option-tag active" data-option="loraName">LoRA Filename</div>
+      <div class="search-option-tag active" data-option="loraModel">LoRA Model Name</div>
+      {% elif request.path == '/checkpoints' %}
+      <div class="search-option-tag active" data-option="filename">Filename</div>
+      <div class="search-option-tag active" data-option="modelname">Checkpoint Name</div>
+      {% else %}
+      <!-- Default options for LoRAs page -->
+      <div class="search-option-tag active" data-option="filename">Filename</div>
+      <div class="search-option-tag active" data-option="modelname">Model Name</div>
+      <div class="search-option-tag active" data-option="tags">Tags</div>
       {% endif %}
     </div>
   </div>
+  {% if request.path != '/loras/recipes' %}
   <div class="options-section">
     <div class="search-option-switch">
       <span>Include Subfolders</span>
@@ -87,6 +92,7 @@
       </label>
     </div>
   </div>
+  {% endif %}
 </div>
 
 <!-- Add filter panel -->

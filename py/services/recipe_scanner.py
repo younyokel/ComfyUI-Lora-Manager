@@ -348,7 +348,7 @@ class RecipeScanner:
             logger.error(f"Error getting base model for lora: {e}")
             return None
 
-    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None):
+    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None, search_options: dict = None):
         """Get paginated and filtered recipe data
         
         Args:
@@ -357,6 +357,7 @@ class RecipeScanner:
             sort_by: Sort method ('name' or 'date')
             search: Search term
             filters: Dictionary of filters to apply
+            search_options: Dictionary of search options to apply
         """
         cache = await self.get_cached_data()
 
@@ -365,11 +366,44 @@ class RecipeScanner:
         
         # Apply search filter
         if search:
-            filtered_data = [
-                item for item in filtered_data 
-                if search.lower() in str(item.get('title', '')).lower() or
-                   search.lower() in str(item.get('prompt', '')).lower()
-            ]
+            # Default search options if none provided
+            if not search_options:
+                search_options = {
+                    'title': True,
+                    'tags': True,
+                    'lora_name': True,
+                    'lora_model': True
+                }
+            
+            # Build the search predicate based on search options
+            def matches_search(item):
+                # Search in title if enabled
+                if search_options.get('title', True) and search.lower() in str(item.get('title', '')).lower():
+                    return True
+                
+                # Search in tags if enabled
+                if search_options.get('tags', True) and 'tags' in item:
+                    for tag in item['tags']:
+                        if search.lower() in tag.lower():
+                            return True
+                
+                # Search in lora file names if enabled
+                if search_options.get('lora_name', True) and 'loras' in item:
+                    for lora in item['loras']:
+                        if search.lower() in str(lora.get('file_name', '')).lower():
+                            return True
+                
+                # Search in lora model names if enabled
+                if search_options.get('lora_model', True) and 'loras' in item:
+                    for lora in item['loras']:
+                        if search.lower() in str(lora.get('modelName', '')).lower():
+                            return True
+                
+                # No match found
+                return False
+            
+            # Filter the data using the search predicate
+            filtered_data = [item for item in filtered_data if matches_search(item)]
         
         # Apply additional filters
         if filters:

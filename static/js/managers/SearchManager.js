@@ -194,7 +194,7 @@ export class SearchManager {
           });
         }
         
-        // Apply recursive search
+        // Apply recursive search - only if the toggle exists
         if (this.recursiveSearchToggle && preferences.recursive !== undefined) {
           this.recursiveSearchToggle.checked = preferences.recursive;
         }
@@ -245,9 +245,13 @@ export class SearchManager {
         });
         
         const preferences = {
-          options,
-          recursive: this.recursiveSearchToggle ? this.recursiveSearchToggle.checked : false
+          options
         };
+        
+        // Only add recursive option if the toggle exists
+        if (this.recursiveSearchToggle) {
+          preferences.recursive = this.recursiveSearchToggle.checked;
+        }
         
         localStorage.setItem(`${this.currentPage}_search_prefs`, JSON.stringify(preferences));
       } catch (error) {

@@ -76,6 +76,12 @@ class RecipeRoutes:
             sort_by = request.query.get('sort_by', 'date')
             search = request.query.get('search', None)
             
+            # Get search options (renamed for better clarity)
+            search_title = request.query.get('search_title', 'true').lower() == 'true'
+            search_tags = request.query.get('search_tags', 'true').lower() == 'true'  
+            search_lora_name = request.query.get('search_lora_name', 'true').lower() == 'true'
+            search_lora_model = request.query.get('search_lora_model', 'true').lower() == 'true'
+            
             # Get filter parameters
             base_models = request.query.get('base_models', None)
             tags = request.query.get('tags', None)
@@ -87,13 +93,22 @@ class RecipeRoutes:
             if tags:
                 filters['tags'] = tags.split(',')
             
+            # Add search options to filters
+            search_options = {
+                'title': search_title,
+                'tags': search_tags,
+                'lora_name': search_lora_name,
+                'lora_model': search_lora_model
+            }
+            
             # Get paginated data
             result = await self.recipe_scanner.get_paginated_data(
                 page=page,
                 page_size=page_size,
                 sort_by=sort_by,
                 search=search,
-                filters=filters
+                filters=filters,
+                search_options=search_options
             )
             
             # Format the response data with static URLs for file paths

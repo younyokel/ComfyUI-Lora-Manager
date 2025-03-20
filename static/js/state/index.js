@@ -42,16 +42,17 @@ export const state = {
             sortBy: 'date',
             searchManager: null,
             searchOptions: {
-                filename: true,
-                modelname: true,
+                title: true,
                 tags: true,
-                loras: true,
-                recursive: false
+                loraName: true,
+                loraModel: true
             },
             filters: {
                 baseModel: [],
-                tags: []
-            }
+                tags: [],
+                search: ''
+            },
+            pageSize: 20
         },
         
         checkpoints: {

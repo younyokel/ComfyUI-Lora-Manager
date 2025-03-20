@@ -3,7 +3,7 @@
  * Extends the base SearchManager with recipe-specific functionality
  */
 import { SearchManager } from './SearchManager.js';
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 
 export class RecipeSearchManager extends SearchManager {
@@ -17,7 +17,7 @@ export class RecipeSearchManager extends SearchManager {
     
     // Store this instance in the state
     if (state) {
-      state.searchManager = this;
+      state.pages.recipes.searchManager = this;
     }
   }
   
@@ -34,7 +34,7 @@ export class RecipeSearchManager extends SearchManager {
     
     if (!searchTerm) {
       if (state) {
-        state.currentPage = 1;
+        state.pages.recipes.currentPage = 1;
       }
       this.resetAndReloadRecipes();
       return;
@@ -50,22 +50,24 @@ export class RecipeSearchManager extends SearchManager {
       const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
       
       if (state) {
-        state.currentPage = 1;
-        state.hasMore = true;
+        state.pages.recipes.currentPage = 1;
+        state.pages.recipes.hasMore = true;
       }
 
       const url = new URL('/api/recipes', window.location.origin);
       url.searchParams.set('page', '1');
       url.searchParams.set('page_size', '20');
-      url.searchParams.set('sort_by', state ? state.sortBy : 'name');
+      url.searchParams.set('sort_by', state ? state.pages.recipes.sortBy : 'name');
       url.searchParams.set('search', searchTerm);
       url.searchParams.set('fuzzy', 'true');
       
       // Add search options
-      const searchOptions = this.getActiveSearchOptions();
-      url.searchParams.set('search_name', searchOptions.modelname.toString());
+      const recipeState = getCurrentPageState();
+      const searchOptions = recipeState.searchOptions;
+      url.searchParams.set('search_title', searchOptions.title.toString());
       url.searchParams.set('search_tags', searchOptions.tags.toString());
-      url.searchParams.set('search_loras', searchOptions.loras.toString());
+      url.searchParams.set('search_lora_name', searchOptions.loraName.toString());
+      url.searchParams.set('search_lora_model', searchOptions.loraModel.toString());
 
       const response = await fetch(url);
       
@@ -81,13 +83,13 @@ export class RecipeSearchManager extends SearchManager {
         if (data.items.length === 0) {
           grid.innerHTML = '<div class="no-results">No matching recipes found</div>';
           if (state) {
-            state.hasMore = false;
+            state.pages.recipes.hasMore = false;
           }
         } else {
           this.appendRecipeCards(data.items);
           if (state) {
-            state.hasMore = state.currentPage < data.total_pages;
-            state.currentPage++;
+            state.pages.recipes.hasMore = state.pages.recipes.currentPage < data.total_pages;
+            state.pages.recipes.currentPage++;
           }
         }
         
