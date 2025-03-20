@@ -1,3 +1,4 @@
+import { updatePanelPositions } from "../utils/uiHelpers.js";
 /**
  * SearchManager - Handles search functionality across different pages
  * Each page can extend or customize this base functionality
@@ -27,11 +28,10 @@ export class SearchManager {
       this.initEventListeners();
       this.loadSearchPreferences();
       
-      // Initialize panel positions
-      this.updatePanelPositions();
+      updatePanelPositions();
       
       // Add resize listener
-      window.addEventListener('resize', this.updatePanelPositions.bind(this));
+      window.addEventListener('resize', updatePanelPositions);
     }
     
     initEventListeners() {
@@ -161,7 +161,7 @@ export class SearchManager {
         const isHidden = this.searchOptionsPanel.classList.contains('hidden');
         if (isHidden) {
           // Update position before showing
-          this.updatePanelPositions();
+          updatePanelPositions();
           this.searchOptionsPanel.classList.remove('hidden');
           this.searchOptionsToggle.classList.add('active');
           
@@ -265,56 +265,6 @@ export class SearchManager {
         options[tag.dataset.option] = tag.classList.contains('active');
       });
       return options;
-    }
-    
-    updatePanelPositions() {
-      const searchOptionsPanel = document.getElementById('searchOptionsPanel');
-      const filterPanel = document.getElementById('filterPanel');
-      
-      if (!searchOptionsPanel && !filterPanel) return;
-      
-      // Get the header element
-      const header = document.querySelector('.app-header');
-      if (!header) return;
-      
-      // Calculate the position based on the bottom of the header
-      const headerRect = header.getBoundingClientRect();
-      const topPosition = headerRect.bottom + 5; // Add 5px padding
-      
-      // Set the positions
-      if (searchOptionsPanel) {
-        searchOptionsPanel.style.top = `${topPosition}px`;
-        
-        // Make sure the panel is visible when positioned
-        if (!searchOptionsPanel.classList.contains('hidden') && 
-            window.getComputedStyle(searchOptionsPanel).display === 'none') {
-          searchOptionsPanel.style.display = 'block';
-        }
-      }
-      
-      if (filterPanel) {
-        filterPanel.style.top = `${topPosition}px`;
-      }
-      
-      // Adjust panel horizontal position based on the search container
-      const searchContainer = document.querySelector('.header-search');
-      if (searchContainer) {
-        const searchRect = searchContainer.getBoundingClientRect();
-        
-        // Position the search options panel aligned with the search container
-        if (searchOptionsPanel) {
-          searchOptionsPanel.style.right = `${window.innerWidth - searchRect.right}px`;
-        }
-        
-        // Position the filter panel aligned with the filter button
-        if (filterPanel) {
-          const filterButton = document.getElementById('filterButton');
-          if (filterButton) {
-            const filterRect = filterButton.getBoundingClientRect();
-            filterPanel.style.right = `${window.innerWidth - filterRect.right}px`;
-          }
-        }
-      }
     }
     
     performSearch() {

@@ -106,20 +106,45 @@ export function updatePanelPositions() {
     const searchOptionsPanel = document.getElementById('searchOptionsPanel');
     const filterPanel = document.getElementById('filterPanel');
     
-    if (!searchOptionsPanel || !filterPanel) return;
+    if (!searchOptionsPanel && !filterPanel) return;
     
-    // Get the controls container
-    const controls = document.querySelector('.controls');
-    if (!controls) return;
+    // Get the header element
+    const header = document.querySelector('.app-header');
+    if (!header) return;
     
-    // Calculate the position based on the bottom of the controls container
-    const controlsRect = controls.getBoundingClientRect();
-    const topPosition = controlsRect.bottom + 10; // Add 10px padding
+    // Calculate the position based on the bottom of the header
+    const headerRect = header.getBoundingClientRect();
+    const topPosition = headerRect.bottom + 5; // Add 5px padding
     
     // Set the positions
-    searchOptionsPanel.style.top = `${topPosition}px`;
-    filterPanel.style.top = `${topPosition}px`;
-}
+    if (searchOptionsPanel) {
+      searchOptionsPanel.style.top = `${topPosition}px`;
+    }
+    
+    if (filterPanel) {
+      filterPanel.style.top = `${topPosition}px`;
+    }
+    
+    // Adjust panel horizontal position based on the search container
+    const searchContainer = document.querySelector('.header-search');
+    if (searchContainer) {
+      const searchRect = searchContainer.getBoundingClientRect();
+      
+      // Position the search options panel aligned with the search container
+      if (searchOptionsPanel) {
+        searchOptionsPanel.style.right = `${window.innerWidth - searchRect.right}px`;
+      }
+      
+      // Position the filter panel aligned with the filter button
+      if (filterPanel) {
+        const filterButton = document.getElementById('filterButton');
+        if (filterButton) {
+          const filterRect = filterButton.getBoundingClientRect();
+          filterPanel.style.right = `${window.innerWidth - filterRect.right}px`;
+        }
+      }
+    }
+  }
 
 // Update the toggleFolderTags function
 export function toggleFolderTags() {
@@ -144,11 +169,7 @@ export function toggleFolderTags() {
         // Update panel positions after toggling
         // Use a small delay to ensure the DOM has updated
         setTimeout(() => {
-            if (window.searchManager && typeof window.searchManager.updatePanelPositions === 'function') {
-                window.searchManager.updatePanelPositions();
-            } else if (typeof updatePanelPositions === 'function') {
-                updatePanelPositions();
-            }
+            updatePanelPositions();
         }, 50);
     }
 }

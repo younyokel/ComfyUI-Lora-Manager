@@ -33,10 +33,7 @@ export class RecipeSearchManager extends SearchManager {
     const grid = document.getElementById('recipeGrid');
     
     if (!searchTerm) {
-      if (state) {
-        state.pages.recipes.currentPage = 1;
-      }
-      this.resetAndReloadRecipes();
+      window.recipeManager.loadRecipes();
       return;
     }
 
@@ -112,34 +109,12 @@ export class RecipeSearchManager extends SearchManager {
     }
   }
   
-  resetAndReloadRecipes() {
-    if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
-      window.recipeManager.loadRecipes();
-    } else {
-      // Fallback to reloading the page
-      window.location.reload(); 
-    }
-  }
-  
   appendRecipeCards(recipes) {
-    // This function would be implemented in the recipes page
-    // Similar to appendLoraCards for loras
     const grid = document.getElementById('recipeGrid');
     if (!grid) return;
     
-    if (typeof window.appendRecipeCards === 'function') {
-      window.appendRecipeCards(recipes);
-    } else {
-      // Fallback implementation
-      recipes.forEach(recipe => {
-        const card = document.createElement('div');
-        card.className = 'recipe-card';
-        card.innerHTML = `
-          <h3>${recipe.name}</h3>
-          <p>${recipe.description || 'No description'}</p>
-        `;
-        grid.appendChild(card);
-      });
-    }
+    // Create data object in the format expected by the RecipeManager
+    const data = { items: recipes, has_more: false };
+    window.recipeManager.updateRecipesGrid(data, false);
   }
 } 

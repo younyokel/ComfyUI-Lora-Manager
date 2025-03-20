@@ -5,7 +5,7 @@ import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
 import { HeaderManager } from './components/Header.js';
 import { SettingsManager } from './managers/SettingsManager.js';
-import { showToast, initTheme, initBackToTop, updatePanelPositions, lazyLoadImages } from './utils/uiHelpers.js';
+import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 
 // Core application class
@@ -29,12 +29,6 @@ export class AppCore {
         window.headerManager = new HeaderManager();
         initTheme();
         initBackToTop();
-        
-        // Set up event listeners
-        window.addEventListener('resize', updatePanelPositions);
-        
-        // Initial positioning
-        updatePanelPositions();
         
         // Mark as initialized
         this.initialized = true;
@@ -65,9 +59,6 @@ export class AppCore {
         if (['loras', 'recipes', 'checkpoints'].includes(pageType)) {
             initializeInfiniteScroll(pageType);
         }
-        
-        // Update panel positions
-        updatePanelPositions();
         
         return this;
     }

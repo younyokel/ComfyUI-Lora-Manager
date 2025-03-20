@@ -59,6 +59,12 @@ class RecipeManager {
         window.importRecipes = () => this.importRecipes();
         window.importManager = this.importManager;
         window.loadMoreRecipes = () => this.loadMoreRecipes();
+        
+        // Add appendRecipeCards function for the search manager to use
+        window.appendRecipeCards = (recipes) => {
+            const data = { items: recipes, has_more: false };
+            this.updateRecipesGrid(data, false);
+        };
     }
     
     initEventListeners() {
@@ -69,28 +75,6 @@ class RecipeManager {
                 this.pageState.sortBy = sortSelect.value;
                 this.loadRecipes();
             });
-        }
-        
-        // Search input
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            let debounceTimeout;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(debounceTimeout);
-                debounceTimeout = setTimeout(() => {
-                    this.pageState.filters.search = searchInput.value;
-                    this.loadRecipes();
-                }, 300);
-            });
-        }
-        
-        // Import button
-        const importButton = document.querySelector('button[onclick="importRecipes()"]');
-        if (importButton) {
-            importButton.onclick = (e) => {
-                e.preventDefault();
-                this.importManager.showImportModal();
-            };
         }
     }
     

@@ -1,4 +1,4 @@
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
 
 export class RecipeFilterManager {
     constructor() {
@@ -165,11 +165,7 @@ export class RecipeFilterManager {
             
             if (isHidden) {
                 // Update panel positions before showing
-                if (window.searchManager && typeof window.searchManager.updatePanelPositions === 'function') {
-                    window.searchManager.updatePanelPositions();
-                } else if (typeof updatePanelPositions === 'function') {
-                    updatePanelPositions();
-                }
+                updatePanelPositions();
                 
                 this.filterPanel.classList.remove('hidden');
                 this.filterButton.classList.add('active');

@@ -1,6 +1,6 @@
 import { BASE_MODELS, BASE_MODEL_CLASSES } from '../utils/constants.js';
 import { state, getCurrentPageState } from '../state/index.js';
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
 import { resetAndReload } from '../api/loraApi.js';
 
 export class FilterManager {
@@ -155,11 +155,7 @@ export class FilterManager {
             
             if (isHidden) {
                 // Update panel positions before showing
-                if (window.searchManager && typeof window.searchManager.updatePanelPositions === 'function') {
-                    window.searchManager.updatePanelPositions();
-                } else if (typeof updatePanelPositions === 'function') {
-                    updatePanelPositions();
-                }
+                updatePanelPositions();
                 
                 this.filterPanel.classList.remove('hidden');
                 this.filterButton.classList.add('active');
