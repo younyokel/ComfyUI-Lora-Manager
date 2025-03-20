@@ -19,16 +19,26 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     
     switch (pageType) {
         case 'recipes':
-            loadMoreFunction = window.recipeManager?.loadMoreRecipes || (() => console.warn('loadMoreRecipes not found'));
+            loadMoreFunction = () => {
+                if (!pageState.isLoading && pageState.hasMore) {
+                    pageState.currentPage++;
+                    window.recipeManager.loadRecipes(false); // false to not reset pagination
+                }
+            };
             gridId = 'recipeGrid';
             break;
         case 'checkpoints':
-            loadMoreFunction = window.checkpointManager?.loadMoreCheckpoints || (() => console.warn('loadMoreCheckpoints not found'));
+            loadMoreFunction = () => {
+                if (!pageState.isLoading && pageState.hasMore) {
+                    pageState.currentPage++;
+                    window.checkpointManager.loadCheckpoints(false); // false to not reset pagination
+                }
+            };
             gridId = 'checkpointGrid';
             break;
         case 'loras':
         default:
-            loadMoreFunction = loadMoreLoras;
+            loadMoreFunction = () => loadMoreLoras(false); // false to not reset
             gridId = 'loraGrid';
             break;
     }

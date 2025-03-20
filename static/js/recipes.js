@@ -58,10 +58,17 @@ class RecipeManager {
         window.recipeManager = this;
         window.importRecipes = () => this.importRecipes();
         window.importManager = this.importManager;
-        window.loadMoreRecipes = () => this.loadMoreRecipes();
         
-        // Add appendRecipeCards function for the search manager to use
+        // Deprecated - kept for backwards compatibility
+        window.loadMoreRecipes = () => {
+            console.warn('loadMoreRecipes is deprecated, use infiniteScroll instead');
+            this.pageState.currentPage++;
+            this.loadRecipes(false);
+        };
+        
+        // Add appendRecipeCards function for compatibility
         window.appendRecipeCards = (recipes) => {
+            console.warn('appendRecipeCards is deprecated, use recipeManager.updateRecipesGrid instead');
             const data = { items: recipes, has_more: false };
             this.updateRecipesGrid(data, false);
         };
@@ -102,6 +109,15 @@ class RecipeManager {
             // Add search filter if present
             if (this.pageState.filters.search) {
                 params.append('search', this.pageState.filters.search);
+                
+                // Add search option parameters
+                if (this.pageState.searchOptions) {
+                    params.append('search_title', this.pageState.searchOptions.title.toString());
+                    params.append('search_tags', this.pageState.searchOptions.tags.toString());
+                    params.append('search_lora_name', this.pageState.searchOptions.loraName.toString());
+                    params.append('search_lora_model', this.pageState.searchOptions.loraModel.toString());
+                    params.append('fuzzy', 'true');
+                }
             }
             
             // Add base model filters
@@ -113,6 +129,8 @@ class RecipeManager {
             if (this.pageState.filters.tags && this.pageState.filters.tags.length) {
                 params.append('tags', this.pageState.filters.tags.join(','));
             }
+
+            console.log('Loading recipes with params:', params.toString());
             
             // Fetch recipes
             const response = await fetch(`/api/recipes?${params.toString()}`);
@@ -137,14 +155,6 @@ class RecipeManager {
             document.body.classList.remove('loading');
             this.pageState.isLoading = false;
         }
-    }
-    
-    // Load more recipes for infinite scroll
-    async loadMoreRecipes() {
-        if (this.pageState.isLoading || !this.pageState.hasMore) return;
-        
-        this.pageState.currentPage++;
-        await this.loadRecipes(false);
     }
     
     updateRecipesGrid(data, resetGrid = true) {

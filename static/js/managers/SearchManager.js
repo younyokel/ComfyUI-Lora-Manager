@@ -1,4 +1,5 @@
 import { updatePanelPositions } from "../utils/uiHelpers.js";
+import { getCurrentPageState } from "../state/index.js";
 /**
  * SearchManager - Handles search functionality across different pages
  * Each page can extend or customize this base functionality
@@ -272,24 +273,52 @@ export class SearchManager {
       const options = this.getActiveSearchOptions();
       const recursive = this.recursiveSearchToggle ? this.recursiveSearchToggle.checked : false;
       
-      // This is a base implementation - each page should override this method
-      console.log('Performing search:', {
-        query,
-        options,
-        recursive,
-        page: this.currentPage
-      });
+      // Update the state with search parameters
+      const pageState = getCurrentPageState();
       
-      // Dispatch a custom event that page-specific code can listen for
-      const searchEvent = new CustomEvent('app:search', {
-        detail: {
-          query,
-          options,
-          recursive,
-          page: this.currentPage
+      // Set search query in filters
+      if (pageState && pageState.filters) {
+        pageState.filters.search = query;
+      }
+      
+      // Update search options based on page type
+      if (pageState && pageState.searchOptions) {
+        if (this.currentPage === 'recipes') {
+          pageState.searchOptions = {
+            title: options.title || false,
+            tags: options.tags || false,
+            loraName: options.loraName || false,
+            loraModel: options.loraModel || false
+          };
+        } else if (this.currentPage === 'loras') {
+          pageState.searchOptions = {
+            filename: options.filename || false,
+            modelname: options.modelname || false,
+            tags: options.tags || false,
+            recursive: recursive
+          };
+        } else if (this.currentPage === 'checkpoints') {
+          pageState.searchOptions = {
+            filename: options.filename || false,
+            modelname: options.modelname || false,
+            recursive: recursive
+          };
         }
-      });
+      }
       
-      document.dispatchEvent(searchEvent);
+      // Call the appropriate manager's load method based on page type
+      if (this.currentPage === 'recipes' && window.recipeManager) {
+        console.log("load recipes")
+        window.recipeManager.loadRecipes(true); // true to reset pagination
+      } else if (this.currentPage === 'loras' && window.loadMoreLoras) {
+        // Reset loras page and reload
+        if (pageState) {
+          pageState.currentPage = 1;
+          pageState.hasMore = true;
+        }
+        window.loadMoreLoras(true); // true to reset pagination
+      } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
+        window.checkpointManager.loadCheckpoints(true); // true to reset pagination
+      }
     }
   }

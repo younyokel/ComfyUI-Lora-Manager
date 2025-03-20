@@ -1,11 +1,17 @@
 import { BASE_MODELS, BASE_MODEL_CLASSES } from '../utils/constants.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
-import { resetAndReload } from '../api/loraApi.js';
+import { loadMoreLoras } from '../api/loraApi.js';
 
 export class FilterManager {
-    constructor() {
+    constructor(options = {}) {
+        this.options = {
+            ...options
+        };
+        
+        this.currentPage = options.page || document.body.dataset.page || 'loras';
         const pageState = getCurrentPageState();
+        
         this.filters = pageState.filters || {
             baseModel: [],
             tags: []
@@ -17,11 +23,18 @@ export class FilterManager {
         this.tagsLoaded = false;
         
         this.initialize();
+        
+        // Store this instance in the state
+        if (pageState) {
+            pageState.filterManager = this;
+        }
     }
     
     initialize() {
-        // Create base model filter tags
-        this.createBaseModelTags();
+        // Create base model filter tags if they exist
+        if (document.getElementById('baseModelTags')) {
+            this.createBaseModelTags();
+        }
 
         // Add click handler for filter button
         if (this.filterButton) {
@@ -32,7 +45,7 @@ export class FilterManager {
         
         // Close filter panel when clicking outside
         document.addEventListener('click', (e) => {
-            if (!this.filterPanel.contains(e.target) && 
+            if (this.filterPanel && !this.filterPanel.contains(e.target) && 
                 e.target !== this.filterButton &&
                 !this.filterButton.contains(e.target) &&
                 !this.filterPanel.classList.contains('hidden')) {
@@ -48,15 +61,20 @@ export class FilterManager {
         try {
             // Show loading state
             const tagsContainer = document.getElementById('modelTagsFilter');
-            if (tagsContainer) {
-                tagsContainer.innerHTML = '<div class="tags-loading">Loading tags...</div>';
+            if (!tagsContainer) return;
+            
+            tagsContainer.innerHTML = '<div class="tags-loading">Loading tags...</div>';
+            
+            // Determine the API endpoint based on the page type
+            let tagsEndpoint = '/api/top-tags?limit=20';
+            if (this.currentPage === 'recipes') {
+                tagsEndpoint = '/api/recipes/top-tags?limit=20';
             }
             
-            const response = await fetch('/api/top-tags?limit=20');
+            const response = await fetch(tagsEndpoint);
             if (!response.ok) throw new Error('Failed to fetch tags');
             
             const data = await response.json();
-            console.log('Top tags:', data);
             if (data.success && data.tags) {
                 this.createTagFilterElements(data.tags);
                 
@@ -81,14 +99,13 @@ export class FilterManager {
         tagsContainer.innerHTML = '';
         
         if (!tags.length) {
-            tagsContainer.innerHTML = '<div class="no-tags">No tags available</div>';
+            tagsContainer.innerHTML = `<div class="no-tags">No ${this.currentPage === 'recipes' ? 'recipe ' : ''}tags available</div>`;
             return;
         }
         
         tags.forEach(tag => {
             const tagEl = document.createElement('div');
             tagEl.className = 'filter-tag tag-filter';
-            // {tag: "name", count: number}
             const tagName = tag.tag;
             tagEl.dataset.tag = tagName;
             tagEl.innerHTML = `${tagName} <span class="tag-count">${tag.count}</span>`;
@@ -119,34 +136,80 @@ export class FilterManager {
         const baseModelTagsContainer = document.getElementById('baseModelTags');
         if (!baseModelTagsContainer) return;
         
-        baseModelTagsContainer.innerHTML = '';
-        
-        Object.entries(BASE_MODELS).forEach(([key, value]) => {
-            const tag = document.createElement('div');
-            tag.className = `filter-tag base-model-tag ${BASE_MODEL_CLASSES[value]}`;
-            tag.dataset.baseModel = value;
-            tag.innerHTML = value;
+        if (this.currentPage === 'loras') {
+            // Use predefined base models for loras page
+            baseModelTagsContainer.innerHTML = '';
             
-            // Add click handler to toggle selection and automatically apply
-            tag.addEventListener('click', async () => {
-                tag.classList.toggle('active');
+            Object.entries(BASE_MODELS).forEach(([key, value]) => {
+                const tag = document.createElement('div');
+                tag.className = `filter-tag base-model-tag ${BASE_MODEL_CLASSES[value]}`;
+                tag.dataset.baseModel = value;
+                tag.innerHTML = value;
                 
-                if (tag.classList.contains('active')) {
-                    if (!this.filters.baseModel.includes(value)) {
-                        this.filters.baseModel.push(value);
+                // Add click handler to toggle selection and automatically apply
+                tag.addEventListener('click', async () => {
+                    tag.classList.toggle('active');
+                    
+                    if (tag.classList.contains('active')) {
+                        if (!this.filters.baseModel.includes(value)) {
+                            this.filters.baseModel.push(value);
+                        }
+                    } else {
+                        this.filters.baseModel = this.filters.baseModel.filter(model => model !== value);
                     }
-                } else {
-                    this.filters.baseModel = this.filters.baseModel.filter(model => model !== value);
-                }
+                    
+                    this.updateActiveFiltersCount();
+                    
+                    // Auto-apply filter when tag is clicked
+                    await this.applyFilters(false);
+                });
                 
-                this.updateActiveFiltersCount();
-                
-                // Auto-apply filter when tag is clicked
-                await this.applyFilters(false);
+                baseModelTagsContainer.appendChild(tag);
             });
-            
-            baseModelTagsContainer.appendChild(tag);
-        });
+        } else if (this.currentPage === 'recipes') {
+            // Fetch base models for recipes
+            fetch('/api/recipes/base-models')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.base_models) {
+                        baseModelTagsContainer.innerHTML = '';
+                        
+                        data.base_models.forEach(model => {
+                            const tag = document.createElement('div');
+                            tag.className = `filter-tag base-model-tag`;
+                            tag.dataset.baseModel = model.name;
+                            tag.innerHTML = `${model.name} <span class="tag-count">${model.count}</span>`;
+                            
+                            // Add click handler to toggle selection and automatically apply
+                            tag.addEventListener('click', async () => {
+                                tag.classList.toggle('active');
+                                
+                                if (tag.classList.contains('active')) {
+                                    if (!this.filters.baseModel.includes(model.name)) {
+                                        this.filters.baseModel.push(model.name);
+                                    }
+                                } else {
+                                    this.filters.baseModel = this.filters.baseModel.filter(m => m !== model.name);
+                                }
+                                
+                                this.updateActiveFiltersCount();
+                                
+                                // Auto-apply filter when tag is clicked
+                                await this.applyFilters(false);
+                            });
+                            
+                            baseModelTagsContainer.appendChild(tag);
+                        });
+                        
+                        // Update selections based on stored filters
+                        this.updateTagSelections();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching base models:', error);
+                    baseModelTagsContainer.innerHTML = '<div class="tags-error">Failed to load base models</div>';
+                });
+        }
     }
     
     toggleFilterPanel() {       
@@ -172,8 +235,12 @@ export class FilterManager {
     }
     
     closeFilterPanel() {
-        this.filterPanel.classList.add('hidden');
-        this.filterButton.classList.remove('active');
+        if (this.filterPanel) {
+            this.filterPanel.classList.add('hidden');
+        }
+        if (this.filterButton) {
+            this.filterButton.classList.remove('active');
+        }
     }
     
     updateTagSelections() {
@@ -203,24 +270,35 @@ export class FilterManager {
     updateActiveFiltersCount() {
         const totalActiveFilters = this.filters.baseModel.length + this.filters.tags.length;
         
-        if (totalActiveFilters > 0) {
-            this.activeFiltersCount.textContent = totalActiveFilters;
-            this.activeFiltersCount.style.display = 'inline-flex';
-        } else {
-            this.activeFiltersCount.style.display = 'none';
+        if (this.activeFiltersCount) {
+            if (totalActiveFilters > 0) {
+                this.activeFiltersCount.textContent = totalActiveFilters;
+                this.activeFiltersCount.style.display = 'inline-flex';
+            } else {
+                this.activeFiltersCount.style.display = 'none';
+            }
         }
     }
     
     async applyFilters(showToastNotification = true) {
+        const pageState = getCurrentPageState();
+        const storageKey = `${this.currentPage}_filters`;
+        
         // Save filters to localStorage
-        localStorage.setItem('loraFilters', JSON.stringify(this.filters));
+        localStorage.setItem(storageKey, JSON.stringify(this.filters));
         
         // Update state with current filters
-        const pageState = getCurrentPageState();
         pageState.filters = { ...this.filters };
         
-        // Reload loras with filters applied
-        await resetAndReload();
+        // Call the appropriate manager's load method based on page type
+        if (this.currentPage === 'recipes' && window.recipeManager) {
+            await window.recipeManager.loadRecipes(true);
+        } else if (this.currentPage === 'loras') {
+            // For loras page, reset the page and reload
+            await loadMoreLoras(true, true);
+        } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
+            await window.checkpointManager.loadCheckpoints(true);
+        }
         
         // Update filter button to show active state
         if (this.hasActiveFilters()) {
@@ -264,15 +342,28 @@ export class FilterManager {
         this.updateActiveFiltersCount();
         
         // Remove from localStorage
-        localStorage.removeItem('loraFilters');
+        const storageKey = `${this.currentPage}_filters`;
+        localStorage.removeItem(storageKey);
         
-        // Update UI and reload data
+        // Update UI
         this.filterButton.classList.remove('active');
-        await resetAndReload();
+        
+        // Reload data using the appropriate method for the current page
+        if (this.currentPage === 'recipes' && window.recipeManager) {
+            await window.recipeManager.loadRecipes(true);
+        } else if (this.currentPage === 'loras') {
+            await loadMoreLoras(true, true);
+        } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
+            await window.checkpointManager.loadCheckpoints(true);
+        }
+        
+        showToast(`Filters cleared`, 'info');
     }
     
     loadFiltersFromStorage() {
-        const savedFilters = localStorage.getItem('loraFilters');
+        const storageKey = `${this.currentPage}_filters`;
+        const savedFilters = localStorage.getItem(storageKey);
+        
         if (savedFilters) {
             try {
                 const parsedFilters = JSON.parse(savedFilters);
@@ -283,6 +374,10 @@ export class FilterManager {
                     tags: parsedFilters.tags || []
                 };
                 
+                // Update state with loaded filters
+                const pageState = getCurrentPageState();
+                pageState.filters = { ...this.filters };
+                
                 this.updateTagSelections();
                 this.updateActiveFiltersCount();
                 
@@ -290,7 +385,7 @@ export class FilterManager {
                     this.filterButton.classList.add('active');
                 }
             } catch (error) {
-                console.error('Error loading filters from storage:', error);
+                console.error(`Error loading ${this.currentPage} filters from storage:`, error);
             }
         }
     }

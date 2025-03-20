@@ -5,13 +5,21 @@ import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 import { showDeleteModal } from '../utils/modalUtils.js';
 import { toggleFolder } from '../utils/uiHelpers.js';
 
-export async function loadMoreLoras(boolUpdateFolders = false) {
+export async function loadMoreLoras(resetPage = false, updateFolders = false) {
     const pageState = getCurrentPageState();
     
-    if (pageState.isLoading || !pageState.hasMore) return;
+    if (pageState.isLoading || (!pageState.hasMore && !resetPage)) return;
     
     pageState.isLoading = true;
     try {
+        // Reset to first page if requested
+        if (resetPage) {
+            pageState.currentPage = 1;
+            // Clear grid if resetting
+            const grid = document.getElementById('loraGrid');
+            if (grid) grid.innerHTML = '';
+        }
+        
         const params = new URLSearchParams({
             page: pageState.currentPage,
             page_size: 20,
@@ -19,7 +27,7 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         });
         
         // Use pageState instead of state
-        const isRecursiveSearch = pageState.searchManager?.isRecursiveSearch ?? false;
+        const isRecursiveSearch = pageState.searchOptions?.recursive ?? false;
         
         if (pageState.activeFolder !== null) {
             params.append('folder', pageState.activeFolder);
@@ -27,10 +35,16 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
         }
 
         // Add search parameters if there's a search term
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput && searchInput.value.trim()) {
-            params.append('search', searchInput.value.trim());
+        if (pageState.filters?.search) {
+            params.append('search', pageState.filters.search);
             params.append('fuzzy', 'true');
+            
+            // Add search option parameters if available
+            if (pageState.searchOptions) {
+                params.append('search_filename', pageState.searchOptions.filename.toString());
+                params.append('search_modelname', pageState.searchOptions.modelname.toString());
+                params.append('search_tags', (pageState.searchOptions.tags || false).toString());
+            }
         }
         
         // Add filter parameters if active
@@ -72,7 +86,7 @@ export async function loadMoreLoras(boolUpdateFolders = false) {
             pageState.hasMore = false;
         }
 
-        if (boolUpdateFolders && data.folders) {
+        if (updateFolders && data.folders) {
             updateFolderTags(data.folders);
         }
         
@@ -271,24 +285,15 @@ export function appendLoraCards(loras) {
     });
 }
 
-export async function resetAndReload(boolUpdateFolders = false) {
+export async function resetAndReload(updateFolders = false) {
     const pageState = getCurrentPageState();
     console.log('Resetting with state:', { ...pageState });
     
-    pageState.currentPage = 1;
-    pageState.hasMore = true;
-    pageState.isLoading = false;
-    
-    const grid = document.getElementById('loraGrid');
-    grid.innerHTML = '';
-    
-    const sentinel = document.createElement('div');
-    sentinel.id = 'scroll-sentinel';
-    grid.appendChild(sentinel);
-    
+    // Initialize infinite scroll - will reset the observer
     initializeInfiniteScroll();
     
-    await loadMoreLoras(boolUpdateFolders);
+    // Load more loras with reset flag
+    await loadMoreLoras(true, updateFolders);
 }
 
 export async function refreshLoras() {
