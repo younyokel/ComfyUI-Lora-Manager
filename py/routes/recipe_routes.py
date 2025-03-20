@@ -423,6 +423,9 @@ class RecipeRoutes:
             with open(image_path, 'wb') as f:
                 f.write(optimized_image)
             
+            # Add recipe metadata to the image
+            ExifUtils.append_recipe_metadata(image_path, recipe_data)
+            
             # Create the recipe JSON
             current_time = time.time()
             
@@ -643,9 +646,7 @@ class RecipeRoutes:
             
             # Copy the original image to temp file
             shutil.copy2(image_path, temp_path)
-            
-            # Add recipe metadata to the image
-            processed_path = ExifUtils.append_recipe_metadata(temp_path, recipe)
+            processed_path = temp_path
             
             # Create a URL for the processed image
             # Use a timestamp to prevent caching
