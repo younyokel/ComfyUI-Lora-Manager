@@ -275,11 +275,7 @@ export function appendLoraCards(loras) {
     
     loras.forEach(lora => {
         const card = createLoraCard(lora);
-        if (sentinel) {
-            grid.insertBefore(card, sentinel);
-        } else {
-            grid.appendChild(card);
-        }
+        grid.appendChild(card);
     });
 }
 

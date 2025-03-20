@@ -65,10 +65,24 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     if (existingSentinel) {
         state.observer.observe(existingSentinel);
     } else {
+        // Create a wrapper div that will be placed after the grid
+        const sentinelWrapper = document.createElement('div');
+        sentinelWrapper.style.width = '100%';
+        sentinelWrapper.style.height = '10px';
+        sentinelWrapper.style.margin = '0';
+        sentinelWrapper.style.padding = '0';
+        
+        // Create the actual sentinel element
         const sentinel = document.createElement('div');
         sentinel.id = 'scroll-sentinel';
         sentinel.style.height = '10px';
-        grid.appendChild(sentinel);
+        
+        // Add the sentinel to the wrapper
+        sentinelWrapper.appendChild(sentinel);
+        
+        // Insert the wrapper after the grid instead of inside it
+        grid.parentNode.insertBefore(sentinelWrapper, grid.nextSibling);
+        
         state.observer.observe(sentinel);
     }
 } 

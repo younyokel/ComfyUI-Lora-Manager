@@ -171,22 +171,6 @@ class RecipeManager {
             const recipeCard = new RecipeCard(recipe, (recipe) => this.showRecipeDetails(recipe));
             grid.appendChild(recipeCard.element);
         });
-        
-        // Add sentinel for infinite scroll if needed
-        if (this.pageState.hasMore) {
-            let sentinel = document.getElementById('scroll-sentinel');
-            if (!sentinel) {
-                sentinel = document.createElement('div');
-                sentinel.id = 'scroll-sentinel';
-                sentinel.style.height = '10px';
-                grid.appendChild(sentinel);
-                
-                // Re-observe the sentinel if we have an observer
-                if (state && state.observer) {
-                    state.observer.observe(sentinel);
-                }
-            }
-        }
     }
     
     showRecipeDetails(recipe) {
