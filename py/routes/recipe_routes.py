@@ -423,9 +423,6 @@ class RecipeRoutes:
             with open(image_path, 'wb') as f:
                 f.write(optimized_image)
             
-            # Add recipe metadata to the image
-            ExifUtils.append_recipe_metadata(image_path, recipe_data)
-            
             # Create the recipe JSON
             current_time = time.time()
             
@@ -486,6 +483,9 @@ class RecipeRoutes:
             json_path = os.path.join(recipes_dir, json_filename)
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+
+            # Add recipe metadata to the image
+            ExifUtils.append_recipe_metadata(image_path, recipe_data)
             
             # Simplified cache update approach
             # Instead of trying to update the cache directly, just set it to None

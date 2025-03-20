@@ -354,9 +354,9 @@ export class ImportManager {
                 this.updateTagsDisplay();
             }
         } else if (this.recipeData && this.recipeData.gen_params && this.recipeData.gen_params.prompt) {
-            // Use the first 15 words from the prompt as the default recipe name
+            // Use the first 10 words from the prompt as the default recipe name
             const promptWords = this.recipeData.gen_params.prompt.split(' ');
-            const truncatedPrompt = promptWords.slice(0, 15).join(' ');
+            const truncatedPrompt = promptWords.slice(0, 10).join(' ');
             recipeName.value = truncatedPrompt;
             this.recipeName = truncatedPrompt;
             

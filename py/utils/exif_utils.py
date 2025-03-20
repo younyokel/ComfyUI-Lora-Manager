@@ -135,7 +135,7 @@ class ExifUtils:
             recipe_metadata_marker = f"Recipe metadata: {recipe_metadata_json}"
             
             # Append to existing user comment or create new one
-            new_user_comment = f"{user_comment}, {recipe_metadata_marker}" if user_comment else recipe_metadata_marker
+            new_user_comment = f"{user_comment} \n {recipe_metadata_marker}" if user_comment else recipe_metadata_marker
             
             # Write back to the image
             return ExifUtils.update_user_comment(image_path, new_user_comment)
