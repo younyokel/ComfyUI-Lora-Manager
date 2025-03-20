@@ -5,6 +5,7 @@ from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
 from .routes.recipe_routes import RecipeRoutes
+from .routes.checkpoints_routes import CheckpointsRoutes
 from .services.lora_scanner import LoraScanner
 from .services.recipe_scanner import RecipeScanner
 from .services.file_monitor import LoraFileMonitor
@@ -59,12 +60,14 @@ class LoraManager:
         
         # Setup feature routes
         routes = LoraRoutes()
+        checkpoints_routes = CheckpointsRoutes()
         
         # Setup file monitoring
         monitor = LoraFileMonitor(routes.scanner, config.loras_roots)
         monitor.start()
         
         routes.setup_routes(app)
+        checkpoints_routes.setup_routes(app)
         ApiRoutes.setup_routes(app, monitor)
         RecipeRoutes.setup_routes(app)
         
