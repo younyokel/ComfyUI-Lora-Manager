@@ -56,22 +56,7 @@ class RecipeManager {
     _exposeGlobalFunctions() {
         // Only expose what's needed for the page
         window.recipeManager = this;
-        window.importRecipes = () => this.importRecipes();
         window.importManager = this.importManager;
-        
-        // Deprecated - kept for backwards compatibility
-        window.loadMoreRecipes = () => {
-            console.warn('loadMoreRecipes is deprecated, use infiniteScroll instead');
-            this.pageState.currentPage++;
-            this.loadRecipes(false);
-        };
-        
-        // Add appendRecipeCards function for compatibility
-        window.appendRecipeCards = (recipes) => {
-            console.warn('appendRecipeCards is deprecated, use recipeManager.updateRecipesGrid instead');
-            const data = { items: recipes, has_more: false };
-            this.updateRecipesGrid(data, false);
-        };
     }
     
     initEventListeners() {
@@ -140,6 +125,8 @@ class RecipeManager {
             }
             
             const data = await response.json();
+
+            console.log('Recipes data:', data);
             
             // Update recipes grid
             this.updateRecipesGrid(data, resetPage);
@@ -204,11 +191,6 @@ class RecipeManager {
     
     showRecipeDetails(recipe) {
         this.recipeModal.showRecipeDetails(recipe);
-    }
-    
-    // Add a method to handle recipe import
-    importRecipes() {
-        this.importManager.showImportModal();
     }
 }
 

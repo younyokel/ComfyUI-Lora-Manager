@@ -308,7 +308,6 @@ export class SearchManager {
       
       // Call the appropriate manager's load method based on page type
       if (this.currentPage === 'recipes' && window.recipeManager) {
-        console.log("load recipes")
         window.recipeManager.loadRecipes(true); // true to reset pagination
       } else if (this.currentPage === 'loras' && window.loadMoreLoras) {
         // Reset loras page and reload

@@ -1,8 +1,6 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
-import { state } from '../state/index.js';
-import { resetAndReload } from '../api/loraApi.js';
 
 export class ImportManager {
     constructor() {
@@ -922,13 +920,7 @@ export class ImportManager {
                 // Close modal and reload recipes
                 modalManager.closeModal('importModal');
                 
-                // Refresh the recipe list if needed
-                if (typeof refreshRecipes === 'function') {
-                    refreshRecipes();
-                } else {
-                    // Fallback to reloading the page
-                    resetAndReload();
-                }
+                window.recipeManager.loadRecipes(true); // true to reset pagination
                 
             } else {
                 // Handle error
