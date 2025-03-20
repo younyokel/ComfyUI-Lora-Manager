@@ -4,7 +4,7 @@
 {% block page_id %}recipes{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" href="/loras_static/css/components/recipe-card.css">
+<link rel="stylesheet" href="/loras_static/css/components/card.css">
 <link rel="stylesheet" href="/loras_static/css/components/recipe-modal.css">
 <link rel="stylesheet" href="/loras_static/css/components/import-modal.css">
 {% endblock %}
@@ -33,10 +33,10 @@
     </div>
     
     <!-- Recipe grid -->
-    <div class="card-grid recipe-grid" id="recipeGrid">
+    <div class="card-grid" id="recipeGrid">
         {% if recipes and recipes|length > 0 %}
             {% for recipe in recipes %}
-                <div class="recipe-card" data-file-path="{{ recipe.file_path }}" data-title="{{ recipe.title }}" data-created="{{ recipe.created_date }}">
+                <div class="lora-card" data-file-path="{{ recipe.file_path }}" data-title="{{ recipe.title }}" data-created="{{ recipe.created_date }}">
                     <div class="recipe-indicator" title="Recipe">R</div>
                     <div class="card-preview">
                         <img src="{{ recipe.file_url }}" alt="{{ recipe.title }}">

@@ -20,6 +20,9 @@
     aspect-ratio: 896/1152;
     max-width: 260px; /* Adjusted from 320px to fit 5 cards */
     margin: 0 auto;
+    cursor: pointer; /* Added from recipe-card */
+    display: flex; /* Added from recipe-card */
+    flex-direction: column; /* Added from recipe-card */
 }
 
 .lora-card:hover {
@@ -274,4 +277,55 @@
     border-radius: var(--border-radius-xs);
     backdrop-filter: blur(2px);
     font-size: 0.85em;
+}
+
+/* Recipe specific elements - migrated from recipe-card.css */
+.recipe-indicator {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    width: 24px;
+    height: 24px;
+    background: var(--lora-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.base-model-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 32px; /* For accommodating the recipe indicator */
+}
+
+.lora-count {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: var(--border-radius-xs);
+    font-size: 0.85em;
+    position: relative;
+}
+
+.lora-count.ready {
+    background: rgba(46, 204, 113, 0.3);
+}
+
+.lora-count.missing {
+    background: rgba(231, 76, 60, 0.3);
+}
+
+.placeholder-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    background: var(--lora-surface-alt);
+    border-radius: var(--border-radius-base);
 }

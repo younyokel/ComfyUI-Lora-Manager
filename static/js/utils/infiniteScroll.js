@@ -43,7 +43,7 @@ export function initializeInfiniteScroll(pageType = 'loras') {
             break;
     }
 
-    const debouncedLoadMore = debounce(loadMoreFunction, 200);
+    const debouncedLoadMore = debounce(loadMoreFunction, 100);
 
     state.observer = new IntersectionObserver(
         (entries) => {

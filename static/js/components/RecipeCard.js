@@ -11,7 +11,7 @@ class RecipeCard {
     
     createCardElement() {
         const card = document.createElement('div');
-        card.className = 'recipe-card';
+        card.className = 'lora-card';
         card.dataset.filePath = this.recipe.file_path;
         card.dataset.title = this.recipe.title;
         card.dataset.created = this.recipe.created_date;
