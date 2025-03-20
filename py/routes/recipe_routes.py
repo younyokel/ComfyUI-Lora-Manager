@@ -68,7 +68,6 @@ class RecipeRoutes:
     async def get_recipes(self, request: web.Request) -> web.Response:
         """API endpoint for getting paginated recipes"""
         try:
-            logger.info(f"get_recipes, Request: {request}")
             # Get query parameters with defaults
             page = int(request.query.get('page', '1'))
             page_size = int(request.query.get('page_size', '20'))
@@ -100,7 +99,6 @@ class RecipeRoutes:
                 'lora_model': search_lora_model
             }
 
-            logger.info(f"get_recipes, Filters: {filters}, Search Options: {search_options}")
             # Get paginated data
             result = await self.recipe_scanner.get_paginated_data(
                 page=page,

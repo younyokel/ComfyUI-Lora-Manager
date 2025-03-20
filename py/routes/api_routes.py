@@ -131,7 +131,6 @@ class ApiRoutes:
             folder = request.query.get('folder')
             search = request.query.get('search', '').lower()
             fuzzy = request.query.get('fuzzy', 'false').lower() == 'true'
-            recursive = request.query.get('recursive', 'false').lower() == 'true'
             
             # Parse base models filter parameter
             base_models = request.query.get('base_models', '').split(',')
@@ -141,6 +140,7 @@ class ApiRoutes:
             search_filename = request.query.get('search_filename', 'true').lower() == 'true'
             search_modelname = request.query.get('search_modelname', 'true').lower() == 'true'
             search_tags = request.query.get('search_tags', 'false').lower() == 'true'
+            recursive = request.query.get('recursive', 'false').lower() == 'true'
             
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
@@ -165,13 +165,13 @@ class ApiRoutes:
                 folder=folder,
                 search=search,
                 fuzzy=fuzzy,
-                recursive=recursive,
                 base_models=base_models,  # Pass base models filter
                 tags=tags,  # Add tags parameter
                 search_options={
                     'filename': search_filename,
                     'modelname': search_modelname,
-                    'tags': search_tags
+                    'tags': search_tags,
+                    'recursive': recursive
                 }
             )
             

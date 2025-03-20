@@ -1,3 +1,4 @@
+from difflib import SequenceMatcher
 import requests
 import tempfile
 import re
@@ -39,3 +40,39 @@ def download_twitter_image(url):
     except Exception as e:
         print(f"Error downloading twitter image: {e}")
         return None
+    
+def fuzzy_match(text: str, pattern: str, threshold: float = 0.7) -> bool:
+        """
+        Check if text matches pattern using fuzzy matching.
+        Returns True if similarity ratio is above threshold.
+        """
+        if not pattern or not text:
+            return False
+        
+        # Convert both to lowercase for case-insensitive matching
+        text = text.lower()
+        pattern = pattern.lower()
+        
+        # Split pattern into words
+        search_words = pattern.split()
+        
+        # Check each word
+        for word in search_words:
+            # First check if word is a substring (faster)
+            if word in text:
+                continue
+            
+            # If not found as substring, try fuzzy matching
+            # Check if any part of the text matches this word
+            found_match = False
+            for text_part in text.split():
+                ratio = SequenceMatcher(None, text_part, word).ratio()
+                if ratio >= threshold:
+                    found_match = True
+                    break
+                
+            if not found_match:
+                return False
+        
+        # All words found either as substrings or fuzzy matches
+        return True

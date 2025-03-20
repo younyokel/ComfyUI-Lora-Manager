@@ -131,8 +131,8 @@ class RecipeManager {
             // Update recipes grid
             this.updateRecipesGrid(data, resetPage);
             
-            // Update pagination state
-            this.pageState.hasMore = data.has_more || false;
+            // Update pagination state based on current page and total pages
+            this.pageState.hasMore = data.page < data.total_pages;
             
         } catch (error) {
             console.error('Error loading recipes:', error);

@@ -18,6 +18,7 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
             // Clear grid if resetting
             const grid = document.getElementById('loraGrid');
             if (grid) grid.innerHTML = '';
+            initializeInfiniteScroll();
         }
         
         const params = new URLSearchParams({
@@ -26,12 +27,8 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
             sort_by: pageState.sortBy
         });
         
-        // Use pageState instead of state
-        const isRecursiveSearch = pageState.searchOptions?.recursive ?? false;
-        
         if (pageState.activeFolder !== null) {
             params.append('folder', pageState.activeFolder);
-            params.append('recursive', isRecursiveSearch.toString());
         }
 
         // Add search parameters if there's a search term
@@ -44,6 +41,7 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
                 params.append('search_filename', pageState.searchOptions.filename.toString());
                 params.append('search_modelname', pageState.searchOptions.modelname.toString());
                 params.append('search_tags', (pageState.searchOptions.tags || false).toString());
+                params.append('recursive', (pageState.searchOptions?.recursive ?? false).toString());
             }
         }
         

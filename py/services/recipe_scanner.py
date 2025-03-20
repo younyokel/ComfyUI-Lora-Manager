@@ -9,6 +9,7 @@ from ..config import config
 from .recipe_cache import RecipeCache
 from .lora_scanner import LoraScanner
 from .civitai_client import CivitaiClient
+from ..utils.utils import fuzzy_match
 import sys
 
 logger = logging.getLogger(__name__)
@@ -378,25 +379,26 @@ class RecipeScanner:
             # Build the search predicate based on search options
             def matches_search(item):
                 # Search in title if enabled
-                if search_options.get('title', True) and search.lower() in str(item.get('title', '')).lower():
-                    return True
+                if search_options.get('title', True):
+                    if fuzzy_match(str(item.get('title', '')), search):
+                        return True
                 
                 # Search in tags if enabled
                 if search_options.get('tags', True) and 'tags' in item:
                     for tag in item['tags']:
-                        if search.lower() in tag.lower():
+                        if fuzzy_match(tag, search):
                             return True
                 
                 # Search in lora file names if enabled
                 if search_options.get('lora_name', True) and 'loras' in item:
                     for lora in item['loras']:
-                        if search.lower() in str(lora.get('file_name', '')).lower():
+                        if fuzzy_match(str(lora.get('file_name', '')), search):
                             return True
                 
                 # Search in lora model names if enabled
                 if search_options.get('lora_model', True) and 'loras' in item:
                     for lora in item['loras']:
-                        if search.lower() in str(lora.get('modelName', '')).lower():
+                        if fuzzy_match(str(lora.get('modelName', '')), search):
                             return True
                 
                 # No match found

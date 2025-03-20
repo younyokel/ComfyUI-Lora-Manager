@@ -9,10 +9,10 @@ from operator import itemgetter
 from ..config import config
 from ..utils.file_utils import load_metadata, get_file_info
 from .lora_cache import LoraCache
-from difflib import SequenceMatcher
 from .lora_hash_index import LoraHashIndex
 from .settings_manager import settings
 from ..utils.constants import NSFW_LEVELS
+from ..utils.utils import fuzzy_match
 import sys
 
 logger = logging.getLogger(__name__)
@@ -132,45 +132,9 @@ class LoraScanner:
                 folders=[]
             )
 
-    def fuzzy_match(self, text: str, pattern: str, threshold: float = 0.7) -> bool:
-        """
-        Check if text matches pattern using fuzzy matching.
-        Returns True if similarity ratio is above threshold.
-        """
-        if not pattern or not text:
-            return False
-        
-        # Convert both to lowercase for case-insensitive matching
-        text = text.lower()
-        pattern = pattern.lower()
-        
-        # Split pattern into words
-        search_words = pattern.split()
-        
-        # Check each word
-        for word in search_words:
-            # First check if word is a substring (faster)
-            if word in text:
-                continue
-            
-            # If not found as substring, try fuzzy matching
-            # Check if any part of the text matches this word
-            found_match = False
-            for text_part in text.split():
-                ratio = SequenceMatcher(None, text_part, word).ratio()
-                if ratio >= threshold:
-                    found_match = True
-                    break
-                
-            if not found_match:
-                return False
-        
-        # All words found either as substrings or fuzzy matches
-        return True
-
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
                                folder: str = None, search: str = None, fuzzy: bool = False,
-                               recursive: bool = False, base_models: list = None, tags: list = None,
+                               base_models: list = None, tags: list = None,
                                search_options: dict = None) -> Dict:
         """Get paginated and filtered lora data
         
@@ -181,10 +145,9 @@ class LoraScanner:
             folder: Filter by folder path
             search: Search term
             fuzzy: Use fuzzy matching for search
-            recursive: Include subfolders when folder filter is applied
             base_models: List of base models to filter by
             tags: List of tags to filter by
-            search_options: Dictionary with search options (filename, modelname, tags)
+            search_options: Dictionary with search options (filename, modelname, tags, recursive)
         """
         cache = await self.get_cached_data()
 
@@ -193,7 +156,8 @@ class LoraScanner:
             search_options = {
                 'filename': True,
                 'modelname': True,
-                'tags': False
+                'tags': False,
+                'recursive': False
             }
 
         # Get the base data set
@@ -208,7 +172,7 @@ class LoraScanner:
         
         # Apply folder filtering
         if folder is not None:
-            if recursive:
+            if search_options.get('recursive', False):
                 # Recursive mode: match all paths starting with this folder
                 filtered_data = [
                     item for item in filtered_data 
@@ -237,16 +201,47 @@ class LoraScanner:
         
         # Apply search filtering
         if search:
-            if fuzzy:
-                filtered_data = [
-                    item for item in filtered_data 
-                    if self._fuzzy_search_match(item, search, search_options)
-                ]
-            else:
-                filtered_data = [
-                    item for item in filtered_data 
-                    if self._exact_search_match(item, search, search_options)
-                ]
+            search_results = []
+            for item in filtered_data:
+                # Check filename if enabled
+                if search_options.get('filename', True):
+                    if fuzzy:
+                        if fuzzy_match(item.get('file_name', ''), search):
+                            search_results.append(item)
+                            continue
+                    else:
+                        if search.lower() in item.get('file_name', '').lower():
+                            search_results.append(item)
+                            continue
+                            
+                # Check model name if enabled
+                if search_options.get('modelname', True):
+                    if fuzzy:
+                        if fuzzy_match(item.get('model_name', ''), search):
+                            search_results.append(item)
+                            continue
+                    else:
+                        if search.lower() in item.get('model_name', '').lower():
+                            search_results.append(item)
+                            continue
+                            
+                # Check tags if enabled
+                if search_options.get('tags', False) and item.get('tags'):
+                    found_tag = False
+                    for tag in item['tags']:
+                        if fuzzy:
+                            if fuzzy_match(tag, search):
+                                found_tag = True
+                                break
+                        else:
+                            if search.lower() in tag.lower():
+                                found_tag = True
+                                break
+                    if found_tag:
+                        search_results.append(item)
+                        continue
+                        
+            filtered_data = search_results
 
         # Calculate pagination
         total_items = len(filtered_data)
@@ -262,44 +257,6 @@ class LoraScanner:
         }
         
         return result
-
-    def _fuzzy_search_match(self, item: Dict, search: str, search_options: Dict) -> bool:
-        """Check if an item matches the search term using fuzzy matching with search options"""
-        # Check filename if enabled
-        if search_options.get('filename', True) and self.fuzzy_match(item.get('file_name', ''), search):
-            return True
-            
-        # Check model name if enabled
-        if search_options.get('modelname', True) and self.fuzzy_match(item.get('model_name', ''), search):
-            return True
-            
-        # Check tags if enabled
-        if search_options.get('tags', False) and item.get('tags'):
-            for tag in item['tags']:
-                if self.fuzzy_match(tag, search):
-                    return True
-                    
-        return False
-
-    def _exact_search_match(self, item: Dict, search: str, search_options: Dict) -> bool:
-        """Check if an item matches the search term using exact matching with search options"""
-        search = search.lower()
-        
-        # Check filename if enabled
-        if search_options.get('filename', True) and search in item.get('file_name', '').lower():
-            return True
-            
-        # Check model name if enabled
-        if search_options.get('modelname', True) and search in item.get('model_name', '').lower():
-            return True
-            
-        # Check tags if enabled
-        if search_options.get('tags', False) and item.get('tags'):
-            for tag in item['tags']:
-                if search in tag.lower():
-                    return True
-                    
-        return False
 
     def invalidate_cache(self):
         """Invalidate the current cache"""
