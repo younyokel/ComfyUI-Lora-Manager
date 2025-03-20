@@ -11,11 +11,69 @@ class RecipeModal {
     }
     
     showRecipeDetails(recipe) {
-        console.log(recipe);
         // Set modal title
         const modalTitle = document.getElementById('recipeModalTitle');
         if (modalTitle) {
             modalTitle.textContent = recipe.title || 'Recipe Details';
+        }
+        
+        // Set recipe tags if they exist
+        const tagsCompactElement = document.getElementById('recipeTagsCompact');
+        const tagsTooltipContent = document.getElementById('recipeTagsTooltipContent');
+        
+        if (tagsCompactElement && tagsTooltipContent && recipe.tags && recipe.tags.length > 0) {
+            // Clear previous tags
+            tagsCompactElement.innerHTML = '';
+            tagsTooltipContent.innerHTML = '';
+            
+            // Limit displayed tags to 5, show a "+X more" button if needed
+            const maxVisibleTags = 5;
+            const visibleTags = recipe.tags.slice(0, maxVisibleTags);
+            const remainingTags = recipe.tags.length > maxVisibleTags ? recipe.tags.slice(maxVisibleTags) : [];
+            
+            // Add visible tags
+            visibleTags.forEach(tag => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'recipe-tag-compact';
+                tagElement.textContent = tag;
+                tagsCompactElement.appendChild(tagElement);
+            });
+            
+            // Add "more" button if needed
+            if (remainingTags.length > 0) {
+                const moreButton = document.createElement('div');
+                moreButton.className = 'recipe-tag-more';
+                moreButton.textContent = `+${remainingTags.length} more`;
+                tagsCompactElement.appendChild(moreButton);
+                
+                // Add tooltip functionality
+                moreButton.addEventListener('mouseenter', () => {
+                    document.getElementById('recipeTagsTooltip').classList.add('visible');
+                });
+                
+                moreButton.addEventListener('mouseleave', () => {
+                    setTimeout(() => {
+                        if (!document.getElementById('recipeTagsTooltip').matches(':hover')) {
+                            document.getElementById('recipeTagsTooltip').classList.remove('visible');
+                        }
+                    }, 300);
+                });
+                
+                document.getElementById('recipeTagsTooltip').addEventListener('mouseleave', () => {
+                    document.getElementById('recipeTagsTooltip').classList.remove('visible');
+                });
+                
+                // Add all tags to tooltip
+                recipe.tags.forEach(tag => {
+                    const tooltipTag = document.createElement('div');
+                    tooltipTag.className = 'tooltip-tag';
+                    tooltipTag.textContent = tag;
+                    tagsTooltipContent.appendChild(tooltipTag);
+                });
+            }
+        } else if (tagsCompactElement) {
+            // No tags to display
+            tagsCompactElement.innerHTML = '';
         }
         
         // Set recipe image
@@ -140,11 +198,11 @@ class RecipeModal {
                                 <h4>${lora.modelName}</h4>
                                 ${localStatus}
                             </div>
-                            ${lora.modelVersionName ? `<div class="recipe-lora-version">${lora.modelVersionName}</div>` : ''}
                             <div class="recipe-lora-info">
-                                ${lora.baseModel ? `<div class="base-model">${lora.baseModel}</div>` : ''}
+                                ${lora.modelVersionName ? `<div class="recipe-lora-version">${lora.modelVersionName}</div>` : ''}
                                 <div class="recipe-lora-weight">Weight: ${lora.strength || 1.0}</div>
                             </div>
+                            ${lora.baseModel ? `<div class="recipe-lora-info"><div class="base-model">${lora.baseModel}</div></div>` : ''}
                         </div>
                     </div>
                 `;
