@@ -359,7 +359,7 @@ export class FilterManager {
                 // Update state with loaded filters
                 const pageState = getCurrentPageState();
                 pageState.filters = { ...this.filters };
-                
+
                 this.updateTagSelections();
                 this.updateActiveFiltersCount();
                 

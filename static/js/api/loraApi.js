@@ -57,8 +57,6 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
             }
         }
 
-        console.log('Loading loras with params:', params.toString());
-
         const response = await fetch(`/api/loras?${params}`);
         if (!response.ok) {
             throw new Error(`Failed to fetch loras: ${response.statusText}`);

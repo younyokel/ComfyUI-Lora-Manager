@@ -2,6 +2,7 @@ import { updateService } from '../managers/UpdateService.js';
 import { toggleTheme } from '../utils/uiHelpers.js';
 import { SearchManager } from '../managers/SearchManager.js';
 import { FilterManager } from '../managers/FilterManager.js';
+import { initPageState } from '../state/index.js';
 
 /**
  * Header.js - Manages the application header behavior across different pages
@@ -10,6 +11,7 @@ import { FilterManager } from '../managers/FilterManager.js';
 export class HeaderManager {
     constructor() {
       this.currentPage = this.detectCurrentPage();
+      initPageState(this.currentPage);
       this.searchManager = null;
       this.filterManager = null;
       

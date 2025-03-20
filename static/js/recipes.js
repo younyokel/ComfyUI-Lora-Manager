@@ -3,13 +3,10 @@ import { appCore } from './core.js';
 import { ImportManager } from './managers/ImportManager.js';
 import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
-import { state, getCurrentPageState, setCurrentPageType, initPageState } from './state/index.js';
+import { getCurrentPageState } from './state/index.js';
 
 class RecipeManager {
     constructor() {
-        // Initialize recipe page state
-        initPageState('recipes');
-        
         // Get page state
         this.pageState = getCurrentPageState();
         
