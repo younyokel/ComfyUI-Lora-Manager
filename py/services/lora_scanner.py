@@ -702,6 +702,32 @@ class LoraScanner:
         
         # Return limited number
         return sorted_tags[:limit]
+        
+    async def get_base_models(self, limit: int = 20) -> List[Dict[str, any]]:
+        """Get base models used in loras sorted by frequency
+        
+        Args:
+            limit: Maximum number of base models to return
+            
+        Returns:
+            List of dictionaries with base model name and count, sorted by count
+        """
+        # Make sure cache is initialized
+        cache = await self.get_cached_data()
+        
+        # Count base model occurrences
+        base_model_counts = {}
+        for lora in cache.raw_data:
+            if 'base_model' in lora and lora['base_model']:
+                base_model = lora['base_model']
+                base_model_counts[base_model] = base_model_counts.get(base_model, 0) + 1
+        
+        # Sort base models by count
+        sorted_models = [{'name': model, 'count': count} for model, count in base_model_counts.items()]
+        sorted_models.sort(key=lambda x: x['count'], reverse=True)
+        
+        # Return limited number
+        return sorted_models[:limit]
 
     async def diagnose_hash_index(self):
         """Diagnostic method to verify hash index functionality"""

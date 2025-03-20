@@ -66,7 +66,7 @@ export class FilterManager {
             tagsContainer.innerHTML = '<div class="tags-loading">Loading tags...</div>';
             
             // Determine the API endpoint based on the page type
-            let tagsEndpoint = '/api/top-tags?limit=20';
+            let tagsEndpoint = '/api/loras/top-tags?limit=20';
             if (this.currentPage === 'recipes') {
                 tagsEndpoint = '/api/recipes/top-tags?limit=20';
             }
@@ -136,80 +136,62 @@ export class FilterManager {
         const baseModelTagsContainer = document.getElementById('baseModelTags');
         if (!baseModelTagsContainer) return;
         
+        // Set the appropriate API endpoint based on current page
+        let apiEndpoint = '';
         if (this.currentPage === 'loras') {
-            // Use predefined base models for loras page
-            baseModelTagsContainer.innerHTML = '';
-            
-            Object.entries(BASE_MODELS).forEach(([key, value]) => {
-                const tag = document.createElement('div');
-                tag.className = `filter-tag base-model-tag ${BASE_MODEL_CLASSES[value]}`;
-                tag.dataset.baseModel = value;
-                tag.innerHTML = value;
-                
-                // Add click handler to toggle selection and automatically apply
-                tag.addEventListener('click', async () => {
-                    tag.classList.toggle('active');
-                    
-                    if (tag.classList.contains('active')) {
-                        if (!this.filters.baseModel.includes(value)) {
-                            this.filters.baseModel.push(value);
-                        }
-                    } else {
-                        this.filters.baseModel = this.filters.baseModel.filter(model => model !== value);
-                    }
-                    
-                    this.updateActiveFiltersCount();
-                    
-                    // Auto-apply filter when tag is clicked
-                    await this.applyFilters(false);
-                });
-                
-                baseModelTagsContainer.appendChild(tag);
-            });
+            apiEndpoint = '/api/loras/base-models';
         } else if (this.currentPage === 'recipes') {
-            // Fetch base models for recipes
-            fetch('/api/recipes/base-models')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.base_models) {
-                        baseModelTagsContainer.innerHTML = '';
+            apiEndpoint = '/api/recipes/base-models';
+        } else {
+            return; // No API endpoint for other pages
+        }
+        
+        // Fetch base models
+        fetch(apiEndpoint)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.base_models) {
+                    baseModelTagsContainer.innerHTML = '';
+                    
+                    data.base_models.forEach(model => {
+                        const tag = document.createElement('div');
+                        // Add base model classes only for the loras page
+                        const baseModelClass = (this.currentPage === 'loras' && BASE_MODEL_CLASSES[model.name]) 
+                            ? BASE_MODEL_CLASSES[model.name] 
+                            : '';
+                        tag.className = `filter-tag base-model-tag ${baseModelClass}`;
+                        tag.dataset.baseModel = model.name;
+                        tag.innerHTML = `${model.name} <span class="tag-count">${model.count}</span>`;
                         
-                        data.base_models.forEach(model => {
-                            const tag = document.createElement('div');
-                            tag.className = `filter-tag base-model-tag`;
-                            tag.dataset.baseModel = model.name;
-                            tag.innerHTML = `${model.name} <span class="tag-count">${model.count}</span>`;
+                        // Add click handler to toggle selection and automatically apply
+                        tag.addEventListener('click', async () => {
+                            tag.classList.toggle('active');
                             
-                            // Add click handler to toggle selection and automatically apply
-                            tag.addEventListener('click', async () => {
-                                tag.classList.toggle('active');
-                                
-                                if (tag.classList.contains('active')) {
-                                    if (!this.filters.baseModel.includes(model.name)) {
-                                        this.filters.baseModel.push(model.name);
-                                    }
-                                } else {
-                                    this.filters.baseModel = this.filters.baseModel.filter(m => m !== model.name);
+                            if (tag.classList.contains('active')) {
+                                if (!this.filters.baseModel.includes(model.name)) {
+                                    this.filters.baseModel.push(model.name);
                                 }
-                                
-                                this.updateActiveFiltersCount();
-                                
-                                // Auto-apply filter when tag is clicked
-                                await this.applyFilters(false);
-                            });
+                            } else {
+                                this.filters.baseModel = this.filters.baseModel.filter(m => m !== model.name);
+                            }
                             
-                            baseModelTagsContainer.appendChild(tag);
+                            this.updateActiveFiltersCount();
+                            
+                            // Auto-apply filter when tag is clicked
+                            await this.applyFilters(false);
                         });
                         
-                        // Update selections based on stored filters
-                        this.updateTagSelections();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching base models:', error);
-                    baseModelTagsContainer.innerHTML = '<div class="tags-error">Failed to load base models</div>';
-                });
-        }
+                        baseModelTagsContainer.appendChild(tag);
+                    });
+                    
+                    // Update selections based on stored filters
+                    this.updateTagSelections();
+                }
+            })
+            .catch(error => {
+                console.error(`Error fetching base models for ${this.currentPage}:`, error);
+                baseModelTagsContainer.innerHTML = '<div class="tags-error">Failed to load base models</div>';
+            });
     }
     
     toggleFilterPanel() {       

@@ -49,7 +49,8 @@ class ApiRoutes:
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
-        app.router.add_get('/api/top-tags', routes.get_top_tags)  # Add new route for top tags
+        app.router.add_get('/api/loras/top-tags', routes.get_top_tags)  # Add new route for top tags
+        app.router.add_get('/api/loras/base-models', routes.get_base_models)  # Add new route for base models
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -841,4 +842,28 @@ class ApiRoutes:
             return web.json_response({
                 'success': False,
                 'error': 'Internal server error'
+            }, status=500)
+
+    async def get_base_models(self, request: web.Request) -> web.Response:
+        """Get base models used in loras"""
+        try:
+            # Parse query parameters
+            limit = int(request.query.get('limit', '20'))
+            
+            # Validate limit
+            if limit < 1 or limit > 100:
+                limit = 20  # Default to a reasonable limit
+                
+            # Get base models
+            base_models = await self.scanner.get_base_models(limit)
+            
+            return web.json_response({
+                'success': True,
+                'base_models': base_models
+            })
+        except Exception as e:
+            logger.error(f"Error retrieving base models: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)
