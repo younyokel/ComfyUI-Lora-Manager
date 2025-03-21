@@ -317,7 +317,11 @@ class ExifUtils:
                 "clip_skip": ""
             }
             
-            # Process each node in the workflow to extract parameters
+            # First pass: find the KSampler node to get basic parameters and node references
+            # Store node references to follow for prompts
+            positive_ref = None
+            negative_ref = None
+            
             for node_id, node_data in workflow_data.items():
                 if not isinstance(node_data, dict):
                     continue
@@ -327,7 +331,7 @@ class ExifUtils:
                 if not inputs:
                     continue
                 
-                # KSampler nodes contain most generation parameters
+                # KSampler nodes contain most generation parameters and references to prompt nodes
                 if "KSampler" in node_data.get("class_type", ""):
                     # Extract basic sampling parameters
                     gen_params["steps"] = inputs.get("steps", "")
@@ -336,18 +340,11 @@ class ExifUtils:
                     gen_params["seed"] = inputs.get("seed", "")
                     if isinstance(gen_params["seed"], list) and len(gen_params["seed"]) > 1:
                         gen_params["seed"] = gen_params["seed"][1]  # Use the actual value if it's a list
-                
-                # CLIP Text Encode nodes contain prompts
-                elif "CLIPTextEncode" in node_data.get("class_type", ""):
-                    # Check for negative prompt nodes
-                    title = node_data.get("_meta", {}).get("title", "").lower()
-                    prompt_text = inputs.get("text", "")
                     
-                    if "negative" in title:
-                        gen_params["negative_prompt"] = prompt_text
-                    elif prompt_text and not "negative" in title and gen_params["prompt"] == "":
-                        gen_params["prompt"] = prompt_text
-                
+                    # Get references to positive and negative prompt nodes
+                    positive_ref = inputs.get("positive", "")
+                    negative_ref = inputs.get("negative", "")
+                    
                 # CLIPSetLastLayer contains clip_skip information
                 elif "CLIPSetLastLayer" in node_data.get("class_type", ""):
                     gen_params["clip_skip"] = inputs.get("stop_at_clip_layer", "")
@@ -366,6 +363,67 @@ class ExifUtils:
                     resolution = inputs.get("resolution", "")
                     if isinstance(resolution, str) and "x" in resolution:
                         gen_params["size"] = resolution.split(" ")[0]  # Extract just the dimensions
+            
+            # Helper function to follow node references and extract text content
+            def get_text_from_node_ref(node_ref, workflow_data):
+                if not node_ref or not isinstance(node_ref, list) or len(node_ref) < 2:
+                    return ""
+                
+                node_id, slot_idx = node_ref
+                
+                # If we can't find the node, return empty string
+                if node_id not in workflow_data:
+                    return ""
+                
+                node = workflow_data[node_id]
+                inputs = node.get("inputs", {})
+                
+                # Direct text input in CLIP Text Encode nodes
+                if "CLIPTextEncode" in node.get("class_type", ""):
+                    text = inputs.get("text", "")
+                    if isinstance(text, str):
+                        return text
+                    elif isinstance(text, list) and len(text) >= 2:
+                        # If text is a reference to another node, follow it
+                        return get_text_from_node_ref(text, workflow_data)
+                
+                # Other nodes might have text input with different field names
+                for field_name, field_value in inputs.items():
+                    if field_name == "text" and isinstance(field_value, str):
+                        return field_value
+                    elif isinstance(field_value, list) and len(field_value) >= 2 and field_name in ["text"]:
+                        # If it's a reference to another node, follow it
+                        return get_text_from_node_ref(field_value, workflow_data)
+                
+                return ""
+            
+            # Extract prompts by following references from KSampler node
+            if positive_ref:
+                gen_params["prompt"] = get_text_from_node_ref(positive_ref, workflow_data)
+            
+            if negative_ref:
+                gen_params["negative_prompt"] = get_text_from_node_ref(negative_ref, workflow_data)
+            
+            # Fallback: if we couldn't extract prompts via references, use the traditional method
+            if not gen_params["prompt"] or not gen_params["negative_prompt"]:
+                for node_id, node_data in workflow_data.items():
+                    if not isinstance(node_data, dict):
+                        continue
+                        
+                    inputs = node_data.get("inputs", {})
+                    if not inputs:
+                        continue
+                    
+                    if "CLIPTextEncode" in node_data.get("class_type", ""):
+                        # Check for negative prompt nodes
+                        title = node_data.get("_meta", {}).get("title", "").lower()
+                        prompt_text = inputs.get("text", "")
+                        
+                        if isinstance(prompt_text, str):
+                            if "negative" in title and not gen_params["negative_prompt"]:
+                                gen_params["negative_prompt"] = prompt_text
+                            elif prompt_text and not "negative" in title and not gen_params["prompt"]:
+                                gen_params["prompt"] = prompt_text
             
             return gen_params
             
