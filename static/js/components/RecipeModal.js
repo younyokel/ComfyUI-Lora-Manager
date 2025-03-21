@@ -8,6 +8,30 @@ class RecipeModal {
     
     init() {
         this.setupCopyButtons();
+        // Set up tooltip positioning handlers after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupTooltipPositioning();
+        });
+    }
+    
+    // Add tooltip positioning handler to ensure correct positioning of fixed tooltips
+    setupTooltipPositioning() {
+        document.addEventListener('mouseover', (event) => {
+            // Check if we're hovering over a local-badge
+            if (event.target.closest('.local-badge')) {
+                const badge = event.target.closest('.local-badge');
+                const tooltip = badge.querySelector('.local-path');
+                
+                if (tooltip) {
+                    // Get badge position
+                    const badgeRect = badge.getBoundingClientRect();
+                    
+                    // Position the tooltip
+                    tooltip.style.top = (badgeRect.bottom + 4) + 'px';
+                    tooltip.style.left = (badgeRect.right - tooltip.offsetWidth) + 'px';
+                }
+            }
+        }, true);
     }
     
     showRecipeDetails(recipe) {
@@ -178,7 +202,7 @@ class RecipeModal {
                 const existsLocally = lora.inLibrary;
                 const localPath = lora.localPath || '';
                 
-                // Create local status badge
+                // Create local status badge with a more stable structure
                 const localStatus = existsLocally ? 
                     `<div class="local-badge">
                         <i class="fas fa-check"></i> In Library
@@ -196,13 +220,13 @@ class RecipeModal {
                         <div class="recipe-lora-content">
                             <div class="recipe-lora-header">
                                 <h4>${lora.modelName}</h4>
-                                ${localStatus}
+                                <div class="badge-container">${localStatus}</div>
                             </div>
                             <div class="recipe-lora-info">
                                 ${lora.modelVersionName ? `<div class="recipe-lora-version">${lora.modelVersionName}</div>` : ''}
                                 <div class="recipe-lora-weight">Weight: ${lora.strength || 1.0}</div>
+                                ${lora.baseModel ? `<div class="base-model">${lora.baseModel}</div>` : ''}
                             </div>
-                            ${lora.baseModel ? `<div class="recipe-lora-info"><div class="base-model">${lora.baseModel}</div></div>` : ''}
                         </div>
                     </div>
                 `;

@@ -112,8 +112,6 @@ class RecipeManager {
                 params.append('tags', this.pageState.filters.tags.join(','));
             }
 
-            console.log('Loading recipes with params:', params.toString());
-            
             // Fetch recipes
             const response = await fetch(`/api/recipes?${params.toString()}`);
             
@@ -123,8 +121,6 @@ class RecipeManager {
             
             const data = await response.json();
 
-            console.log('Recipes data:', data);
-            
             // Update recipes grid
             this.updateRecipesGrid(data, resetPage);
             

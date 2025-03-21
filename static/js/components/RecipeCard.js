@@ -215,10 +215,7 @@ class RecipeCard {
         .then(data => {
             showToast('Recipe deleted successfully', 'success');
             
-            // Refresh the recipe list if we're on the recipes page
-            if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
-                window.recipeManager.loadRecipes();
-            }
+            window.recipeManager.loadRecipes();
             
             modalManager.closeModal('deleteModal');
         })

@@ -11,6 +11,9 @@
     white-space: nowrap;
     flex-shrink: 0;
     position: relative;
+    /* Force hardware acceleration to prevent Chrome scroll issues */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .local-badge i {
@@ -33,13 +36,19 @@
     white-space: normal;
     word-break: break-all;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    z-index: 1;
+    z-index: 100; /* Higher z-index to ensure it's above other elements */
     min-width: 200px;
     max-width: 300px;
+    /* Create a separate layer with hardware acceleration */
+    transform: translateZ(0);
+    /* Use a fixed position to ensure it's in a separate layer from scrollable content */
+    position: fixed;
+    pointer-events: none; /* Don't block mouse events */
 }
 
 .local-badge:hover .local-path {
     display: block;
+    pointer-events: auto; /* Allow interaction with the tooltip when visible */
 }
 
 .error-message {
