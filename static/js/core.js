@@ -7,6 +7,7 @@ import { HeaderManager } from './components/Header.js';
 import { SettingsManager } from './managers/SettingsManager.js';
 import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
+import { migrateStorageItems } from './utils/storageHelpers.js';
 
 // Core application class
 export class AppCore {
@@ -17,6 +18,8 @@ export class AppCore {
     // Initialize core functionality
     async initialize() {
         if (this.initialized) return;
+
+        console.log('AppCore: Initializing...');
         
         // Initialize managers
         state.loadingManager = new LoadingManager();
@@ -63,6 +66,11 @@ export class AppCore {
         return this;
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Migrate localStorage items to use the namespace prefix
+    migrateStorageItems();
+});
 
 // Create and export a singleton instance
 export const appCore = new AppCore();

@@ -1,5 +1,6 @@
 import { updatePanelPositions } from "../utils/uiHelpers.js";
 import { getCurrentPageState } from "../state/index.js";
+import { setStorageItem, getStorageItem } from "../utils/storageHelpers.js";
 /**
  * SearchManager - Handles search functionality across different pages
  * Each page can extend or customize this base functionality
@@ -183,7 +184,7 @@ export class SearchManager {
     
     loadSearchPreferences() {
       try {
-        const preferences = JSON.parse(localStorage.getItem(`${this.currentPage}_search_prefs`)) || {};
+        const preferences = getStorageItem(`${this.currentPage}_search_prefs`) || {};
         
         // Apply search options
         if (preferences.options) {
@@ -254,7 +255,7 @@ export class SearchManager {
           preferences.recursive = this.recursiveSearchToggle.checked;
         }
         
-        localStorage.setItem(`${this.currentPage}_search_prefs`, JSON.stringify(preferences));
+        setStorageItem(`${this.currentPage}_search_prefs`, preferences);
       } catch (error) {
         console.error('Error saving search preferences:', error);
       }

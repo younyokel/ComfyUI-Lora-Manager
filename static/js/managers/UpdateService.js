@@ -1,4 +1,5 @@
 import { modalManager } from './ModalManager.js';
+import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 
 export class UpdateService {
     constructor() {
@@ -7,13 +8,13 @@ export class UpdateService {
         this.latestVersion = "v0.0.0";   // Initialize with default values
         this.updateInfo = null;
         this.updateAvailable = false;
-        this.updateNotificationsEnabled = localStorage.getItem('show_update_notifications') !== 'false';
-        this.lastCheckTime = parseInt(localStorage.getItem('last_update_check') || '0');
+        this.updateNotificationsEnabled = getStorageItem('show_update_notifications') !== 'false';
+        this.lastCheckTime = parseInt(getStorageItem('last_update_check') || '0');
     }
 
     initialize() {
         // Initialize update preferences from localStorage
-        const showUpdates = localStorage.getItem('show_update_notifications');
+        const showUpdates = getStorageItem('show_update_notifications');
         this.updateNotificationsEnabled = showUpdates === null || showUpdates === 'true';
         
         // Register event listener for update notification toggle
@@ -22,7 +23,7 @@ export class UpdateService {
             updateCheckbox.checked = this.updateNotificationsEnabled;
             updateCheckbox.addEventListener('change', (e) => {
                 this.updateNotificationsEnabled = e.target.checked;
-                localStorage.setItem('show_update_notifications', e.target.checked);
+                setStorageItem('show_update_notifications', e.target.checked);
                 this.updateBadgeVisibility();
             });
         }
@@ -71,7 +72,7 @@ export class UpdateService {
                 
                 // Update last check time
                 this.lastCheckTime = now;
-                localStorage.setItem('last_update_check', now.toString());
+                setStorageItem('last_update_check', now.toString());
                 
                 // Update UI
                 this.updateBadgeVisibility();

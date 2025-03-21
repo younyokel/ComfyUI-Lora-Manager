@@ -1,5 +1,5 @@
 import { appCore } from './core.js';
-import { state, initPageState } from './state/index.js';
+import { state } from './state/index.js';
 import { showLoraModal, toggleShowcase, scrollToTop } from './components/LoraModal.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
 import { 
@@ -97,9 +97,6 @@ function initializeEventListeners() {
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize page state
-    initPageState('loras');
-
     // Initialize core application
     await appCore.initialize();
     

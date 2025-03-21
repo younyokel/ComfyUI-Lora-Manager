@@ -771,6 +771,7 @@ async function saveRecipeDirectly(widget) {
   try {
     // Get the workflow data from the ComfyUI app
     const prompt = await app.graphToPrompt();
+    console.log('Prompt:', prompt.output);
     
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {

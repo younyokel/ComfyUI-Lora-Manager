@@ -2,6 +2,7 @@ import { BASE_MODELS, BASE_MODEL_CLASSES } from '../utils/constants.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
 import { loadMoreLoras } from '../api/loraApi.js';
+import { removeStorageItem, setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 
 export class FilterManager {
     constructor(options = {}) {
@@ -267,7 +268,7 @@ export class FilterManager {
         const storageKey = `${this.currentPage}_filters`;
         
         // Save filters to localStorage
-        localStorage.setItem(storageKey, JSON.stringify(this.filters));
+        setStorageItem(storageKey, this.filters);
         
         // Update state with current filters
         pageState.filters = { ...this.filters };
@@ -323,9 +324,9 @@ export class FilterManager {
         this.updateTagSelections();
         this.updateActiveFiltersCount();
         
-        // Remove from localStorage
+        // Remove from local Storage
         const storageKey = `${this.currentPage}_filters`;
-        localStorage.removeItem(storageKey);
+        removeStorageItem(storageKey);
         
         // Update UI
         this.filterButton.classList.remove('active');
@@ -344,16 +345,14 @@ export class FilterManager {
     
     loadFiltersFromStorage() {
         const storageKey = `${this.currentPage}_filters`;
-        const savedFilters = localStorage.getItem(storageKey);
+        const savedFilters = getStorageItem(storageKey);
         
         if (savedFilters) {
             try {
-                const parsedFilters = JSON.parse(savedFilters);
-                
                 // Ensure backward compatibility with older filter format
                 this.filters = {
-                    baseModel: parsedFilters.baseModel || [],
-                    tags: parsedFilters.tags || []
+                    baseModel: savedFilters.baseModel || [],
+                    tags: savedFilters.tags || []
                 };
                 
                 // Update state with loaded filters

@@ -1,6 +1,7 @@
 import { refreshSingleLoraMetadata } from '../api/loraApi.js';
 import { showToast, getNSFWLevelName } from '../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
+import { getStorageItem } from '../utils/storageHelpers.js';
 
 export class LoraContextMenu {
     constructor() {
@@ -149,7 +150,7 @@ export class LoraContextMenu {
 
     updateCardBlurEffect(card, level) {
         // Get user settings for blur threshold
-        const blurThreshold = parseInt(localStorage.getItem('nsfwBlurLevel') || '4');
+        const blurThreshold = parseInt(getStorageItem('nsfwBlurLevel') || '4');
         
         // Get card preview container
         const previewContainer = card.querySelector('.card-preview');

@@ -1,5 +1,6 @@
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
+import { getStorageItem, setStorageItem } from './storageHelpers.js';
 
 export function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -27,7 +28,7 @@ export function lazyLoadImages() {
 }
 
 export function restoreFolderFilter() {
-    const activeFolder = localStorage.getItem('activeFolder');
+    const activeFolder = getStorageItem('activeFolder');
     const folderTag = activeFolder && document.querySelector(`.tag[data-folder="${activeFolder}"]`);
     if (folderTag) {
         folderTag.classList.add('active');
@@ -36,13 +37,13 @@ export function restoreFolderFilter() {
 }
 
 export function initTheme() {
-    document.body.dataset.theme = localStorage.getItem('theme') || 'dark';
+    document.body.dataset.theme = getStorageItem('theme') || 'dark';
 }
 
 export function toggleTheme() {
     const theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
     document.body.dataset.theme = theme;
-    localStorage.setItem('theme', theme);
+    setStorageItem('theme', theme);
 }
 
 export function toggleFolder(tag) {
@@ -158,12 +159,12 @@ export function toggleFolderTags() {
             // Change icon to indicate folders are hidden
             toggleBtn.className = 'fas fa-folder-plus';
             toggleBtn.parentElement.title = 'Show folder tags';
-            localStorage.setItem('folderTagsCollapsed', 'true');
+            setStorageItem('folderTagsCollapsed', 'true');
         } else {
             // Change icon to indicate folders are visible
             toggleBtn.className = 'fas fa-folder-minus';
             toggleBtn.parentElement.title = 'Hide folder tags';
-            localStorage.setItem('folderTagsCollapsed', 'false');
+            setStorageItem('folderTagsCollapsed', 'false');
         }
         
         // Update panel positions after toggling
@@ -176,7 +177,7 @@ export function toggleFolderTags() {
 
 // Add this to your existing initialization code
 export function initFolderTagsVisibility() {
-    const isCollapsed = localStorage.getItem('folderTagsCollapsed') === 'true';
+    const isCollapsed = getStorageItem('folderTagsCollapsed') === 'true';
     if (isCollapsed) {
         const folderTags = document.querySelector('.folder-tags');
         const toggleBtn = document.querySelector('.toggle-folders-btn i');

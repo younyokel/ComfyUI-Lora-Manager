@@ -2,6 +2,7 @@ import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
+import { setStorageItem } from '../utils/storageHelpers.js';
 
 export class SettingsManager {
     constructor() {
@@ -75,7 +76,7 @@ export class SettingsManager {
         state.global.settings.show_only_sfw = showOnlySFW;
         
         // Save settings to localStorage
-        localStorage.setItem('settings', JSON.stringify(state.global.settings));
+        setStorageItem('settings', state.global.settings);
         
         try {
             // Save backend settings via API
