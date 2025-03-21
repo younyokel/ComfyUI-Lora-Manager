@@ -98,16 +98,80 @@ export function openCivitai(modelName) {
     }
 }
 
+/**
+ * Dynamically positions the search options panel and filter panel
+ * based on the current layout and folder tags container height
+ */
+export function updatePanelPositions() {
+    const searchOptionsPanel = document.getElementById('searchOptionsPanel');
+    const filterPanel = document.getElementById('filterPanel');
+    
+    if (!searchOptionsPanel && !filterPanel) return;
+    
+    // Get the header element
+    const header = document.querySelector('.app-header');
+    if (!header) return;
+    
+    // Calculate the position based on the bottom of the header
+    const headerRect = header.getBoundingClientRect();
+    const topPosition = headerRect.bottom + 5; // Add 5px padding
+    
+    // Set the positions
+    if (searchOptionsPanel) {
+      searchOptionsPanel.style.top = `${topPosition}px`;
+    }
+    
+    if (filterPanel) {
+      filterPanel.style.top = `${topPosition}px`;
+    }
+    
+    // Adjust panel horizontal position based on the search container
+    const searchContainer = document.querySelector('.header-search');
+    if (searchContainer) {
+      const searchRect = searchContainer.getBoundingClientRect();
+      
+      // Position the search options panel aligned with the search container
+      if (searchOptionsPanel) {
+        searchOptionsPanel.style.right = `${window.innerWidth - searchRect.right}px`;
+      }
+      
+      // Position the filter panel aligned with the filter button
+      if (filterPanel) {
+        const filterButton = document.getElementById('filterButton');
+        if (filterButton) {
+          const filterRect = filterButton.getBoundingClientRect();
+          filterPanel.style.right = `${window.innerWidth - filterRect.right}px`;
+        }
+      }
+    }
+  }
+
+// Update the toggleFolderTags function
 export function toggleFolderTags() {
     const folderTags = document.querySelector('.folder-tags');
-    const btn = document.querySelector('.toggle-folders-btn');
-    const isCollapsed = folderTags.classList.toggle('collapsed');
+    const toggleBtn = document.querySelector('.toggle-folders-btn i');
     
-    // 更新按钮提示文本
-    btn.title = isCollapsed ? 'Expand folder tags' : 'Collapse folder tags';
-    
-    // 保存状态到 localStorage
-    localStorage.setItem('folderTagsCollapsed', isCollapsed);
+    if (folderTags) {
+        folderTags.classList.toggle('collapsed');
+        
+        if (folderTags.classList.contains('collapsed')) {
+            // Change icon to indicate folders are hidden
+            toggleBtn.className = 'fas fa-folder-plus';
+            toggleBtn.parentElement.title = 'Show folder tags';
+            localStorage.setItem('folderTagsCollapsed', 'true');
+        } else {
+            // Change icon to indicate folders are visible
+            toggleBtn.className = 'fas fa-folder-minus';
+            toggleBtn.parentElement.title = 'Hide folder tags';
+            localStorage.setItem('folderTagsCollapsed', 'false');
+        }
+        
+        // Update panel positions after toggling
+        // Use a small delay to ensure the DOM has updated
+        setTimeout(() => {
+            updatePanelPositions();
+        }, 50);
+    }
 }
 
 // Add this to your existing initialization code
@@ -115,9 +179,20 @@ export function initFolderTagsVisibility() {
     const isCollapsed = localStorage.getItem('folderTagsCollapsed') === 'true';
     if (isCollapsed) {
         const folderTags = document.querySelector('.folder-tags');
-        const btn = document.querySelector('.toggle-folders-btn');
-        folderTags.classList.add('collapsed');
-        btn.title = 'Expand folder tags';
+        const toggleBtn = document.querySelector('.toggle-folders-btn i');
+        if (folderTags) {
+            folderTags.classList.add('collapsed');
+        }
+        if (toggleBtn) {
+            toggleBtn.className = 'fas fa-folder-plus';
+            toggleBtn.parentElement.title = 'Show folder tags';
+        }
+    } else {
+        const toggleBtn = document.querySelector('.toggle-folders-btn i');
+        if (toggleBtn) {
+            toggleBtn.className = 'fas fa-folder-minus';
+            toggleBtn.parentElement.title = 'Hide folder tags';
+        }
     }
 }
 
@@ -128,10 +203,13 @@ export function initBackToTop() {
     button.title = 'Back to top';
     document.body.appendChild(button);
 
+    // Get the scrollable container
+    const scrollContainer = document.querySelector('.page-content');
+
     // Show/hide button based on scroll position
     const toggleBackToTop = () => {
-        const scrollThreshold = window.innerHeight * 0.75;
-        if (window.scrollY > scrollThreshold) {
+        const scrollThreshold = window.innerHeight * 0.3;
+        if (scrollContainer.scrollTop > scrollThreshold) {
             button.classList.add('visible');
         } else {
             button.classList.remove('visible');
@@ -140,14 +218,14 @@ export function initBackToTop() {
 
     // Smooth scroll to top
     button.addEventListener('click', () => {
-        window.scrollTo({
+        scrollContainer.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
     });
 
-    // Listen for scroll events
-    window.addEventListener('scroll', toggleBackToTop);
+    // Listen for scroll events on the scrollable container
+    scrollContainer.addEventListener('scroll', toggleBackToTop);
     
     // Initial check
     toggleBackToTop();

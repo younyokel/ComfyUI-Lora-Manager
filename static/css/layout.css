@@ -1,7 +1,18 @@
+.page-content {
+    height: calc(100vh - 48px); /* Full height minus header */
+    margin-top: 48px; /* Push down below header */
+    overflow-y: auto; /* Enable scrolling here */
+    width: 100%;
+    position: relative;
+    overflow-y: scroll;
+}
+
 .container {
     max-width: 1400px;
     margin: 20px auto;
     padding: 0 15px;
+    position: relative;
+    z-index: var(--z-base);
 }
 
 .controls {
@@ -14,114 +25,22 @@
 .actions {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-2);
     flex-wrap: nowrap;
     width: 100%;
 }
 
-/* Search and filter styles moved to components/search-filter.css */
-
-/* Update corner-controls for collapsible behavior */
-.corner-controls {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: var(--z-overlay);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: all 0.3s ease;
-}
-
-.corner-controls-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
+.action-buttons {
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 2;
-    margin-bottom: 10px;
-}
-
-.corner-controls-toggle:hover {
-    background: var(--lora-accent);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.corner-controls-items {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    opacity: 0;
-    transform: translateY(-10px) scale(0.9);
-    transition: all 0.3s ease;
-    pointer-events: none;
-}
-
-/* Expanded state */
-.corner-controls.expanded .corner-controls-items {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: all;
-}
-
-/* Expanded state - only expand on hover if not already expanded by click */
-.corner-controls:hover:not(.expanded) .corner-controls-items {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: all;
+    gap: var(--space-2);
+    flex-wrap: nowrap;
 }
 
 /* Ensure hidden class works properly */
 .hidden {
     display: none !important;
-}
-
-/* Update toggle button styles */
-.update-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color); /* Changed from var(--lora-accent) to match other toggles */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.update-toggle:hover {
-    background: var(--lora-accent);
-    color: white;
-    transform: translateY(-2px);
-}
-
-/* Update badge styles */
-.update-badge {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    background-color: var(--lora-error);
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px var(--card-bg);
-}
-
-/* Badge on corner toggle */
-.corner-badge {
-    top: 0;
-    right: 0;
 }
 
 .folder-tags-container {
@@ -131,11 +50,14 @@
 }
 
 .folder-tags {
+    display: flex;
+    gap: 4px;
+    padding: 2px 0;
+    flex-wrap: wrap;
     transition: max-height 0.3s ease, opacity 0.2s ease;
     max-height: 150px; /* Limit height to prevent overflow */
     opacity: 1;
     overflow-y: auto; /* Enable vertical scrolling */
-    padding-right: 40px; /* Make space for the toggle button */
     margin-bottom: 5px; /* Add margin below the tags */
 }
 
@@ -144,13 +66,15 @@
     opacity: 0;
     margin: 0;
     padding-bottom: 0;
+    overflow: hidden;
+}
+
+.toggle-folders-container {
+    margin-left: auto;
 }
 
 /* Toggle Folders Button */
 .toggle-folders-btn {
-    position: absolute;
-    bottom: 0;      /* 固定在容器底部 */
-    right: 0;       /* 固定在容器右侧 */
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -162,7 +86,6 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 2;
 }
 
 .toggle-folders-btn:hover {
@@ -175,23 +98,16 @@
     transition: transform 0.3s ease;
 }
 
-/* 折叠状态样式 */
-.folder-tags.collapsed + .toggle-folders-btn {
-    position: static;
-    margin-right: auto; /* 确保按钮在左侧 */
-    transform: translateY(0);
+/* Icon-only button style */
+.icon-only {
+    min-width: unset !important;
+    width: 36px !important;
+    padding: 0 !important;
 }
 
-.folder-tags.collapsed + .toggle-folders-btn i {
+/* Rotate icon when folders are collapsed */
+.folder-tags.collapsed ~ .actions .toggle-folders-btn i {
     transform: rotate(180deg);
-}
-
-/* 文件夹标签样式 */
-.folder-tags {
-    display: flex;
-    gap: 4px;
-    padding: 2px 0;
-    flex-wrap: wrap;
 }
 
 /* Add custom scrollbar for better visibility */
@@ -263,123 +179,31 @@
     transform: translateY(-2px);
 }
 
-.theme-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.theme-toggle:hover {
-    background: var(--lora-accent);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.support-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--lora-error);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.support-toggle:hover {
-    background: var(--lora-error);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.support-toggle i {
-    font-size: 1.1em;
-    position: relative;
-    top: 1px;
-    left: -0.5px;
-}
-
-.theme-toggle img {
-    width: 20px;
-    height: 20px;
-}
-
-.theme-toggle .theme-icon {
-    width: 20px;
-    height: 20px;
-    position: absolute;
-    transition: opacity 0.2s ease;
-}
-
-.theme-toggle .light-icon {
-    opacity: 0;
-}
-
-.theme-toggle .dark-icon {
-    opacity: 1;
-}
-
-[data-theme="light"] .theme-toggle .light-icon {
-    opacity: 1;
-}
-
-[data-theme="light"] .theme-toggle .dark-icon {
-    opacity: 0;
-}
-
 @media (max-width: 768px) {
     .actions {
         flex-wrap: wrap;
         gap: var(--space-1);
     }
-
-    .controls {
-        flex-direction: column;
-        gap: 15px;
+    
+    .action-buttons {
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        width: 100%;
+    }
+    
+    .toggle-folders-container {
+        margin-left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
     }
     
     .folder-tags-container {
         order: -1;
     }
     
-    .toggle-folders-btn {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        transform: none; /* 移除transform，防止hover时的位移 */
-    }
-    
     .toggle-folders-btn:hover {
         transform: none; /* 移动端下禁用hover效果 */
-    }
-    
-    .folder-tags.collapsed + .toggle-folders-btn {
-        position: relative;
-        transform: none;
-    }
-
-    .corner-controls {
-        top: 10px;
-        right: 10px;
-    }
-    
-    .corner-controls-items {
-        display: none;
-    }
-    
-    .corner-controls.expanded .corner-controls-items {
-        display: flex;
     }
 
     .back-to-top {

@@ -2,13 +2,13 @@
 .modal {
     display: none;
     position: fixed;
-    top: 0;
+    top: 48px; /* Start below the header */
     left: 0;
     width: 100%;
-    height: 100%;
+    height: calc(100% - 48px); /* Adjust height to exclude header */
     background: rgba(0, 0, 0, 0.2); /* 调整为更淡的半透明黑色 */
     z-index: var(--z-modal);
-    overflow: hidden; /* 改为 hidden，防止双滚动条 */
+    overflow: auto; /* Change from hidden to auto to allow scrolling */
 }
 
 /* 当模态窗口打开时，禁止body滚动 */
@@ -23,8 +23,8 @@ body.modal-open {
     position: relative;
     max-width: 800px;
     height: auto;
-    max-height: 90vh;
-    margin: 2rem auto;
+    max-height: calc(90vh - 48px); /* Adjust to account for header height */
+    margin: 1rem auto; /* Keep reduced top margin */
     background: var(--lora-surface);
     border-radius: var(--border-radius-base);
     padding: var(--space-3);
@@ -443,4 +443,43 @@ input:checked + .toggle-slider:before {
 
 .nsfw-blur:hover {
     filter: blur(8px);
+}
+
+/* Add styles for delete preview image */
+.delete-preview {
+    max-width: 150px;
+    margin: 0 auto var(--space-2);
+    overflow: hidden;
+}
+
+.delete-preview img {
+    width: 100%;
+    height: auto;
+    max-height: 150px;
+    object-fit: contain;
+    border-radius: var(--border-radius-sm);
+}
+
+.delete-info {
+    text-align: center;
+}
+
+.delete-info h3 {
+    margin-bottom: var(--space-1);
+    word-break: break-word;
+}
+
+.delete-info p {
+    margin: var(--space-1) 0;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.delete-note {
+    font-size: 0.85em;
+    color: var(--text-color);
+    opacity: 0.7;
+    font-style: italic;
+    margin-top: var(--space-1);
+    text-align: center;
 }

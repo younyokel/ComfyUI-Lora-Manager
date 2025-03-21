@@ -17,6 +17,7 @@ class Config:
         # 静态路由映射字典, target to route mapping
         self._route_mappings = {}
         self.loras_roots = self._init_lora_paths()
+        self.temp_directory = folder_paths.get_temp_directory()
         # 在初始化时扫描符号链接
         self._scan_symbolic_links()
 
@@ -87,9 +88,9 @@ class Config:
 
     def _init_lora_paths(self) -> List[str]:
         """Initialize and validate LoRA paths from ComfyUI settings"""
-        paths = list(set(path.replace(os.sep, "/") 
+        paths = sorted(set(path.replace(os.sep, "/") 
                 for path in folder_paths.get_folder_paths("loras") 
-                if os.path.exists(path)))
+                if os.path.exists(path)), key=lambda p: p.lower())
         print("Found LoRA roots:", "\n - " + "\n - ".join(paths))
         
         if not paths:

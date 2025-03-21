@@ -42,11 +42,18 @@ class DownloadManager:
             save_path = os.path.join(save_dir, file_name)
             file_size = file_info.get('sizeKB', 0) * 1024
 
-            # 4. 通知文件监控系统
-            self.file_monitor.handler.add_ignore_path(
-                save_path.replace(os.sep, '/'),
-                file_size
-            )
+            # 4. 通知文件监控系统 - 使用规范化路径和文件大小
+            if self.file_monitor and self.file_monitor.handler:
+                # Add both the normalized path and potential alternative paths
+                normalized_path = save_path.replace(os.sep, '/')
+                self.file_monitor.handler.add_ignore_path(normalized_path, file_size)
+                
+                # Also add the path with file extension variations (.safetensors)
+                if not normalized_path.endswith('.safetensors'):
+                    safetensors_path = os.path.splitext(normalized_path)[0] + '.safetensors'
+                    self.file_monitor.handler.add_ignore_path(safetensors_path, file_size)
+                
+                logger.debug(f"Added download path to ignore list: {normalized_path} (size: {file_size} bytes)")
 
             # 5. 准备元数据
             metadata = LoraMetadata.from_civitai_info(version_info, file_info, save_path)
@@ -135,6 +142,9 @@ class DownloadManager:
             all_folders = set(cache.folders)
             all_folders.add(relative_path)
             cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
+            
+            # Update the hash index with the new LoRA entry
+            self.file_monitor.scanner._hash_index.add_entry(metadata_dict['sha256'], metadata_dict['file_path'])
 
             # Update the hash index with the new LoRA entry
             self.file_monitor.scanner._hash_index.add_entry(metadata_dict['sha256'], metadata_dict['file_path'])

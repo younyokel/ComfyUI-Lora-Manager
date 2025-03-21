@@ -5,6 +5,7 @@
 @import 'layout.css';
 
 /* Import Components */
+@import 'components/header.css';
 @import 'components/card.css';
 @import 'components/modal.css';
 @import 'components/download-modal.css';
@@ -16,6 +17,7 @@
 @import 'components/support-modal.css';
 @import 'components/search-filter.css';
 @import 'components/bulk.css';
+@import 'components/shared.css';
 
 .initialization-notice {
     display: flex;

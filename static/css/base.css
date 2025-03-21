@@ -1,6 +1,8 @@
-/* 强制显示滚动条，防止页面跳动 */
-html {
-    overflow-y: scroll;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden; /* Disable default scrolling */
 }
 
 /* 针对Firefox */
@@ -16,6 +18,7 @@ html {
 
 ::-webkit-scrollbar-track {
     background: transparent;
+    margin-top: 0;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -35,6 +38,7 @@ html {
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(95% 0.02 256);
     --lora-error: oklch(75% 0.32 29);
+    --lora-warning: oklch(75% 0.25 80); /* Add warning color for deleted LoRAs */
     
     /* Spacing Scale */
     --space-1: calc(8px * 1);
@@ -43,6 +47,7 @@ html {
     
     /* Z-index Scale */
     --z-base: 10;
+    --z-header: 100;
     --z-modal: 1000;
     --z-overlay: 2000;
 
@@ -64,11 +69,14 @@ html {
     --lora-surface: oklch(25% 0.02 256 / 0.98);
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(98% 0.02 256);
+    --lora-warning: oklch(75% 0.25 80); /* Add warning color for dark theme too */
 }
 
 body {
-    margin: 0;
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg-color);
     color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    padding-top: 0; /* Remove the padding-top */
 }

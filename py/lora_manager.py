@@ -4,9 +4,13 @@ from server import PromptServer # type: ignore
 from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
+from .routes.recipe_routes import RecipeRoutes
+from .routes.checkpoints_routes import CheckpointsRoutes
 from .services.lora_scanner import LoraScanner
+from .services.recipe_scanner import RecipeScanner
 from .services.file_monitor import LoraFileMonitor
 from .services.lora_cache import LoraCache
+from .services.recipe_cache import RecipeCache
 import logging
 
 logger = logging.getLogger(__name__)
@@ -56,36 +60,42 @@ class LoraManager:
         
         # Setup feature routes
         routes = LoraRoutes()
+        checkpoints_routes = CheckpointsRoutes()
         
         # Setup file monitoring
         monitor = LoraFileMonitor(routes.scanner, config.loras_roots)
         monitor.start()
         
         routes.setup_routes(app)
+        checkpoints_routes.setup_routes(app)
         ApiRoutes.setup_routes(app, monitor)
+        RecipeRoutes.setup_routes(app)
         
         # Store monitor in app for cleanup
         app['lora_monitor'] = monitor
         
         # Schedule cache initialization using the application's startup handler
-        app.on_startup.append(lambda app: cls._schedule_cache_init(routes.scanner))
+        app.on_startup.append(lambda app: cls._schedule_cache_init(routes.scanner, routes.recipe_scanner))
         
         # Add cleanup
         app.on_shutdown.append(cls._cleanup)
         app.on_shutdown.append(ApiRoutes.cleanup)
     
     @classmethod
-    async def _schedule_cache_init(cls, scanner: LoraScanner):
+    async def _schedule_cache_init(cls, scanner: LoraScanner, recipe_scanner: RecipeScanner):
         """Schedule cache initialization in the running event loop"""
         try:
             # 创建低优先级的初始化任务
-            asyncio.create_task(cls._initialize_cache(scanner), name='lora_cache_init')
+            lora_task = asyncio.create_task(cls._initialize_lora_cache(scanner), name='lora_cache_init')
+            
+            # Schedule recipe cache initialization with a delay to let lora scanner initialize first
+            recipe_task = asyncio.create_task(cls._initialize_recipe_cache(recipe_scanner, delay=2), name='recipe_cache_init')
         except Exception as e:
-            print(f"LoRA Manager: Error scheduling cache initialization: {e}")
+            logger.error(f"LoRA Manager: Error scheduling cache initialization: {e}")
     
     @classmethod
-    async def _initialize_cache(cls, scanner: LoraScanner):
-        """Initialize cache in background"""
+    async def _initialize_lora_cache(cls, scanner: LoraScanner):
+        """Initialize lora cache in background"""
         try:
             # 设置初始缓存占位
             scanner._cache = LoraCache(
@@ -98,7 +108,26 @@ class LoraManager:
             # 分阶段加载缓存
             await scanner.get_cached_data(force_refresh=True)
         except Exception as e:
-            print(f"LoRA Manager: Error initializing cache: {e}")
+            logger.error(f"LoRA Manager: Error initializing lora cache: {e}")
+    
+    @classmethod
+    async def _initialize_recipe_cache(cls, scanner: RecipeScanner, delay: float = 2.0):
+        """Initialize recipe cache in background with a delay"""
+        try:
+            # Wait for the specified delay to let lora scanner initialize first
+            await asyncio.sleep(delay)
+            
+            # Set initial empty cache
+            scanner._cache = RecipeCache(
+                raw_data=[],
+                sorted_by_name=[],
+                sorted_by_date=[]
+            )
+            
+            # Force refresh to load the actual data
+            await scanner.get_cached_data(force_refresh=True)
+        except Exception as e:
+            logger.error(f"LoRA Manager: Error initializing recipe cache: {e}")
     
     @classmethod
     async def _cleanup(cls, app):

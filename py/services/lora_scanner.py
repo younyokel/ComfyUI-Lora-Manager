@@ -9,10 +9,11 @@ from operator import itemgetter
 from ..config import config
 from ..utils.file_utils import load_metadata, get_file_info
 from .lora_cache import LoraCache
-from difflib import SequenceMatcher
 from .lora_hash_index import LoraHashIndex
 from .settings_manager import settings
 from ..utils.constants import NSFW_LEVELS
+from ..utils.utils import fuzzy_match
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -131,45 +132,9 @@ class LoraScanner:
                 folders=[]
             )
 
-    def fuzzy_match(self, text: str, pattern: str, threshold: float = 0.7) -> bool:
-        """
-        Check if text matches pattern using fuzzy matching.
-        Returns True if similarity ratio is above threshold.
-        """
-        if not pattern or not text:
-            return False
-        
-        # Convert both to lowercase for case-insensitive matching
-        text = text.lower()
-        pattern = pattern.lower()
-        
-        # Split pattern into words
-        search_words = pattern.split()
-        
-        # Check each word
-        for word in search_words:
-            # First check if word is a substring (faster)
-            if word in text:
-                continue
-            
-            # If not found as substring, try fuzzy matching
-            # Check if any part of the text matches this word
-            found_match = False
-            for text_part in text.split():
-                ratio = SequenceMatcher(None, text_part, word).ratio()
-                if ratio >= threshold:
-                    found_match = True
-                    break
-                
-            if not found_match:
-                return False
-        
-        # All words found either as substrings or fuzzy matches
-        return True
-
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
                                folder: str = None, search: str = None, fuzzy: bool = False,
-                               recursive: bool = False, base_models: list = None, tags: list = None,
+                               base_models: list = None, tags: list = None,
                                search_options: dict = None) -> Dict:
         """Get paginated and filtered lora data
         
@@ -180,10 +145,9 @@ class LoraScanner:
             folder: Filter by folder path
             search: Search term
             fuzzy: Use fuzzy matching for search
-            recursive: Include subfolders when folder filter is applied
             base_models: List of base models to filter by
             tags: List of tags to filter by
-            search_options: Dictionary with search options (filename, modelname, tags)
+            search_options: Dictionary with search options (filename, modelname, tags, recursive)
         """
         cache = await self.get_cached_data()
 
@@ -192,7 +156,8 @@ class LoraScanner:
             search_options = {
                 'filename': True,
                 'modelname': True,
-                'tags': False
+                'tags': False,
+                'recursive': False
             }
 
         # Get the base data set
@@ -207,7 +172,7 @@ class LoraScanner:
         
         # Apply folder filtering
         if folder is not None:
-            if recursive:
+            if search_options.get('recursive', False):
                 # Recursive mode: match all paths starting with this folder
                 filtered_data = [
                     item for item in filtered_data 
@@ -236,16 +201,47 @@ class LoraScanner:
         
         # Apply search filtering
         if search:
-            if fuzzy:
-                filtered_data = [
-                    item for item in filtered_data 
-                    if self._fuzzy_search_match(item, search, search_options)
-                ]
-            else:
-                filtered_data = [
-                    item for item in filtered_data 
-                    if self._exact_search_match(item, search, search_options)
-                ]
+            search_results = []
+            for item in filtered_data:
+                # Check filename if enabled
+                if search_options.get('filename', True):
+                    if fuzzy:
+                        if fuzzy_match(item.get('file_name', ''), search):
+                            search_results.append(item)
+                            continue
+                    else:
+                        if search.lower() in item.get('file_name', '').lower():
+                            search_results.append(item)
+                            continue
+                            
+                # Check model name if enabled
+                if search_options.get('modelname', True):
+                    if fuzzy:
+                        if fuzzy_match(item.get('model_name', ''), search):
+                            search_results.append(item)
+                            continue
+                    else:
+                        if search.lower() in item.get('model_name', '').lower():
+                            search_results.append(item)
+                            continue
+                            
+                # Check tags if enabled
+                if search_options.get('tags', False) and item.get('tags'):
+                    found_tag = False
+                    for tag in item['tags']:
+                        if fuzzy:
+                            if fuzzy_match(tag, search):
+                                found_tag = True
+                                break
+                        else:
+                            if search.lower() in tag.lower():
+                                found_tag = True
+                                break
+                    if found_tag:
+                        search_results.append(item)
+                        continue
+                        
+            filtered_data = search_results
 
         # Calculate pagination
         total_items = len(filtered_data)
@@ -261,44 +257,6 @@ class LoraScanner:
         }
         
         return result
-
-    def _fuzzy_search_match(self, item: Dict, search: str, search_options: Dict) -> bool:
-        """Check if an item matches the search term using fuzzy matching with search options"""
-        # Check filename if enabled
-        if search_options.get('filename', True) and self.fuzzy_match(item.get('file_name', ''), search):
-            return True
-            
-        # Check model name if enabled
-        if search_options.get('modelname', True) and self.fuzzy_match(item.get('model_name', ''), search):
-            return True
-            
-        # Check tags if enabled
-        if search_options.get('tags', False) and item.get('tags'):
-            for tag in item['tags']:
-                if self.fuzzy_match(tag, search):
-                    return True
-                    
-        return False
-
-    def _exact_search_match(self, item: Dict, search: str, search_options: Dict) -> bool:
-        """Check if an item matches the search term using exact matching with search options"""
-        search = search.lower()
-        
-        # Check filename if enabled
-        if search_options.get('filename', True) and search in item.get('file_name', '').lower():
-            return True
-            
-        # Check model name if enabled
-        if search_options.get('modelname', True) and search in item.get('model_name', '').lower():
-            return True
-            
-        # Check tags if enabled
-        if search_options.get('tags', False) and item.get('tags'):
-            for tag in item['tags']:
-                if search in tag.lower():
-                    return True
-                    
-        return False
 
     def invalidate_cache(self):
         """Invalidate the current cache"""
@@ -604,7 +562,7 @@ class LoraScanner:
             
             # Update hash index with new path
             if 'sha256' in metadata:
-                self._hash_index.add_entry(metadata['sha256'], new_path)
+                self._hash_index.add_entry(metadata['sha256'].lower(), new_path)
             
             # Update folders list
             all_folders = set(item['folder'] for item in cache.raw_data)
@@ -659,6 +617,26 @@ class LoraScanner:
         """Get hash for a LoRA by its file path"""
         return self._hash_index.get_hash(file_path) 
 
+    def get_preview_url_by_hash(self, sha256: str) -> Optional[str]:
+        """Get preview static URL for a LoRA by its hash"""
+        # Get the file path first
+        file_path = self._hash_index.get_path(sha256.lower())
+        if not file_path:
+            return None
+            
+        # Determine the preview file path (typically same name with different extension)
+        base_name = os.path.splitext(file_path)[0]
+        preview_extensions = ['.preview.png', '.preview.jpeg', '.preview.jpg', '.preview.mp4',
+                            '.png', '.jpeg', '.jpg', '.mp4']
+        
+        for ext in preview_extensions:
+            preview_path = f"{base_name}{ext}"
+            if os.path.exists(preview_path):
+                # Convert to static URL using config
+                return config.get_preview_static_url(preview_path)
+        
+        return None
+
     # Add new method to get top tags
     async def get_top_tags(self, limit: int = 20) -> List[Dict[str, any]]:
         """Get top tags sorted by count
@@ -681,4 +659,81 @@ class LoraScanner:
         
         # Return limited number
         return sorted_tags[:limit]
+        
+    async def get_base_models(self, limit: int = 20) -> List[Dict[str, any]]:
+        """Get base models used in loras sorted by frequency
+        
+        Args:
+            limit: Maximum number of base models to return
+            
+        Returns:
+            List of dictionaries with base model name and count, sorted by count
+        """
+        # Make sure cache is initialized
+        cache = await self.get_cached_data()
+        
+        # Count base model occurrences
+        base_model_counts = {}
+        for lora in cache.raw_data:
+            if 'base_model' in lora and lora['base_model']:
+                base_model = lora['base_model']
+                base_model_counts[base_model] = base_model_counts.get(base_model, 0) + 1
+        
+        # Sort base models by count
+        sorted_models = [{'name': model, 'count': count} for model, count in base_model_counts.items()]
+        sorted_models.sort(key=lambda x: x['count'], reverse=True)
+        
+        # Return limited number
+        return sorted_models[:limit]
+
+    async def diagnose_hash_index(self):
+        """Diagnostic method to verify hash index functionality"""
+        print("\n\n*** DIAGNOSING LORA HASH INDEX ***\n\n", file=sys.stderr)
+        
+        # First check if the hash index has any entries
+        if hasattr(self, '_hash_index'):
+            index_entries = len(self._hash_index._hash_to_path)
+            print(f"Hash index has {index_entries} entries", file=sys.stderr)
+            
+            # Print a few example entries if available
+            if index_entries > 0:
+                print("\nSample hash index entries:", file=sys.stderr)
+                count = 0
+                for hash_val, path in self._hash_index._hash_to_path.items():
+                    if count < 5:  # Just show the first 5
+                        print(f"Hash: {hash_val[:8]}... -> Path: {path}", file=sys.stderr)
+                        count += 1
+                    else:
+                        break
+        else:
+            print("Hash index not initialized", file=sys.stderr)
+        
+        # Try looking up by a known hash for testing
+        if not hasattr(self, '_hash_index') or not self._hash_index._hash_to_path:
+            print("No hash entries to test lookup with", file=sys.stderr)
+            return
+        
+        test_hash = next(iter(self._hash_index._hash_to_path.keys()))
+        test_path = self._hash_index.get_path(test_hash)
+        print(f"\nTest lookup by hash: {test_hash[:8]}... -> {test_path}", file=sys.stderr)
+        
+        # Also test reverse lookup
+        test_hash_result = self._hash_index.get_hash(test_path)
+        print(f"Test reverse lookup: {test_path} -> {test_hash_result[:8]}...\n\n", file=sys.stderr)
+
+    async def get_lora_info_by_name(self, name):
+        """Get LoRA information by name"""
+        try:
+            # Get cached data
+            cache = await self.get_cached_data()
+            
+            # Find the LoRA by name
+            for lora in cache.raw_data:
+                if lora.get("file_name") == name:
+                    return lora
+                    
+            return None
+        except Exception as e:
+            logger.error(f"Error getting LoRA info by name: {e}", exc_info=True)
+            return None
 

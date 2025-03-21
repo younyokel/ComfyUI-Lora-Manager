@@ -5,101 +5,38 @@
             <div class="tag" data-folder="{{ folder }}">{{ folder }}</div>
             {% endfor %}
         </div>
-        <button class="toggle-folders-btn" onclick="toggleFolderTags()" title="Collapse folder tags">
-            <i class="fas fa-chevron-up"></i>
-        </button>
     </div>
     
     <div class="actions">
-        <div title="Sort models by..." class="control-group">
-            <select id="sortSelect">
-            <option value="name">Name</option>
-            <option value="date">Date</option>
-            </select>
+        <div class="action-buttons">
+            <div title="Sort models by..." class="control-group">
+                <select id="sortSelect">
+                <option value="name">Name</option>
+                <option value="date">Date</option>
+                </select>
+            </div>
+            <div title="Refresh model list" class="control-group">
+                <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            <div class="control-group">
+                <button onclick="fetchCivitai()" class="secondary" title="Fetch from Civitai"><i class="fas fa-download"></i> Fetch</button>
+            </div>
+            <div class="control-group">
+                <button onclick="downloadManager.showDownloadModal()" title="Download from URL">
+                    <i class="fas fa-cloud-download-alt"></i> Download
+                </button>
+            </div>
+            <div class="control-group">
+                <button id="bulkOperationsBtn" onclick="bulkManager.toggleBulkMode()" title="Bulk Operations">
+                    <i class="fas fa-th-large"></i> Bulk
+                </button>
+            </div>
         </div>
-        <div title="Refresh model list" class="control-group">
-            <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
-        </div>
-        <div class="control-group">
-            <button onclick="fetchCivitai()" class="secondary" title="Fetch from Civitai"><i class="fas fa-download"></i> Fetch</button>
-        </div>
-        <div class="control-group">
-            <button onclick="downloadManager.showDownloadModal()" title="Download from URL">
-                <i class="fas fa-cloud-download-alt"></i> Download
+        <div class="toggle-folders-container">
+            <button class="toggle-folders-btn icon-only" onclick="toggleFolderTags()" title="Toggle folder tags">
+                <i class="fas fa-tags"></i>
             </button>
         </div>
-        <div class="control-group">
-            <button id="bulkOperationsBtn" onclick="bulkManager.toggleBulkMode()" title="Bulk Operations">
-                <i class="fas fa-th-large"></i> Bulk
-            </button>
-        </div>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Search models..." />
-            <!-- 清空按钮将由JavaScript动态添加到这里 -->
-            <i class="fas fa-search search-icon"></i>
-            <button class="search-options-toggle" id="searchOptionsToggle" title="Search Options">
-                <i class="fas fa-sliders-h"></i>
-            </button>
-             <button class="search-filter-toggle" id="filterButton" onclick="filterManager.toggleFilterPanel()" title="Filter models">
-                <i class="fas fa-filter"></i>
-                <span class="filter-badge" id="activeFiltersCount" style="display: none">0</span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Add search options panel -->
-<div id="searchOptionsPanel" class="search-options-panel hidden">
-    <div class="options-header">
-        <h3>Search Options</h3>
-        <button class="close-options-btn" id="closeSearchOptions">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    <div class="options-section">
-        <h4>Search In:</h4>
-        <div class="search-option-tags">
-            <div class="search-option-tag active" data-option="filename">Filename</div>
-            <div class="search-option-tag active" data-option="tags">Tags</div>
-            <div class="search-option-tag active" data-option="modelname">Model Name</div>
-        </div>
-    </div>
-    <div class="options-section">
-        <div class="search-option-switch">
-            <span>Include Subfolders</span>
-            <label class="switch">
-                <input type="checkbox" id="recursiveSearchToggle">
-                <span class="slider round"></span>
-            </label>
-        </div>
-    </div>
-</div>
-
-<!-- Add filter panel -->
-<div id="filterPanel" class="filter-panel hidden">
-    <div class="filter-header">
-        <h3>Filter Models</h3>
-        <button class="close-filter-btn" onclick="filterManager.closeFilterPanel()">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    <div class="filter-section">
-        <h4>Base Model</h4>
-        <div class="filter-tags" id="baseModelTags">
-            <!-- Tags will be dynamically inserted here -->
-        </div>
-    </div>
-    <div class="filter-section">
-        <h4>Tags (Top 20)</h4>
-        <div class="filter-tags" id="modelTagsFilter">
-            <!-- Top tags will be dynamically inserted here -->
-            <div class="tags-loading">Loading tags...</div>
-        </div>
-    </div>
-    <div class="filter-actions">
-        <button class="clear-filters-btn" onclick="filterManager.clearFilters()">
-            Clear All Filters
-        </button>
     </div>
 </div>
 

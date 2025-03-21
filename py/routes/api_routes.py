@@ -16,6 +16,7 @@ from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
+from ..services.recipe_scanner import RecipeScanner
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class ApiRoutes:
         app.router.add_post('/api/fetch-all-civitai', routes.fetch_all_civitai)
         app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
+        app.router.add_get('/api/folders', routes.get_folders)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
@@ -47,7 +49,8 @@ class ApiRoutes:
         app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
-        app.router.add_get('/api/top-tags', routes.get_top_tags)  # Add new route for top tags
+        app.router.add_get('/api/loras/top-tags', routes.get_top_tags)  # Add new route for top tags
+        app.router.add_get('/api/loras/base-models', routes.get_base_models)  # Add new route for base models
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -128,7 +131,6 @@ class ApiRoutes:
             folder = request.query.get('folder')
             search = request.query.get('search', '').lower()
             fuzzy = request.query.get('fuzzy', 'false').lower() == 'true'
-            recursive = request.query.get('recursive', 'false').lower() == 'true'
             
             # Parse base models filter parameter
             base_models = request.query.get('base_models', '').split(',')
@@ -138,6 +140,7 @@ class ApiRoutes:
             search_filename = request.query.get('search_filename', 'true').lower() == 'true'
             search_modelname = request.query.get('search_modelname', 'true').lower() == 'true'
             search_tags = request.query.get('search_tags', 'false').lower() == 'true'
+            recursive = request.query.get('recursive', 'false').lower() == 'true'
             
             # Validate parameters
             if page < 1 or page_size < 1 or page_size > 100:
@@ -162,13 +165,13 @@ class ApiRoutes:
                 folder=folder,
                 search=search,
                 fuzzy=fuzzy,
-                recursive=recursive,
                 base_models=base_models,  # Pass base models filter
                 tags=tags,  # Add tags parameter
                 search_options={
                     'filename': search_filename,
                     'modelname': search_modelname,
-                    'tags': search_tags
+                    'tags': search_tags,
+                    'recursive': recursive
                 }
             )
             
@@ -518,6 +521,13 @@ class ApiRoutes:
         return web.json_response({
             'roots': config.loras_roots
         })
+    
+    async def get_folders(self, request: web.Request) -> web.Response:
+        """Get all folders in the cache"""
+        cache = await self.scanner.get_cached_data()
+        return web.json_response({
+            'folders': cache.folders
+        })
 
     async def get_civitai_versions(self, request: web.Request) -> web.Response:
         """Get available versions for a Civitai model with local availability info"""
@@ -832,4 +842,28 @@ class ApiRoutes:
             return web.json_response({
                 'success': False,
                 'error': 'Internal server error'
+            }, status=500)
+
+    async def get_base_models(self, request: web.Request) -> web.Response:
+        """Get base models used in loras"""
+        try:
+            # Parse query parameters
+            limit = int(request.query.get('limit', '20'))
+            
+            # Validate limit
+            if limit < 1 or limit > 100:
+                limit = 20  # Default to a reasonable limit
+                
+            # Get base models
+            base_models = await self.scanner.get_base_models(limit)
+            
+            return web.json_response({
+                'success': True,
+                'base_models': base_models
+            })
+        except Exception as e:
+            logger.error(f"Error retrieving base models: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)

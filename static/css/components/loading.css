@@ -56,6 +56,53 @@
     transition: width 200ms ease-out;
 }
 
+/* Enhanced progress display */
+.progress-details-container {
+    margin-top: var(--space-3);
+    width: 100%;
+    text-align: left;
+}
+
+.overall-progress-label {
+    font-size: 0.9rem;
+    margin-bottom: var(--space-1);
+    color: var(--text-color);
+}
+
+.current-item-progress {
+    margin-top: var(--space-2);
+}
+
+.current-item-label {
+    font-size: 0.9rem;
+    margin-bottom: var(--space-1);
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.current-item-bar-container {
+    height: 8px;
+    background-color: var(--lora-border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: var(--space-1);
+}
+
+.current-item-bar {
+    height: 100%;
+    background-color: var(--lora-accent);
+    transition: width 200ms ease-out;
+    width: 0%;
+}
+
+.current-item-percent {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary, var(--text-color));
+    opacity: 0.7;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -63,7 +110,8 @@
 
 @media (prefers-reduced-motion: reduce) {
     .lora-card,
-    .progress-bar {
+    .progress-bar,
+    .current-item-bar {
         transition: none;
     }
 }

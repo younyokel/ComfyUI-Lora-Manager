@@ -1,123 +1,33 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>LoRA Manager</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/loras_static/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="icon" type="image/png" sizes="32x32" href="/loras_static/images/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/loras_static/images/favicon-16x16.png">
-    <link rel="manifest" href="/loras_static/images/site.webmanifest">
-    
-    <!-- 预加载关键资源 -->
-    <link rel="preload" href="/loras_static/css/style.css" as="style">
-    <link rel="preload" href="/loras_static/js/main.js" as="script" crossorigin="anonymous">
-    
-    <!-- 优化字体加载 -->
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
-    
-    <!-- 添加性能监控 -->
-    <script>
-        performance.mark('page-start'); 
-        window.addEventListener('load', () => {
-            performance.mark('page-end');
-            performance.measure('page-load', 'page-start', 'page-end');
-        });
-    </script>
-    
-    <!-- 添加安全相关的 meta 标签 -->
-    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
-    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
-    
-    <!-- 添加资源加载策略 -->
-    <link rel="preconnect" href="https://civitai.com">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+{% extends "base.html" %}
 
-    <script>
-        // 计算滚动条宽度并设置CSS变量
-        document.addEventListener('DOMContentLoaded', () => {
-            const scrollDiv = document.createElement('div');
-            scrollDiv.style.cssText = 'width:100px;height:100px;overflow:scroll;position:absolute;top:-9999px;';
-            document.body.appendChild(scrollDiv);
-            const scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
-            document.body.removeChild(scrollDiv);
-            document.documentElement.style.setProperty('--scrollbar-width', scrollbarWidth + 'px');
-        });
-    </script>
-</head>
-<body>
-    <div class="corner-controls">
-        <div class="corner-controls-toggle">
-            <i class="fas fa-ellipsis-v"></i>
-            <span class="update-badge corner-badge hidden"></span>
-        </div>
-        <div class="corner-controls-items">
-            <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                <img src="/loras_static/images/theme-toggle-light.svg" alt="Theme" class="theme-icon light-icon">
-                <img src="/loras_static/images/theme-toggle-dark.svg" alt="Theme" class="theme-icon dark-icon">
-            </div>
-            <div class="update-toggle" id="updateToggleBtn" title="Check Updates">
-                <i class="fas fa-bell"></i>
-                <span class="update-badge hidden"></span>
-            </div>
-            <div class="support-toggle" id="supportToggleBtn" title="Support">
-                <i class="fas fa-heart"></i>
-            </div>
-            <div class="settings-toggle" onclick="settingsManager.toggleSettings()" title="Settings">
-                <i class="fas fa-cog"></i>
-            </div>
-        </div>
+{% block title %}LoRA Manager{% endblock %}
+{% block page_id %}loras{% endblock %}
+
+{% block preload %}
+<link rel="preload" href="/loras_static/js/loras.js" as="script" crossorigin="anonymous">
+{% endblock %}
+
+{% block init_title %}Initializing LoRA Manager{% endblock %}
+{% block init_message %}Scanning and building LoRA cache. This may take a few minutes...{% endblock %}
+{% block init_check_url %}/api/loras?page=1&page_size=1{% endblock %}
+
+{% block additional_components %}
+{% include 'components/lora_modals.html' %}
+{% endblock %}
+
+{% block content %}
+    {% include 'components/controls.html' %}
+    <!-- Lora卡片容器 -->
+    <div class="card-grid" id="loraGrid">
+        <!-- Cards will be dynamically inserted here -->
     </div>
-    
-    {% include 'components/modals.html' %}
-    {% include 'components/loading.html' %}
-    {% include 'components/context_menu.html' %}
+    <!-- Bulk operations panel will be inserted here by JavaScript -->
+{% endblock %}
 
-    <div class="container">
-        {% if is_initializing %}
-        <div class="initialization-notice">
-            <div class="notice-content">
-                <div class="loading-spinner"></div>
-                <h2>Initializing LoRA Manager</h2>
-                <p>Scanning and building LoRA cache. This may take a few minutes...</p>
-            </div>
-        </div>
-        {% else %}
-            {% include 'components/controls.html' %}
-            <!-- Lora卡片容器 -->
-            <div class="card-grid" id="loraGrid">
-                <!-- Cards will be dynamically inserted here -->
-            </div>
-            <!-- Bulk operations panel will be inserted here by JavaScript -->
-        {% endif %}
-    </div>
+{% block overlay %}
+<div class="bulk-mode-overlay"></div>
+{% endblock %}
 
-    <!-- Add after the container div -->
-    <div class="bulk-mode-overlay"></div>
-
-    <script type="module" src="/loras_static/js/main.js"></script>
-    {% if is_initializing %}
-    <script>
-        // 检查初始化状态并设置自动刷新
-        async function checkInitStatus() {
-            try {
-                const response = await fetch('/api/loras?page=1&page_size=1');
-                if (response.ok) {
-                    // 如果成功获取数据，说明初始化完成，刷新页面
-                    window.location.reload();
-                } else {
-                    // 如果还未完成，继续轮询
-                    setTimeout(checkInitStatus, 2000); // 每2秒检查一次
-                }
-            } catch (error) {
-                // 如果出错，继续轮询
-                setTimeout(checkInitStatus, 2000);
-            }
-        }
-        
-        // 启动状态检查
-        checkInitStatus();
-    </script>
-    {% endif %}
-</body>
-</html>
+{% block main_script %}
+<script type="module" src="/loras_static/js/loras.js"></script>
+{% endblock %}

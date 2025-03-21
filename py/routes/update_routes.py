@@ -24,19 +24,15 @@ class UpdateRoutes:
         try:
             # Read local version from pyproject.toml
             local_version = UpdateRoutes._get_local_version()
-            logger.info(f"Local version: {local_version}")
-            
+
             # Fetch remote version from GitHub
             remote_version, changelog = await UpdateRoutes._get_remote_version()
-            logger.info(f"Remote version: {remote_version}")
             
             # Compare versions
             update_available = UpdateRoutes._compare_versions(
                 local_version.replace('v', ''), 
                 remote_version.replace('v', '')
             )
-            
-            logger.info(f"Update available: {update_available}")
             
             return web.json_response({
                 'success': True,
