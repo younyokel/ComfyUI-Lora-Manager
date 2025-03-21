@@ -777,7 +777,7 @@ class RecipeRoutes:
             # load_extensions=False to avoid loading extensions for now
             parsed_workflow = parse_workflow(workflow_json, load_extensions=False)
 
-            logger.info(f"Parsed workflow: {parsed_workflow}")
+            logger.debug(f"Parsed workflow: {parsed_workflow}")
             
             if not parsed_workflow or not parsed_workflow.get("gen_params"):
                 return web.json_response({"error": "Could not extract generation parameters from workflow"}, status=400)
