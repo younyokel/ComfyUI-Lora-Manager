@@ -46,6 +46,8 @@ class RecipeRoutes:
         
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
+        
+        app.router.add_post('/api/recipes/save-from-widget', routes.save_recipe_from_widget)
     
     async def _init_cache(self, app):
         """Initialize cache on startup"""
@@ -730,3 +732,169 @@ class RecipeRoutes:
                 del self._shared_recipes[rid]
             except Exception as e:
                 logger.error(f"Error cleaning up shared recipe {rid}: {e}")
+
+    async def save_recipe_from_widget(self, request: web.Request) -> web.Response:
+        """Save a recipe from the LoRAs widget"""
+        try:
+            reader = await request.multipart()
+            
+            # Process form data
+            name = None
+            tags = []
+            metadata = None
+            
+            while True:
+                field = await reader.next()
+                if field is None:
+                    break
+                
+                if field.name == 'name':
+                    name = await field.text()
+                    
+                elif field.name == 'tags':
+                    tags_text = await field.text()
+                    try:
+                        tags = json.loads(tags_text)
+                    except:
+                        tags = []
+                    
+                elif field.name == 'metadata':
+                    metadata_text = await field.text()
+                    try:
+                        metadata = json.loads(metadata_text)
+                    except:
+                        metadata = {}
+            
+            missing_fields = []
+            if not name:
+                missing_fields.append("name")
+            if not metadata:
+                missing_fields.append("metadata")
+            if missing_fields:
+                return web.json_response({"error": f"Missing required fields: {', '.join(missing_fields)}"}, status=400)
+            
+            # Find the latest image in the temp directory
+            temp_dir = config.temp_directory
+            image_files = []
+            
+            for file in os.listdir(temp_dir):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    file_path = os.path.join(temp_dir, file)
+                    image_files.append((file_path, os.path.getmtime(file_path)))
+            
+            if not image_files:
+                return web.json_response({"error": "No recent images found to use for recipe"}, status=400)
+            
+            # Sort by modification time (newest first)
+            image_files.sort(key=lambda x: x[1], reverse=True)
+            latest_image_path = image_files[0][0]
+            
+            # Extract ComfyUI generation parameters from the latest image
+            gen_params = ExifUtils.extract_comfyui_gen_params(latest_image_path)
+            
+            # Read the image
+            with open(latest_image_path, 'rb') as f:
+                image = f.read()
+            
+            # Create recipes directory if it doesn't exist
+            recipes_dir = self.recipe_scanner.recipes_dir
+            os.makedirs(recipes_dir, exist_ok=True)
+            
+            # Generate UUID for the recipe
+            import uuid
+            recipe_id = str(uuid.uuid4())
+            
+            # Optimize the image (resize and convert to WebP)
+            optimized_image, extension = ExifUtils.optimize_image(
+                image_data=image,
+                target_width=480,
+                format='webp',
+                quality=85,
+                preserve_metadata=True
+            )
+            
+            # Save the optimized image
+            image_filename = f"{recipe_id}{extension}"
+            image_path = os.path.join(recipes_dir, image_filename)
+            with open(image_path, 'wb') as f:
+                f.write(optimized_image)
+            
+            # Format loras data from metadata
+            loras_data = []
+            for lora in metadata.get("loras", []):
+                # Skip inactive LoRAs
+                if not lora.get("active", True):
+                    continue
+                
+                # Get lora info from scanner
+                lora_name = lora.get("name", "")
+                lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora_name)
+                
+                # Create lora entry
+                lora_entry = {
+                    "file_name": lora_name,
+                    "hash": lora_info.get("sha256", "").lower() if lora_info else "",
+                    "strength": float(lora.get("weight", 1.0)),
+                    "modelVersionId": lora_info.get("civitai", {}).get("id", "") if lora_info else "",
+                    "modelName": lora_info.get("civitai", {}).get("model", {}).get("name", "") if lora_info else lora_name,
+                    "modelVersionName": lora_info.get("civitai", {}).get("name", "") if lora_info else "",
+                    "isDeleted": False
+                }
+                loras_data.append(lora_entry)
+            
+            # Get base model from lora scanner
+            base_model_counts = {}
+            for lora in loras_data:
+                lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora.get("file_name", ""))
+                if lora_info and "base_model" in lora_info:
+                    base_model = lora_info["base_model"]
+                    base_model_counts[base_model] = base_model_counts.get(base_model, 0) + 1
+            
+            # Get most common base model
+            most_common_base_model = ""
+            if base_model_counts:
+                most_common_base_model = max(base_model_counts.items(), key=lambda x: x[1])[0]
+            
+            # Create the recipe data structure
+            recipe_data = {
+                "id": recipe_id,
+                "file_path": image_path,
+                "title": name,
+                "modified": time.time(),
+                "created_date": time.time(),
+                "base_model": most_common_base_model,
+                "loras": loras_data,
+                "gen_params": gen_params  # Directly use the extracted params
+            }
+            
+            # Add tags if provided
+            if tags:
+                recipe_data["tags"] = tags
+            
+            # Save the recipe JSON
+            json_filename = f"{recipe_id}.recipe.json"
+            json_path = os.path.join(recipes_dir, json_filename)
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+
+            # Add recipe metadata to the image
+            ExifUtils.append_recipe_metadata(image_path, recipe_data)
+            
+            # Update cache
+            if self.recipe_scanner._cache is not None:
+                # Add the recipe to the raw data if the cache exists
+                self.recipe_scanner._cache.raw_data.append(recipe_data)
+                # Schedule a background task to resort the cache
+                asyncio.create_task(self.recipe_scanner._cache.resort())
+                logger.info(f"Added recipe {recipe_id} to cache")
+            
+            return web.json_response({
+                'success': True,
+                'recipe_id': recipe_id,
+                'image_path': image_path,
+                'json_path': json_path
+            })
+            
+        except Exception as e:
+            logger.error(f"Error saving recipe from widget: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)

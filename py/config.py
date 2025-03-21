@@ -17,6 +17,7 @@ class Config:
         # 静态路由映射字典, target to route mapping
         self._route_mappings = {}
         self.loras_roots = self._init_lora_paths()
+        self.temp_directory = folder_paths.get_temp_directory()
         # 在初始化时扫描符号链接
         self._scan_symbolic_links()
 

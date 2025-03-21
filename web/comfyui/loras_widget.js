@@ -1,4 +1,5 @@
 import { api } from "../../scripts/api.js";
+import { app } from "../../scripts/app.js";
 
 export function addLorasWidget(node, name, opts, callback) {
   // Create container for loras
@@ -376,16 +377,16 @@ export function addLorasWidget(node, name, opts, callback) {
       }
     );
 
-    // Save recipe option with bookmark icon (WIP)
+    // Save recipe option with bookmark icon
     const saveOption = createMenuItem(
-      'Save Recipe (WIP)',
+      'Save Recipe',
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>',
-      null
+      () => {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+        saveRecipeDirectly(widget);
+      }
     );
-    Object.assign(saveOption.style, {
-      opacity: '0.6',
-      cursor: 'default',
-    });
 
     // Add separator
     const separator = document.createElement('div');
@@ -763,4 +764,95 @@ export function addLorasWidget(node, name, opts, callback) {
   };
 
   return { minWidth: 400, minHeight: 200, widget };
+}
+
+// Function to directly save the recipe without dialog
+async function saveRecipeDirectly(widget) {
+  try {
+    // Filter active loras
+    const activeLoras = widget.value.filter(lora => lora.active);
+    
+    if (activeLoras.length === 0) {
+      // Show toast notification for no active LoRAs
+      if (app && app.extensionManager && app.extensionManager.toast) {
+        app.extensionManager.toast.add({
+          severity: 'warn',
+          summary: 'No Active LoRAs',
+          detail: 'Please activate at least one LoRA to save a recipe',
+          life: 3000
+        });
+      }
+      return;
+    }
+    
+    // Generate a name based on active LoRAs
+    const recipeName = activeLoras.map(lora => 
+      `${lora.name.split('/').pop().split('\\').pop()}:${lora.strength}`
+    ).join(' ');
+    
+    // Show loading toast
+    if (app && app.extensionManager && app.extensionManager.toast) {
+      app.extensionManager.toast.add({
+        severity: 'info',
+        summary: 'Saving Recipe',
+        detail: 'Please wait...',
+        life: 2000
+      });
+    }
+    
+    // Prepare the data
+    const formData = new FormData();
+    formData.append('name', recipeName);
+    formData.append('tags', JSON.stringify([]));
+    
+    // Prepare metadata with loras
+    const metadata = {
+      loras: activeLoras.map(lora => ({
+        name: lora.name,
+        weight: parseFloat(lora.strength),
+        active: true
+      }))
+    };
+    
+    formData.append('metadata', JSON.stringify(metadata));
+    
+    // Send the request
+    const response = await fetch('/api/recipes/save-from-widget', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    // Show result toast
+    if (app && app.extensionManager && app.extensionManager.toast) {
+      if (result.success) {
+        app.extensionManager.toast.add({
+          severity: 'success',
+          summary: 'Recipe Saved',
+          detail: 'Recipe has been saved successfully',
+          life: 3000
+        });
+      } else {
+        app.extensionManager.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: result.error || 'Failed to save recipe',
+          life: 5000
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error saving recipe:', error);
+    
+    // Show error toast
+    if (app && app.extensionManager && app.extensionManager.toast) {
+      app.extensionManager.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to save recipe: ' + (error.message || 'Unknown error'),
+        life: 5000
+      });
+    }
+  }
 }

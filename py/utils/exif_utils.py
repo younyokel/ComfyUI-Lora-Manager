@@ -279,3 +279,151 @@ class ExifUtils:
                 with open(image_data, 'rb') as f:
                     return f.read(), os.path.splitext(image_data)[1]
             return image_data, '.jpg'
+
+    @staticmethod
+    def _parse_comfyui_workflow(workflow_data: Any) -> Dict[str, Any]:
+        """
+        Parse ComfyUI workflow data and extract relevant generation parameters
+        
+        Args:
+            workflow_data: Raw workflow data (string or dict)
+            
+        Returns:
+            Formatted generation parameters dictionary
+        """
+        try:
+            # If workflow_data is a string, try to parse it as JSON
+            if isinstance(workflow_data, str):
+                try:
+                    workflow_data = json.loads(workflow_data)
+                except json.JSONDecodeError:
+                    logger.error("Failed to parse workflow data as JSON")
+                    return {}
+            
+            # Now workflow_data should be a dictionary
+            if not isinstance(workflow_data, dict):
+                logger.error(f"Workflow data is not a dictionary: {type(workflow_data)}")
+                return {}
+                
+            # Initialize parameters dictionary with only the required fields
+            gen_params = {
+                "prompt": "",
+                "negative_prompt": "",
+                "steps": "",
+                "sampler": "",
+                "cfg_scale": "",
+                "seed": "",
+                "size": "",
+                "clip_skip": ""
+            }
+            
+            # Process each node in the workflow to extract parameters
+            for node_id, node_data in workflow_data.items():
+                if not isinstance(node_data, dict):
+                    continue
+                    
+                # Extract node inputs if available
+                inputs = node_data.get("inputs", {})
+                if not inputs:
+                    continue
+                
+                # KSampler nodes contain most generation parameters
+                if "KSampler" in node_data.get("class_type", ""):
+                    # Extract basic sampling parameters
+                    gen_params["steps"] = inputs.get("steps", "")
+                    gen_params["cfg_scale"] = inputs.get("cfg", "")
+                    gen_params["sampler"] = inputs.get("sampler_name", "")
+                    gen_params["seed"] = inputs.get("seed", "")
+                    if isinstance(gen_params["seed"], list) and len(gen_params["seed"]) > 1:
+                        gen_params["seed"] = gen_params["seed"][1]  # Use the actual value if it's a list
+                
+                # CLIP Text Encode nodes contain prompts
+                elif "CLIPTextEncode" in node_data.get("class_type", ""):
+                    # Check for negative prompt nodes
+                    title = node_data.get("_meta", {}).get("title", "").lower()
+                    prompt_text = inputs.get("text", "")
+                    
+                    if "negative" in title:
+                        gen_params["negative_prompt"] = prompt_text
+                    elif prompt_text and not "negative" in title and gen_params["prompt"] == "":
+                        gen_params["prompt"] = prompt_text
+                
+                # CLIPSetLastLayer contains clip_skip information
+                elif "CLIPSetLastLayer" in node_data.get("class_type", ""):
+                    gen_params["clip_skip"] = inputs.get("stop_at_clip_layer", "")
+                    if isinstance(gen_params["clip_skip"], int) and gen_params["clip_skip"] < 0:
+                        # Convert negative layer index to positive clip skip value
+                        gen_params["clip_skip"] = abs(gen_params["clip_skip"])
+                
+                # Look for resolution information
+                elif "LatentImage" in node_data.get("class_type", "") or "Empty" in node_data.get("class_type", ""):
+                    width = inputs.get("width", 0)
+                    height = inputs.get("height", 0)
+                    if width and height:
+                        gen_params["size"] = f"{width}x{height}"
+                    
+                    # Some nodes have resolution as a string like "832x1216 (0.68)"
+                    resolution = inputs.get("resolution", "")
+                    if isinstance(resolution, str) and "x" in resolution:
+                        gen_params["size"] = resolution.split(" ")[0]  # Extract just the dimensions
+            
+            return gen_params
+            
+        except Exception as e:
+            logger.error(f"Error parsing ComfyUI workflow: {e}", exc_info=True)
+            return {}
+
+    @staticmethod
+    def extract_comfyui_gen_params(image_path: str) -> Dict[str, Any]:
+        """
+        Extract ComfyUI workflow data from PNG images and format for recipe data
+        Only extracts the specific generation parameters needed for recipes.
+        
+        Args:
+            image_path: Path to the ComfyUI-generated PNG image
+            
+        Returns:
+            Dictionary containing formatted generation parameters
+        """
+        try:
+            # Check if the file exists and is accessible
+            if not os.path.exists(image_path):
+                logger.error(f"Image file not found: {image_path}")
+                return {}
+                
+            # Open the image to extract embedded workflow data
+            with Image.open(image_path) as img:
+                workflow_data = None
+                
+                # For PNG images, look for the ComfyUI workflow data in PNG chunks
+                if img.format == 'PNG':
+                    # Check standard metadata fields that might contain workflow
+                    if 'parameters' in img.info:
+                        workflow_data = img.info['parameters']
+                    elif 'prompt' in img.info:
+                        workflow_data = img.info['prompt']
+                    else:
+                        # Look for other potential field names that might contain workflow data
+                        for key in img.info:
+                            if isinstance(key, str) and ('workflow' in key.lower() or 'comfy' in key.lower()):
+                                workflow_data = img.info[key]
+                                break
+                
+                # If no workflow data found in PNG chunks, try EXIF as fallback
+                if not workflow_data:
+                    user_comment = ExifUtils.extract_user_comment(image_path)
+                    if user_comment and '{' in user_comment and '}' in user_comment:
+                        # Try to extract JSON part
+                        json_start = user_comment.find('{')
+                        json_end = user_comment.rfind('}') + 1
+                        workflow_data = user_comment[json_start:json_end]
+                
+                # Parse workflow data if found
+                if workflow_data:
+                    return ExifUtils._parse_comfyui_workflow(workflow_data)
+                
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Error extracting ComfyUI gen params from {image_path}: {e}", exc_info=True)
+            return {}

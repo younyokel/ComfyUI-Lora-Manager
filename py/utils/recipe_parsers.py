@@ -517,14 +517,10 @@ class RecipeParserFactory:
             Appropriate RecipeMetadataParser implementation
         """
         if RecipeFormatParser().is_metadata_matching(user_comment):
-            logger.info("RecipeFormatParser") 
             return RecipeFormatParser()
         elif StandardMetadataParser().is_metadata_matching(user_comment):
-            logger.info("StandardMetadataParser")
             return StandardMetadataParser()
         elif A1111MetadataParser().is_metadata_matching(user_comment):
-            logger.info("A1111MetadataParser")
             return A1111MetadataParser()
         else:
-            logger.info("No parser found for this image")
             return None

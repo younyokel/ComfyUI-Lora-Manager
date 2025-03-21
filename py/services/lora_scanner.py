@@ -721,3 +721,19 @@ class LoraScanner:
         test_hash_result = self._hash_index.get_hash(test_path)
         print(f"Test reverse lookup: {test_path} -> {test_hash_result[:8]}...\n\n", file=sys.stderr)
 
+    async def get_lora_info_by_name(self, name):
+        """Get LoRA information by name"""
+        try:
+            # Get cached data
+            cache = await self.get_cached_data()
+            
+            # Find the LoRA by name
+            for lora in cache.raw_data:
+                if lora.get("file_name") == name:
+                    return lora
+                    
+            return None
+        except Exception as e:
+            logger.error(f"Error getting LoRA info by name: {e}", exc_info=True)
+            return None
+
