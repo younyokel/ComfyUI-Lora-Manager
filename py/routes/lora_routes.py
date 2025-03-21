@@ -116,25 +116,8 @@ class LoraRoutes:
                     request=request  # Pass the request object to the template
                 )
             else:
-                # Normal flow - get recipes with the same formatting as the API endpoint
-                cache = await self.recipe_scanner.get_cached_data()
-                recipes_data = cache.sorted_by_name[:20]  # Show first 20 recipes by name
-                
-                # Format the response data with static URLs for file paths - same as in recipe_routes
-                for item in recipes_data:
-                    # Always ensure file_url is set
-                    if 'file_path' in item:
-                        item['file_url'] = self._format_recipe_file_url(item['file_path'])
-                    else:
-                        item['file_url'] = '/loras_static/images/no-preview.png'
-                    
-                    # Ensure loras array exists
-                    if 'loras' not in item:
-                        item['loras'] = []
-                        
-                    # Ensure base_model field exists
-                    if 'base_model' not in item:
-                        item['base_model'] = ""
+                # return empty recipes
+                recipes_data = []
                 
                 template = self.template_env.get_template('recipes.html')
                 rendered = template.render(
