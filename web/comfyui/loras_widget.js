@@ -769,28 +769,8 @@ export function addLorasWidget(node, name, opts, callback) {
 // Function to directly save the recipe without dialog
 async function saveRecipeDirectly(widget) {
   try {
+    // Get the workflow data from the ComfyUI app
     const prompt = await app.graphToPrompt();
-    console.log("prompt", prompt);
-    // Filter active loras
-    const activeLoras = widget.value.filter(lora => lora.active);
-    
-    if (activeLoras.length === 0) {
-      // Show toast notification for no active LoRAs
-      if (app && app.extensionManager && app.extensionManager.toast) {
-        app.extensionManager.toast.add({
-          severity: 'warn',
-          summary: 'No Active LoRAs',
-          detail: 'Please activate at least one LoRA to save a recipe',
-          life: 3000
-        });
-      }
-      return;
-    }
-    
-    // Generate a name based on active LoRAs
-    const recipeName = activeLoras.map(lora => 
-      `${lora.name.split('/').pop().split('\\').pop()}:${lora.strength}`
-    ).join(' ');
     
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {
@@ -802,21 +782,9 @@ async function saveRecipeDirectly(widget) {
       });
     }
     
-    // Prepare the data
+    // Prepare the data - only send workflow JSON
     const formData = new FormData();
-    formData.append('name', recipeName);
-    formData.append('tags', JSON.stringify([]));
-    
-    // Prepare metadata with loras
-    const metadata = {
-      loras: activeLoras.map(lora => ({
-        name: lora.name,
-        weight: parseFloat(lora.strength),
-        active: true
-      }))
-    };
-    
-    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('workflow_json', JSON.stringify(prompt.output));
     
     // Send the request
     const response = await fetch('/api/recipes/save-from-widget', {

@@ -739,39 +739,22 @@ class RecipeRoutes:
             reader = await request.multipart()
             
             # Process form data
-            name = None
-            tags = []
-            metadata = None
+            workflow_json = None
             
             while True:
                 field = await reader.next()
                 if field is None:
                     break
                 
-                if field.name == 'name':
-                    name = await field.text()
-                    
-                elif field.name == 'tags':
-                    tags_text = await field.text()
+                if field.name == 'workflow_json':
+                    workflow_text = await field.text()
                     try:
-                        tags = json.loads(tags_text)
+                        workflow_json = json.loads(workflow_text)
                     except:
-                        tags = []
-                    
-                elif field.name == 'metadata':
-                    metadata_text = await field.text()
-                    try:
-                        metadata = json.loads(metadata_text)
-                    except:
-                        metadata = {}
+                        return web.json_response({"error": "Invalid workflow JSON"}, status=400)
             
-            missing_fields = []
-            if not name:
-                missing_fields.append("name")
-            if not metadata:
-                missing_fields.append("metadata")
-            if missing_fields:
-                return web.json_response({"error": f"Missing required fields: {', '.join(missing_fields)}"}, status=400)
+            if not workflow_json:
+                return web.json_response({"error": "Missing required workflow_json field"}, status=400)
             
             # Find the latest image in the temp directory
             temp_dir = config.temp_directory
@@ -789,8 +772,38 @@ class RecipeRoutes:
             image_files.sort(key=lambda x: x[1], reverse=True)
             latest_image_path = image_files[0][0]
             
-            # Extract ComfyUI generation parameters from the latest image
-            gen_params = ExifUtils.extract_comfyui_gen_params(latest_image_path)
+            # Parse the workflow to extract generation parameters and loras
+            from ..workflow_params.workflow_parser import parse_workflow
+            # load_extensions=False to avoid loading extensions for now
+            parsed_workflow = parse_workflow(workflow_json, load_extensions=False)
+
+            logger.info(f"Parsed workflow: {parsed_workflow}")
+            
+            if not parsed_workflow or not parsed_workflow.get("gen_params"):
+                return web.json_response({"error": "Could not extract generation parameters from workflow"}, status=400)
+            
+            # Get the lora stack from the parsed workflow
+            lora_stack = parsed_workflow.get("loras", "")
+            
+            # Parse the lora stack format: "<lora:name:strength> <lora:name2:strength2> ..."
+            import re
+            lora_matches = re.findall(r'<lora:([^:]+):([^>]+)>', lora_stack)
+            
+            # Check if any loras were found
+            if not lora_matches:
+                return web.json_response({"error": "No LoRAs found in the workflow"}, status=400)
+            
+            # Generate recipe name from the first 3 loras (or less if fewer are available)
+            loras_for_name = lora_matches[:3]  # Take at most 3 loras for the name
+            
+            recipe_name_parts = []
+            for lora_name, lora_strength in loras_for_name:
+                # Get the basename without path or extension
+                basename = os.path.basename(lora_name)
+                basename = os.path.splitext(basename)[0]
+                recipe_name_parts.append(f"{basename}:{lora_strength}")
+            
+            recipe_name = " ".join(recipe_name_parts)
             
             # Read the image
             with open(latest_image_path, 'rb') as f:
@@ -819,30 +832,29 @@ class RecipeRoutes:
             with open(image_path, 'wb') as f:
                 f.write(optimized_image)
             
-            # Format loras data from metadata
+            # Format loras data from the lora stack
             loras_data = []
-            for lora in metadata.get("loras", []):
-                # Skip inactive LoRAs
-                if not lora.get("active", True):
-                    continue
-                
-                # Get lora info from scanner
-                lora_name = lora.get("name", "")
-                lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora_name)
-                
-                # Create lora entry
-                lora_entry = {
-                    "file_name": lora_name,
-                    "hash": lora_info.get("sha256", "").lower() if lora_info else "",
-                    "strength": float(lora.get("weight", 1.0)),
-                    "modelVersionId": lora_info.get("civitai", {}).get("id", "") if lora_info else "",
-                    "modelName": lora_info.get("civitai", {}).get("model", {}).get("name", "") if lora_info else lora_name,
-                    "modelVersionName": lora_info.get("civitai", {}).get("name", "") if lora_info else "",
-                    "isDeleted": False
-                }
-                loras_data.append(lora_entry)
             
-            # Get base model from lora scanner
+            for lora_name, lora_strength in lora_matches:
+                try:
+                    # Get lora info from scanner
+                    lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora_name)
+                    
+                    # Create lora entry
+                    lora_entry = {
+                        "file_name": lora_name,
+                        "hash": lora_info.get("sha256", "").lower() if lora_info else "",
+                        "strength": float(lora_strength),
+                        "modelVersionId": lora_info.get("civitai", {}).get("id", "") if lora_info else "",
+                        "modelName": lora_info.get("civitai", {}).get("model", {}).get("name", "") if lora_info else lora_name,
+                        "modelVersionName": lora_info.get("civitai", {}).get("name", "") if lora_info else "",
+                        "isDeleted": False
+                    }
+                    loras_data.append(lora_entry)
+                except Exception as e:
+                    logger.warning(f"Error processing LoRA {lora_name}: {e}")
+            
+            # Get base model from lora scanner for the available loras
             base_model_counts = {}
             for lora in loras_data:
                 lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora.get("file_name", ""))
@@ -859,17 +871,14 @@ class RecipeRoutes:
             recipe_data = {
                 "id": recipe_id,
                 "file_path": image_path,
-                "title": name,
+                "title": recipe_name,  # Use generated recipe name
                 "modified": time.time(),
                 "created_date": time.time(),
                 "base_model": most_common_base_model,
                 "loras": loras_data,
-                "gen_params": gen_params  # Directly use the extracted params
+                "gen_params": parsed_workflow.get("gen_params", {}),  # Use the parsed workflow parameters
+                "loras_stack": lora_stack  # Include the original lora stack string
             }
-            
-            # Add tags if provided
-            if tags:
-                recipe_data["tags"] = tags
             
             # Save the recipe JSON
             json_filename = f"{recipe_id}.recipe.json"
@@ -892,7 +901,8 @@ class RecipeRoutes:
                 'success': True,
                 'recipe_id': recipe_id,
                 'image_path': image_path,
-                'json_path': json_path
+                'json_path': json_path,
+                'recipe_name': recipe_name  # Include the generated recipe name in the response
             })
             
         except Exception as e:

@@ -44,7 +44,6 @@ class ExifUtils:
                 return None
                 
         except Exception as e:
-            logger.error(f"Error extracting EXIF data from {image_path}: {e}")
             return None
     
     @staticmethod
