@@ -769,6 +769,8 @@ export function addLorasWidget(node, name, opts, callback) {
 // Function to directly save the recipe without dialog
 async function saveRecipeDirectly(widget) {
   try {
+    const prompt = await app.graphToPrompt();
+    console.log("prompt", prompt);
     // Filter active loras
     const activeLoras = widget.value.filter(lora => lora.active);
     
