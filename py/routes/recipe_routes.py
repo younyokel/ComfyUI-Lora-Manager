@@ -12,6 +12,7 @@ from ..services.civitai_client import CivitaiClient
 from ..services.recipe_scanner import RecipeScanner
 from ..services.lora_scanner import LoraScanner
 from ..config import config
+from ..workflow.parser import WorkflowParser
 import time  # Add this import at the top
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ class RecipeRoutes:
     def __init__(self):
         self.recipe_scanner = RecipeScanner(LoraScanner())
         self.civitai_client = CivitaiClient()
+        self.parser = WorkflowParser()
         
         # Pre-warm the cache
         self._init_cache_task = None
@@ -773,9 +775,7 @@ class RecipeRoutes:
             latest_image_path = image_files[0][0]
             
             # Parse the workflow to extract generation parameters and loras
-            from ..workflow_params.workflow_parser import parse_workflow
-            # load_extensions=False to avoid loading extensions for now
-            parsed_workflow = parse_workflow(workflow_json, load_extensions=False)
+            parsed_workflow = self.parser.parse_workflow(workflow_json)
 
             logger.debug(f"Parsed workflow: {parsed_workflow}")
             

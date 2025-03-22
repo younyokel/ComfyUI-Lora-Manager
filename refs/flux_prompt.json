@@ -44,7 +44,7 @@
     },
     "31": {
         "inputs": {
-            "seed": 48,
+            "seed": 44,
             "steps": 25,
             "cfg": 1,
             "sampler_name": "dpmpp_2m",
@@ -95,7 +95,7 @@
         },
         "class_type": "FluxGuidance",
         "_meta": {
-            "title": "g"
+            "title": "FluxGuidance"
         }
     },
     "37": {
@@ -175,12 +175,12 @@
                 {
                     "name": "pp-enchanted-whimsy",
                     "strength": "0.90",
-                    "active": true
+                    "active": false
                 },
                 {
                     "name": "ral-frctlgmtry_flux",
                     "strength": "0.85",
-                    "active": true
+                    "active": false
                 },
                 {
                     "name": "pp-storybook_rank2_bf16",
@@ -219,16 +219,8 @@
             "group_mode": "",
             "toggle_trigger_words": [
                 {
-                    "text": "in the style of ppWhimsy",
-                    "active": true
-                },
-                {
-                    "text": "ral-frctlgmtry",
-                    "active": true
-                },
-                {
                     "text": "ppstorybook",
-                    "active": true
+                    "active": false
                 },
                 {
                     "text": "__dummy_item__",
@@ -241,7 +233,7 @@
                     "_isDummy": true
                 }
             ],
-            "orinalMessage": "in the style of ppWhimsy,, ral-frctlgmtry,, ppstorybook",
+            "orinalMessage": "ppstorybook",
             "trigger_words": [
                 "58",
                 2
@@ -250,6 +242,73 @@
         "class_type": "TriggerWord Toggle (LoraManager)",
         "_meta": {
             "title": "TriggerWord Toggle (LoraManager)"
+        }
+    },
+    "61": {
+        "inputs": {
+            "add_noise": "enable",
+            "noise_seed": 1111423448930884,
+            "steps": 20,
+            "cfg": 8,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "start_at_step": 0,
+            "end_at_step": 10000,
+            "return_with_leftover_noise": "disable"
+        },
+        "class_type": "KSamplerAdvanced",
+        "_meta": {
+            "title": "KSampler (Advanced)"
+        }
+    },
+    "62": {
+        "inputs": {
+            "sigmas": [
+                "63",
+                0
+            ]
+        },
+        "class_type": "SamplerCustomAdvanced",
+        "_meta": {
+            "title": "SamplerCustomAdvanced"
+        }
+    },
+    "63": {
+        "inputs": {
+            "scheduler": "normal",
+            "steps": 20,
+            "denoise": 1
+        },
+        "class_type": "BasicScheduler",
+        "_meta": {
+            "title": "BasicScheduler"
+        }
+    },
+    "64": {
+        "inputs": {
+            "seed": 1089899258710474,
+            "steps": 20,
+            "cfg": 8,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "denoise": 1
+        },
+        "class_type": "KSampler",
+        "_meta": {
+            "title": "KSampler"
+        }
+    },
+    "65": {
+        "inputs": {
+            "text": ",Stylized geek cat artist with glasses and a paintbrush, smiling at the viewer while holding a sign that reads 'Stay tuned!', solid white background",
+            "anything": [
+                "46",
+                0
+            ]
+        },
+        "class_type": "easy showAnything",
+        "_meta": {
+            "title": "Show Any"
         }
     }
 }

@@ -4,12 +4,7 @@ Main workflow parser implementation for ComfyUI
 import json
 import logging
 from typing import Dict, List, Any, Optional, Union, Set
-from .mappers import (
-    NodeMapper, KSamplerMapper, EmptyLatentImageMapper, 
-    EmptySD3LatentImageMapper, CLIPTextEncodeMapper, 
-    LoraLoaderMapper, LoraStackerMapper, JoinStringsMapper,
-    StringConstantMapper, TriggerWordToggleMapper, FluxGuidanceMapper
-)
+from .mappers import get_mapper, get_all_mappers, load_extensions
 from .utils import (
     load_workflow, save_output, find_node_by_type,
     trace_model_path
@@ -20,33 +15,13 @@ logger = logging.getLogger(__name__)
 class WorkflowParser:
     """Parser for ComfyUI workflows"""
     
-    def __init__(self):
-        """Initialize the parser with default node mappers"""
-        self.node_mappers: Dict[str, NodeMapper] = {}
+    def __init__(self, load_extensions_on_init: bool = True):
+        """Initialize the parser with mappers"""
         self.processed_nodes: Set[str] = set()  # Track processed nodes to avoid cycles
-        self.register_default_mappers()
-    
-    def register_default_mappers(self) -> None:
-        """Register all default node mappers"""
-        mappers = [
-            KSamplerMapper(),
-            EmptyLatentImageMapper(),
-            EmptySD3LatentImageMapper(),
-            CLIPTextEncodeMapper(),
-            LoraLoaderMapper(),
-            LoraStackerMapper(),
-            JoinStringsMapper(),
-            StringConstantMapper(),
-            TriggerWordToggleMapper(),
-            FluxGuidanceMapper()
-        ]
         
-        for mapper in mappers:
-            self.register_mapper(mapper)
-    
-    def register_mapper(self, mapper: NodeMapper) -> None:
-        """Register a node mapper"""
-        self.node_mappers[mapper.node_type] = mapper
+        # Load extensions if requested
+        if load_extensions_on_init:
+            load_extensions()
     
     def process_node(self, node_id: str, workflow: Dict) -> Any:
         """Process a single node and extract relevant information"""
@@ -64,8 +39,8 @@ class WorkflowParser:
         node_type = node_data.get("class_type")
         
         result = None
-        if node_type in self.node_mappers:
-            mapper = self.node_mappers[node_type]
+        mapper = get_mapper(node_type)
+        if mapper:
             result = mapper.process(node_id, node_data, workflow, self)
         
         # Remove node from processed set to allow it to be processed again in a different context
