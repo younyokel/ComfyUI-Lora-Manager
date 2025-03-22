@@ -777,8 +777,6 @@ class RecipeRoutes:
             # Parse the workflow to extract generation parameters and loras
             parsed_workflow = self.parser.parse_workflow(workflow_json)
 
-            logger.debug(f"Parsed workflow: {parsed_workflow}")
-            
             if not parsed_workflow or not parsed_workflow.get("gen_params"):
                 return web.json_response({"error": "Could not extract generation parameters from workflow"}, status=400)
             

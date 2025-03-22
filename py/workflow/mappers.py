@@ -209,21 +209,28 @@ class LoraStackerMapper(NodeMapper):
     
     def transform(self, inputs: Dict) -> Dict:
         loras_data = inputs.get("loras", [])
-        existing_stack = inputs.get("lora_stack", {}).get("lora_stack", [])
         result_stack = []
         
         # Handle existing stack entries
+        existing_stack = []
+        lora_stack_input = inputs.get("lora_stack", [])
+        
+        # Handle different formats of lora_stack
+        if isinstance(lora_stack_input, dict) and "lora_stack" in lora_stack_input:
+            # Format from another LoraStacker node
+            existing_stack = lora_stack_input["lora_stack"]
+        elif isinstance(lora_stack_input, list):
+            # Direct list format or reference format [node_id, output_slot]
+            if len(lora_stack_input) == 2 and isinstance(lora_stack_input[0], (str, int)) and isinstance(lora_stack_input[1], int):
+                # This is likely a reference that was already processed
+                pass
+            else:
+                # Regular list of tuples/entries
+                existing_stack = lora_stack_input
+        
+        # Add existing entries first
         if existing_stack:
-            # Check if existing_stack is a reference to another node ([node_id, output_slot])
-            if isinstance(existing_stack, list) and len(existing_stack) == 2 and isinstance(existing_stack[0], (str, int)) and isinstance(existing_stack[1], int):
-                # This is a reference to another node, should already be processed
-                # So we'll need to extract the value from that node
-                if isinstance(inputs.get("lora_stack", {}), dict) and "lora_stack" in inputs["lora_stack"]:
-                    # If we have the processed result, use it
-                    result_stack.extend(inputs["lora_stack"]["lora_stack"])
-            elif isinstance(existing_stack, list):
-                # If it's a regular list (not a node reference), just add the entries
-                result_stack.extend(existing_stack)
+            result_stack.extend(existing_stack)
         
         # Process loras array - filter active entries
         # Check if loras_data is a list or a dict with __value__ key (new format)
