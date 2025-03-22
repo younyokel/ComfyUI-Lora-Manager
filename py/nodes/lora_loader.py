@@ -1,3 +1,4 @@
+import logging
 from nodes import LoraLoader
 from comfy.comfy_types import IO # type: ignore
 from ..services.lora_scanner import LoraScanner
@@ -5,6 +6,8 @@ from ..config import config
 import asyncio
 import os
 from .utils import FlexibleOptionalInputType, any_type
+
+logger = logging.getLogger(__name__)
 
 class LoraManagerLoader:
     NAME = "Lora Loader (LoraManager)"
@@ -55,6 +58,23 @@ class LoraManagerLoader:
         basename = os.path.basename(lora_path)
         return os.path.splitext(basename)[0]
     
+    def _get_loras_list(self, kwargs):
+        """Helper to extract loras list from either old or new kwargs format"""
+        if 'loras' not in kwargs:
+            return []
+            
+        loras_data = kwargs['loras']
+        # Handle new format: {'loras': {'__value__': [...]}}
+        if isinstance(loras_data, dict) and '__value__' in loras_data:
+            return loras_data['__value__']
+        # Handle old format: {'loras': [...]}
+        elif isinstance(loras_data, list):
+            return loras_data
+        # Unexpected format
+        else:
+            logger.warning(f"Unexpected loras format: {type(loras_data)}")
+            return []
+    
     def load_loras(self, model, clip, text, **kwargs):
         """Loads multiple LoRAs based on the kwargs input and lora_stack."""
         loaded_loras = []
@@ -74,24 +94,24 @@ class LoraManagerLoader:
                 all_trigger_words.extend(trigger_words)
                 loaded_loras.append(f"{lora_name}: {model_strength}")
         
-        # Then process loras from kwargs
-        if 'loras' in kwargs:
-            for lora in kwargs['loras']:
-                if not lora.get('active', False):
-                    continue
-                    
-                lora_name = lora['name']
-                strength = float(lora['strength'])
+        # Then process loras from kwargs with support for both old and new formats
+        loras_list = self._get_loras_list(kwargs)
+        for lora in loras_list:
+            if not lora.get('active', False):
+                continue
                 
-                # Get lora path and trigger words
-                lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
-                
-                # Apply the LoRA using the resolved path
-                model, clip = LoraLoader().load_lora(model, clip, lora_path, strength, strength)
-                loaded_loras.append(f"{lora_name}: {strength}")
-                
-                # Add trigger words to collection
-                all_trigger_words.extend(trigger_words)
+            lora_name = lora['name']
+            strength = float(lora['strength'])
+            
+            # Get lora path and trigger words
+            lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
+            
+            # Apply the LoRA using the resolved path
+            model, clip = LoraLoader().load_lora(model, clip, lora_path, strength, strength)
+            loaded_loras.append(f"{lora_name}: {strength}")
+            
+            # Add trigger words to collection
+            all_trigger_words.extend(trigger_words)
         
         # use ',, ' to separate trigger words for group mode
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""

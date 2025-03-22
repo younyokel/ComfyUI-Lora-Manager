@@ -4,6 +4,9 @@ from ..config import config
 import asyncio
 import os
 from .utils import FlexibleOptionalInputType, any_type
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LoraStacker:
     NAME = "Lora Stacker (LoraManager)"
@@ -52,6 +55,23 @@ class LoraStacker:
         basename = os.path.basename(lora_path)
         return os.path.splitext(basename)[0]
     
+    def _get_loras_list(self, kwargs):
+        """Helper to extract loras list from either old or new kwargs format"""
+        if 'loras' not in kwargs:
+            return []
+            
+        loras_data = kwargs['loras']
+        # Handle new format: {'loras': {'__value__': [...]}}
+        if isinstance(loras_data, dict) and '__value__' in loras_data:
+            return loras_data['__value__']
+        # Handle old format: {'loras': [...]}
+        elif isinstance(loras_data, list):
+            return loras_data
+        # Unexpected format
+        else:
+            logger.warning(f"Unexpected loras format: {type(loras_data)}")
+            return []
+    
     def stack_loras(self, text, **kwargs):
         """Stacks multiple LoRAs based on the kwargs input without loading them."""
         stack = []
@@ -67,24 +87,25 @@ class LoraStacker:
                 _, trigger_words = asyncio.run(self.get_lora_info(lora_name))
                 all_trigger_words.extend(trigger_words)
         
-        if 'loras' in kwargs:
-            for lora in kwargs['loras']:
-                if not lora.get('active', False):
-                    continue
-                    
-                lora_name = lora['name']
-                model_strength = float(lora['strength'])
-                clip_strength = model_strength  # Using same strength for both as in the original loader
+        # Process loras from kwargs with support for both old and new formats
+        loras_list = self._get_loras_list(kwargs)
+        for lora in loras_list:
+            if not lora.get('active', False):
+                continue
                 
-                # Get lora path and trigger words
-                lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
-                
-                # Add to stack without loading
-                # replace '/' with os.sep to avoid different OS path format
-                stack.append((lora_path.replace('/', os.sep), model_strength, clip_strength))
-                
-                # Add trigger words to collection
-                all_trigger_words.extend(trigger_words)
+            lora_name = lora['name']
+            model_strength = float(lora['strength'])
+            clip_strength = model_strength  # Using same strength for both as in the original loader
+            
+            # Get lora path and trigger words
+            lora_path, trigger_words = asyncio.run(self.get_lora_info(lora_name))
+            
+            # Add to stack without loading
+            # replace '/' with os.sep to avoid different OS path format
+            stack.append((lora_path.replace('/', os.sep), model_strength, clip_strength))
+            
+            # Add trigger words to collection
+            all_trigger_words.extend(trigger_words)
         
         # use ',, ' to separate trigger words for group mode
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""

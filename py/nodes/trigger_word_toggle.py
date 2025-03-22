@@ -2,6 +2,10 @@ import json
 import re
 from server import PromptServer # type: ignore
 from .utils import FlexibleOptionalInputType, any_type
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class TriggerWordToggle:
     NAME = "TriggerWord Toggle (LoraManager)"
@@ -24,8 +28,24 @@ class TriggerWordToggle:
     RETURN_NAMES = ("filtered_trigger_words",)
     FUNCTION = "process_trigger_words"
 
+    def _get_toggle_data(self, kwargs, key='toggle_trigger_words'):
+        """Helper to extract data from either old or new kwargs format"""
+        if key not in kwargs:
+            return None
+            
+        data = kwargs[key]
+        # Handle new format: {'key': {'__value__': ...}}
+        if isinstance(data, dict) and '__value__' in data:
+            return data['__value__']
+        # Handle old format: {'key': ...}
+        else:
+            return data
+
     def process_trigger_words(self, id, group_mode, **kwargs):
-        trigger_words = kwargs.get("trigger_words", "")
+        # Handle both old and new formats for trigger_words
+        trigger_words_data = self._get_toggle_data(kwargs, 'trigger_words')
+        trigger_words = trigger_words_data if isinstance(trigger_words_data, str) else ""
+        
         # Send trigger words to frontend
         PromptServer.instance.send_sync("trigger_word_update", {
             "id": id,
@@ -34,11 +54,10 @@ class TriggerWordToggle:
         
         filtered_triggers = trigger_words
         
-        if 'toggle_trigger_words' in kwargs:
+        # Get toggle data with support for both formats
+        trigger_data = self._get_toggle_data(kwargs, 'toggle_trigger_words')
+        if trigger_data:
             try:
-                # Get trigger word toggle data
-                trigger_data = kwargs['toggle_trigger_words']
-                
                 # Convert to list if it's a JSON string
                 if isinstance(trigger_data, str):
                     trigger_data = json.loads(trigger_data)
@@ -72,6 +91,6 @@ class TriggerWordToggle:
                         filtered_triggers = ""
                     
             except Exception as e:
-                print(f"Error processing trigger words: {e}")
+                logger.error(f"Error processing trigger words: {e}")
             
         return (filtered_triggers,)
