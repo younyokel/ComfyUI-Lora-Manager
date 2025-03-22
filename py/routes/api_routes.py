@@ -51,6 +51,7 @@ class ApiRoutes:
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
         app.router.add_get('/api/loras/top-tags', routes.get_top_tags)  # Add new route for top tags
         app.router.add_get('/api/loras/base-models', routes.get_base_models)  # Add new route for base models
+        app.router.add_get('/api/lora-civitai-url', routes.get_lora_civitai_url)  # Add new route for Civitai URL
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -715,6 +716,48 @@ class ApiRoutes:
 
         except Exception as e:
             logger.error(f"Error getting lora preview URL: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
+
+    async def get_lora_civitai_url(self, request: web.Request) -> web.Response:
+        """Get the Civitai URL for a LoRA file"""
+        try:
+            # Get lora file name from query parameters
+            lora_name = request.query.get('name')
+            if not lora_name:
+                return web.Response(text='Lora file name is required', status=400)
+
+            # Get cache data
+            cache = await self.scanner.get_cached_data()
+            
+            # Search for the lora in cache data
+            for lora in cache.raw_data:
+                file_name = lora['file_name']
+                if file_name == lora_name:
+                    civitai_data = lora.get('civitai', {})
+                    model_id = civitai_data.get('modelId')
+                    version_id = civitai_data.get('id')
+                    
+                    if model_id:
+                        civitai_url = f"https://civitai.com/models/{model_id}"
+                        if version_id:
+                            civitai_url += f"?modelVersionId={version_id}"
+                            
+                        return web.json_response({
+                            'success': True,
+                            'civitai_url': civitai_url,
+                            'model_id': model_id,
+                            'version_id': version_id
+                        })
+                    break
+
+            # If no Civitai data found
+            return web.json_response({
+                'success': False,
+                'error': 'No Civitai data found for the specified lora'
+            }, status=404)
+
+        except Exception as e:
+            logger.error(f"Error getting lora Civitai URL: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)
 
     async def move_models_bulk(self, request: web.Request) -> web.Response:

@@ -360,6 +360,58 @@ export function addLorasWidget(node, name, opts, callback) {
        minWidth: '180px',
     });
 
+    // View on Civitai option with globe icon
+    const viewOnCivitaiOption = createMenuItem(
+      'View on Civitai',
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+      async () => {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+        
+        try {
+          // Get Civitai URL from API
+          const response = await api.fetchApi(`/lora-civitai-url?name=${encodeURIComponent(loraName)}`, {
+            method: 'GET'
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to get Civitai URL');
+          }
+          
+          const data = await response.json();
+          if (data.success && data.civitai_url) {
+            // Open the URL in a new tab
+            window.open(data.civitai_url, '_blank');
+          } else {
+            // Show error message if no Civitai URL
+            if (app && app.extensionManager && app.extensionManager.toast) {
+              app.extensionManager.toast.add({
+                severity: 'warning',
+                summary: 'Not Found',
+                detail: 'This LoRA has no associated Civitai URL',
+                life: 3000
+              });
+            } else {
+              alert('This LoRA has no associated Civitai URL');
+            }
+          }
+        } catch (error) {
+          console.error('Error getting Civitai URL:', error);
+          if (app && app.extensionManager && app.extensionManager.toast) {
+            app.extensionManager.toast.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: error.message || 'Failed to get Civitai URL',
+              life: 5000
+            });
+          } else {
+            alert('Error: ' + (error.message || 'Failed to get Civitai URL'));
+          }
+        }
+      }
+    );
+
     // Delete option with trash icon
     const deleteOption = createMenuItem(
       'Delete', 
@@ -395,6 +447,7 @@ export function addLorasWidget(node, name, opts, callback) {
       borderTop: '1px solid rgba(255, 255, 255, 0.1)',
     });
 
+    menu.appendChild(viewOnCivitaiOption); // Add the new menu option
     menu.appendChild(deleteOption);
     menu.appendChild(separator);
     menu.appendChild(saveOption);
