@@ -449,7 +449,7 @@ export class ImportManager {
                         <div class="lora-content">
                             <div class="lora-header">
                                 <h3>${lora.name}</h3>
-                                ${statusBadge}
+                                <div class="badge-container">${statusBadge}</div>
                             </div>
                             ${lora.version ? `<div class="lora-version">${lora.version}</div>` : ''}
                             <div class="lora-info">
