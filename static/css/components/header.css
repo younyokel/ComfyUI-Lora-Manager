@@ -110,8 +110,18 @@
   transform: translateY(-2px);
 }
 
-.theme-toggle .light-icon {
+.theme-toggle {
+  position: relative; /* Ensure relative positioning for the container */
+}
+
+.theme-toggle .light-icon,
+.theme-toggle .dark-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center perfectly */
   opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .theme-toggle .dark-icon {
