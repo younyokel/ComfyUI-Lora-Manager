@@ -2,6 +2,7 @@ from typing import Optional
 
 # Base model mapping based on version string
 BASE_MODEL_MAPPING = {
+    "sd_1.5": "SD 1.5",
     "sd-v1-5": "SD 1.5",
     "sd-v2-1": "SD 2.1",
     "sdxl": "SDXL 1.0",
