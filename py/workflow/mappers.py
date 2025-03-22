@@ -28,10 +28,25 @@ class NodeMapper:
                 # Check if input is a reference to another node's output
                 if isinstance(input_value, list) and len(input_value) == 2:
                     # Format is [node_id, output_slot]
-                    ref_node_id, output_slot = input_value
-                    # Recursively process the referenced node
-                    ref_value = parser.process_node(str(ref_node_id), workflow)
-                    result[input_name] = ref_value
+                    try:
+                        ref_node_id, output_slot = input_value
+                        # Convert node_id to string if it's an integer
+                        if isinstance(ref_node_id, int):
+                            ref_node_id = str(ref_node_id)
+                        
+                        # Recursively process the referenced node
+                        ref_value = parser.process_node(ref_node_id, workflow)
+                        
+                        # Store the processed value
+                        if ref_value is not None:
+                            result[input_name] = ref_value
+                        else:
+                            # If we couldn't get a value from the reference, store the raw value
+                            result[input_name] = input_value
+                    except Exception as e:
+                        logger.error(f"Error processing reference in node {node_id}, input {input_name}: {e}")
+                        # If we couldn't process the reference, store the raw value
+                        result[input_name] = input_value
                 else:
                     # Direct value
                     result[input_name] = input_value
@@ -142,7 +157,7 @@ class LoraLoaderMapper(NodeMapper):
     def transform(self, inputs: Dict) -> Dict:
         # Fallback to loras array if text field doesn't exist or is invalid
         loras_data = inputs.get("loras", [])
-        lora_stack = inputs.get("lora_stack", [])
+        lora_stack = inputs.get("lora_stack", {}).get("lora_stack", [])
         
         # Process loras array - filter active entries
         lora_texts = []
@@ -157,18 +172,24 @@ class LoraLoaderMapper(NodeMapper):
             
         # Process each active lora entry
         for lora in loras_list:
+            logger.info(f"Lora: {lora}, active: {lora.get('active')}")
             if isinstance(lora, dict) and lora.get("active", False):
                 lora_name = lora.get("name", "")
                 strength = lora.get("strength", 1.0)
-                if lora_name and not lora_name.startswith("__dummy"):
-                    lora_texts.append(f"<lora:{lora_name}:{strength}>")
+                lora_texts.append(f"<lora:{lora_name}:{strength}>")
         
-        # Process lora_stack if it exists
-        if lora_stack:
-            # Format each entry from the stack
-            for lora_path, strength, _ in lora_stack:
-                lora_name = os.path.basename(lora_path).split('.')[0]
-                if lora_name and not lora_name.startswith("__dummy"):
+        # Process lora_stack if it exists and is a valid format (list of tuples)
+        if lora_stack and isinstance(lora_stack, list):
+            # If lora_stack is a reference to another node ([node_id, output_slot]),
+            # we don't process it here as it's already been processed recursively
+            if len(lora_stack) == 2 and isinstance(lora_stack[0], (str, int)) and isinstance(lora_stack[1], int):
+                # This is a reference to another node, already processed
+                pass
+            else:
+                # Format each entry from the stack (assuming it's a list of tuples)
+                for stack_entry in lora_stack:
+                    lora_name = stack_entry[0]
+                    strength = stack_entry[1]
                     lora_texts.append(f"<lora:{lora_name}:{strength}>")
         
         # Join with spaces
@@ -188,12 +209,21 @@ class LoraStackerMapper(NodeMapper):
     
     def transform(self, inputs: Dict) -> Dict:
         loras_data = inputs.get("loras", [])
-        existing_stack = inputs.get("lora_stack", [])
+        existing_stack = inputs.get("lora_stack", {}).get("lora_stack", [])
         result_stack = []
         
-        # Keep existing stack entries
+        # Handle existing stack entries
         if existing_stack:
-            result_stack.extend(existing_stack)
+            # Check if existing_stack is a reference to another node ([node_id, output_slot])
+            if isinstance(existing_stack, list) and len(existing_stack) == 2 and isinstance(existing_stack[0], (str, int)) and isinstance(existing_stack[1], int):
+                # This is a reference to another node, should already be processed
+                # So we'll need to extract the value from that node
+                if isinstance(inputs.get("lora_stack", {}), dict) and "lora_stack" in inputs["lora_stack"]:
+                    # If we have the processed result, use it
+                    result_stack.extend(inputs["lora_stack"]["lora_stack"])
+            elif isinstance(existing_stack, list):
+                # If it's a regular list (not a node reference), just add the entries
+                result_stack.extend(existing_stack)
         
         # Process loras array - filter active entries
         # Check if loras_data is a list or a dict with __value__ key (new format)
@@ -209,10 +239,7 @@ class LoraStackerMapper(NodeMapper):
             if isinstance(lora, dict) and lora.get("active", False):
                 lora_name = lora.get("name", "")
                 strength = float(lora.get("strength", 1.0))
-                if lora_name and not lora_name.startswith("__dummy"):
-                    # Here we would need the real path, but as a fallback use the name
-                    # In a real implementation, this would require looking up the file path
-                    result_stack.append((lora_name, strength, strength))
+                result_stack.append((lora_name, strength))
         
         return {"lora_stack": result_stack}
 

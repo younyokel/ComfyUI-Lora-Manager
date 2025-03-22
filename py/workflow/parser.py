@@ -41,7 +41,12 @@ class WorkflowParser:
         result = None
         mapper = get_mapper(node_type)
         if mapper:
-            result = mapper.process(node_id, node_data, workflow, self)
+            try:
+                result = mapper.process(node_id, node_data, workflow, self)
+            except Exception as e:
+                logger.error(f"Error processing node {node_id} of type {node_type}: {e}", exc_info=True)
+                # Return a partial result or None depending on how we want to handle errors
+                result = {}
         
         # Remove node from processed set to allow it to be processed again in a different context
         self.processed_nodes.remove(node_id)
@@ -111,23 +116,6 @@ class WorkflowParser:
                 node_inputs = workflow[flux_node_id].get("inputs", {})
                 if "guidance" in node_inputs:
                     result["gen_params"]["guidance"] = node_inputs["guidance"]
-        
-        # Trace the model path to find LoRA Loader nodes
-        lora_node_ids = trace_model_path(workflow, ksampler_node_id)
-        
-        # Process each LoRA Loader node
-        lora_texts = []
-        for lora_node_id in lora_node_ids:
-            # Reset the processed nodes tracker for each lora processing
-            self.processed_nodes = set()
-            
-            lora_result = self.process_node(lora_node_id, workflow)
-            if lora_result and "loras" in lora_result:
-                lora_texts.append(lora_result["loras"])
-        
-        # Combine all LoRA texts
-        if lora_texts:
-            result["loras"] = " ".join(lora_texts)
         
         # Add clip_skip = 2 to match reference output if not already present
         if "clip_skip" not in result["gen_params"]:

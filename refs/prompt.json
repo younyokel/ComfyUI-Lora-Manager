@@ -114,7 +114,7 @@
                 1
             ]
         },
-        "class_type": "CLIPSetLastLayer", 
+        "class_type": "CLIPSetLastLayer",
         "_meta": {
             "title": "CLIP Set Last Layer"
         }
@@ -155,27 +155,11 @@
                     "active": true
                 },
                 {
-                    "text": "aorun, scales, makeup, bare shoulders, pointy ears",
-                    "active": true
-                },
-                {
-                    "text": "dress",
-                    "active": true
-                },
-                {
-                    "text": "claws",
-                    "active": true
-                },
-                {
                     "text": "in the style of cksc",
                     "active": true
                 },
                 {
                     "text": "artist:moriimee",
-                    "active": true
-                },
-                {
-                    "text": "in the style of cknc",
                     "active": true
                 },
                 {
@@ -189,7 +173,7 @@
                     "_isDummy": true
                 }
             ],
-            "orinalMessage": "in the style of ck-rw,, aorun, scales, makeup, bare shoulders, pointy ears,, dress,, claws,, in the style of cksc,, artist:moriimee,, in the style of cknc",
+            "orinalMessage": "in the style of ck-rw,, in the style of cksc,, artist:moriimee",
             "trigger_words": [
                 "56",
                 2
@@ -217,7 +201,7 @@
                 {
                     "name": "ck-nc-cyberpunk-IL-000011",
                     "strength": 0.4,
-                    "active": true
+                    "active": false
                 },
                 {
                     "name": "__dummy_item1__",
@@ -257,7 +241,7 @@
                 {
                     "name": "aorunIllstrious",
                     "strength": "0.90",
-                    "active": true
+                    "active": false
                 },
                 {
                     "name": "__dummy_item1__",
