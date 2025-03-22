@@ -63,7 +63,6 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
         }
         
         const data = await response.json();
-        console.log('Received data:', data);
         
         if (data.items.length === 0 && pageState.currentPage === 1) {
             const grid = document.getElementById('loraGrid');

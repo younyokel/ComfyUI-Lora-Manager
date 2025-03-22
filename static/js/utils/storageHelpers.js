@@ -74,6 +74,12 @@ export function removeStorageItem(key) {
  * This should be called once during application initialization
  */
 export function migrateStorageItems() {
+    // Check if migration has already been performed
+    if (localStorage.getItem(STORAGE_PREFIX + 'migration_completed')) {
+        console.log('Lora Manager: Storage migration already completed');
+        return;
+    }
+    
     // List of known keys used in the application
     const knownKeys = [
         'nsfwBlurLevel',
@@ -93,18 +99,29 @@ export function migrateStorageItems() {
     
     // Migrate each known key
     knownKeys.forEach(key => {
-        const value = localStorage.getItem(key);
-        if (value !== null) {
-            try {
-                // Try to parse as JSON first
-                const parsedValue = JSON.parse(value);
-                setStorageItem(key, parsedValue);
-            } catch (e) {
-                // If not JSON, store as is
-                setStorageItem(key, value);
+        const prefixedKey = STORAGE_PREFIX + key;
+        
+        // Only migrate if the prefixed key doesn't already exist
+        if (localStorage.getItem(prefixedKey) === null) {
+            const value = localStorage.getItem(key);
+            if (value !== null) {
+                try {
+                    // Try to parse as JSON first
+                    const parsedValue = JSON.parse(value);
+                    setStorageItem(key, parsedValue);
+                } catch (e) {
+                    // If not JSON, store as is
+                    setStorageItem(key, value);
+                }
+                
+                // We can optionally remove the old key after migration
+                localStorage.removeItem(key);
             }
         }
     });
+    
+    // Mark migration as completed
+    localStorage.setItem(STORAGE_PREFIX + 'migration_completed', 'true');
     
     console.log('Lora Manager: Storage migration completed');
 }

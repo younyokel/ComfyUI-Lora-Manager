@@ -8,15 +8,11 @@ export class UpdateService {
         this.latestVersion = "v0.0.0";   // Initialize with default values
         this.updateInfo = null;
         this.updateAvailable = false;
-        this.updateNotificationsEnabled = getStorageItem('show_update_notifications') !== 'false';
+        this.updateNotificationsEnabled = getStorageItem('show_update_notifications');
         this.lastCheckTime = parseInt(getStorageItem('last_update_check') || '0');
     }
 
     initialize() {
-        // Initialize update preferences from localStorage
-        const showUpdates = getStorageItem('show_update_notifications');
-        this.updateNotificationsEnabled = showUpdates === null || showUpdates === 'true';
-        
         // Register event listener for update notification toggle
         const updateCheckbox = document.getElementById('updateNotifications');
         if (updateCheckbox) {

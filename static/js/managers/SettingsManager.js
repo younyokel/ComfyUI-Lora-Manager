@@ -2,7 +2,7 @@ import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
-import { setStorageItem } from '../utils/storageHelpers.js';
+import { setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 
 export class SettingsManager {
     constructor() {
@@ -10,7 +10,22 @@ export class SettingsManager {
         this.isOpen = false;
         
         // Add initialization to sync with modal state
+        this.currentPage = document.body.dataset.page || 'loras';
+        
+        // Ensure settings are loaded from localStorage
+        this.loadSettingsFromStorage();
+        
         this.initialize();
+    }
+
+    loadSettingsFromStorage() {
+        // Get saved settings from localStorage
+        const savedSettings = getStorageItem('settings');
+        
+        // Apply saved settings to state if available
+        if (savedSettings) {
+            state.global.settings = { ...state.global.settings, ...savedSettings };
+        }
     }
 
     initialize() {
@@ -101,8 +116,16 @@ export class SettingsManager {
             // Apply frontend settings immediately
             this.applyFrontendSettings();
             
-            // Reload the loras without updating folders
-            await resetAndReload(false);
+            if (this.currentPage === 'loras') {
+                // Reload the loras without updating folders
+                await resetAndReload(false);
+            } else if (this.currentPage === 'recipes') {
+                // Reload the recipes without updating folders
+                await window.recipeManager.loadRecipes();
+            } else if (this.currentPage === 'checkpoints') {
+                // Reload the checkpoints without updating folders
+                await window.checkpointsManager.loadCheckpoints();
+            }
         } catch (error) {
             showToast('Failed to save settings: ' + error.message, 'error');
         }

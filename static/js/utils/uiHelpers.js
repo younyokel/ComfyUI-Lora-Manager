@@ -177,7 +177,7 @@ export function toggleFolderTags() {
 
 // Add this to your existing initialization code
 export function initFolderTagsVisibility() {
-    const isCollapsed = getStorageItem('folderTagsCollapsed') === 'true';
+    const isCollapsed = getStorageItem('folderTagsCollapsed');
     if (isCollapsed) {
         const folderTags = document.querySelector('.folder-tags');
         const toggleBtn = document.querySelector('.toggle-folders-btn i');

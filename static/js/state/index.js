@@ -1,11 +1,16 @@
 // Create the new hierarchical state structure
+import { getStorageItem } from '../utils/storageHelpers.js';
+
+// Load settings from localStorage or use defaults
+const savedSettings = getStorageItem('settings', {
+    blurMatureContent: true,
+    show_only_sfw: false
+});
+
 export const state = {
     // Global state
     global: {
-        settings: {
-            blurMatureContent: true,
-            show_only_sfw: false
-        },
+        settings: savedSettings,
         loadingManager: null,
         observer: null,
     },
