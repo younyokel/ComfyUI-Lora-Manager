@@ -51,34 +51,23 @@ class Config:
                     if self._is_link(entry.path):
                         target_path = os.path.realpath(entry.path)
                         if os.path.isdir(target_path):
-                            # 只有当映射成功添加时才继续扫描目标目录
-                            if self.add_path_mapping(entry.path, target_path):
-                                self._scan_directory_links(target_path)
+                            self.add_path_mapping(entry.path, target_path)
+                            self._scan_directory_links(target_path)
                     elif entry.is_dir(follow_symlinks=False):
                         self._scan_directory_links(entry.path)
         except Exception as e:
             logger.error(f"Error scanning links in {root}: {e}")
 
-    def add_path_mapping(self, link_path: str, target_path: str) -> bool:
+    def add_path_mapping(self, link_path: str, target_path: str):
         """添加符号链接路径映射
         target_path: 实际目标路径
         link_path: 符号链接路径
-        
-        Returns:
-            bool: True if mapping was added, False if target already exists
         """
         normalized_link = os.path.normpath(link_path).replace(os.sep, '/')
         normalized_target = os.path.normpath(target_path).replace(os.sep, '/')
-        
-        # 检查目标路径是否已经存在映射
-        if normalized_target in self._path_mappings:
-            logger.info(f"Target path already mapped: {normalized_target} -> {self._path_mappings[normalized_target]}, ignoring new mapping to {normalized_link}")
-            return False
-            
         # 保持原有的映射关系：目标路径 -> 链接路径
         self._path_mappings[normalized_target] = normalized_link
         logger.info(f"Added path mapping: {normalized_target} -> {normalized_link}")
-        return True
 
     def add_route_mapping(self, path: str, route: str):
         """添加静态路由映射"""
@@ -107,17 +96,11 @@ class Config:
         if not paths:
             raise ValueError("No valid loras folders found in ComfyUI configuration")
         
-        # initialize path mappings
-        # Filter out loras roots where real path is already mapped
-        filtered_paths = []
+        # 初始化路径映射
         for path in paths:
             real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
             if real_path != path:
-                if self.add_path_mapping(path, real_path):
-                    filtered_paths.append(path)
-            else:
-                filtered_paths.append(path)
-        paths = filtered_paths
+                self.add_path_mapping(path, real_path)
         
         return paths
 
