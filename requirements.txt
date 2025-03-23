@@ -3,3 +3,6 @@ jinja2
 safetensors
 watchdog
 beautifulsoup4
+piexif
+Pillow
+requests

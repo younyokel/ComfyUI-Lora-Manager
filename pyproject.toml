@@ -8,7 +8,10 @@ dependencies = [
     "jinja2", 
     "safetensors",
     "watchdog",
-    "beautifulsoup4"
+    "beautifulsoup4",
+    "piexif",
+    "Pillow",
+    "requests"
 ]
 
 [project.urls]
