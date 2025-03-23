@@ -269,6 +269,9 @@ class ApiRoutes:
         cache = await self.scanner.get_cached_data()
         cache.raw_data = [item for item in cache.raw_data if item['file_path'] != main_path]
         await cache.resort()
+
+        # update hash index
+        self.scanner._hash_index.remove_by_path(main_path)
         
         # Delete optional files
         for pattern in patterns[1:]:
