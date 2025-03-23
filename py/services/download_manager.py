@@ -28,6 +28,25 @@ class DownloadManager:
             if not version_info:
                 return {'success': False, 'error': 'Failed to fetch model metadata'}
 
+            # Check if this is an early access LoRA
+            if 'earlyAccessEndsAt' in version_info:
+                early_access_date = version_info.get('earlyAccessEndsAt', '')
+                # Convert to a readable date if possible
+                try:
+                    from datetime import datetime
+                    date_obj = datetime.fromisoformat(early_access_date.replace('Z', '+00:00'))
+                    formatted_date = date_obj.strftime('%Y-%m-%d')
+                    early_access_msg = f"This LoRA requires early access payment (until {formatted_date}). "
+                except:
+                    early_access_msg = "This LoRA requires early access payment. "
+                
+                early_access_msg += "Please ensure you have purchased early access and are logged in to Civitai."
+                logger.warning(f"Early access LoRA detected: {version_info.get('name', 'Unknown')}")
+                
+                # We'll still try to download, but log a warning and prepare for potential failure
+                if progress_callback:
+                    await progress_callback(1)  # Show minimal progress to indicate we're trying
+
             # Report initial progress
             if progress_callback:
                 await progress_callback(0)
@@ -82,6 +101,10 @@ class DownloadManager:
 
         except Exception as e:
             logger.error(f"Error in download_from_civitai: {e}", exc_info=True)
+            # Check if this might be an early access error
+            error_str = str(e).lower()
+            if "403" in error_str or "401" in error_str or "unauthorized" in error_str or "early access" in error_str:
+                return {'success': False, 'error': f"Early access restriction: {str(e)}. Please ensure you have purchased early access and are logged in to Civitai."}
             return {'success': False, 'error': str(e)}
 
     async def _execute_download(self, download_url: str, save_dir: str, 

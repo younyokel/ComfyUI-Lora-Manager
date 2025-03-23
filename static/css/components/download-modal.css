@@ -98,6 +98,7 @@
 .version-info {
     display: flex;
     flex-wrap: wrap;
+    flex-direction: row !important;
     gap: 8px;
     align-items: center;
     font-size: 0.9em;

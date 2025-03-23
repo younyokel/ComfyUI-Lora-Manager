@@ -207,6 +207,15 @@
     border-left: 4px solid var(--lora-warning);
 }
 
+.lora-item.is-early-access {
+    background: rgba(0, 184, 122, 0.05);
+    border-left: 4px solid #00B87A;
+}
+
+.lora-item.missing-locally {
+    border-left: 4px solid var(--lora-error);
+}
+
 .lora-thumbnail {
     width: 80px;
     height: 80px;
@@ -295,6 +304,12 @@
 
 .missing-lora-item:last-child {
     border-bottom: none;
+}
+
+.missing-lora-item.is-early-access {
+    background: rgba(0, 184, 122, 0.05);
+    border-left: 3px solid #00B87A;
+    padding-left: 10px;
 }
 
 .missing-badge {
@@ -681,4 +696,40 @@
     margin-top: 8px;
     min-height: 20px; /* Ensure there's always space for the error message */
     font-weight: 500;
+}
+
+.early-access-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 184, 122, 0.1);
+    border: 1px solid #00B87A;
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color);
+    margin-bottom: var(--space-2);
+}
+
+/* Add special styling for early access badge in the missing loras list */
+.missing-lora-item .early-access-badge {
+    padding: 2px 6px;
+    font-size: 0.75em;
+    margin-top: 4px;
+    display: inline-flex;
+}
+
+/* Specific styling for the early access warning container in import modal */
+.early-access-warning .warning-icon {
+    color: #00B87A;
+    font-size: 1.2em;
+}
+
+.early-access-warning .warning-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.early-access-warning .warning-text {
+    font-size: 0.9em;
+    line-height: 1.4;
 }

@@ -265,11 +265,6 @@ export class ImportManager {
                 throw new Error('No LoRA information found in this image');
             }
             
-            // Store generation parameters if available
-            if (this.recipeData.gen_params) {
-                console.log('Generation parameters found:', this.recipeData.gen_params);
-            }
-            
             // Find missing LoRAs
             this.missingLoras = this.recipeData.loras.filter(lora => !lora.existsLocally);
             
@@ -418,6 +413,7 @@ export class ImportManager {
             lorasList.innerHTML = this.recipeData.loras.map(lora => {
                 const existsLocally = lora.existsLocally;
                 const isDeleted = lora.isDeleted;
+                const isEarlyAccess = lora.isEarlyAccess;
                 const localPath = lora.localPath || '';
                 
                 // Create status badge based on LoRA status
@@ -437,19 +433,43 @@ export class ImportManager {
                         </div>`;
                 }
 
+                // Early access badge (shown additionally with other badges)
+                let earlyAccessBadge = '';
+                if (isEarlyAccess) {
+                    // Format the early access end date if available
+                    let earlyAccessInfo = 'This LoRA requires early access payment to download.';
+                    if (lora.earlyAccessEndsAt) {
+                        try {
+                            const endDate = new Date(lora.earlyAccessEndsAt);
+                            const formattedDate = endDate.toLocaleDateString();
+                            earlyAccessInfo += ` Early access ends on ${formattedDate}.`;
+                        } catch (e) {
+                            console.warn('Failed to format early access date', e);
+                        }
+                    }
+                    
+                    earlyAccessBadge = `<div class="early-access-badge">
+                        <i class="fas fa-clock"></i> Early Access
+                        <div class="early-access-info">${earlyAccessInfo} Verify that you have purchased early access before downloading.</div>
+                    </div>`;
+                }
+
                 // Format size if available
                 const sizeDisplay = lora.size ? 
                     `<div class="size-badge">${this.formatFileSize(lora.size)}</div>` : '';
 
                 return `
-                    <div class="lora-item ${existsLocally ? 'exists-locally' : isDeleted ? 'is-deleted' : 'missing-locally'}">
+                    <div class="lora-item ${existsLocally ? 'exists-locally' : isDeleted ? 'is-deleted' : 'missing-locally'} ${isEarlyAccess ? 'is-early-access' : ''}">
                         <div class="lora-thumbnail">
                             <img src="${lora.thumbnailUrl || '/loras_static/images/no-preview.png'}" alt="LoRA preview">
                         </div>
                         <div class="lora-content">
                             <div class="lora-header">
                                 <h3>${lora.name}</h3>
-                                <div class="badge-container">${statusBadge}</div>
+                                <div class="badge-container">
+                                    ${statusBadge}
+                                    ${earlyAccessBadge}
+                                </div>
                             </div>
                             ${lora.version ? `<div class="lora-version">${lora.version}</div>` : ''}
                             <div class="lora-info">
@@ -461,6 +481,41 @@ export class ImportManager {
                     </div>
                 `;
             }).join('');
+        }
+        
+        // Check for early access loras and show warning if any exist
+        const earlyAccessLoras = this.recipeData.loras.filter(lora => 
+            lora.isEarlyAccess && !lora.existsLocally && !lora.isDeleted);
+        if (earlyAccessLoras.length > 0) {
+            // Show a warning about early access loras
+            const warningMessage = `
+                <div class="early-access-warning">
+                    <div class="warning-icon"><i class="fas fa-clock"></i></div>
+                    <div class="warning-content">
+                        <div class="warning-title">${earlyAccessLoras.length} LoRA(s) require Early Access</div>
+                        <div class="warning-text">
+                            These LoRAs require a payment to access. Download will fail if you haven't purchased access.
+                            You may need to log in to your Civitai account in browser settings.
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Show the warning message
+            const buttonsContainer = document.querySelector('#detailsStep .modal-actions');
+            if (buttonsContainer) {
+                // Remove existing warning if any
+                const existingWarning = document.getElementById('earlyAccessWarning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
+                // Add new warning
+                const warningContainer = document.createElement('div');
+                warningContainer.id = 'earlyAccessWarning';
+                warningContainer.innerHTML = warningMessage;
+                buttonsContainer.parentNode.insertBefore(warningContainer, buttonsContainer);
+            }
         }
         
         // Update Next button state based on missing LoRAs
@@ -581,6 +636,40 @@ export class ImportManager {
         // Update missing LoRAs list to exclude deleted LoRAs
         this.missingLoras = this.recipeData.loras.filter(lora => 
             !lora.existsLocally && !lora.isDeleted);
+            
+        // Check for early access loras and show warning if any exist
+        const earlyAccessLoras = this.missingLoras.filter(lora => lora.isEarlyAccess);
+        if (earlyAccessLoras.length > 0) {
+            // Show a warning about early access loras
+            const warningMessage = `
+                <div class="early-access-warning">
+                    <div class="warning-icon"><i class="fas fa-clock"></i></div>
+                    <div class="warning-content">
+                        <div class="warning-title">${earlyAccessLoras.length} LoRA(s) require Early Access</div>
+                        <div class="warning-text">
+                            These LoRAs require a payment to access. Download will fail if you haven't purchased access.
+                            You may need to log in to your Civitai account in browser settings.
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Show the warning message
+            const buttonsContainer = document.querySelector('#detailsStep .modal-actions');
+            if (buttonsContainer) {
+                // Remove existing warning if any
+                const existingWarning = document.getElementById('earlyAccessWarning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
+                // Add new warning
+                const warningContainer = document.createElement('div');
+                warningContainer.id = 'earlyAccessWarning';
+                warningContainer.innerHTML = warningMessage;
+                buttonsContainer.parentNode.insertBefore(warningContainer, buttonsContainer);
+            }
+        }
         
         // If we have downloadable missing LoRAs, go to location step
         if (this.missingLoras.length > 0) {
@@ -646,12 +735,22 @@ export class ImportManager {
                 missingLorasList.innerHTML = this.downloadableLoRAs.map(lora => {
                     const sizeDisplay = lora.size ? this.formatFileSize(lora.size) : 'Unknown size';
                     const baseModel = lora.baseModel ? `<span class="lora-base-model">${lora.baseModel}</span>` : '';
+                    const isEarlyAccess = lora.isEarlyAccess;
+                    
+                    // Early access badge
+                    let earlyAccessBadge = '';
+                    if (isEarlyAccess) {
+                        earlyAccessBadge = `<span class="early-access-badge">
+                            <i class="fas fa-clock"></i> Early Access
+                        </span>`;
+                    }
                     
                     return `
-                        <div class="missing-lora-item">
+                        <div class="missing-lora-item ${isEarlyAccess ? 'is-early-access' : ''}">
                             <div class="missing-lora-info">
                                 <div class="missing-lora-name">${lora.name}</div>
                                 ${baseModel}
+                                ${earlyAccessBadge}
                             </div>
                             <div class="missing-lora-size">${sizeDisplay}</div>
                         </div>
@@ -822,6 +921,8 @@ export class ImportManager {
                     const updateProgress = this.loadingManager.showDownloadProgress(this.downloadableLoRAs.length);
                     
                     let completedDownloads = 0;
+                    let failedDownloads = 0;
+                    let earlyAccessFailures = 0;
                     let currentLoraProgress = 0;
                     
                     // Set up progress tracking for current download
@@ -832,7 +933,7 @@ export class ImportManager {
                             currentLoraProgress = data.progress;
                             
                             // Get current LoRA name
-                            const currentLora = this.downloadableLoRAs[completedDownloads];
+                            const currentLora = this.downloadableLoRAs[completedDownloads + failedDownloads];
                             const loraName = currentLora ? currentLora.name : '';
                             
                             // Update progress display
@@ -841,19 +942,19 @@ export class ImportManager {
                             // Add more detailed status messages based on progress
                             if (currentLoraProgress < 3) {
                                 this.loadingManager.setStatus(
-                                    `Preparing download for LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
+                                    `Preparing download for LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
                                 );
                             } else if (currentLoraProgress === 3) {
                                 this.loadingManager.setStatus(
-                                    `Downloaded preview for LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
+                                    `Downloaded preview for LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
                                 );
                             } else if (currentLoraProgress > 3 && currentLoraProgress < 100) {
                                 this.loadingManager.setStatus(
-                                    `Downloading LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
+                                    `Downloading LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
                                 );
                             } else {
                                 this.loadingManager.setStatus(
-                                    `Finalizing LoRA ${completedDownloads+1}/${this.downloadableLoRAs.length}`
+                                    `Finalizing LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
                                 );
                             }
                         }
@@ -884,6 +985,18 @@ export class ImportManager {
                             if (!response.ok) {
                                 const errorText = await response.text();
                                 console.error(`Failed to download LoRA ${lora.name}: ${errorText}`);
+                                
+                                // Check if this is an early access error (status 401 is the key indicator)
+                                if (response.status === 401 || 
+                                   (errorText.toLowerCase().includes('early access') || 
+                                    errorText.toLowerCase().includes('purchase'))) {
+                                    earlyAccessFailures++;
+                                    this.loadingManager.setStatus(
+                                        `Failed to download ${lora.name}: Early Access required`
+                                    );
+                                }
+                                
+                                failedDownloads++;
                                 // Continue with next download
                             } else {
                                 completedDownloads++;
@@ -891,7 +1004,7 @@ export class ImportManager {
                                 // Update progress to show completion of current LoRA
                                 updateProgress(100, completedDownloads, '');
                                 
-                                if (completedDownloads < this.downloadableLoRAs.length) {
+                                if (completedDownloads + failedDownloads < this.downloadableLoRAs.length) {
                                     this.loadingManager.setStatus(
                                         `Completed ${completedDownloads}/${this.downloadableLoRAs.length} LoRAs. Starting next download...`
                                     );
@@ -899,6 +1012,7 @@ export class ImportManager {
                             }
                         } catch (downloadError) {
                             console.error(`Error downloading LoRA ${lora.name}:`, downloadError);
+                            failedDownloads++;
                             // Continue with next download
                         }
                     }
@@ -906,11 +1020,18 @@ export class ImportManager {
                     // Close WebSocket
                     ws.close();
                     
-                    // Show final completion message
-                    if (completedDownloads === this.downloadableLoRAs.length) {
+                    // Show appropriate completion message based on results
+                    if (failedDownloads === 0) {
                         showToast(`All ${completedDownloads} LoRAs downloaded successfully`, 'success');
                     } else {
-                        showToast(`Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs`, 'warning');
+                        if (earlyAccessFailures > 0) {
+                            showToast(
+                                `Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs. ${earlyAccessFailures} failed due to Early Access restrictions.`,
+                                'error'
+                            );
+                        } else {
+                            showToast(`Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs`, 'error');
+                        }
                     }
                 }
 

@@ -579,16 +579,36 @@ class ApiRoutes:
                     download_url=data.get('download_url'),
                     save_dir=data.get('lora_root'),
                     relative_path=data.get('relative_path'),
-                    progress_callback=progress_callback  # Add progress callback
+                    progress_callback=progress_callback
                 )
                 
                 if not result.get('success', False):
-                    return web.Response(status=500, text=result.get('error', 'Unknown error'))
+                    error_message = result.get('error', 'Unknown error')
+                    
+                    # Return 401 for early access errors
+                    if 'early access' in error_message.lower():
+                        logger.warning(f"Early access download failed: {error_message}")
+                        return web.Response(
+                            status=401,  # Use 401 status code to match Civitai's response
+                            text=f"Early Access Restriction: {error_message}"
+                        )
+                    
+                    return web.Response(status=500, text=error_message)
                 
                 return web.json_response(result)
             except Exception as e:
-                logger.error(f"Error downloading LoRA: {e}")
-                return web.Response(status=500, text=str(e))
+                error_message = str(e)
+                
+                # Check if this might be an early access error
+                if '401' in error_message:
+                    logger.warning(f"Early access error (401): {error_message}")
+                    return web.Response(
+                        status=401,
+                        text="Early Access Restriction: This LoRA requires purchase. Please buy early access on Civitai.com."
+                    )
+                
+                logger.error(f"Error downloading LoRA: {error_message}")
+                return web.Response(status=500, text=error_message)
 
     async def update_settings(self, request: web.Request) -> web.Response:
         """Update application settings"""

@@ -111,6 +111,13 @@ class RecipeFormatParser(RecipeMetadataParser):
                             try:
                                 civitai_info = await civitai_client.get_model_version_info(lora['modelVersionId'])
                                 if civitai_info and civitai_info.get("error") != "Model not found":
+                                    # Check if this is an early access lora
+                                    if 'earlyAccessEndsAt' in civitai_info:
+                                        # Convert earlyAccessEndsAt to a human-readable date
+                                        early_access_date = civitai_info.get('earlyAccessEndsAt', '')
+                                        lora_entry['isEarlyAccess'] = True
+                                        lora_entry['earlyAccessEndsAt'] = early_access_date
+                                    
                                     # Get thumbnail URL from first image
                                     if 'images' in civitai_info and civitai_info['images']:
                                         lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
@@ -219,6 +226,13 @@ class StandardMetadataParser(RecipeMetadataParser):
 
                     # Check if this LoRA exists locally by SHA256 hash
                     if civitai_info and civitai_info.get("error") != "Model not found":
+                        # Check if this is an early access lora
+                        if 'earlyAccessEndsAt' in civitai_info:
+                            # Convert earlyAccessEndsAt to a human-readable date
+                            early_access_date = civitai_info.get('earlyAccessEndsAt', '')
+                            lora_entry['isEarlyAccess'] = True
+                            lora_entry['earlyAccessEndsAt'] = early_access_date
+                        
                         # LoRA exists on Civitai, process its information
                         if 'files' in civitai_info:
                             # Find the model file (type="Model") in the files list
@@ -427,6 +441,13 @@ class A1111MetadataParser(RecipeMetadataParser):
                     try:
                         civitai_info = await civitai_client.get_model_by_hash(hash_value)
                         if civitai_info and civitai_info.get("error") != "Model not found":
+                            # Check if this is an early access lora
+                            if 'earlyAccessEndsAt' in civitai_info:
+                                # Convert earlyAccessEndsAt to a human-readable date
+                                early_access_date = civitai_info.get('earlyAccessEndsAt', '')
+                                lora_entry['isEarlyAccess'] = True
+                                lora_entry['earlyAccessEndsAt'] = early_access_date
+                            
                             # Get model version ID
                             lora_entry['id'] = civitai_info.get('id', '')
                             

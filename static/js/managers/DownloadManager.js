@@ -130,7 +130,22 @@ export class DownloadManager {
             const existsLocally = version.existsLocally;
             const localPath = version.localPath;
             
-            // 更新本地状态指示器为badge样式
+            // Check if this is an early access version
+            const isEarlyAccess = version.availability === 'EarlyAccess';
+            
+            // Create early access badge if needed
+            let earlyAccessBadge = '';
+            if (isEarlyAccess) {
+                earlyAccessBadge = `
+                    <div class="early-access-badge" title="Early access required">
+                        <i class="fas fa-clock"></i> Early Access
+                    </div>
+                `;
+            }
+
+            console.log(earlyAccessBadge);
+            
+            // Status badge for local models
             const localStatus = existsLocally ? 
                 `<div class="local-badge">
                     <i class="fas fa-check"></i> In Library
@@ -138,7 +153,9 @@ export class DownloadManager {
                  </div>` : '';
 
             return `
-                <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''} ${existsLocally ? 'exists-locally' : ''}"
+                <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''} 
+                     ${existsLocally ? 'exists-locally' : ''} 
+                     ${isEarlyAccess ? 'is-early-access' : ''}"
                      onclick="downloadManager.selectVersion('${version.id}')">
                     <div class="version-thumbnail">
                         <img src="${thumbnailUrl}" alt="Version preview">
@@ -150,6 +167,7 @@ export class DownloadManager {
                         </div>
                         <div class="version-info">
                             ${version.baseModel ? `<div class="base-model">${version.baseModel}</div>` : ''}
+                            ${earlyAccessBadge}
                         </div>
                         <div class="version-meta">
                             <span><i class="fas fa-calendar"></i> ${new Date(version.createdAt).toLocaleDateString()}</span>

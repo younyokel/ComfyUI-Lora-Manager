@@ -76,6 +76,17 @@ class CivitaiClient:
             headers = self._get_request_headers()
             async with session.get(url, headers=headers, allow_redirects=True) as response:
                 if response.status != 200:
+                    # Handle early access 401 unauthorized responses
+                    if response.status == 401:
+                        logger.warning(f"Unauthorized access to resource: {url} (Status 401)")
+                        return False, "Early access restriction: You must purchase early access to download this LoRA."
+                    
+                    # Handle other client errors that might be permission-related
+                    if response.status == 403:
+                        logger.warning(f"Forbidden access to resource: {url} (Status 403)")
+                        return False, "Access forbidden: You don't have permission to download this file."
+                    
+                    # Generic error response for other status codes
                     return False, f"Download failed with status {response.status}"
 
                 # Get filename from content-disposition header

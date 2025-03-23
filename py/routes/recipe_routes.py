@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from aiohttp import web
 from typing import Dict
@@ -13,7 +14,7 @@ from ..services.recipe_scanner import RecipeScanner
 from ..services.lora_scanner import LoraScanner
 from ..config import config
 from ..workflow.parser import WorkflowParser
-import time  # Add this import at the top
+from ..utils.utils import download_twitter_image
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,6 @@ class RecipeRoutes:
                     }, status=400)
                 
                 # Download image from URL
-                from ..utils.utils import download_twitter_image
                 temp_path = download_twitter_image(url)
                 
                 if not temp_path:

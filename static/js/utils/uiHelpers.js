@@ -6,11 +6,54 @@ export function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    document.body.append(toast);
+    
+    // Get or create toast container
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        document.body.append(toastContainer);
+    }
+    
+    toastContainer.append(toast);
+
+    // Calculate vertical position for stacked toasts
+    const existingToasts = Array.from(toastContainer.querySelectorAll('.toast'));
+    const toastIndex = existingToasts.indexOf(toast);
+    const topOffset = 20; // Base offset from top
+    const spacing = 10; // Space between toasts
+    
+    // Set position based on existing toasts
+    toast.style.top = `${topOffset + (toastIndex * (toast.offsetHeight || 60 + spacing))}px`;
 
     requestAnimationFrame(() => {
         toast.classList.add('show');
-        setTimeout(() => toast.remove(), 2300);
+        
+        // Set timeout based on type
+        let timeout = 2000; // Default (info)
+        if (type === 'warning' || type === 'error') {
+            timeout = 5000;
+        }
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                toast.remove();
+                
+                // Reposition remaining toasts
+                if (toastContainer) {
+                    const remainingToasts = Array.from(toastContainer.querySelectorAll('.toast'));
+                    remainingToasts.forEach((t, index) => {
+                        t.style.top = `${topOffset + (index * (t.offsetHeight || 60 + spacing))}px`;
+                    });
+                    
+                    // Remove container if empty
+                    if (remainingToasts.length === 0) {
+                        toastContainer.remove();
+                    }
+                }
+            });
+        }, timeout);
     });
 }
 
