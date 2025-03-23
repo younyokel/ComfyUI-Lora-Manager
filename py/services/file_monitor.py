@@ -32,7 +32,8 @@ class LoraFileHandler(FileSystemEventHandler):
         # Also check with backslashes for Windows compatibility
         alt_path = real_path.replace('/', '\\')
         
-        current_time = asyncio.get_event_loop().time()
+        # 使用传入的事件循环而不是尝试获取当前线程的事件循环
+        current_time = self.loop.time()
         
         # Check if path is in ignore list and not expired
         if normalized_path in self._ignore_paths and self._ignore_paths[normalized_path] > current_time:
@@ -59,8 +60,7 @@ class LoraFileHandler(FileSystemEventHandler):
         else:
             timeout = self._min_ignore_timeout
         
-        # Store expiration time instead of just the path
-        current_time = asyncio.get_event_loop().time()
+        current_time = self.loop.time()
         expiration_time = current_time + timeout
         
         # Store both normalized and alternative path formats
@@ -72,8 +72,7 @@ class LoraFileHandler(FileSystemEventHandler):
         
         logger.debug(f"Added ignore path: {normalized_path} (expires in {timeout:.1f}s)")
         
-        # Schedule cleanup after timeout
-        asyncio.get_event_loop().call_later(
+        self.loop.call_later(
             timeout,
             self._remove_ignore_path,
             normalized_path

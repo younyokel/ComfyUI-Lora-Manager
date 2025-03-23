@@ -421,7 +421,7 @@ def load_extensions(ext_dir: str = None) -> None:
                             logger.info(f"Loaded extension mapper: {mapper.node_type} from {filename}")
             
             except Exception as e:
-                logger.error(f"Error loading extension {filename}: {e}")
+                logger.warning(f"Error loading extension {filename}: {e}")
 
 
 # Initialize the registry with default mappers
