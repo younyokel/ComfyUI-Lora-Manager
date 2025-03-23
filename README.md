@@ -1,8 +1,14 @@
 # ComfyUI LoRA Manager
 
-A web-based management interface designed to help you organize and manage your local LoRA models in ComfyUI. Access the interface at: `http://localhost:8188/loras`
+> **Revolutionize your workflow with the ultimate LoRA companion for ComfyUI!**
 
-![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/Screenshot%202025-01-27%20172349.png)
+[![Discord](https://img.shields.io/discord/1139198537532235866?color=7289DA&label=Discord&logo=discord&logoColor=white)](https://discord.gg/5frpBsjx)
+[![Release](https://img.shields.io/github/v/release/willmiao/ComfyUI-Lora-Manager?include_prereleases&color=blue&logo=github)](https://github.com/willmiao/ComfyUI-Lora-Manager/releases)
+[![Release Date](https://img.shields.io/github/release-date/willmiao/ComfyUI-Lora-Manager?color=green&logo=github)](https://github.com/willmiao/ComfyUI-Lora-Manager/releases)
+
+A comprehensive toolset that streamlines organizing, downloading, and applying LoRA models in ComfyUI. With powerful features like recipe management and one-click workflow integration, working with LoRAs becomes faster, smoother, and significantly easier. Access the interface at: `http://localhost:8188/loras`
+
+![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/Screenshot.png)
 
 ## 📺 Tutorial: One-Click LoRA Integration
 Watch this quick tutorial to learn how to use the new one-click LoRA integration feature:
@@ -12,6 +18,14 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 ---
 
 ## Release Notes
+
+### v0.8.0
+* **Introduced LoRA Recipes** - Create, import, save, and share your favorite LoRA combinations
+* **Recipe Management System** - Easily browse, search, and organize your LoRA recipes
+* **Workflow Integration** - Save recipes directly from your workflow with generation parameters preserved
+* **Simplified Workflow Application** - Quickly apply saved recipes to new projects
+* **Enhanced UI & UX** - Improved interface design and user experience
+* **Bug Fixes & Stability** - Resolved various issues and enhanced overall performance
 
 ### v0.7.37
 * Added NSFW content control settings (blur mature content and SFW-only filter)
@@ -91,6 +105,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
   - Trigger words at a glance
   - One-click workflow integration with preset values
   
+- 🧩 **LoRA Recipes**
+  - Save and share favorite LoRA combinations
+  - Preserve generation parameters for future reference
+  - Quick application to workflows
+  - Import/export functionality for community sharing
+  
 - 💻 **User Friendly**
   - One-click access from ComfyUI menu
   - Context menu for quick actions
@@ -152,14 +172,5 @@ If you find this project helpful, consider supporting its development:
 
 Join our Discord community for support, discussions, and updates:
 [Discord Server](https://discord.gg/vcqNrWVFvM)
-
----
-
-## 🗺️ Roadmap
-
-- ✅ One-click integration of LoRAs into ComfyUI workflows with preset strength values
-- 🤝 Improved usage tips retrieval from CivitAI model pages
-- 🔌 Integration with Power LoRA Loader and other management tools
-- 🛡️ Configurable NSFW level settings for content filtering
 
 ---
