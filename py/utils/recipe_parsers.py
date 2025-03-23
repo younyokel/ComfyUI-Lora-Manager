@@ -112,7 +112,7 @@ class RecipeFormatParser(RecipeMetadataParser):
                                 civitai_info = await civitai_client.get_model_version_info(lora['modelVersionId'])
                                 if civitai_info and civitai_info.get("error") != "Model not found":
                                     # Check if this is an early access lora
-                                    if 'earlyAccessEndsAt' in civitai_info:
+                                    if civitai_info.get('earlyAccessEndsAt'):
                                         # Convert earlyAccessEndsAt to a human-readable date
                                         early_access_date = civitai_info.get('earlyAccessEndsAt', '')
                                         lora_entry['isEarlyAccess'] = True
@@ -227,7 +227,7 @@ class StandardMetadataParser(RecipeMetadataParser):
                     # Check if this LoRA exists locally by SHA256 hash
                     if civitai_info and civitai_info.get("error") != "Model not found":
                         # Check if this is an early access lora
-                        if 'earlyAccessEndsAt' in civitai_info:
+                        if civitai_info.get('earlyAccessEndsAt'):
                             # Convert earlyAccessEndsAt to a human-readable date
                             early_access_date = civitai_info.get('earlyAccessEndsAt', '')
                             lora_entry['isEarlyAccess'] = True
@@ -442,7 +442,7 @@ class A1111MetadataParser(RecipeMetadataParser):
                         civitai_info = await civitai_client.get_model_by_hash(hash_value)
                         if civitai_info and civitai_info.get("error") != "Model not found":
                             # Check if this is an early access lora
-                            if 'earlyAccessEndsAt' in civitai_info:
+                            if civitai_info.get('earlyAccessEndsAt'):
                                 # Convert earlyAccessEndsAt to a human-readable date
                                 early_access_date = civitai_info.get('earlyAccessEndsAt', '')
                                 lora_entry['isEarlyAccess'] = True
