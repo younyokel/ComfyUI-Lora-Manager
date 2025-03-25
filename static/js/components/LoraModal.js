@@ -1233,9 +1233,14 @@ function setupModelNameEditing() {
 }
 
 // Add save model base model function
-window.saveBaseModel = async function(filePath) {
+window.saveBaseModel = async function(filePath, originalValue) {
     const baseModelElement = document.querySelector('.base-model-content');
     const newBaseModel = baseModelElement.textContent.trim();
+    
+    // Only save if the value has actually changed
+    if (newBaseModel === originalValue) {
+        return; // No change, no need to save
+    }
     
     try {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
@@ -1275,10 +1280,16 @@ function setupBaseModelEditing() {
     editBtn.addEventListener('click', () => {
         baseModelDisplay.classList.add('editing');
         
+        // Store the original value to check for changes later
+        const originalValue = baseModelContent.textContent.trim();
+        
         // Create dropdown selector to replace the base model content
-        const currentValue = baseModelContent.textContent.trim();
+        const currentValue = originalValue;
         const dropdown = document.createElement('select');
         dropdown.className = 'base-model-selector';
+        
+        // Flag to track if a change was made
+        let valueChanged = false;
         
         // Add options from BASE_MODELS constants
         const baseModelCategories = {
@@ -1325,6 +1336,13 @@ function setupBaseModelEditing() {
         dropdown.addEventListener('change', function() {
             const selectedModel = this.value;
             baseModelContent.textContent = selectedModel;
+            
+            // Mark that a change was made if the value differs from original
+            if (selectedModel !== originalValue) {
+                valueChanged = true;
+            } else {
+                valueChanged = false;
+            }
         });
         
         // Function to save changes and exit edit mode
@@ -1341,14 +1359,17 @@ function setupBaseModelEditing() {
             // Remove editing class
             baseModelDisplay.classList.remove('editing');
             
-            // Get file path for saving
-            const filePath = document.querySelector('#loraModal .modal-content')
-                .querySelector('.file-path').textContent + 
-                document.querySelector('#loraModal .modal-content')
-                .querySelector('#file-name').textContent + '.safetensors';
-            
-            // Save the changes
-            saveBaseModel(filePath);
+            // Only save if the value has actually changed
+            if (valueChanged || baseModelContent.textContent.trim() !== originalValue) {
+                // Get file path for saving
+                const filePath = document.querySelector('#loraModal .modal-content')
+                    .querySelector('.file-path').textContent + 
+                    document.querySelector('#loraModal .modal-content')
+                    .querySelector('#file-name').textContent + '.safetensors';
+                
+                // Save the changes, passing the original value for comparison
+                saveBaseModel(filePath, originalValue);
+            }
             
             // Remove this event listener
             document.removeEventListener('click', outsideClickHandler);
