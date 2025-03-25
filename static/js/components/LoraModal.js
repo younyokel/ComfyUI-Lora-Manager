@@ -1,7 +1,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { modalManager } from '../managers/ModalManager.js';
-import { NSFW_LEVELS } from '../utils/constants.js';
+import { NSFW_LEVELS, BASE_MODELS } from '../utils/constants.js';
 
 export function showLoraModal(lora) {
     const escapedWords = lora.civitai?.trainedWords?.length ? 
@@ -43,7 +43,12 @@ export function showLoraModal(lora) {
                         <div class="info-item base-size">
                             <div class="base-wrapper">
                                 <label>Base Model</label>
-                                <span>${lora.base_model || 'N/A'}</span>
+                                <div class="base-model-display">
+                                    <span class="base-model-content">${lora.base_model || 'N/A'}</span>
+                                    <button class="edit-base-model-btn" title="Edit base model">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="size-wrapper">
                                 <label>Size</label>
@@ -124,6 +129,7 @@ export function showLoraModal(lora) {
     setupTagTooltip();
     setupTriggerWordsEditMode();
     setupModelNameEditing();
+    setupBaseModelEditing();
     
     // If we have a model ID but no description, fetch it
     if (lora.civitai?.modelId && !lora.modelDescription) {
@@ -1223,5 +1229,150 @@ function setupModelNameEditing() {
             
             showToast('Model name is limited to 100 characters', 'warning');
         }
+    });
+}
+
+// Add save model base model function
+window.saveBaseModel = async function(filePath) {
+    const baseModelElement = document.querySelector('.base-model-content');
+    const newBaseModel = baseModelElement.textContent.trim();
+    
+    try {
+        await saveModelMetadata(filePath, { base_model: newBaseModel });
+        
+        // Update the corresponding lora card's dataset
+        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        if (loraCard) {
+            loraCard.dataset.base_model = newBaseModel;
+        }
+        
+        showToast('Base model updated successfully', 'success');
+    } catch (error) {
+        showToast('Failed to update base model', 'error');
+    }
+};
+
+// New function to handle base model editing
+function setupBaseModelEditing() {
+    const baseModelContent = document.querySelector('.base-model-content');
+    const editBtn = document.querySelector('.edit-base-model-btn');
+    
+    if (!baseModelContent || !editBtn) return;
+    
+    // Show edit button on hover
+    const baseModelDisplay = document.querySelector('.base-model-display');
+    baseModelDisplay.addEventListener('mouseenter', () => {
+        editBtn.classList.add('visible');
+    });
+    
+    baseModelDisplay.addEventListener('mouseleave', () => {
+        if (!baseModelDisplay.classList.contains('editing')) {
+            editBtn.classList.remove('visible');
+        }
+    });
+    
+    // Handle edit button click
+    editBtn.addEventListener('click', () => {
+        baseModelDisplay.classList.add('editing');
+        
+        // Create dropdown selector to replace the base model content
+        const currentValue = baseModelContent.textContent.trim();
+        const dropdown = document.createElement('select');
+        dropdown.className = 'base-model-selector';
+        
+        // Add options from BASE_MODELS constants
+        const baseModelCategories = {
+            'Stable Diffusion 1.x': [BASE_MODELS.SD_1_4, BASE_MODELS.SD_1_5, BASE_MODELS.SD_1_5_LCM, BASE_MODELS.SD_1_5_HYPER],
+            'Stable Diffusion 2.x': [BASE_MODELS.SD_2_0, BASE_MODELS.SD_2_1],
+            'Stable Diffusion 3.x': [BASE_MODELS.SD_3, BASE_MODELS.SD_3_5, BASE_MODELS.SD_3_5_MEDIUM, BASE_MODELS.SD_3_5_LARGE, BASE_MODELS.SD_3_5_LARGE_TURBO],
+            'SDXL': [BASE_MODELS.SDXL, BASE_MODELS.SDXL_LIGHTNING, BASE_MODELS.SDXL_HYPER],
+            'Video Models': [BASE_MODELS.SVD, BASE_MODELS.WAN_VIDEO, BASE_MODELS.HUNYUAN_VIDEO],
+            'Other Models': [
+                BASE_MODELS.FLUX_1_D, BASE_MODELS.FLUX_1_S, BASE_MODELS.AURAFLOW,
+                BASE_MODELS.PIXART_A, BASE_MODELS.PIXART_E, BASE_MODELS.HUNYUAN_1,
+                BASE_MODELS.LUMINA, BASE_MODELS.KOLORS, BASE_MODELS.NOOBAI,
+                BASE_MODELS.ILLUSTRIOUS, BASE_MODELS.PONY, BASE_MODELS.UNKNOWN
+            ]
+        };
+        
+        // Create option groups for better organization
+        Object.entries(baseModelCategories).forEach(([category, models]) => {
+            const group = document.createElement('optgroup');
+            group.label = category;
+            
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                option.selected = model === currentValue;
+                group.appendChild(option);
+            });
+            
+            dropdown.appendChild(group);
+        });
+        
+        // Replace content with dropdown
+        baseModelContent.style.display = 'none';
+        baseModelDisplay.insertBefore(dropdown, editBtn);
+        
+        // Hide edit button during editing
+        editBtn.style.display = 'none';
+        
+        // Focus the dropdown
+        dropdown.focus();
+        
+        // Handle dropdown change
+        dropdown.addEventListener('change', function() {
+            const selectedModel = this.value;
+            baseModelContent.textContent = selectedModel;
+        });
+        
+        // Function to save changes and exit edit mode
+        const saveAndExit = function() {
+            // Check if dropdown still exists and remove it
+            if (dropdown && dropdown.parentNode === baseModelDisplay) {
+                baseModelDisplay.removeChild(dropdown);
+            }
+            
+            // Show the content and edit button
+            baseModelContent.style.display = '';
+            editBtn.style.display = '';
+            
+            // Remove editing class
+            baseModelDisplay.classList.remove('editing');
+            
+            // Get file path for saving
+            const filePath = document.querySelector('#loraModal .modal-content')
+                .querySelector('.file-path').textContent + 
+                document.querySelector('#loraModal .modal-content')
+                .querySelector('#file-name').textContent + '.safetensors';
+            
+            // Save the changes
+            saveBaseModel(filePath);
+            
+            // Remove this event listener
+            document.removeEventListener('click', outsideClickHandler);
+        };
+        
+        // Handle outside clicks to save and exit
+        const outsideClickHandler = function(e) {
+            // If click is outside the dropdown and base model display
+            if (!baseModelDisplay.contains(e.target)) {
+                saveAndExit();
+            }
+        };
+        
+        // Add delayed event listener for outside clicks
+        setTimeout(() => {
+            document.addEventListener('click', outsideClickHandler);
+        }, 0);
+        
+        // Also handle dropdown blur event
+        dropdown.addEventListener('blur', function(e) {
+            // Only save if the related target is not the edit button or inside the baseModelDisplay
+            if (!baseModelDisplay.contains(e.relatedTarget)) {
+                saveAndExit();
+            }
+        });
     });
 }

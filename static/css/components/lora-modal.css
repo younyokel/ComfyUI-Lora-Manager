@@ -573,6 +573,59 @@
     flex: 2;  /* 分配更多空间给base model */
 }
 
+/* Base model display and editing styles */
+.base-model-display {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.base-model-content {
+    padding: 2px 4px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid transparent;
+    color: var(--text-color);
+    flex: 1;
+}
+
+.edit-base-model-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    opacity: 0;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: var(--border-radius-xs);
+    transition: all 0.2s ease;
+    margin-left: var(--space-1);
+}
+
+.edit-base-model-btn.visible,
+.base-model-display:hover .edit-base-model-btn {
+    opacity: 0.5;
+}
+
+.edit-base-model-btn:hover {
+    opacity: 0.8 !important;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .edit-base-model-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.base-model-selector {
+    width: 100%;
+    padding: 3px 5px;
+    background: var(--bg-color);
+    border: 1px solid var(--lora-accent);
+    border-radius: var(--border-radius-xs);
+    color: var(--text-color);
+    font-size: 0.9em;
+    outline: none;
+    margin-right: var(--space-1);
+}
+
 .size-wrapper {
     flex: 1;
     border-left: 1px solid var(--lora-border);
