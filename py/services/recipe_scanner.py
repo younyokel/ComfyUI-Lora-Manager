@@ -15,21 +15,6 @@ from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
-@asynccontextmanager
-async def async_timeout(timeout: float):
-    task = asyncio.current_task()
-    loop = asyncio.get_running_loop()
-    handle = loop.call_later(timeout, task.cancel)
-    try:
-        yield
-    except asyncio.CancelledError:
-        raise asyncio.TimeoutError()
-    finally:
-        handle.cancel()
-
-# Use native asyncio.timeout (Python 3.11+) if available, else use async_timeout.
-_timeout = getattr(asyncio, "timeout", async_timeout)
-
 class RecipeScanner:
     """Service for scanning and managing recipe images"""
     
@@ -80,61 +65,44 @@ class RecipeScanner:
 
         # Try to acquire the lock with a timeout to prevent deadlocks
         try:
-            # Use a timeout for acquiring the lock
-            async with _timeout(1.0):
-                async with self._initialization_lock:
-                    # Check again after acquiring the lock
-                    if self._cache is not None and not force_refresh:
-                        return self._cache
+            async with self._initialization_lock:
+                # Check again after acquiring the lock
+                if self._cache is not None and not force_refresh:
+                    return self._cache
+                
+                # Mark as initializing to prevent concurrent initializations
+                self._is_initializing = True
+                
+                try:
+                    # Remove dependency on lora scanner initialization
+                    # Scan for recipe data directly
+                    raw_data = await self.scan_all_recipes()
                     
-                    # Mark as initializing to prevent concurrent initializations
-                    self._is_initializing = True
+                    # Update cache
+                    self._cache = RecipeCache(
+                        raw_data=raw_data,
+                        sorted_by_name=[],
+                        sorted_by_date=[]
+                    )
                     
-                    try:
-                        # First ensure the lora scanner is initialized
-                        if self._lora_scanner:
-                            try:
-                                lora_cache = await asyncio.wait_for(
-                                    self._lora_scanner.get_cached_data(), 
-                                    timeout=10.0
-                                )
-                            except asyncio.TimeoutError:
-                                logger.error("Timeout waiting for lora scanner initialization")
-                            except Exception as e:
-                                logger.error(f"Error waiting for lora scanner: {e}")
-                        
-                        # Scan for recipe data
-                        raw_data = await self.scan_all_recipes()
-                        
-                        # Update cache
-                        self._cache = RecipeCache(
-                            raw_data=raw_data,
-                            sorted_by_name=[],
-                            sorted_by_date=[]
-                        )
-                        
-                        # Resort cache
-                        await self._cache.resort()
-                        
-                        return self._cache
+                    # Resort cache
+                    await self._cache.resort()
                     
-                    except Exception as e:
-                        logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
-                        # Create empty cache on error
-                        self._cache = RecipeCache(
-                            raw_data=[],
-                            sorted_by_name=[],
-                            sorted_by_date=[]
-                        )
-                        return self._cache
-                    finally:
-                        # Mark initialization as complete
-                        self._is_initializing = False
+                    return self._cache
+                
+                except Exception as e:
+                    logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
+                    # Create empty cache on error
+                    self._cache = RecipeCache(
+                        raw_data=[],
+                        sorted_by_name=[],
+                        sorted_by_date=[]
+                    )
+                    return self._cache
+                finally:
+                    # Mark initialization as complete
+                    self._is_initializing = False
         
-        except asyncio.TimeoutError:
-            # If we can't acquire the lock in time, return the current cache or an empty one
-            logger.warning("Timeout acquiring initialization lock - returning current cache state")
-            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
         except Exception as e:
             logger.error(f"Unexpected error in get_cached_data: {e}")
             return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
