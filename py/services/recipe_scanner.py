@@ -11,8 +11,24 @@ from .lora_scanner import LoraScanner
 from .civitai_client import CivitaiClient
 from ..utils.utils import fuzzy_match
 import sys
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def async_timeout(timeout: float):
+    task = asyncio.current_task()
+    loop = asyncio.get_running_loop()
+    handle = loop.call_later(timeout, task.cancel)
+    try:
+        yield
+    except asyncio.CancelledError:
+        raise asyncio.TimeoutError()
+    finally:
+        handle.cancel()
+
+# Use native asyncio.timeout (Python 3.11+) if available, else use async_timeout.
+_timeout = getattr(asyncio, "timeout", async_timeout)
 
 class RecipeScanner:
     """Service for scanning and managing recipe images"""
@@ -65,7 +81,7 @@ class RecipeScanner:
         # Try to acquire the lock with a timeout to prevent deadlocks
         try:
             # Use a timeout for acquiring the lock
-            async with asyncio.timeout(1.0):
+            async with _timeout(1.0):
                 async with self._initialization_lock:
                     # Check again after acquiring the lock
                     if self._cache is not None and not force_refresh:
@@ -448,4 +464,4 @@ class RecipeScanner:
             'total_pages': (total_items + page_size - 1) // page_size
         }
         
-        return result 
+        return result
