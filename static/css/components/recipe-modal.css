@@ -129,7 +129,14 @@
     justify-content: center;
 }
 
-.recipe-preview-container img {
+.recipe-preview-container img,
+.recipe-preview-container video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.recipe-preview-media {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -340,9 +347,19 @@
     border-radius: var(--border-radius-xs);
     overflow: hidden;
     background: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.recipe-lora-thumbnail img {
+.recipe-lora-thumbnail img,
+.recipe-lora-thumbnail video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumbnail-video {
     width: 100%;
     height: 100%;
     object-fit: cover;

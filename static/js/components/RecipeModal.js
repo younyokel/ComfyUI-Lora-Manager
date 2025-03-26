@@ -107,8 +107,33 @@ class RecipeModal {
             const imageUrl = recipe.file_url || 
                             (recipe.file_path ? `/loras_static/root1/preview/${recipe.file_path.split('/').pop()}` : 
                             '/loras_static/images/no-preview.png');
-            modalImage.src = imageUrl;
-            modalImage.alt = recipe.title || 'Recipe Preview';
+            
+            // Check if the file is a video (mp4)
+            const isVideo = imageUrl.toLowerCase().endsWith('.mp4');
+            
+            // Replace the image element with appropriate media element
+            const mediaContainer = modalImage.parentElement;
+            mediaContainer.innerHTML = '';
+            
+            if (isVideo) {
+                const videoElement = document.createElement('video');
+                videoElement.id = 'recipeModalVideo';
+                videoElement.src = imageUrl;
+                videoElement.controls = true;
+                videoElement.autoplay = false;
+                videoElement.loop = true;
+                videoElement.muted = true;
+                videoElement.className = 'recipe-preview-media';
+                videoElement.alt = recipe.title || 'Recipe Preview';
+                mediaContainer.appendChild(videoElement);
+            } else {
+                const imgElement = document.createElement('img');
+                imgElement.id = 'recipeModalImage';
+                imgElement.src = imageUrl;
+                imgElement.className = 'recipe-preview-media';
+                imgElement.alt = recipe.title || 'Recipe Preview';
+                mediaContainer.appendChild(imgElement);
+            }
         }
         
         // Set generation parameters
@@ -212,10 +237,18 @@ class RecipeModal {
                         <i class="fas fa-exclamation-triangle"></i> Not in Library
                      </div>`;
 
+                // Check if preview is a video
+                const isPreviewVideo = lora.preview_url && lora.preview_url.toLowerCase().endsWith('.mp4');
+                const previewMedia = isPreviewVideo ?
+                    `<video class="thumbnail-video" autoplay loop muted playsinline>
+                        <source src="${lora.preview_url}" type="video/mp4">
+                     </video>` :
+                    `<img src="${lora.preview_url || '/loras_static/images/no-preview.png'}" alt="LoRA preview">`;
+
                 return `
                     <div class="recipe-lora-item ${existsLocally ? 'exists-locally' : 'missing-locally'}">
                         <div class="recipe-lora-thumbnail">
-                            <img src="${lora.preview_url || '/loras_static/images/no-preview.png'}" alt="LoRA preview">
+                            ${previewMedia}
                         </div>
                         <div class="recipe-lora-content">
                             <div class="recipe-lora-header">
