@@ -35,6 +35,10 @@ app.registerExtension({
             // Enable widget serialization
             node.serialize_widgets = true;
 
+            node.addInput('clip', 'CLIP', {
+                "shape": 7
+            });
+
             node.addInput("lora_stack", 'LORA_STACK', {
                 "shape": 7  // 7 is the shape of the optional input
             });

@@ -18,7 +18,7 @@ class LoraManagerLoader:
         return {
             "required": {
                 "model": ("MODEL",),
-                "clip": ("CLIP",),
+                # "clip": ("CLIP",),
                 "text": (IO.STRING, {
                     "multiline": True, 
                     "dynamicPrompts": True, 
@@ -75,11 +75,12 @@ class LoraManagerLoader:
             logger.warning(f"Unexpected loras format: {type(loras_data)}")
             return []
     
-    def load_loras(self, model, clip, text, **kwargs):
+    def load_loras(self, model, text, **kwargs):
         """Loads multiple LoRAs based on the kwargs input and lora_stack."""
         loaded_loras = []
         all_trigger_words = []
         
+        clip = kwargs.get('clip', None)
         lora_stack = kwargs.get('lora_stack', None)
         # First process lora_stack if available
         if lora_stack:
