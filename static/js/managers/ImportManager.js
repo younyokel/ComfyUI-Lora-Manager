@@ -116,6 +116,7 @@ export class ImportManager {
         this.recipeName = '';
         this.recipeTags = [];
         this.missingLoras = [];
+        this.downloadableLoRAs = [];
         
         // Reset import mode to upload
         this.importMode = 'upload';
@@ -1213,4 +1214,4 @@ export class ImportManager {
         
         return true;
     }
-} 
+}
