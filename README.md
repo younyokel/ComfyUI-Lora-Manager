@@ -20,6 +20,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.1
+* **Base Model Correction** - Added support for modifying base model associations to fix incorrect metadata for non-CivitAI LoRAs
+* **LoRA Loader Flexibility** - Made CLIP input optional for model-only workflows like Hunyuan video generation
+* **Expanded Recipe Support** - Added compatibility with 3 additional recipe metadata formats
+* **Enhanced Showcase Images** - Generation parameters now displayed alongside LoRA preview images
+* **UI Improvements & Bug Fixes** - Various interface refinements and stability enhancements
+
 ### v0.8.0
 * **Introduced LoRA Recipes** - Create, import, save, and share your favorite LoRA combinations
 * **Recipe Management System** - Easily browse, search, and organize your LoRA recipes
