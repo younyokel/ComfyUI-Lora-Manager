@@ -44,6 +44,138 @@ class RecipeMetadataParser(ABC):
             Dict containing parsed recipe data with standardized format
         """
         pass
+    
+    async def populate_lora_from_civitai(self, lora_entry: Dict[str, Any], civitai_info: Dict[str, Any], 
+                                         recipe_scanner=None, base_model_counts=None, hash_value=None) -> Dict[str, Any]:
+        """
+        Populate a lora entry with information from Civitai API response
+        
+        Args:
+            lora_entry: The lora entry to populate
+            civitai_info: The response from Civitai API
+            recipe_scanner: Optional recipe scanner for local file lookup
+            base_model_counts: Optional dict to track base model counts
+            hash_value: Optional hash value to use if not available in civitai_info
+            
+        Returns:
+            The populated lora_entry dict
+        """
+        try:
+            if civitai_info and civitai_info.get("error") != "Model not found":
+                # Check if this is an early access lora
+                if civitai_info.get('earlyAccessEndsAt'):
+                    # Convert earlyAccessEndsAt to a human-readable date
+                    early_access_date = civitai_info.get('earlyAccessEndsAt', '')
+                    lora_entry['isEarlyAccess'] = True
+                    lora_entry['earlyAccessEndsAt'] = early_access_date
+                
+                # Update model name if available
+                if 'model' in civitai_info and 'name' in civitai_info['model']:
+                    lora_entry['name'] = civitai_info['model']['name']
+                
+                # Update version if available
+                if 'name' in civitai_info:
+                    lora_entry['version'] = civitai_info.get('name', '')
+                
+                # Get thumbnail URL from first image
+                if 'images' in civitai_info and civitai_info['images']:
+                    lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
+                
+                # Get base model
+                current_base_model = civitai_info.get('baseModel', '')
+                lora_entry['baseModel'] = current_base_model
+                
+                # Update base model counts if tracking them
+                if base_model_counts is not None and current_base_model:
+                    base_model_counts[current_base_model] = base_model_counts.get(current_base_model, 0) + 1
+                
+                # Get download URL
+                lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
+                
+                # Process file information if available
+                if 'files' in civitai_info:
+                    model_file = next((file for file in civitai_info.get('files', []) 
+                                    if file.get('type') == 'Model'), None)
+                    
+                    if model_file:
+                        # Get size
+                        lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
+                        
+                        # Get SHA256 hash
+                        sha256 = model_file.get('hashes', {}).get('SHA256', hash_value)
+                        if sha256:
+                            lora_entry['hash'] = sha256.lower()
+                        
+                        # Check if exists locally
+                        if recipe_scanner and lora_entry['hash']:
+                            lora_scanner = recipe_scanner._lora_scanner
+                            exists_locally = lora_scanner.has_lora_hash(lora_entry['hash'])
+                            if exists_locally:
+                                try:
+                                    local_path = lora_scanner.get_lora_path_by_hash(lora_entry['hash'])
+                                    lora_entry['existsLocally'] = True
+                                    lora_entry['localPath'] = local_path
+                                    lora_entry['file_name'] = os.path.splitext(os.path.basename(local_path))[0]
+                                    
+                                    # Get thumbnail from local preview if available
+                                    lora_cache = await lora_scanner.get_cached_data()
+                                    lora_item = next((item for item in lora_cache.raw_data 
+                                                     if item['sha256'].lower() == lora_entry['hash'].lower()), None)
+                                    if lora_item and 'preview_url' in lora_item:
+                                        lora_entry['thumbnailUrl'] = config.get_preview_static_url(lora_item['preview_url'])
+                                except Exception as e:
+                                    logger.error(f"Error getting local lora path: {e}")
+                            else:
+                                # For missing LoRAs, get file_name from model_file.name
+                                file_name = model_file.get('name', '')
+                                lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else ''
+            else:
+                # Model not found or deleted
+                lora_entry['isDeleted'] = True
+                lora_entry['thumbnailUrl'] = '/loras_static/images/no-preview.png'
+                
+        except Exception as e:
+            logger.error(f"Error populating lora from Civitai info: {e}")
+            
+        return lora_entry
+        
+    async def populate_checkpoint_from_civitai(self, checkpoint: Dict[str, Any], civitai_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Populate checkpoint information from Civitai API response
+        
+        Args:
+            checkpoint: The checkpoint entry to populate
+            civitai_info: The response from Civitai API
+            
+        Returns:
+            The populated checkpoint dict
+        """
+        try:
+            if civitai_info and civitai_info.get("error") != "Model not found":
+                # Update model name if available
+                if 'model' in civitai_info and 'name' in civitai_info['model']:
+                    checkpoint['name'] = civitai_info['model']['name']
+                
+                # Update version if available
+                if 'name' in civitai_info:
+                    checkpoint['version'] = civitai_info.get('name', '')
+                
+                # Get thumbnail URL from first image
+                if 'images' in civitai_info and civitai_info['images']:
+                    checkpoint['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
+                
+                # Get base model
+                checkpoint['baseModel'] = civitai_info.get('baseModel', '')
+                
+                # Get download URL
+                checkpoint['downloadUrl'] = civitai_info.get('downloadUrl', '')
+            else:
+                # Model not found or deleted
+                checkpoint['isDeleted'] = True
+        except Exception as e:
+            logger.error(f"Error populating checkpoint from Civitai info: {e}")
+            
+        return checkpoint
 
 
 class RecipeFormatParser(RecipeMetadataParser):
@@ -110,33 +242,14 @@ class RecipeFormatParser(RecipeMetadataParser):
                         if lora.get('modelVersionId') and civitai_client:
                             try:
                                 civitai_info = await civitai_client.get_model_version_info(lora['modelVersionId'])
-                                if civitai_info and civitai_info.get("error") != "Model not found":
-                                    # Check if this is an early access lora
-                                    if civitai_info.get('earlyAccessEndsAt'):
-                                        # Convert earlyAccessEndsAt to a human-readable date
-                                        early_access_date = civitai_info.get('earlyAccessEndsAt', '')
-                                        lora_entry['isEarlyAccess'] = True
-                                        lora_entry['earlyAccessEndsAt'] = early_access_date
-                                    
-                                    # Get thumbnail URL from first image
-                                    if 'images' in civitai_info and civitai_info['images']:
-                                        lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
-                                    
-                                    # Get base model
-                                    lora_entry['baseModel'] = civitai_info.get('baseModel', '')
-                                    
-                                    # Get download URL
-                                    lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
-                                    
-                                    # Get size from files if available
-                                    if 'files' in civitai_info:
-                                        model_file = next((file for file in civitai_info.get('files', []) 
-                                                        if file.get('type') == 'Model'), None)
-                                        if model_file:
-                                            lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
-                                else:
-                                    lora_entry['isDeleted'] = True
-                                    lora_entry['thumbnailUrl'] = '/loras_static/images/no-preview.png'
+                                # Populate lora entry with Civitai info
+                                lora_entry = await self.populate_lora_from_civitai(
+                                    lora_entry, 
+                                    civitai_info, 
+                                    recipe_scanner,
+                                    None,  # No need to track base model counts
+                                    lora['hash']
+                                )
                             except Exception as e:
                                 logger.error(f"Error fetching Civitai info for LoRA: {e}")
                                 lora_entry['thumbnailUrl'] = '/loras_static/images/no-preview.png'
@@ -222,57 +335,16 @@ class StandardMetadataParser(RecipeMetadataParser):
                 
                 # Get additional info from Civitai if client is available
                 if civitai_client:
-                    civitai_info = await civitai_client.get_model_version_info(model_version_id)
-
-                    # Check if this LoRA exists locally by SHA256 hash
-                    if civitai_info and civitai_info.get("error") != "Model not found":
-                        # Check if this is an early access lora
-                        if civitai_info.get('earlyAccessEndsAt'):
-                            # Convert earlyAccessEndsAt to a human-readable date
-                            early_access_date = civitai_info.get('earlyAccessEndsAt', '')
-                            lora_entry['isEarlyAccess'] = True
-                            lora_entry['earlyAccessEndsAt'] = early_access_date
-                        
-                        # LoRA exists on Civitai, process its information
-                        if 'files' in civitai_info:
-                            # Find the model file (type="Model") in the files list
-                            model_file = next((file for file in civitai_info.get('files', []) 
-                                            if file.get('type') == 'Model'), None)
-                            
-                            if model_file and recipe_scanner:
-                                sha256 = model_file.get('hashes', {}).get('SHA256', '')
-                                if sha256:
-                                    lora_scanner = recipe_scanner._lora_scanner
-                                    exists_locally = lora_scanner.has_lora_hash(sha256)
-                                    if exists_locally:
-                                        local_path = lora_scanner.get_lora_path_by_hash(sha256)
-                                        lora_entry['existsLocally'] = True
-                                        lora_entry['localPath'] = local_path
-                                        lora_entry['file_name'] = os.path.splitext(os.path.basename(local_path))[0]
-                                    else:
-                                        # For missing LoRAs, get file_name from model_file.name
-                                        file_name = model_file.get('name', '')
-                                        lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else ''
-                                
-                                lora_entry['hash'] = sha256
-                                lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
-                        
-                        # Get thumbnail URL from first image
-                        if 'images' in civitai_info and civitai_info['images']:
-                            lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
-                        
-                        # Get base model and update counts
-                        current_base_model = civitai_info.get('baseModel', '')
-                        lora_entry['baseModel'] = current_base_model
-                        if current_base_model:
-                            base_model_counts[current_base_model] = base_model_counts.get(current_base_model, 0) + 1
-                        
-                        # Get download URL
-                        lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
-                    else:
-                        # LoRA is deleted from Civitai or not found
-                        lora_entry['isDeleted'] = True
-                        lora_entry['thumbnailUrl'] = '/loras_static/images/no-preview.png'
+                    try:
+                        civitai_info = await civitai_client.get_model_version_info(model_version_id)
+                        # Populate lora entry with Civitai info
+                        lora_entry = await self.populate_lora_from_civitai(
+                            lora_entry, 
+                            civitai_info, 
+                            recipe_scanner
+                        )
+                    except Exception as e:
+                        logger.error(f"Error fetching Civitai info for LoRA: {e}")
                 
                 loras.append(lora_entry)
             
@@ -436,61 +508,18 @@ class A1111MetadataParser(RecipeMetadataParser):
                     'isDeleted': False
                 }
                 
-                # Get info from Civitai by hash
-                if civitai_client:
+                # Get info from Civitai by hash if available
+                if civitai_client and hash_value:
                     try:
                         civitai_info = await civitai_client.get_model_by_hash(hash_value)
-                        if civitai_info and civitai_info.get("error") != "Model not found":
-                            # Check if this is an early access lora
-                            if civitai_info.get('earlyAccessEndsAt'):
-                                # Convert earlyAccessEndsAt to a human-readable date
-                                early_access_date = civitai_info.get('earlyAccessEndsAt', '')
-                                lora_entry['isEarlyAccess'] = True
-                                lora_entry['earlyAccessEndsAt'] = early_access_date
-                            
-                            # Get model version ID
-                            lora_entry['id'] = civitai_info.get('id', '')
-                            
-                            # Get model name and version
-                            lora_entry['name'] = civitai_info.get('model', {}).get('name', lora_name)
-                            lora_entry['version'] = civitai_info.get('name', '')
-                            
-                            # Get thumbnail URL
-                            if 'images' in civitai_info and civitai_info['images']:
-                                lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
-                            
-                            # Get base model and update counts
-                            current_base_model = civitai_info.get('baseModel', '')
-                            lora_entry['baseModel'] = current_base_model
-                            if current_base_model:
-                                base_model_counts[current_base_model] = base_model_counts.get(current_base_model, 0) + 1
-                            
-                            # Get download URL
-                            lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
-                            
-                            # Get file name and size from Civitai
-                            if 'files' in civitai_info:
-                                model_file = next((file for file in civitai_info.get('files', []) 
-                                                if file.get('type') == 'Model'), None)
-                                if model_file:
-                                    file_name = model_file.get('name', '')
-                                    lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else lora_name
-                                    lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
-                                    # Update hash to sha256
-                                    lora_entry['hash'] = model_file.get('hashes', {}).get('SHA256', hash_value).lower()
-                                    
-                            # Check if exists locally with sha256 hash
-                            if recipe_scanner and lora_entry['hash']:
-                                lora_scanner = recipe_scanner._lora_scanner
-                                exists_locally = lora_scanner.has_lora_hash(lora_entry['hash'])
-                                if exists_locally:
-                                    lora_cache = await lora_scanner.get_cached_data()
-                                    lora_item = next((item for item in lora_cache.raw_data if item['sha256'] == lora_entry['hash']), None)
-                                    if lora_item:
-                                        lora_entry['existsLocally'] = True
-                                        lora_entry['localPath'] = lora_item['file_path']
-                                        lora_entry['thumbnailUrl'] = config.get_preview_static_url(lora_item['preview_url'])
-                                        
+                        # Populate lora entry with Civitai info
+                        lora_entry = await self.populate_lora_from_civitai(
+                            lora_entry, 
+                            civitai_info, 
+                            recipe_scanner,
+                            base_model_counts,
+                            hash_value
+                        )
                     except Exception as e:
                         logger.error(f"Error fetching Civitai info for LoRA hash {hash_value}: {e}")
                 
@@ -591,51 +620,12 @@ class ComfyMetadataParser(RecipeMetadataParser):
                 if civitai_client:
                     try:
                         civitai_info = await civitai_client.get_model_version_info(model_version_id)
-                        if civitai_info and civitai_info.get("error") != "Model not found":
-                            # Update lora entry with model name and version
-                            if 'model' in civitai_info and 'name' in civitai_info['model']:
-                                lora_entry['name'] = civitai_info['model']['name']
-                            lora_entry['version'] = civitai_info.get('name', '')
-                            
-                            # Check if this is an early access lora
-                            if civitai_info.get('earlyAccessEndsAt'):
-                                early_access_date = civitai_info.get('earlyAccessEndsAt', '')
-                                lora_entry['isEarlyAccess'] = True
-                                lora_entry['earlyAccessEndsAt'] = early_access_date
-                            
-                            # Get thumbnail URL from first image
-                            if 'images' in civitai_info and civitai_info['images']:
-                                lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
-                            
-                            # Get base model
-                            lora_entry['baseModel'] = civitai_info.get('baseModel', '')
-                            
-                            # Get download URL
-                            lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
-                            
-                            # Check if this LoRA exists locally by SHA256 hash
-                            if 'files' in civitai_info:
-                                model_file = next((file for file in civitai_info.get('files', []) 
-                                                if file.get('type') == 'Model'), None)
-                                if model_file and recipe_scanner:
-                                    sha256 = model_file.get('hashes', {}).get('SHA256', '')
-                                    if sha256:
-                                        lora_scanner = recipe_scanner._lora_scanner
-                                        exists_locally = lora_scanner.has_lora_hash(sha256)
-                                        if exists_locally:
-                                            local_path = lora_scanner.get_lora_path_by_hash(sha256)
-                                            lora_entry['existsLocally'] = True
-                                            lora_entry['localPath'] = local_path
-                                            lora_entry['file_name'] = os.path.splitext(os.path.basename(local_path))[0]
-                                        else:
-                                            # For missing LoRAs, get file_name from model_file.name
-                                            file_name = model_file.get('name', '')
-                                            lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else ''
-                                    
-                                    lora_entry['hash'] = sha256
-                                    lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
-                        else:
-                            lora_entry['isDeleted'] = True
+                        # Populate lora entry with Civitai info
+                        lora_entry = await self.populate_lora_from_civitai(
+                            lora_entry, 
+                            civitai_info, 
+                            recipe_scanner
+                        )
                     except Exception as e:
                         logger.error(f"Error fetching Civitai info for LoRA: {e}")
                 
@@ -669,10 +659,8 @@ class ComfyMetadataParser(RecipeMetadataParser):
                         if civitai_client:
                             try:
                                 civitai_info = await civitai_client.get_model_version_info(checkpoint_version_id)
-                                if civitai_info and civitai_info.get("error") != "Model not found":
-                                    if 'model' in civitai_info and 'name' in civitai_info['model']:
-                                        checkpoint['name'] = civitai_info['model']['name']
-                                    checkpoint['version'] = civitai_info.get('name', '')
+                                # Populate checkpoint with Civitai info
+                                checkpoint = await self.populate_checkpoint_from_civitai(checkpoint, civitai_info)
                             except Exception as e:
                                 logger.error(f"Error fetching Civitai info for checkpoint: {e}")
             
@@ -884,58 +872,14 @@ class MetaFormatParser(RecipeMetadataParser):
                 if civitai_client and hash_value:
                     try:
                         civitai_info = await civitai_client.get_model_by_hash(hash_value)
-                        if civitai_info and civitai_info.get("error") != "Model not found":
-                            # Check if this is an early access lora
-                            if civitai_info.get('earlyAccessEndsAt'):
-                                early_access_date = civitai_info.get('earlyAccessEndsAt', '')
-                                lora_entry['isEarlyAccess'] = True
-                                lora_entry['earlyAccessEndsAt'] = early_access_date
-                            
-                            # Get model version ID
-                            lora_entry['id'] = civitai_info.get('id', '')
-                            
-                            # Get model name and version
-                            lora_entry['name'] = civitai_info.get('model', {}).get('name', name)
-                            lora_entry['version'] = civitai_info.get('name', '')
-                            
-                            # Get thumbnail URL
-                            if 'images' in civitai_info and civitai_info['images']:
-                                lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
-                            
-                            # Get base model and update counts
-                            current_base_model = civitai_info.get('baseModel', '')
-                            lora_entry['baseModel'] = current_base_model
-                            if current_base_model:
-                                base_model_counts[current_base_model] = base_model_counts.get(current_base_model, 0) + 1
-                            
-                            # Get download URL
-                            lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
-                            
-                            # Get file name and size from Civitai
-                            if 'files' in civitai_info:
-                                model_file = next((file for file in civitai_info.get('files', []) 
-                                                if file.get('type') == 'Model'), None)
-                                if model_file:
-                                    file_name = model_file.get('name', '')
-                                    lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else name
-                                    lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
-                                    # Update hash to sha256
-                                    new_hash = model_file.get('hashes', {}).get('SHA256', hash_value).lower()
-                                    lora_entry['hash'] = new_hash
-                            
-                            # Check if exists locally with sha256 hash
-                            if recipe_scanner and lora_entry['hash']:
-                                lora_scanner = recipe_scanner._lora_scanner
-                                exists_locally = lora_scanner.has_lora_hash(lora_entry['hash'])
-                                if exists_locally:
-                                    lora_cache = await lora_scanner.get_cached_data()
-                                    lora_item = next((item for item in lora_cache.raw_data if item['sha256'].lower() == lora_entry['hash'].lower()), None)
-                                    if lora_item:
-                                        lora_entry['existsLocally'] = True
-                                        lora_entry['localPath'] = lora_item['file_path']
-                                        lora_entry['thumbnailUrl'] = config.get_preview_static_url(lora_item['preview_url'])
-                        else:
-                            lora_entry['isDeleted'] = True
+                        # Populate lora entry with Civitai info
+                        lora_entry = await self.populate_lora_from_civitai(
+                            lora_entry, 
+                            civitai_info, 
+                            recipe_scanner,
+                            base_model_counts,
+                            hash_value
+                        )
                     except Exception as e:
                         logger.error(f"Error fetching Civitai info for LoRA hash {hash_value}: {e}")
                 
