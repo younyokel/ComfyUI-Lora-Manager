@@ -466,7 +466,9 @@ class A1111MetadataParser(RecipeMetadataParser):
             # Extract LoRA information from prompt
             lora_weights = {}
             lora_matches = re.findall(self.LORA_PATTERN, prompt)
-            for lora_name, weight in lora_matches:
+            for lora_name, weights in lora_matches:
+                # Take only the first strength value (before the colon)
+                weight = weights.split(':')[0]
                 lora_weights[lora_name.strip()] = float(weight.strip())
             
             # Remove LoRA patterns from prompt
@@ -918,6 +920,133 @@ class MetaFormatParser(RecipeMetadataParser):
             return {"error": str(e), "loras": []}
 
 
+class ImageSaverMetadataParser(RecipeMetadataParser):
+    """Parser for ComfyUI Image Saver plugin metadata format"""
+    
+    METADATA_MARKER = r'Hashes: \{"LORA:'
+    LORA_PATTERN = r'<lora:([^:]+):([^>]+)>'
+    HASH_PATTERN = r'Hashes: (\{.*?\})'
+    
+    def is_metadata_matching(self, user_comment: str) -> bool:
+        """Check if the user comment matches the Image Saver metadata format"""
+        return re.search(self.METADATA_MARKER, user_comment, re.IGNORECASE | re.DOTALL) is not None
+    
+    async def parse_metadata(self, user_comment: str, recipe_scanner=None, civitai_client=None) -> Dict[str, Any]:
+        """Parse metadata from Image Saver plugin format"""
+        try:
+            # Extract prompt and negative prompt
+            parts = user_comment.split('Negative prompt:', 1)
+            prompt = parts[0].strip()
+            
+            # Initialize metadata
+            metadata = {"prompt": prompt, "loras": []}
+            
+            # Extract negative prompt and parameters
+            if len(parts) > 1:
+                negative_and_params = parts[1]
+                
+                # Extract negative prompt
+                if "Steps:" in negative_and_params:
+                    neg_prompt = negative_and_params.split("Steps:", 1)[0].strip()
+                    metadata["negative_prompt"] = neg_prompt
+                
+                # Extract key-value parameters (Steps, Sampler, CFG scale, etc.)
+                param_pattern = r'([A-Za-z ]+): ([^,]+)'
+                params = re.findall(param_pattern, negative_and_params)
+                for key, value in params:
+                    clean_key = key.strip().lower().replace(' ', '_')
+                    metadata[clean_key] = value.strip()
+            
+            # Extract LoRA information from prompt
+            lora_weights = {}
+            lora_matches = re.findall(self.LORA_PATTERN, prompt)
+            for lora_name, weight in lora_matches:
+                lora_weights[lora_name.strip()] = float(weight.split(':')[0].strip())
+            
+            # Remove LoRA patterns from prompt
+            metadata["prompt"] = re.sub(self.LORA_PATTERN, '', prompt).strip()
+            
+            # Extract LoRA hashes from Hashes section
+            lora_hashes = {}
+            hash_match = re.search(self.HASH_PATTERN, user_comment)
+            if hash_match:
+                try:
+                    hashes = json.loads(hash_match.group(1))
+                    for key, hash_value in hashes.items():
+                        if key.startswith('LORA:'):
+                            lora_name = key[5:]  # Remove 'LORA:' prefix
+                            lora_hashes[lora_name] = hash_value.strip()
+                except json.JSONDecodeError:
+                    pass
+            
+            # Process LoRAs and collect base models
+            base_model_counts = {}
+            loras = []
+            
+            # Process each LoRA with hash and weight
+            for lora_name, hash_value in lora_hashes.items():
+                weight = lora_weights.get(lora_name, 1.0)
+                
+                # Initialize lora entry with default values
+                lora_entry = {
+                    'name': lora_name,
+                    'type': 'lora',
+                    'weight': weight,
+                    'existsLocally': False,
+                    'localPath': None,
+                    'file_name': lora_name,
+                    'hash': hash_value,
+                    'thumbnailUrl': '/loras_static/images/no-preview.png',
+                    'baseModel': '',
+                    'size': 0,
+                    'downloadUrl': '',
+                    'isDeleted': False
+                }
+                
+                # Get info from Civitai by hash if available
+                if civitai_client and hash_value:
+                    try:
+                        civitai_info = await civitai_client.get_model_by_hash(hash_value)
+                        # Populate lora entry with Civitai info
+                        lora_entry = await self.populate_lora_from_civitai(
+                            lora_entry, 
+                            civitai_info, 
+                            recipe_scanner,
+                            base_model_counts,
+                            hash_value
+                        )
+                    except Exception as e:
+                        logger.error(f"Error fetching Civitai info for LoRA hash {hash_value}: {e}")
+                
+                loras.append(lora_entry)
+
+            # Set base_model to the most common one from civitai_info
+            base_model = None
+            if base_model_counts:
+                base_model = max(base_model_counts.items(), key=lambda x: x[1])[0]
+            
+            # Extract generation parameters for recipe metadata
+            gen_params = {}
+            for key in GEN_PARAM_KEYS:
+                if key in metadata:
+                    gen_params[key] = metadata.get(key, '')
+            
+            # Add model information if available
+            if 'model' in metadata:
+                gen_params['checkpoint'] = metadata['model']
+            
+            return {
+                'base_model': base_model,
+                'loras': loras,
+                'gen_params': gen_params,
+                'raw_metadata': metadata
+            }
+            
+        except Exception as e:
+            logger.error(f"Error parsing Image Saver metadata: {e}", exc_info=True)
+            return {"error": str(e), "loras": []}
+
+
 class RecipeParserFactory:
     """Factory for creating recipe metadata parsers"""
     
@@ -948,5 +1077,7 @@ class RecipeParserFactory:
             return A1111MetadataParser()
         elif MetaFormatParser().is_metadata_matching(user_comment):
             return MetaFormatParser()
+        elif ImageSaverMetadataParser().is_metadata_matching(user_comment):
+            return ImageSaverMetadataParser()
         else:
             return None
