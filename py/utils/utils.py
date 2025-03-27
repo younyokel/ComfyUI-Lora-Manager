@@ -40,7 +40,45 @@ def download_twitter_image(url):
     except Exception as e:
         print(f"Error downloading twitter image: {e}")
         return None
+
+def download_civitai_image(url):
+    """Download image from a URL containing avatar image with specific class and style attributes
     
+    Args:
+        url (str): The URL to download image from
+        
+    Returns:
+        str: Path to downloaded temporary image file
+    """
+    try:
+        # Download page content
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        # Parse HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find image with specific class and style attributes
+        image = soup.select_one('img.EdgeImage_image__iH4_q.max-h-full.w-auto.max-w-full')
+        
+        if not image or 'src' not in image.attrs:
+            return None
+            
+        image_url = image['src']
+        
+        # Download image
+        image_response = requests.get(image_url)
+        image_response.raise_for_status()
+        
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+            temp_file.write(image_response.content)
+            return temp_file.name
+            
+    except Exception as e:
+        print(f"Error downloading civitai avatar: {e}")
+        return None
+
 def fuzzy_match(text: str, pattern: str, threshold: float = 0.7) -> bool:
         """
         Check if text matches pattern using fuzzy matching.

@@ -14,7 +14,7 @@ from ..services.recipe_scanner import RecipeScanner
 from ..services.lora_scanner import LoraScanner
 from ..config import config
 from ..workflow.parser import WorkflowParser
-from ..utils.utils import download_twitter_image
+from ..utils.utils import download_civitai_image
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +235,7 @@ class RecipeRoutes:
                     }, status=400)
                 
                 # Download image from URL
-                temp_path = download_twitter_image(url)
+                temp_path = download_civitai_image(url)
                 
                 if not temp_path:
                     return web.json_response({
@@ -244,10 +244,10 @@ class RecipeRoutes:
                     }, status=400)
             
             # Extract metadata from the image using ExifUtils
-            user_comment = ExifUtils.extract_user_comment(temp_path)
+            metadata = ExifUtils.extract_image_metadata(temp_path)
             
             # If no metadata found, return a more specific error
-            if not user_comment:
+            if not metadata:
                 result = {
                     "error": "No metadata found in this image",
                     "loras": []  # Return empty loras array to prevent client-side errors
@@ -262,7 +262,7 @@ class RecipeRoutes:
                 return web.json_response(result, status=200)
             
             # Use the parser factory to get the appropriate parser
-            parser = RecipeParserFactory.create_parser(user_comment)
+            parser = RecipeParserFactory.create_parser(metadata)
 
             if parser is None:
                 result = {
@@ -280,7 +280,7 @@ class RecipeRoutes:
             
             # Parse the metadata
             result = await parser.parse_metadata(
-                user_comment, 
+                metadata, 
                 recipe_scanner=self.recipe_scanner, 
                 civitai_client=self.civitai_client
             )
@@ -387,8 +387,7 @@ class RecipeRoutes:
                         return web.json_response({"error": f"Invalid base64 image data: {str(e)}"}, status=400)
                 elif image_url:
                     # Download image from URL
-                    from ..utils.utils import download_twitter_image
-                    temp_path = download_twitter_image(image_url)
+                    temp_path = download_civitai_image(image_url)
                     if not temp_path:
                         return web.json_response({"error": "Failed to download image from URL"}, status=400)
                     

@@ -45,6 +45,63 @@ class ExifUtils:
                 
         except Exception as e:
             return None
+
+    @staticmethod
+    def extract_image_metadata(image_path: str) -> Optional[str]:
+        """Extract metadata from image including UserComment or parameters field
+        
+        Args:
+            image_path (str): Path to the image file
+            
+        Returns:
+            Optional[str]: Extracted metadata or None if not found
+        """
+        try:
+            # First try to open the image
+            with Image.open(image_path) as img:
+                # Method 1: Check for parameters in image info
+                if hasattr(img, 'info') and 'parameters' in img.info:
+                    return img.info['parameters']
+                
+                # Method 2: Check EXIF UserComment field
+                if img.format not in ['JPEG', 'TIFF', 'WEBP']:
+                    # For non-JPEG/TIFF/WEBP images, try to get EXIF through PIL
+                    exif = img._getexif()
+                    if exif and piexif.ExifIFD.UserComment in exif:
+                        user_comment = exif[piexif.ExifIFD.UserComment]
+                        if isinstance(user_comment, bytes):
+                            if user_comment.startswith(b'UNICODE\0'):
+                                return user_comment[8:].decode('utf-16be')
+                            return user_comment.decode('utf-8', errors='ignore')
+                        return user_comment
+                
+                # For JPEG/TIFF/WEBP, use piexif
+                try:
+                    exif_dict = piexif.load(image_path)
+                    
+                    if piexif.ExifIFD.UserComment in exif_dict.get('Exif', {}):
+                        user_comment = exif_dict['Exif'][piexif.ExifIFD.UserComment]
+                        if isinstance(user_comment, bytes):
+                            if user_comment.startswith(b'UNICODE\0'):
+                                user_comment = user_comment[8:].decode('utf-16be')
+                            else:
+                                user_comment = user_comment.decode('utf-8', errors='ignore')
+                        return user_comment
+                except Exception as e:
+                    logger.debug(f"Error loading EXIF data: {e}")
+                
+                # Method 3: Check PNG metadata for workflow info (for ComfyUI images)
+                if img.format == 'PNG':
+                    # Look for workflow or prompt metadata in PNG chunks
+                    for key in img.info:
+                        if key in ['workflow', 'prompt', 'parameters']:
+                            return img.info[key]
+                
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error extracting image metadata: {e}", exc_info=True)
+            return None
     
     @staticmethod
     def update_user_comment(image_path: str, user_comment: str) -> str:
@@ -92,18 +149,78 @@ class ExifUtils:
         except Exception as e:
             logger.error(f"Error updating EXIF data in {image_path}: {e}")
             return image_path
+
+    @staticmethod
+    def update_image_metadata(image_path: str, metadata: str) -> str:
+        """Update metadata in image's EXIF data or parameters fields
+        
+        Args:
+            image_path (str): Path to the image file
+            metadata (str): Metadata string to save
+            
+        Returns:
+            str: Path to the updated image
+        """
+        try:
+            # Load the image and check its format
+            with Image.open(image_path) as img:
+                img_format = img.format
+                
+                # For PNG, try to update parameters directly
+                if img_format == 'PNG':
+                    # We'll save with parameters in the PNG info
+                    info_dict = {'parameters': metadata}
+                    img.save(image_path, format='PNG', pnginfo=info_dict)
+                    return image_path
+                
+                # For WebP format, use PIL's exif parameter directly
+                elif img_format == 'WEBP':
+                    exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + metadata.encode('utf-16be')}}
+                    exif_bytes = piexif.dump(exif_dict)
+                    
+                    # Save with the exif data
+                    img.save(image_path, format='WEBP', exif=exif_bytes, quality=85)
+                    return image_path
+                
+                # For other formats, use standard EXIF approach
+                else:
+                    try:
+                        exif_dict = piexif.load(img.info.get('exif', b''))
+                    except:
+                        exif_dict = {'0th':{}, 'Exif':{}, 'GPS':{}, 'Interop':{}, '1st':{}}
+                    
+                    # If no Exif dictionary exists, create one
+                    if 'Exif' not in exif_dict:
+                        exif_dict['Exif'] = {}
+                    
+                    # Update the UserComment field - use UNICODE format
+                    unicode_bytes = metadata.encode('utf-16be')
+                    metadata_bytes = b'UNICODE\0' + unicode_bytes
+                    
+                    exif_dict['Exif'][piexif.ExifIFD.UserComment] = metadata_bytes
+                    
+                    # Convert EXIF dict back to bytes
+                    exif_bytes = piexif.dump(exif_dict)
+                    
+                    # Save the image with updated EXIF data
+                    img.save(image_path, exif=exif_bytes)
+                    
+            return image_path
+        except Exception as e:
+            logger.error(f"Error updating metadata in {image_path}: {e}")
+            return image_path
             
     @staticmethod
     def append_recipe_metadata(image_path, recipe_data) -> str:
         """Append recipe metadata to an image's EXIF data"""
         try:
-            # First, extract existing user comment
-            user_comment = ExifUtils.extract_user_comment(image_path)
+            # First, extract existing metadata
+            metadata = ExifUtils.extract_image_metadata(image_path)
             
-            # Check if there's already recipe metadata in the user comment
-            if user_comment:
+            # Check if there's already recipe metadata
+            if metadata:
                 # Remove any existing recipe metadata
-                user_comment = ExifUtils.remove_recipe_metadata(user_comment)
+                metadata = ExifUtils.remove_recipe_metadata(metadata)
             
             # Prepare simplified loras data
             simplified_loras = []
@@ -133,11 +250,11 @@ class ExifUtils:
             # Create the recipe metadata marker
             recipe_metadata_marker = f"Recipe metadata: {recipe_metadata_json}"
             
-            # Append to existing user comment or create new one
-            new_user_comment = f"{user_comment} \n {recipe_metadata_marker}" if user_comment else recipe_metadata_marker
+            # Append to existing metadata or create new one
+            new_metadata = f"{metadata} \n {recipe_metadata_marker}" if metadata else recipe_metadata_marker
             
             # Write back to the image
-            return ExifUtils.update_user_comment(image_path, new_user_comment)
+            return ExifUtils.update_image_metadata(image_path, new_metadata)
         except Exception as e:
             logger.error(f"Error appending recipe metadata: {e}", exc_info=True)
             return image_path
@@ -184,11 +301,11 @@ class ExifUtils:
         """
         try:
             # Extract metadata if needed
-            user_comment = None
+            metadata = None
             if preserve_metadata:
                 if isinstance(image_data, str) and os.path.exists(image_data):
                     # It's a file path
-                    user_comment = ExifUtils.extract_user_comment(image_data)
+                    metadata = ExifUtils.extract_image_metadata(image_data)
                     img = Image.open(image_data)
                 else:
                     # It's binary data
@@ -199,7 +316,7 @@ class ExifUtils:
                     with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
                         temp_path = temp_file.name
                         temp_file.write(image_data)
-                    user_comment = ExifUtils.extract_user_comment(temp_path)
+                    metadata = ExifUtils.extract_image_metadata(temp_path)
                     os.unlink(temp_path)
             else:
                 # Just open the image without extracting metadata
@@ -239,14 +356,14 @@ class ExifUtils:
             optimized_data = output.getvalue()
             
             # If we need to preserve metadata, write it to a temporary file
-            if preserve_metadata and user_comment:
+            if preserve_metadata and metadata:
                 # For WebP format, we'll directly save with metadata
                 if format.lower() == 'webp':
                     # Create a new BytesIO with metadata
                     output_with_metadata = BytesIO()
                     
                     # Create EXIF data with user comment
-                    exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + user_comment.encode('utf-16be')}}
+                    exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + metadata.encode('utf-16be')}}
                     exif_bytes = piexif.dump(exif_dict)
                     
                     # Save with metadata
@@ -260,7 +377,7 @@ class ExifUtils:
                         temp_file.write(optimized_data)
                     
                     # Add the metadata back
-                    ExifUtils.update_user_comment(temp_path, user_comment)
+                    ExifUtils.update_image_metadata(temp_path, metadata)
                     
                     # Read the file with metadata
                     with open(temp_path, 'rb') as f:
@@ -466,14 +583,14 @@ class ExifUtils:
                                 workflow_data = img.info[key]
                                 break
                 
-                # If no workflow data found in PNG chunks, try EXIF as fallback
+                # If no workflow data found in PNG chunks, try extract_image_metadata as fallback
                 if not workflow_data:
-                    user_comment = ExifUtils.extract_user_comment(image_path)
-                    if user_comment and '{' in user_comment and '}' in user_comment:
+                    metadata = ExifUtils.extract_image_metadata(image_path)
+                    if metadata and '{' in metadata and '}' in metadata:
                         # Try to extract JSON part
-                        json_start = user_comment.find('{')
-                        json_end = user_comment.rfind('}') + 1
-                        workflow_data = user_comment[json_start:json_end]
+                        json_start = metadata.find('{')
+                        json_end = metadata.rfind('}') + 1
+                        workflow_data = metadata[json_start:json_end]
                 
                 # Parse workflow data if found
                 if workflow_data:
