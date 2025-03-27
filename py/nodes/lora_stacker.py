@@ -26,8 +26,8 @@ class LoraStacker:
             "optional": FlexibleOptionalInputType(any_type),
         }
 
-    RETURN_TYPES = ("LORA_STACK", IO.STRING)
-    RETURN_NAMES = ("LORA_STACK", "trigger_words")
+    RETURN_TYPES = ("LORA_STACK", IO.STRING, IO.STRING)
+    RETURN_NAMES = ("LORA_STACK", "trigger_words", "active_loras")
     FUNCTION = "stack_loras"
 
     async def get_lora_info(self, lora_name):
@@ -75,6 +75,7 @@ class LoraStacker:
     def stack_loras(self, text, **kwargs):
         """Stacks multiple LoRAs based on the kwargs input without loading them."""
         stack = []
+        active_loras = []
         all_trigger_words = []
         
         # Process existing lora_stack if available
@@ -103,11 +104,15 @@ class LoraStacker:
             # Add to stack without loading
             # replace '/' with os.sep to avoid different OS path format
             stack.append((lora_path.replace('/', os.sep), model_strength, clip_strength))
+            active_loras.append((lora_name, model_strength))
             
             # Add trigger words to collection
             all_trigger_words.extend(trigger_words)
         
         # use ',, ' to separate trigger words for group mode
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
+        # Format active_loras as <lora:lora_name:strength> separated by spaces
+        active_loras_text = " ".join([f"<lora:{name}:{str(strength).strip()}>" 
+                                  for name, strength in active_loras])
 
-        return (stack, trigger_words_text)
+        return (stack, trigger_words_text, active_loras_text)
