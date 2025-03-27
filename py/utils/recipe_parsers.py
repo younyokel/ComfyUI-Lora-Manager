@@ -767,6 +767,213 @@ class ComfyMetadataParser(RecipeMetadataParser):
             return {"error": str(e), "loras": []}
 
 
+class MetaFormatParser(RecipeMetadataParser):
+    """Parser for images with meta format metadata (Lora_N Model hash format)"""
+    
+    METADATA_MARKER = r'Lora_\d+ Model hash:'
+    
+    def is_metadata_matching(self, user_comment: str) -> bool:
+        """Check if the user comment matches the metadata format"""
+        return re.search(self.METADATA_MARKER, user_comment, re.IGNORECASE | re.DOTALL) is not None
+    
+    async def parse_metadata(self, user_comment: str, recipe_scanner=None, civitai_client=None) -> Dict[str, Any]:
+        """Parse metadata from images with meta format metadata"""
+        try:
+            # Extract prompt and negative prompt
+            parts = user_comment.split('Negative prompt:', 1)
+            prompt = parts[0].strip()
+            
+            # Initialize metadata
+            metadata = {"prompt": prompt, "loras": []}
+            
+            # Extract negative prompt and parameters if available
+            if len(parts) > 1:
+                negative_and_params = parts[1]
+                
+                # Extract negative prompt - everything until the first parameter (usually "Steps:")
+                param_start = re.search(r'([A-Za-z]+): ', negative_and_params)
+                if param_start:
+                    neg_prompt = negative_and_params[:param_start.start()].strip()
+                    metadata["negative_prompt"] = neg_prompt
+                    params_section = negative_and_params[param_start.start():]
+                else:
+                    params_section = negative_and_params
+                
+                # Extract key-value parameters (Steps, Sampler, Seed, etc.)
+                param_pattern = r'([A-Za-z_0-9 ]+): ([^,]+)'
+                params = re.findall(param_pattern, params_section)
+                for key, value in params:
+                    clean_key = key.strip().lower().replace(' ', '_')
+                    metadata[clean_key] = value.strip()
+            
+            # Extract LoRA information
+            # Pattern to match lora entries: Lora_0 Model name: ArtVador I.safetensors, Lora_0 Model hash: 08f7133a58, etc.
+            lora_pattern = r'Lora_(\d+) Model name: ([^,]+), Lora_\1 Model hash: ([^,]+), Lora_\1 Strength model: ([^,]+), Lora_\1 Strength clip: ([^,]+)'
+            lora_matches = re.findall(lora_pattern, user_comment)
+            
+            # If the regular pattern doesn't match, try a more flexible approach
+            if not lora_matches:
+                # First find all Lora indices
+                lora_indices = set(re.findall(r'Lora_(\d+)', user_comment))
+                
+                # For each index, extract the information
+                for idx in lora_indices:
+                    lora_info = {}
+                    
+                    # Extract model name
+                    name_match = re.search(f'Lora_{idx} Model name: ([^,]+)', user_comment)
+                    if name_match:
+                        lora_info['name'] = name_match.group(1).strip()
+                    
+                    # Extract model hash
+                    hash_match = re.search(f'Lora_{idx} Model hash: ([^,]+)', user_comment)
+                    if hash_match:
+                        lora_info['hash'] = hash_match.group(1).strip()
+                    
+                    # Extract strength model
+                    strength_model_match = re.search(f'Lora_{idx} Strength model: ([^,]+)', user_comment)
+                    if strength_model_match:
+                        lora_info['strength_model'] = float(strength_model_match.group(1).strip())
+                    
+                    # Extract strength clip
+                    strength_clip_match = re.search(f'Lora_{idx} Strength clip: ([^,]+)', user_comment)
+                    if strength_clip_match:
+                        lora_info['strength_clip'] = float(strength_clip_match.group(1).strip())
+                    
+                    # Only add if we have at least name and hash
+                    if 'name' in lora_info and 'hash' in lora_info:
+                        lora_matches.append((idx, lora_info['name'], lora_info['hash'], 
+                                            str(lora_info.get('strength_model', 1.0)), 
+                                            str(lora_info.get('strength_clip', 1.0))))
+            
+            # Process LoRAs
+            base_model_counts = {}
+            loras = []
+            
+            for match in lora_matches:
+                if len(match) == 5:  # Regular pattern match
+                    idx, name, hash_value, strength_model, strength_clip = match
+                else:  # Flexible approach match
+                    continue  # Should not happen now
+                
+                # Clean up the values
+                name = name.strip()
+                if name.endswith('.safetensors'):
+                    name = name[:-12]  # Remove .safetensors extension
+                    
+                hash_value = hash_value.strip()
+                weight = float(strength_model)  # Use model strength as weight
+                
+                # Initialize lora entry with default values
+                lora_entry = {
+                    'name': name,
+                    'type': 'lora',
+                    'weight': weight,
+                    'existsLocally': False,
+                    'localPath': None,
+                    'file_name': name,
+                    'hash': hash_value,
+                    'thumbnailUrl': '/loras_static/images/no-preview.png',
+                    'baseModel': '',
+                    'size': 0,
+                    'downloadUrl': '',
+                    'isDeleted': False
+                }
+                
+                # Get info from Civitai by hash if available
+                if civitai_client and hash_value:
+                    try:
+                        civitai_info = await civitai_client.get_model_by_hash(hash_value)
+                        if civitai_info and civitai_info.get("error") != "Model not found":
+                            # Check if this is an early access lora
+                            if civitai_info.get('earlyAccessEndsAt'):
+                                early_access_date = civitai_info.get('earlyAccessEndsAt', '')
+                                lora_entry['isEarlyAccess'] = True
+                                lora_entry['earlyAccessEndsAt'] = early_access_date
+                            
+                            # Get model version ID
+                            lora_entry['id'] = civitai_info.get('id', '')
+                            
+                            # Get model name and version
+                            lora_entry['name'] = civitai_info.get('model', {}).get('name', name)
+                            lora_entry['version'] = civitai_info.get('name', '')
+                            
+                            # Get thumbnail URL
+                            if 'images' in civitai_info and civitai_info['images']:
+                                lora_entry['thumbnailUrl'] = civitai_info['images'][0].get('url', '')
+                            
+                            # Get base model and update counts
+                            current_base_model = civitai_info.get('baseModel', '')
+                            lora_entry['baseModel'] = current_base_model
+                            if current_base_model:
+                                base_model_counts[current_base_model] = base_model_counts.get(current_base_model, 0) + 1
+                            
+                            # Get download URL
+                            lora_entry['downloadUrl'] = civitai_info.get('downloadUrl', '')
+                            
+                            # Get file name and size from Civitai
+                            if 'files' in civitai_info:
+                                model_file = next((file for file in civitai_info.get('files', []) 
+                                                if file.get('type') == 'Model'), None)
+                                if model_file:
+                                    file_name = model_file.get('name', '')
+                                    lora_entry['file_name'] = os.path.splitext(file_name)[0] if file_name else name
+                                    lora_entry['size'] = model_file.get('sizeKB', 0) * 1024
+                                    # Update hash to sha256
+                                    new_hash = model_file.get('hashes', {}).get('SHA256', hash_value).lower()
+                                    lora_entry['hash'] = new_hash
+                            
+                            # Check if exists locally with sha256 hash
+                            if recipe_scanner and lora_entry['hash']:
+                                lora_scanner = recipe_scanner._lora_scanner
+                                exists_locally = lora_scanner.has_lora_hash(lora_entry['hash'])
+                                if exists_locally:
+                                    lora_cache = await lora_scanner.get_cached_data()
+                                    lora_item = next((item for item in lora_cache.raw_data if item['sha256'].lower() == lora_entry['hash'].lower()), None)
+                                    if lora_item:
+                                        lora_entry['existsLocally'] = True
+                                        lora_entry['localPath'] = lora_item['file_path']
+                                        lora_entry['thumbnailUrl'] = config.get_preview_static_url(lora_item['preview_url'])
+                        else:
+                            lora_entry['isDeleted'] = True
+                    except Exception as e:
+                        logger.error(f"Error fetching Civitai info for LoRA hash {hash_value}: {e}")
+                
+                loras.append(lora_entry)
+            
+            # Extract model information
+            model = None
+            if 'model' in metadata:
+                model = metadata['model']
+            
+            # Set base_model to the most common one from civitai_info
+            base_model = None
+            if base_model_counts:
+                base_model = max(base_model_counts.items(), key=lambda x: x[1])[0]
+            
+            # Extract generation parameters for recipe metadata
+            gen_params = {}
+            for key in GEN_PARAM_KEYS:
+                if key in metadata:
+                    gen_params[key] = metadata.get(key, '')
+            
+            # Try to extract size information if available
+            if 'width' in metadata and 'height' in metadata:
+                gen_params['size'] = f"{metadata['width']}x{metadata['height']}"
+            
+            return {
+                'base_model': base_model,
+                'loras': loras,
+                'gen_params': gen_params,
+                'raw_metadata': metadata,
+                'from_meta_format': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error parsing meta format metadata: {e}", exc_info=True)
+            return {"error": str(e), "loras": []}
+
+
 class RecipeParserFactory:
     """Factory for creating recipe metadata parsers"""
     
@@ -795,5 +1002,7 @@ class RecipeParserFactory:
             return StandardMetadataParser()
         elif A1111MetadataParser().is_metadata_matching(user_comment):
             return A1111MetadataParser()
+        elif MetaFormatParser().is_metadata_matching(user_comment):
+            return MetaFormatParser()
         else:
             return None
