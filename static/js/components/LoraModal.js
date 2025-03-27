@@ -208,57 +208,161 @@ function renderShowcaseContent(images) {
                         nsfwText = "R-rated Content";
                     }
                     
-                    if (img.type === 'video') {
-                        return `
-                            <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
-                                ${shouldBlur ? `
-                                    <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                ` : ''}
-                                <video controls autoplay muted loop crossorigin="anonymous" 
-                                       referrerpolicy="no-referrer" data-src="${img.url}"
-                                       class="lazy ${shouldBlur ? 'blurred' : ''}">
-                                    <source data-src="${img.url}" type="video/mp4">
-                                    Your browser does not support video playback
-                                </video>
-                                ${shouldBlur ? `
-                                    <div class="nsfw-overlay">
-                                        <div class="nsfw-warning">
-                                            <p>${nsfwText}</p>
-                                            <button class="show-content-btn">Show</button>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `;
-                    }
-                    return `
-                        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
-                            ${shouldBlur ? `
-                                <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            ` : ''}
-                            <img data-src="${img.url}" 
-                                alt="Preview" 
-                                crossorigin="anonymous" 
-                                referrerpolicy="no-referrer"
-                                width="${img.width}"
-                                height="${img.height}"
-                                class="lazy ${shouldBlur ? 'blurred' : ''}"> 
-                            ${shouldBlur ? `
-                                <div class="nsfw-overlay">
-                                    <div class="nsfw-warning">
-                                        <p>${nsfwText}</p>
-                                        <button class="show-content-btn">Show</button>
+                    // Extract metadata from the image
+                    const meta = img.meta || {};
+                    const prompt = meta.prompt || '';
+                    const negativePrompt = meta.negative_prompt || meta.negativePrompt || '';
+                    const size = meta.Size || `${img.width}x${img.height}`;
+                    const seed = meta.seed || '';
+                    const model = meta.Model || '';
+                    const steps = meta.steps || '';
+                    const sampler = meta.sampler || '';
+                    const cfgScale = meta.cfgScale || '';
+                    const clipSkip = meta.clipSkip || '';
+                    
+                    // Check if we have any meaningful generation parameters
+                    const hasParams = seed || model || steps || sampler || cfgScale || clipSkip;
+                    const hasPrompts = prompt || negativePrompt;
+                    
+                    // If no metadata available, show a message
+                    if (!hasParams && !hasPrompts) {
+                        const metadataPanel = `
+                            <div class="image-metadata-panel">
+                                <div class="metadata-content">
+                                    <div class="no-metadata-message">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span>No generation parameters available</span>
                                     </div>
                                 </div>
-                            ` : ''}
+                            </div>
+                        `;
+                        
+                        if (img.type === 'video') {
+                            return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                        }
+                        return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                    }
+                    
+                    // Create a data attribute with the prompt for copying instead of trying to handle it in the onclick
+                    // This avoids issues with quotes and special characters
+                    const promptIndex = Math.random().toString(36).substring(2, 15);
+                    const negPromptIndex = Math.random().toString(36).substring(2, 15);
+                    
+                    // Create parameter tags HTML
+                    const paramTags = `
+                        <div class="params-tags">
+                            ${size ? `<div class="param-tag"><span class="param-name">Size:</span><span class="param-value">${size}</span></div>` : ''}
+                            ${seed ? `<div class="param-tag"><span class="param-name">Seed:</span><span class="param-value">${seed}</span></div>` : ''}
+                            ${model ? `<div class="param-tag"><span class="param-name">Model:</span><span class="param-value">${model}</span></div>` : ''}
+                            ${steps ? `<div class="param-tag"><span class="param-name">Steps:</span><span class="param-value">${steps}</span></div>` : ''}
+                            ${sampler ? `<div class="param-tag"><span class="param-name">Sampler:</span><span class="param-value">${sampler}</span></div>` : ''}
+                            ${cfgScale ? `<div class="param-tag"><span class="param-name">CFG:</span><span class="param-value">${cfgScale}</span></div>` : ''}
+                            ${clipSkip ? `<div class="param-tag"><span class="param-name">Clip Skip:</span><span class="param-value">${clipSkip}</span></div>` : ''}
                         </div>
                     `;
+                    
+                    // Metadata panel HTML
+                    const metadataPanel = `
+                        <div class="image-metadata-panel">
+                            <div class="metadata-content">
+                                ${hasParams ? paramTags : ''}
+                                ${!hasParams && !hasPrompts ? `
+                                <div class="no-metadata-message">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>No generation parameters available</span>
+                                </div>
+                                ` : ''}
+                                ${prompt ? `
+                                <div class="metadata-row prompt-row">
+                                    <span class="metadata-label">Prompt:</span>
+                                    <div class="metadata-prompt-wrapper">
+                                        <div class="metadata-prompt">${prompt}</div>
+                                        <button class="copy-prompt-btn" data-prompt-index="${promptIndex}">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="hidden-prompt" id="prompt-${promptIndex}" style="display:none;">${prompt}</div>
+                                ` : ''}
+                                ${negativePrompt ? `
+                                <div class="metadata-row prompt-row">
+                                    <span class="metadata-label">Negative Prompt:</span>
+                                    <div class="metadata-prompt-wrapper">
+                                        <div class="metadata-prompt">${negativePrompt}</div>
+                                        <button class="copy-prompt-btn" data-prompt-index="${negPromptIndex}">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="hidden-prompt" id="prompt-${negPromptIndex}" style="display:none;">${negativePrompt}</div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (img.type === 'video') {
+                        return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                    }
+                    return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
                 }).join('')}
             </div>
+        </div>
+    `;
+}
+
+// Helper function to generate video wrapper HTML
+function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel) {
+    return `
+        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
+            ${shouldBlur ? `
+                <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
+                    <i class="fas fa-eye"></i>
+                </button>
+            ` : ''}
+            <video controls autoplay muted loop crossorigin="anonymous" 
+                referrerpolicy="no-referrer" data-src="${img.url}"
+                class="lazy ${shouldBlur ? 'blurred' : ''}">
+                <source data-src="${img.url}" type="video/mp4">
+                Your browser does not support video playback
+            </video>
+            ${shouldBlur ? `
+                <div class="nsfw-overlay">
+                    <div class="nsfw-warning">
+                        <p>${nsfwText}</p>
+                        <button class="show-content-btn">Show</button>
+                    </div>
+                </div>
+            ` : ''}
+            ${metadataPanel}
+        </div>
+    `;
+}
+
+// Helper function to generate image wrapper HTML
+function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel) {
+    return `
+        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
+            ${shouldBlur ? `
+                <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
+                    <i class="fas fa-eye"></i>
+                </button>
+            ` : ''}
+            <img data-src="${img.url}" 
+                alt="Preview" 
+                crossorigin="anonymous" 
+                referrerpolicy="no-referrer"
+                width="${img.width}"
+                height="${img.height}"
+                class="lazy ${shouldBlur ? 'blurred' : ''}"> 
+            ${shouldBlur ? `
+                <div class="nsfw-overlay">
+                    <div class="nsfw-warning">
+                        <p>${nsfwText}</p>
+                        <button class="show-content-btn">Show</button>
+                    </div>
+                </div>
+            ` : ''}
+            ${metadataPanel}
         </div>
     `;
 }
@@ -626,11 +730,72 @@ export function toggleShowcase(element) {
         
         // Initialize NSFW content blur toggle handlers
         initNsfwBlurHandlers(carousel);
+        
+        // Initialize metadata panel interaction handlers
+        initMetadataPanelHandlers(carousel);
     } else {
         const count = carousel.querySelectorAll('.media-wrapper').length;
         indicator.textContent = `Scroll or click to show ${count} examples`;
         icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        
+        // Make sure any open metadata panels get closed
+        const carouselContainer = carousel.querySelector('.carousel-container');
+        if (carouselContainer) {
+            carouselContainer.style.height = '0';
+            setTimeout(() => {
+                carouselContainer.style.height = '';
+            }, 300);
+        }
     }
+}
+
+// Function to initialize metadata panel interactions
+function initMetadataPanelHandlers(container) {
+    // Find all media wrappers
+    const mediaWrappers = container.querySelectorAll('.media-wrapper');
+    
+    mediaWrappers.forEach(wrapper => {
+        // Get the metadata panel
+        const metadataPanel = wrapper.querySelector('.image-metadata-panel');
+        if (!metadataPanel) return;
+        
+        // Prevent events from the metadata panel from bubbling
+        metadataPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Handle copy prompt button clicks
+        const copyBtns = metadataPanel.querySelectorAll('.copy-prompt-btn');
+        copyBtns.forEach(copyBtn => {
+            const promptIndex = copyBtn.dataset.promptIndex;
+            const promptElement = wrapper.querySelector(`#prompt-${promptIndex}`);
+            
+            copyBtn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent bubbling
+                
+                if (!promptElement) return;
+                
+                try {
+                    await navigator.clipboard.writeText(promptElement.textContent);
+                    showToast('Prompt copied to clipboard', 'success');
+                } catch (err) {
+                    console.error('Copy failed:', err);
+                    showToast('Copy failed', 'error');
+                }
+            });
+        });
+        
+        // Prevent scrolling in the metadata panel from scrolling the whole modal
+        metadataPanel.addEventListener('wheel', (e) => {
+            const isAtTop = metadataPanel.scrollTop === 0;
+            const isAtBottom = metadataPanel.scrollHeight - metadataPanel.scrollTop === metadataPanel.clientHeight;
+            
+            // Only prevent default if scrolling would cause the panel to scroll
+            if ((e.deltaY < 0 && !isAtTop) || (e.deltaY > 0 && !isAtBottom)) {
+                e.stopPropagation();
+            }
+        }, { passive: true });
+    });
 }
 
 // New function to initialize blur toggle handlers for showcase images/videos
