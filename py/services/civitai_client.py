@@ -76,9 +76,15 @@ class CivitaiClient:
             headers = self._get_request_headers()
             async with session.get(url, headers=headers, allow_redirects=True) as response:
                 if response.status != 200:
-                    # Handle early access 401 unauthorized responses
+                    # Handle 401 unauthorized responses
                     if response.status == 401:
                         logger.warning(f"Unauthorized access to resource: {url} (Status 401)")
+                        
+                        # Check if this is an API key issue (has Set-Cookie headers)
+                        if 'Set-Cookie' in response.headers:
+                            return False, "Invalid or missing CivitAI API key. Please check your API key in settings."
+                        
+                        # Otherwise it's an early access restriction
                         return False, "Early access restriction: You must purchase early access to download this LoRA."
                     
                     # Handle other client errors that might be permission-related

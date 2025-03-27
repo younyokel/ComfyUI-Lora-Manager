@@ -29,7 +29,7 @@ class DownloadManager:
                 return {'success': False, 'error': 'Failed to fetch model metadata'}
 
             # Check if this is an early access LoRA
-            if 'earlyAccessEndsAt' in version_info:
+            if version_info.get('earlyAccessEndsAt'):
                 early_access_date = version_info.get('earlyAccessEndsAt', '')
                 # Convert to a readable date if possible
                 try:
