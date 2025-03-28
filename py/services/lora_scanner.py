@@ -5,10 +5,11 @@ import asyncio
 import shutil
 import time
 from typing import List, Dict, Optional
-from dataclasses import dataclass
-from operator import itemgetter
+
+from ..utils.models import LoraMetadata
 from ..config import config
-from ..utils.file_utils import load_metadata, get_file_info
+from ..utils.file_utils import load_metadata, get_file_info, normalize_path, find_preview_file, save_metadata
+from ..utils.lora_metadata import extract_lora_metadata
 from .lora_cache import LoraCache
 from .lora_hash_index import LoraHashIndex
 from .settings_manager import settings
@@ -332,8 +333,30 @@ class LoraScanner:
         metadata = await load_metadata(file_path)
         
         if metadata is None:
-            # Create new metadata if none exists
-            metadata = await get_file_info(file_path)
+            # Try to find and use .civitai.info file first
+            civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
+            if os.path.exists(civitai_info_path):
+                try:
+                    with open(civitai_info_path, 'r', encoding='utf-8') as f:
+                        version_info = json.load(f)
+                    
+                    file_info = next((f for f in version_info.get('files', []) if f.get('primary')), None)
+                    if file_info:
+                        # Create a minimal file_info with the required fields
+                        file_name = os.path.splitext(os.path.basename(file_path))[0]
+                        file_info['name'] = file_name
+                    
+                        # Use from_civitai_info to create metadata
+                        metadata = LoraMetadata.from_civitai_info(version_info, file_info, file_path)
+                        metadata.preview_url = find_preview_file(file_name, os.path.dirname(file_path))
+                        await save_metadata(file_path, metadata)
+                        logger.debug(f"Created metadata from .civitai.info for {file_path}")
+                except Exception as e:
+                    logger.error(f"Error creating metadata from .civitai.info for {file_path}: {e}")
+            
+            # If still no metadata, create new metadata using get_file_info
+            if metadata is None:
+                metadata = await get_file_info(file_path)
         
         # Convert to dict and add folder info
         lora_data = metadata.to_dict()
@@ -344,7 +367,7 @@ class LoraScanner:
         lora_data['folder'] = folder.replace(os.path.sep, '/')
         
         return lora_data
-
+            
     async def _fetch_missing_metadata(self, file_path: str, lora_data: Dict) -> None:
         """Fetch missing description and tags from Civitai if needed
         

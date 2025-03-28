@@ -19,7 +19,7 @@ async def calculate_sha256(file_path: str) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
-def _find_preview_file(base_name: str, dir_path: str) -> str:
+def find_preview_file(base_name: str, dir_path: str) -> str:
     """Find preview file for given base name in directory"""
     preview_patterns = [
         f"{base_name}.preview.png",
@@ -56,16 +56,33 @@ async def get_file_info(file_path: str) -> Optional[LoraMetadata]:
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     dir_path = os.path.dirname(file_path)
     
-    preview_url = _find_preview_file(base_name, dir_path)
+    preview_url = find_preview_file(base_name, dir_path)
+    
+    # Check if a .json file exists with SHA256 hash to avoid recalculation
+    json_path = f"{os.path.splitext(file_path)[0]}.json"
+    sha256 = None
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+                if 'sha256' in json_data:
+                    sha256 = json_data['sha256'].lower()
+                    logger.debug(f"Using SHA256 from .json file for {file_path}")
+        except Exception as e:
+            logger.error(f"Error reading .json file for {file_path}: {e}")
 
     try:
+        # If we didn't get SHA256 from the .json file, calculate it
+        if not sha256:
+            sha256 = await calculate_sha256(real_path)
+            
         metadata = LoraMetadata(
             file_name=base_name,
             model_name=base_name,
             file_path=normalize_path(file_path),
             size=os.path.getsize(real_path),
             modified=os.path.getmtime(real_path),
-            sha256=await calculate_sha256(real_path),
+            sha256=sha256,
             base_model="Unknown",  # Will be updated later
             usage_tips="",
             notes="",
@@ -125,7 +142,7 @@ async def load_metadata(file_path: str) -> Optional[LoraMetadata]:
                 if not preview_url or not os.path.exists(preview_url):
                     base_name = os.path.splitext(os.path.basename(file_path))[0]
                     dir_path = os.path.dirname(file_path)
-                    new_preview_url = normalize_path(_find_preview_file(base_name, dir_path))
+                    new_preview_url = normalize_path(find_preview_file(base_name, dir_path))
                     if new_preview_url != preview_url:
                         data['preview_url'] = new_preview_url
                         needs_update = True
