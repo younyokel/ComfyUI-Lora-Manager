@@ -4,7 +4,9 @@
 {% block page_id %}loras{% endblock %}
 
 {% block preload %}
+{% if not is_initializing %}
 <link rel="preload" href="/loras_static/js/loras.js" as="script" crossorigin="anonymous">
+{% endif %}
 {% endblock %}
 
 {% block init_title %}Initializing LoRA Manager{% endblock %}
@@ -29,5 +31,7 @@
 {% endblock %}
 
 {% block main_script %}
+{% if not is_initializing %}
 <script type="module" src="/loras_static/js/loras.js"></script>
+{% endif %}
 {% endblock %}

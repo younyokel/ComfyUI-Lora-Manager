@@ -37,6 +37,49 @@
     <link rel="preconnect" href="https://civitai.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
+    <!-- Add styles for initialization notice -->
+    {% if is_initializing %}
+    <style>
+        .initialization-notice {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999;
+            margin-top: 0;
+            border-radius: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        .notice-content {
+            background-color: rgba(30, 30, 30, 0.9);
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 80%;
+        }
+        .loading-spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #fff;
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    {% endif %}
+
     <script>
         // 计算滚动条宽度并设置CSS变量
         document.addEventListener('DOMContentLoaded', () => {
@@ -52,6 +95,15 @@
 </head>
 
 <body data-page="{% block page_id %}base{% endblock %}">
+    {% if is_initializing %}
+    <div class="initialization-notice">
+        <div class="notice-content">
+            <div class="loading-spinner"></div>
+            <h2>{% block init_title %}Initializing{% endblock %}</h2>
+            <p>{% block init_message %}Scanning and building cache. This may take a few minutes...{% endblock %}</p>
+        </div>
+    </div>
+    {% else %}
     {% include 'components/header.html' %}
 
     <div class="page-content">
@@ -61,22 +113,12 @@
         {% block additional_components %}{% endblock %}
 
         <div class="container">
-            {% if is_initializing %}
-            <div class="initialization-notice">
-                <div class="notice-content">
-                    <div class="loading-spinner"></div>
-                    <h2>{% block init_title %}Initializing{% endblock %}</h2>
-                    <p>{% block init_message %}Scanning and building cache. This may take a few minutes...{% endblock %}
-                    </p>
-                </div>
-            </div>
-            {% else %}
             {% block content %}{% endblock %}
-            {% endif %}
         </div>
 
         {% block overlay %}{% endblock %}
     </div>
+    {% endif %}
 
     {% block main_script %}{% endblock %}
 
@@ -100,7 +142,7 @@
         }
 
         // 启动状态检查
-        checkInitStatus();
+        setTimeout(checkInitStatus, 1000); // 给页面完全加载的时间
     </script>
     {% endif %}
 

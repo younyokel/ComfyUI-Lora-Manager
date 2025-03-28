@@ -58,11 +58,13 @@ class LoraRoutes:
     async def handle_loras_page(self, request: web.Request) -> web.Response:
         """Handle GET /loras request"""
         try:
-            # 不等待缓存数据，直接检查缓存状态
+            # 检查缓存初始化状态，增强判断条件
             is_initializing = (
-                self.scanner._cache is None and 
+                self.scanner._cache is None or 
                 (self.scanner._initialization_task is not None and 
-                not self.scanner._initialization_task.done())
+                not self.scanner._initialization_task.done()) or
+                (self.scanner._cache is not None and len(self.scanner._cache.raw_data) == 0 and 
+                 self.scanner._initialization_task is not None)
             )
 
             if is_initializing:
@@ -74,16 +76,31 @@ class LoraRoutes:
                     settings=settings,  # Pass settings to template
                     request=request  # Pass the request object to the template
                 )
+                
+                logger.info("Loras page is initializing, returning loading page")
             else:
-                # 正常流程
-                cache = await self.scanner.get_cached_data()
-                template = self.template_env.get_template('loras.html')
-                rendered = template.render(
-                    folders=cache.folders,
-                    is_initializing=False,
-                    settings=settings,  # Pass settings to template
-                    request=request  # Pass the request object to the template
-                )
+                # 正常流程 - 但不要等待缓存刷新
+                try:
+                    cache = await self.scanner.get_cached_data(force_refresh=False)
+                    template = self.template_env.get_template('loras.html')
+                    rendered = template.render(
+                        folders=cache.folders,
+                        is_initializing=False,
+                        settings=settings,  # Pass settings to template
+                        request=request  # Pass the request object to the template
+                    )
+                    logger.info(f"Loras page loaded successfully with {len(cache.raw_data)} items")
+                except Exception as cache_error:
+                    logger.error(f"Error loading cache data: {cache_error}")
+                    # 如果获取缓存失败，也显示初始化页面
+                    template = self.template_env.get_template('loras.html')
+                    rendered = template.render(
+                        folders=[],
+                        is_initializing=True,
+                        settings=settings,
+                        request=request
+                    )
+                    logger.info("Cache error, returning initialization page")
             
             return web.Response(
                 text=rendered,

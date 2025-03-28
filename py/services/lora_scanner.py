@@ -3,6 +3,7 @@ import os
 import logging
 import asyncio
 import shutil
+import time
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 from operator import itemgetter
@@ -91,6 +92,7 @@ class LoraScanner:
     async def _initialize_cache(self) -> None:
         """Initialize or refresh the cache"""
         try:
+            start_time = time.time()
             # Clear existing hash index
             self._hash_index.clear()
             
@@ -122,7 +124,7 @@ class LoraScanner:
             await self._cache.resort()
 
             self._initialization_task = None
-            logger.info("LoRA Manager: Cache initialization completed")
+            logger.info(f"LoRA Manager: Cache initialization completed in {time.time() - start_time:.2f} seconds, found {len(raw_data)} loras")
         except Exception as e:
             logger.error(f"LoRA Manager: Error initializing cache: {e}")
             self._cache = LoraCache(
