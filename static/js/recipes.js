@@ -4,6 +4,7 @@ import { ImportManager } from './managers/ImportManager.js';
 import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
 import { getCurrentPageState } from './state/index.js';
+import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 
 class RecipeManager {
     constructor() {
@@ -54,6 +55,7 @@ class RecipeManager {
         // Only expose what's needed for the page
         window.recipeManager = this;
         window.importManager = this.importManager;
+        window.toggleApiKeyVisibility = toggleApiKeyVisibility;
     }
     
     initEventListeners() {

@@ -943,7 +943,10 @@ class RecipeRoutes:
             
             for lora in loras:
                 # Skip loras that are deleted AND marked for exclusion
-                if lora.get("isDeleted", False) and lora.get("exclude", False):
+                if lora.get("isDeleted", False):
+                    continue
+
+                if not self.recipe_scanner._lora_scanner.has_lora_hash(lora.get("hash", "")):
                     continue
                 
                 # Get the strength
@@ -966,7 +969,9 @@ class RecipeRoutes:
                     # Search for files with matching modelVersionId
                     all_loras = await self.recipe_scanner._lora_scanner.get_cached_data()
                     for cached_lora in all_loras.raw_data:
-                        if "civitai" in cached_lora and cached_lora["civitai"].get("id") == lora.get("modelVersionId"):
+                        if not cached_lora.get("civitai"):
+                            continue
+                        if cached_lora.get("civitai", {}).get("id") == lora.get("modelVersionId"):
                             file_name = os.path.splitext(os.path.basename(cached_lora["path"]))[0]
                             break
                 
