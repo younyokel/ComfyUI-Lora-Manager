@@ -50,6 +50,9 @@ class RecipeRoutes:
         # Add new endpoint for getting recipe syntax
         app.router.add_get('/api/recipe/{recipe_id}/syntax', routes.get_recipe_syntax)
         
+        # Add new endpoint for updating recipe metadata (name and tags)
+        app.router.add_put('/api/recipe/{recipe_id}/update', routes.update_recipe)
+        
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
         
@@ -983,4 +986,31 @@ class RecipeRoutes:
             })
         except Exception as e:
             logger.error(f"Error generating recipe syntax: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def update_recipe(self, request: web.Request) -> web.Response:
+        """Update recipe metadata (name and tags)"""
+        try:
+            recipe_id = request.match_info['recipe_id']
+            data = await request.json()
+            
+            # Validate required fields
+            if 'title' not in data and 'tags' not in data:
+                return web.json_response({
+                    "error": "At least one field to update must be provided (title or tags)"
+                }, status=400)
+            
+            # Use the recipe scanner's update method
+            success = await self.recipe_scanner.update_recipe_metadata(recipe_id, data)
+            
+            if not success:
+                return web.json_response({"error": "Recipe not found or update failed"}, status=404)
+            
+            return web.json_response({
+                "success": True,
+                "recipe_id": recipe_id,
+                "updates": data
+            })
+        except Exception as e:
+            logger.error(f"Error updating recipe: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500)

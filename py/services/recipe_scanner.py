@@ -431,6 +431,54 @@ class RecipeScanner:
         
         return result
 
+    async def update_recipe_metadata(self, recipe_id: str, metadata: dict) -> bool:
+        """Update recipe metadata (like title and tags) in both file system and cache
+        
+        Args:
+            recipe_id: The ID of the recipe to update
+            metadata: Dictionary containing metadata fields to update (title, tags, etc.)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        import os
+        import json
+        
+        # First, find the recipe JSON file path
+        recipe_json_path = os.path.join(self.recipes_dir, f"{recipe_id}.recipe.json")
+        
+        if not os.path.exists(recipe_json_path):
+            return False
+            
+        try:
+            # Load existing recipe data
+            with open(recipe_json_path, 'r', encoding='utf-8') as f:
+                recipe_data = json.load(f)
+                
+            # Update fields
+            for key, value in metadata.items():
+                recipe_data[key] = value
+                
+            # Save updated recipe
+            with open(recipe_json_path, 'w', encoding='utf-8') as f:
+                json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+                
+            # Update the cache if it exists
+            if self._cache is not None:
+                await self._cache.update_recipe_metadata(recipe_id, metadata)
+                
+            # If the recipe has an image, update its EXIF metadata
+            from ..utils.exif_utils import ExifUtils
+            image_path = recipe_data.get('file_path')
+            if image_path and os.path.exists(image_path):
+                ExifUtils.append_recipe_metadata(image_path, recipe_data)
+                
+            return True
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error updating recipe metadata: {e}", exc_info=True)
+            return False
+
     async def update_lora_filename_by_hash(self, hash_value: str, new_file_name: str) -> Tuple[int, int]:
         """Update file_name in all recipes that contain a LoRA with the specified hash.
         

@@ -25,7 +25,7 @@ class RecipeCard {
         const lorasCount = loras.length;
         
         // Check if all LoRAs are available in the library
-        const missingLorasCount = loras.filter(lora => !lora.inLibrary).length;
+        const missingLorasCount = loras.filter(lora => !lora.inLibrary && !lora.isDeleted).length;
         const allLorasAvailable = missingLorasCount === 0 && lorasCount > 0;
         
         // Ensure file_url exists, fallback to file_path if needed

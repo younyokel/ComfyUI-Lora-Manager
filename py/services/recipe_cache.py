@@ -37,18 +37,18 @@ class RecipeCache:
         Returns:
             bool: True if the update was successful, False if the recipe wasn't found
         """
-        async with self._lock:
-            # Update in raw_data
-            for item in self.raw_data:
-                if item.get('id') == recipe_id:
-                    item.update(metadata)
-                    break
-            else:
-                return False  # Recipe not found
-                
-            # Resort to reflect changes
-            await self.resort()
-            return True
+
+        # Update in raw_data
+        for item in self.raw_data:
+            if item.get('id') == recipe_id:
+                item.update(metadata)
+                break
+        else:
+            return False  # Recipe not found
+            
+        # Resort to reflect changes
+        await self.resort()
+        return True
             
     async def add_recipe(self, recipe_data: Dict) -> None:
         """Add a new recipe to the cache

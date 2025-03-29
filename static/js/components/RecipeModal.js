@@ -12,6 +12,25 @@ class RecipeModal {
         document.addEventListener('DOMContentLoaded', () => {
             this.setupTooltipPositioning();
         });
+        
+        // Set up document click handler to close edit fields
+        document.addEventListener('click', (event) => {
+            // Handle title edit
+            const titleEditor = document.getElementById('recipeTitleEditor');
+            if (titleEditor && titleEditor.classList.contains('active') && 
+                !titleEditor.contains(event.target) && 
+                !event.target.closest('.edit-icon')) {
+                this.saveTitleEdit();
+            }
+            
+            // Handle tags edit
+            const tagsEditor = document.getElementById('recipeTagsEditor');
+            if (tagsEditor && tagsEditor.classList.contains('active') && 
+                !tagsEditor.contains(event.target) && 
+                !event.target.closest('.edit-icon')) {
+                this.saveTagsEdit();
+            }
+        });
     }
     
     // Add tooltip positioning handler to ensure correct positioning of fixed tooltips
@@ -35,10 +54,37 @@ class RecipeModal {
     }
     
     showRecipeDetails(recipe) {
-        // Set modal title
+        // Store the full recipe for editing
+        this.currentRecipe = JSON.parse(JSON.stringify(recipe)); // 深拷贝以避免对原始对象的修改
+        
+        // Set modal title with edit icon
         const modalTitle = document.getElementById('recipeModalTitle');
         if (modalTitle) {
-            modalTitle.textContent = recipe.title || 'Recipe Details';
+            modalTitle.innerHTML = `
+                <div class="editable-content">
+                    <span class="content-text">${recipe.title || 'Recipe Details'}</span>
+                    <button class="edit-icon" title="Edit recipe name"><i class="fas fa-pencil-alt"></i></button>
+                </div>
+                <div id="recipeTitleEditor" class="content-editor">
+                    <input type="text" class="title-input" value="${recipe.title || ''}">
+                </div>
+            `;
+            
+            // Add event listener for title editing
+            const editIcon = modalTitle.querySelector('.edit-icon');
+            editIcon.addEventListener('click', () => this.showTitleEditor());
+            
+            // Add key event listener for Enter key
+            const titleInput = modalTitle.querySelector('.title-input');
+            titleInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.saveTitleEdit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.cancelTitleEdit();
+                }
+            });
         }
         
         // Store the recipe ID for copy syntax API call
@@ -48,59 +94,94 @@ class RecipeModal {
         const tagsCompactElement = document.getElementById('recipeTagsCompact');
         const tagsTooltipContent = document.getElementById('recipeTagsTooltipContent');
         
-        if (tagsCompactElement && tagsTooltipContent && recipe.tags && recipe.tags.length > 0) {
-            // Clear previous tags
-            tagsCompactElement.innerHTML = '';
-            tagsTooltipContent.innerHTML = '';
+        if (tagsCompactElement) {
+            // Add tags container with edit functionality
+            tagsCompactElement.innerHTML = `
+                <div class="editable-content tags-content">
+                    <div class="tags-display"></div>
+                    <button class="edit-icon" title="Edit tags"><i class="fas fa-pencil-alt"></i></button>
+                </div>
+                <div id="recipeTagsEditor" class="content-editor tags-editor">
+                    <input type="text" class="tags-input" placeholder="Enter tags separated by commas">
+                </div>
+            `;
             
-            // Limit displayed tags to 5, show a "+X more" button if needed
-            const maxVisibleTags = 5;
-            const visibleTags = recipe.tags.slice(0, maxVisibleTags);
-            const remainingTags = recipe.tags.length > maxVisibleTags ? recipe.tags.slice(maxVisibleTags) : [];
+            const tagsDisplay = tagsCompactElement.querySelector('.tags-display');
             
-            // Add visible tags
-            visibleTags.forEach(tag => {
-                const tagElement = document.createElement('div');
-                tagElement.className = 'recipe-tag-compact';
-                tagElement.textContent = tag;
-                tagsCompactElement.appendChild(tagElement);
-            });
-            
-            // Add "more" button if needed
-            if (remainingTags.length > 0) {
-                const moreButton = document.createElement('div');
-                moreButton.className = 'recipe-tag-more';
-                moreButton.textContent = `+${remainingTags.length} more`;
-                tagsCompactElement.appendChild(moreButton);
+            if (recipe.tags && recipe.tags.length > 0) {
+                // Limit displayed tags to 5, show a "+X more" button if needed
+                const maxVisibleTags = 5;
+                const visibleTags = recipe.tags.slice(0, maxVisibleTags);
+                const remainingTags = recipe.tags.length > maxVisibleTags ? recipe.tags.slice(maxVisibleTags) : [];
                 
-                // Add tooltip functionality
-                moreButton.addEventListener('mouseenter', () => {
-                    document.getElementById('recipeTagsTooltip').classList.add('visible');
+                // Add visible tags
+                visibleTags.forEach(tag => {
+                    const tagElement = document.createElement('div');
+                    tagElement.className = 'recipe-tag-compact';
+                    tagElement.textContent = tag;
+                    tagsDisplay.appendChild(tagElement);
                 });
                 
-                moreButton.addEventListener('mouseleave', () => {
-                    setTimeout(() => {
-                        if (!document.getElementById('recipeTagsTooltip').matches(':hover')) {
-                            document.getElementById('recipeTagsTooltip').classList.remove('visible');
-                        }
-                    }, 300);
-                });
-                
-                document.getElementById('recipeTagsTooltip').addEventListener('mouseleave', () => {
-                    document.getElementById('recipeTagsTooltip').classList.remove('visible');
-                });
-                
-                // Add all tags to tooltip
-                recipe.tags.forEach(tag => {
-                    const tooltipTag = document.createElement('div');
-                    tooltipTag.className = 'tooltip-tag';
-                    tooltipTag.textContent = tag;
-                    tagsTooltipContent.appendChild(tooltipTag);
-                });
+                // Add "more" button if needed
+                if (remainingTags.length > 0) {
+                    const moreButton = document.createElement('div');
+                    moreButton.className = 'recipe-tag-more';
+                    moreButton.textContent = `+${remainingTags.length} more`;
+                    tagsDisplay.appendChild(moreButton);
+                    
+                    // Add tooltip functionality
+                    moreButton.addEventListener('mouseenter', () => {
+                        document.getElementById('recipeTagsTooltip').classList.add('visible');
+                    });
+                    
+                    moreButton.addEventListener('mouseleave', () => {
+                        setTimeout(() => {
+                            if (!document.getElementById('recipeTagsTooltip').matches(':hover')) {
+                                document.getElementById('recipeTagsTooltip').classList.remove('visible');
+                            }
+                        }, 300);
+                    });
+                    
+                    document.getElementById('recipeTagsTooltip').addEventListener('mouseleave', () => {
+                        document.getElementById('recipeTagsTooltip').classList.remove('visible');
+                    });
+                    
+                    // Add all tags to tooltip
+                    if (tagsTooltipContent) {
+                        tagsTooltipContent.innerHTML = '';
+                        recipe.tags.forEach(tag => {
+                            const tooltipTag = document.createElement('div');
+                            tooltipTag.className = 'tooltip-tag';
+                            tooltipTag.textContent = tag;
+                            tagsTooltipContent.appendChild(tooltipTag);
+                        });
+                    }
+                }
+            } else {
+                tagsDisplay.innerHTML = '<div class="no-tags">No tags</div>';
             }
-        } else if (tagsCompactElement) {
-            // No tags to display
-            tagsCompactElement.innerHTML = '';
+            
+            // Add event listeners for tags editing
+            const editTagsIcon = tagsCompactElement.querySelector('.edit-icon');
+            const tagsInput = tagsCompactElement.querySelector('.tags-input');
+            
+            // Set current tags in the input
+            if (recipe.tags && recipe.tags.length > 0) {
+                tagsInput.value = recipe.tags.join(', ');
+            }
+            
+            editTagsIcon.addEventListener('click', () => this.showTagsEditor());
+            
+            // Add key event listener for Enter key
+            tagsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.saveTagsEdit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.cancelTagsEdit();
+                }
+            });
         }
         
         // Set recipe image
@@ -195,30 +276,38 @@ class RecipeModal {
         const lorasListElement = document.getElementById('recipeLorasList');
         const lorasCountElement = document.getElementById('recipeLorasCount');
         
-        // 检查所有 LoRAs 是否都在库中
+        // Check all LoRAs status
         let allLorasAvailable = true;
         let missingLorasCount = 0;
+        let deletedLorasCount = 0;
         
         if (recipe.loras && recipe.loras.length > 0) {
             recipe.loras.forEach(lora => {
-                if (!lora.inLibrary) {
+                if (lora.isDeleted) {
+                    deletedLorasCount++;
+                } else if (!lora.inLibrary) {
                     allLorasAvailable = false;
                     missingLorasCount++;
                 }
             });
         }
         
-        // 设置 LoRAs 计数和状态
+        // Set LoRAs count and status
         if (lorasCountElement && recipe.loras) {
             const totalCount = recipe.loras.length;
             
-            // 创建状态指示器
+            // Create status indicator based on LoRA states
             let statusHTML = '';
             if (totalCount > 0) {
-                if (allLorasAvailable) {
+                if (allLorasAvailable && deletedLorasCount === 0) {
+                    // All LoRAs are available
                     statusHTML = `<div class="recipe-status ready"><i class="fas fa-check-circle"></i> Ready to use</div>`;
-                } else {
+                } else if (missingLorasCount > 0) {
+                    // Some LoRAs are missing (prioritize showing missing over deleted)
                     statusHTML = `<div class="recipe-status missing"><i class="fas fa-exclamation-triangle"></i> ${missingLorasCount} missing</div>`;
+                } else if (deletedLorasCount > 0 && missingLorasCount === 0) {
+                    // Some LoRAs are deleted but none are missing
+                    statusHTML = `<div class="recipe-status partial"><i class="fas fa-info-circle"></i> ${deletedLorasCount} deleted</div>`;
                 }
             }
             
@@ -228,17 +317,28 @@ class RecipeModal {
         if (lorasListElement && recipe.loras && recipe.loras.length > 0) {
             lorasListElement.innerHTML = recipe.loras.map(lora => {
                 const existsLocally = lora.inLibrary;
+                const isDeleted = lora.isDeleted;
                 const localPath = lora.localPath || '';
                 
-                // Create local status badge with a more stable structure
-                const localStatus = existsLocally ? 
-                    `<div class="local-badge">
-                        <i class="fas fa-check"></i> In Library
-                        <div class="local-path">${localPath}</div>
-                     </div>` : 
-                    `<div class="missing-badge">
-                        <i class="fas fa-exclamation-triangle"></i> Not in Library
-                     </div>`;
+                // Create status badge based on LoRA state
+                let localStatus;
+                if (existsLocally) {
+                    localStatus = `
+                        <div class="local-badge">
+                            <i class="fas fa-check"></i> In Library
+                            <div class="local-path">${localPath}</div>
+                        </div>`;
+                } else if (isDeleted) {
+                    localStatus = `
+                        <div class="deleted-badge">
+                            <i class="fas fa-trash-alt"></i> Deleted
+                        </div>`;
+                } else {
+                    localStatus = `
+                        <div class="missing-badge">
+                            <i class="fas fa-exclamation-triangle"></i> Not in Library
+                        </div>`;
+                }
 
                 // Check if preview is a video
                 const isPreviewVideo = lora.preview_url && lora.preview_url.toLowerCase().endsWith('.mp4');
@@ -248,8 +348,18 @@ class RecipeModal {
                      </video>` :
                     `<img src="${lora.preview_url || '/loras_static/images/no-preview.png'}" alt="LoRA preview">`;
 
+                // Determine CSS class based on LoRA state
+                let loraItemClass = 'recipe-lora-item';
+                if (existsLocally) {
+                    loraItemClass += ' exists-locally';
+                } else if (isDeleted) {
+                    loraItemClass += ' is-deleted';
+                } else {
+                    loraItemClass += ' missing-locally';
+                }
+
                 return `
-                    <div class="recipe-lora-item ${existsLocally ? 'exists-locally' : 'missing-locally'}">
+                    <div class="${loraItemClass}">
                         <div class="recipe-lora-thumbnail">
                             ${previewMedia}
                         </div>
@@ -278,6 +388,249 @@ class RecipeModal {
         
         // Show the modal
         modalManager.showModal('recipeModal');
+    }
+    
+    // Title editing methods
+    showTitleEditor() {
+        const titleContainer = document.getElementById('recipeModalTitle');
+        if (titleContainer) {
+            titleContainer.querySelector('.editable-content').classList.add('hide');
+            const editor = titleContainer.querySelector('#recipeTitleEditor');
+            editor.classList.add('active');
+            const input = editor.querySelector('input');
+            input.focus();
+            input.select();
+        }
+    }
+    
+    saveTitleEdit() {
+        const titleContainer = document.getElementById('recipeModalTitle');
+        if (titleContainer) {
+            const editor = titleContainer.querySelector('#recipeTitleEditor');
+            const input = editor.querySelector('input');
+            const newTitle = input.value.trim();
+            
+            // Check if title changed
+            if (newTitle && newTitle !== this.currentRecipe.title) {
+                // Update title in the UI
+                titleContainer.querySelector('.content-text').textContent = newTitle;
+                
+                // Update the recipe on the server
+                this.updateRecipeMetadata({ title: newTitle });
+            }
+            
+            // Hide editor
+            editor.classList.remove('active');
+            titleContainer.querySelector('.editable-content').classList.remove('hide');
+        }
+    }
+    
+    cancelTitleEdit() {
+        const titleContainer = document.getElementById('recipeModalTitle');
+        if (titleContainer) {
+            // Reset input value
+            const editor = titleContainer.querySelector('#recipeTitleEditor');
+            const input = editor.querySelector('input');
+            input.value = this.currentRecipe.title || '';
+            
+            // Hide editor
+            editor.classList.remove('active');
+            titleContainer.querySelector('.editable-content').classList.remove('hide');
+        }
+    }
+    
+    // Tags editing methods
+    showTagsEditor() {
+        const tagsContainer = document.getElementById('recipeTagsCompact');
+        if (tagsContainer) {
+            tagsContainer.querySelector('.editable-content').classList.add('hide');
+            const editor = tagsContainer.querySelector('#recipeTagsEditor');
+            editor.classList.add('active');
+            const input = editor.querySelector('input');
+            input.focus();
+        }
+    }
+    
+    saveTagsEdit() {
+        const tagsContainer = document.getElementById('recipeTagsCompact');
+        if (tagsContainer) {
+            const editor = tagsContainer.querySelector('#recipeTagsEditor');
+            const input = editor.querySelector('input');
+            const tagsText = input.value.trim();
+            
+            // Parse tags
+            let newTags = [];
+            if (tagsText) {
+                newTags = tagsText.split(',')
+                    .map(tag => tag.trim())
+                    .filter(tag => tag.length > 0);
+            }
+            
+            // Check if tags changed
+            const oldTags = this.currentRecipe.tags || [];
+            const tagsChanged = 
+                newTags.length !== oldTags.length || 
+                newTags.some((tag, index) => tag !== oldTags[index]);
+            
+            if (tagsChanged) {
+                // Update the recipe on the server
+                this.updateRecipeMetadata({ tags: newTags });
+                
+                // Update tags in the UI
+                const tagsDisplay = tagsContainer.querySelector('.tags-display');
+                tagsDisplay.innerHTML = '';
+                
+                if (newTags.length > 0) {
+                    // Limit displayed tags to 5, show a "+X more" button if needed
+                    const maxVisibleTags = 5;
+                    const visibleTags = newTags.slice(0, maxVisibleTags);
+                    const remainingTags = newTags.length > maxVisibleTags ? newTags.slice(maxVisibleTags) : [];
+                    
+                    // Add visible tags
+                    visibleTags.forEach(tag => {
+                        const tagElement = document.createElement('div');
+                        tagElement.className = 'recipe-tag-compact';
+                        tagElement.textContent = tag;
+                        tagsDisplay.appendChild(tagElement);
+                    });
+                    
+                    // Add "more" button if needed
+                    if (remainingTags.length > 0) {
+                        const moreButton = document.createElement('div');
+                        moreButton.className = 'recipe-tag-more';
+                        moreButton.textContent = `+${remainingTags.length} more`;
+                        tagsDisplay.appendChild(moreButton);
+                        
+                        // Update tooltip content
+                        const tooltipContent = document.getElementById('recipeTagsTooltipContent');
+                        if (tooltipContent) {
+                            tooltipContent.innerHTML = '';
+                            newTags.forEach(tag => {
+                                const tooltipTag = document.createElement('div');
+                                tooltipTag.className = 'tooltip-tag';
+                                tooltipTag.textContent = tag;
+                                tooltipContent.appendChild(tooltipTag);
+                            });
+                        }
+                        
+                        // Re-add tooltip functionality
+                        moreButton.addEventListener('mouseenter', () => {
+                            document.getElementById('recipeTagsTooltip').classList.add('visible');
+                        });
+                        
+                        moreButton.addEventListener('mouseleave', () => {
+                            setTimeout(() => {
+                                if (!document.getElementById('recipeTagsTooltip').matches(':hover')) {
+                                    document.getElementById('recipeTagsTooltip').classList.remove('visible');
+                                }
+                            }, 300);
+                        });
+                    }
+                } else {
+                    tagsDisplay.innerHTML = '<div class="no-tags">No tags</div>';
+                }
+                
+                // Update the current recipe object
+                this.currentRecipe.tags = newTags;
+            }
+            
+            // Hide editor
+            editor.classList.remove('active');
+            tagsContainer.querySelector('.editable-content').classList.remove('hide');
+        }
+    }
+    
+    cancelTagsEdit() {
+        const tagsContainer = document.getElementById('recipeTagsCompact');
+        if (tagsContainer) {
+            // Reset input value
+            const editor = tagsContainer.querySelector('#recipeTagsEditor');
+            const input = editor.querySelector('input');
+            input.value = this.currentRecipe.tags ? this.currentRecipe.tags.join(', ') : '';
+            
+            // Hide editor
+            editor.classList.remove('active');
+            tagsContainer.querySelector('.editable-content').classList.remove('hide');
+        }
+    }
+    
+    // Update recipe metadata on the server
+    async updateRecipeMetadata(updates) {
+        try {
+            const response = await fetch(`/api/recipe/${this.recipeId}/update`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updates)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 显示保存成功的提示
+                if (updates.title) {
+                    showToast('Recipe name updated successfully', 'success');
+                } else if (updates.tags) {
+                    showToast('Recipe tags updated successfully', 'success');
+                } else {
+                    showToast('Recipe updated successfully', 'success');
+                }
+                
+                // 更新当前recipe对象的属性
+                Object.assign(this.currentRecipe, updates);
+                
+                // 确保这个更新也传播到卡片视图
+                // 尝试找到可能显示这个recipe的卡片并更新它
+                try {
+                    const recipeCards = document.querySelectorAll('.recipe-card');
+                    recipeCards.forEach(card => {
+                        if (card.dataset.recipeId === this.recipeId) {
+                            // 更新卡片标题
+                            if (updates.title) {
+                                const titleElement = card.querySelector('.recipe-title');
+                                if (titleElement) {
+                                    titleElement.textContent = updates.title;
+                                }
+                            }
+                            
+                            // 更新卡片标签
+                            if (updates.tags) {
+                                const tagsElement = card.querySelector('.recipe-tags');
+                                if (tagsElement) {
+                                    if (updates.tags.length > 0) {
+                                        tagsElement.innerHTML = updates.tags.map(
+                                            tag => `<div class="recipe-tag">${tag}</div>`
+                                        ).join('');
+                                    } else {
+                                        tagsElement.innerHTML = '';
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (err) {
+                    console.log("Non-critical error updating recipe cards:", err);
+                }
+                
+                // 重要：强制刷新recipes列表，确保从服务器获取最新数据
+                try {
+                    if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
+                        // 异步刷新recipes列表，不阻塞用户界面
+                        setTimeout(() => {
+                            window.recipeManager.loadRecipes(true);
+                        }, 500);
+                    }
+                } catch (err) {
+                    console.log("Error refreshing recipes list:", err);
+                }
+            } else {
+                showToast(`Failed to update recipe: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating recipe:', error);
+            showToast(`Error updating recipe: ${error.message}`, 'error');
+        }
     }
     
     // Setup copy buttons for prompts and recipe syntax
