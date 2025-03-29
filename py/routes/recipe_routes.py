@@ -47,6 +47,9 @@ class RecipeRoutes:
         app.router.add_get('/api/recipe/{recipe_id}/share', routes.share_recipe)
         app.router.add_get('/api/recipe/{recipe_id}/share/download', routes.download_shared_recipe)
         
+        # Add new endpoint for getting recipe syntax
+        app.router.add_get('/api/recipe/{recipe_id}/syntax', routes.get_recipe_syntax)
+        
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
         
@@ -432,19 +435,20 @@ class RecipeRoutes:
             # Format loras data according to the recipe.json format
             loras_data = []
             for lora in metadata.get("loras", []):
-                # Skip deleted LoRAs if they're marked to be excluded
-                if lora.get("isDeleted", False) and lora.get("exclude", False):
-                    continue
+                # Modified: Always include deleted LoRAs in the recipe metadata
+                # Even if they're marked to be excluded, we still keep their identifying information
+                # The exclude flag will only be used to determine if they should be included in recipe syntax
                 
                 # Convert frontend lora format to recipe format
                 lora_entry = {
-                    "file_name": lora.get("file_name", "") or os.path.splitext(os.path.basename(lora.get("localPath", "")))[0],
+                    "file_name": lora.get("file_name", "") or os.path.splitext(os.path.basename(lora.get("localPath", "")))[0] if lora.get("localPath") else "",
                     "hash": lora.get("hash", "").lower() if lora.get("hash") else "",
                     "strength": float(lora.get("weight", 1.0)),
                     "modelVersionId": lora.get("id", ""),
                     "modelName": lora.get("name", ""),
                     "modelVersionName": lora.get("version", ""),
-                    "isDeleted": lora.get("isDeleted", False)  # Preserve deletion status in saved recipe
+                    "isDeleted": lora.get("isDeleted", False),  # Preserve deletion status in saved recipe
+                    "exclude": lora.get("exclude", False)  # Add exclude flag to the recipe
                 }
                 loras_data.append(lora_entry)
             
@@ -904,4 +908,79 @@ class RecipeRoutes:
             
         except Exception as e:
             logger.error(f"Error saving recipe from widget: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def get_recipe_syntax(self, request: web.Request) -> web.Response:
+        """Generate recipe syntax for LoRAs in the recipe, looking up proper file names using hash_index"""
+        try:
+            recipe_id = request.match_info['recipe_id']
+            
+            # Get all recipes from cache
+            cache = await self.recipe_scanner.get_cached_data()
+            
+            # Find the specific recipe
+            recipe = next((r for r in cache.raw_data if str(r.get('id', '')) == recipe_id), None)
+            
+            if not recipe:
+                return web.json_response({"error": "Recipe not found"}, status=404)
+            
+            # Get the loras from the recipe
+            loras = recipe.get('loras', [])
+            
+            if not loras:
+                return web.json_response({"error": "No LoRAs found in this recipe"}, status=400)
+            
+            # Generate recipe syntax for all LoRAs that:
+            # 1. Are in the library (not deleted) OR
+            # 2. Are deleted but not marked for exclusion
+            lora_syntax_parts = []
+            
+            # Access the hash_index from lora_scanner
+            hash_index = self.recipe_scanner._lora_scanner._hash_index
+            
+            for lora in loras:
+                # Skip loras that are deleted AND marked for exclusion
+                if lora.get("isDeleted", False) and lora.get("exclude", False):
+                    continue
+                
+                # Get the strength
+                strength = lora.get("strength", 1.0)
+                
+                # Try to find the actual file name for this lora
+                file_name = None
+                hash_value = lora.get("hash", "").lower()
+                
+                if hash_value and hasattr(hash_index, "_hash_to_path"):
+                    # Look up the file path from the hash
+                    file_path = hash_index._hash_to_path.get(hash_value)
+                    
+                    if file_path:
+                        # Extract the file name without extension from the path
+                        file_name = os.path.splitext(os.path.basename(file_path))[0]
+                
+                # If hash lookup failed, fall back to modelVersionId lookup
+                if not file_name and lora.get("modelVersionId"):
+                    # Search for files with matching modelVersionId
+                    all_loras = await self.recipe_scanner._lora_scanner.get_cached_data()
+                    for cached_lora in all_loras.raw_data:
+                        if "civitai" in cached_lora and cached_lora["civitai"].get("id") == lora.get("modelVersionId"):
+                            file_name = os.path.splitext(os.path.basename(cached_lora["path"]))[0]
+                            break
+                
+                # If all lookups failed, use the file_name from the recipe
+                if not file_name:
+                    file_name = lora.get("file_name", "unknown-lora")
+                
+                # Add to syntax parts
+                lora_syntax_parts.append(f"<lora:{file_name}:{strength}>")
+            
+            # Join the LoRA syntax parts
+            lora_syntax = " ".join(lora_syntax_parts)
+            
+            return web.json_response({
+                'success': True,
+                'syntax': lora_syntax
+            })
+        except Exception as e:
+            logger.error(f"Error generating recipe syntax: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500)

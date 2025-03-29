@@ -399,7 +399,7 @@ export class ImportManager {
                 }
             }
         }
-        
+
         // Update LoRA count information
         const totalLoras = this.recipeData.loras.length;
         const existingLoras = this.recipeData.loras.filter(lora => lora.existsLocally).length;
@@ -549,33 +549,24 @@ export class ImportManager {
                 <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="warning-content">
                     <div class="warning-title">${deletedLoras} LoRA(s) have been deleted from Civitai</div>
-                    <div class="warning-text">These LoRAs cannot be downloaded. If you continue, they will be removed from the recipe.</div>
+                    <div class="warning-text">These LoRAs cannot be downloaded. If you continue, they will remain in the recipe but won't be included when used.</div>
                 </div>
             `;
             
             // Insert before the buttons container
             buttonsContainer.parentNode.insertBefore(warningContainer, buttonsContainer);
+        }
             
-            // Update next button text to be more clear
-            nextButton.textContent = 'Continue Without Deleted LoRAs';
+        // If we have missing LoRAs (not deleted), show "Download Missing LoRAs"
+        // Otherwise show "Save Recipe"
+        const missingNotDeleted = this.recipeData.loras.filter(
+            lora => !lora.existsLocally && !lora.isDeleted
+        ).length;
+        
+        if (missingNotDeleted > 0) {
+            nextButton.textContent = 'Download Missing LoRAs';
         } else {
-            // Remove warning if no deleted LoRAs
-            const warningMsg = document.getElementById('deletedLorasWarning');
-            if (warningMsg) {
-                warningMsg.remove();
-            }
-            
-            // If we have missing LoRAs (not deleted), show "Download Missing LoRAs"
-            // Otherwise show "Save Recipe"
-            const missingNotDeleted = this.recipeData.loras.filter(
-                lora => !lora.existsLocally && !lora.isDeleted
-            ).length;
-            
-            if (missingNotDeleted > 0) {
-                nextButton.textContent = 'Download Missing LoRAs';
-            } else {
-                nextButton.textContent = 'Save Recipe';
-            }
+            nextButton.textContent = 'Save Recipe';
         }
     }
 

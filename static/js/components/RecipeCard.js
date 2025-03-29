@@ -96,22 +96,24 @@ class RecipeCard {
     
     copyRecipeSyntax() {
         try {
-            // Generate recipe syntax in the format <lora:file_name:strength> separated by spaces
-            const loras = this.recipe.loras || [];
-            if (loras.length === 0) {
-                showToast('No LoRAs in this recipe to copy', 'warning');
+            // Get recipe ID
+            const recipeId = this.recipe.id;
+            if (!recipeId) {
+                showToast('Cannot copy recipe syntax: Missing recipe ID', 'error');
                 return;
             }
+
             
-            const syntax = loras.map(lora => {
-                // Use file_name if available, otherwise use empty placeholder
-                const fileName = lora.file_name || '[missing-lora]';
-                const strength = lora.strength || 1.0;
-                return `<lora:${fileName}:${strength}>`;
-            }).join(' ');
-            
-            // Copy to clipboard
-            navigator.clipboard.writeText(syntax)
+            // Fallback if button not found
+            fetch(`/api/recipe/${recipeId}/syntax`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.syntax) {
+                        return navigator.clipboard.writeText(data.syntax);
+                    } else {
+                        throw new Error(data.error || 'No syntax returned');
+                    }
+                })
                 .then(() => {
                     showToast('Recipe syntax copied to clipboard', 'success');
                 })

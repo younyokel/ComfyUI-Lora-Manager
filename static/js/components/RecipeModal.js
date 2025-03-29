@@ -41,6 +41,9 @@ class RecipeModal {
             modalTitle.textContent = recipe.title || 'Recipe Details';
         }
         
+        // Store the recipe ID for copy syntax API call
+        this.recipeId = recipe.id;
+        
         // Set recipe tags if they exist
         const tagsCompactElement = document.getElementById('recipeTagsCompact');
         const tagsTooltipContent = document.getElementById('recipeTagsTooltipContent');
@@ -265,10 +268,8 @@ class RecipeModal {
                 `;
             }).join('');
             
-            // Generate recipe syntax for copy button
-            this.recipeLorasSyntax = recipe.loras.map(lora => 
-                `<lora:${lora.file_name}:${lora.strength || 1.0}>`
-            ).join(' ');
+            // Generate recipe syntax for copy button (this is now a placeholder, actual syntax will be fetched from the API)
+            this.recipeLorasSyntax = '';
             
         } else if (lorasListElement) {
             lorasListElement.innerHTML = '<div class="no-loras">No LoRAs associated with this recipe</div>';
@@ -301,8 +302,39 @@ class RecipeModal {
         
         if (copyRecipeSyntaxBtn) {
             copyRecipeSyntaxBtn.addEventListener('click', () => {
-                this.copyToClipboard(this.recipeLorasSyntax, 'Recipe syntax copied to clipboard');
+                // Use backend API to get recipe syntax
+                this.fetchAndCopyRecipeSyntax();
             });
+        }
+    }
+    
+    // Fetch recipe syntax from backend and copy to clipboard
+    async fetchAndCopyRecipeSyntax() {
+        if (!this.recipeId) {
+            showToast('No recipe ID available', 'error');
+            return;
+        }
+        
+        try {
+            // Fetch recipe syntax from backend
+            const response = await fetch(`/api/recipe/${this.recipeId}/syntax`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to get recipe syntax: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.syntax) {
+                // Copy to clipboard
+                await navigator.clipboard.writeText(data.syntax);
+                showToast('Recipe syntax copied to clipboard', 'success');
+            } else {
+                throw new Error(data.error || 'No syntax returned from server');
+            }
+        } catch (error) {
+            console.error('Error fetching recipe syntax:', error);
+            showToast(`Error copying recipe syntax: ${error.message}`, 'error');
         }
     }
     
