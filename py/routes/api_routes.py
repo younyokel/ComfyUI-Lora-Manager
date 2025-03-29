@@ -52,6 +52,7 @@ class ApiRoutes:
         app.router.add_get('/api/loras/top-tags', routes.get_top_tags)  # Add new route for top tags
         app.router.add_get('/api/loras/base-models', routes.get_base_models)  # Add new route for base models
         app.router.add_get('/api/lora-civitai-url', routes.get_lora_civitai_url)  # Add new route for Civitai URL
+        app.router.add_post('/api/rename_lora', routes.rename_lora)  # Add new route for renaming LoRA files
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -929,6 +930,149 @@ class ApiRoutes:
             })
         except Exception as e:
             logger.error(f"Error retrieving base models: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    def get_multipart_ext(self, filename):
+        parts = filename.split(".")
+        if len(parts) > 2:  # 如果包含多级扩展名
+            return "." + ".".join(parts[-2:])  # 取最后两部分，如 ".metadata.json"
+        return os.path.splitext(filename)[1]  # 否则取普通扩展名，如 ".safetensors"
+
+    async def rename_lora(self, request: web.Request) -> web.Response:
+        """Handle renaming a LoRA file and its associated files"""
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            new_file_name = data.get('new_file_name')
+            
+            if not file_path or not new_file_name:
+                return web.json_response({
+                    'success': False,
+                    'error': 'File path and new file name are required'
+                }, status=400)
+            
+            # Validate the new file name (no path separators or invalid characters)
+            invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+            if any(char in new_file_name for char in invalid_chars):
+                return web.json_response({
+                    'success': False,
+                    'error': 'Invalid characters in file name'
+                }, status=400)
+            
+            # Get the directory and current file name
+            target_dir = os.path.dirname(file_path)
+            old_file_name = os.path.splitext(os.path.basename(file_path))[0]
+            
+            # Check if the target file already exists
+            new_file_path = os.path.join(target_dir, f"{new_file_name}.safetensors").replace(os.sep, '/')
+            if os.path.exists(new_file_path):
+                return web.json_response({
+                    'success': False,
+                    'error': 'A file with this name already exists'
+                }, status=400)
+            
+            # Define the patterns for associated files
+            patterns = [
+                f"{old_file_name}.safetensors",  # Required
+                f"{old_file_name}.metadata.json",
+                f"{old_file_name}.preview.png",
+                f"{old_file_name}.preview.jpg",
+                f"{old_file_name}.preview.jpeg",
+                f"{old_file_name}.preview.webp",
+                f"{old_file_name}.preview.mp4",
+                f"{old_file_name}.png",
+                f"{old_file_name}.jpg",
+                f"{old_file_name}.jpeg",
+                f"{old_file_name}.webp",
+                f"{old_file_name}.mp4"
+            ]
+            
+            # Find all matching files
+            existing_files = []
+            for pattern in patterns:
+                path = os.path.join(target_dir, pattern)
+                if os.path.exists(path):
+                    existing_files.append((path, pattern))
+            
+            # Get the hash from the main file to update hash index
+            hash_value = None
+            metadata = None
+            metadata_path = os.path.join(target_dir, f"{old_file_name}.metadata.json")
+            
+            if os.path.exists(metadata_path):
+                try:
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        metadata = json.load(f)
+                        hash_value = metadata.get('sha256')
+                except Exception as e:
+                    logger.error(f"Error loading metadata for rename: {e}")
+            
+            # Rename all files
+            renamed_files = []
+            new_metadata_path = None
+            
+            # Notify file monitor to ignore these events
+            main_file_path = os.path.join(target_dir, f"{old_file_name}.safetensors")
+            if os.path.exists(main_file_path) and self.download_manager.file_monitor:
+                # Add old and new paths to ignore list
+                file_size = os.path.getsize(main_file_path)
+                self.download_manager.file_monitor.handler.add_ignore_path(main_file_path, file_size)
+                self.download_manager.file_monitor.handler.add_ignore_path(new_file_path, file_size)
+            
+            for old_path, pattern in existing_files:
+                # Get the file extension like .safetensors or .metadata.json
+                ext = self.get_multipart_ext(pattern)
+
+                # Create the new path
+                new_path = os.path.join(target_dir, f"{new_file_name}{ext}").replace(os.sep, '/')
+                
+                # Rename the file
+                os.rename(old_path, new_path)
+                renamed_files.append(new_path)
+                
+                # Keep track of metadata path for later update
+                if ext == '.metadata.json':
+                    new_metadata_path = new_path
+            
+            # Update the metadata file with new file name and paths
+            if new_metadata_path and metadata:
+                # Update file_name, file_path and preview_url in metadata
+                metadata['file_name'] = new_file_name
+                metadata['file_path'] = new_file_path
+                
+                # Update preview_url if it exists
+                if 'preview_url' in metadata and metadata['preview_url']:
+                    old_preview = metadata['preview_url']
+                    ext = self.get_multipart_ext(old_preview)
+                    new_preview = os.path.join(target_dir, f"{new_file_name}{ext}").replace(os.sep, '/')
+                    metadata['preview_url'] = new_preview
+                
+                # Save updated metadata
+                with open(new_metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+            
+            # Update the scanner cache
+            if metadata:
+                await self.scanner.update_single_lora_cache(file_path, new_file_path, metadata)
+                
+                # Update recipe files and cache if hash is available
+                if hash_value:
+                    recipe_scanner = RecipeScanner(self.scanner)
+                    recipes_updated, cache_updated = await recipe_scanner.update_lora_filename_by_hash(hash_value, new_file_name)
+                    logger.info(f"Updated {recipes_updated} recipe files and {cache_updated} cache entries for renamed LoRA")
+            
+            return web.json_response({
+                'success': True,
+                'new_file_path': new_file_path,
+                'renamed_files': renamed_files,
+                'reload_required': False
+            })
+            
+        except Exception as e:
+            logger.error(f"Error renaming LoRA: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)

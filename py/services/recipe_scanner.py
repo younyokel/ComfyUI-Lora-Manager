@@ -2,7 +2,7 @@ import os
 import logging
 import asyncio
 import json
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
 from ..config import config
 from .recipe_cache import RecipeCache
 from .lora_scanner import LoraScanner
@@ -430,3 +430,87 @@ class RecipeScanner:
         }
         
         return result
+
+    async def update_lora_filename_by_hash(self, hash_value: str, new_file_name: str) -> Tuple[int, int]:
+        """Update file_name in all recipes that contain a LoRA with the specified hash.
+        
+        Args:
+            hash_value: The SHA256 hash value of the LoRA
+            new_file_name: The new file_name to set
+            
+        Returns:
+            Tuple[int, int]: (number of recipes updated in files, number of recipes updated in cache)
+        """
+        if not hash_value or not new_file_name:
+            return 0, 0
+            
+        # Always use lowercase hash for consistency
+        hash_value = hash_value.lower()
+        
+        # Get recipes directory
+        recipes_dir = self.recipes_dir
+        if not recipes_dir or not os.path.exists(recipes_dir):
+            logger.warning(f"Recipes directory not found: {recipes_dir}")
+            return 0, 0
+            
+        # Check if cache is initialized
+        cache_initialized = self._cache is not None
+        cache_updated_count = 0
+        file_updated_count = 0
+        
+        # Get all recipe JSON files in the recipes directory
+        recipe_files = []
+        for root, _, files in os.walk(recipes_dir):
+            for file in files:
+                if file.lower().endswith('.recipe.json'):
+                    recipe_files.append(os.path.join(root, file))
+        
+        # Process each recipe file
+        for recipe_path in recipe_files:
+            try:
+                # Load the recipe data
+                with open(recipe_path, 'r', encoding='utf-8') as f:
+                    recipe_data = json.load(f)
+                
+                # Skip if no loras or invalid structure
+                if not recipe_data or not isinstance(recipe_data, dict) or 'loras' not in recipe_data:
+                    continue
+                
+                # Check if any lora has matching hash
+                file_updated = False
+                for lora in recipe_data.get('loras', []):
+                    if 'hash' in lora and lora['hash'].lower() == hash_value:
+                        # Update file_name
+                        old_file_name = lora.get('file_name', '')
+                        lora['file_name'] = new_file_name
+                        file_updated = True
+                        logger.info(f"Updated file_name in recipe {recipe_path}: {old_file_name} -> {new_file_name}")
+                
+                # If updated, save the file
+                if file_updated:
+                    with open(recipe_path, 'w', encoding='utf-8') as f:
+                        json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+                    file_updated_count += 1
+                    
+                    # Also update in cache if it exists
+                    if cache_initialized:
+                        recipe_id = recipe_data.get('id')
+                        if recipe_id:
+                            for cache_item in self._cache.raw_data:
+                                if cache_item.get('id') == recipe_id:
+                                    # Replace loras array with updated version
+                                    cache_item['loras'] = recipe_data['loras']
+                                    cache_updated_count += 1
+                                    break
+            
+            except Exception as e:
+                logger.error(f"Error updating recipe file {recipe_path}: {e}")
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+        
+        # Resort cache if updates were made
+        if cache_initialized and cache_updated_count > 0:
+            await self._cache.resort()
+            logger.info(f"Resorted recipe cache after updating {cache_updated_count} items")
+            
+        return file_updated_count, cache_updated_count

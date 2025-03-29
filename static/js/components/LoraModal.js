@@ -29,9 +29,11 @@ export function showLoraModal(lora) {
                         </div>
                         <div class="info-item">
                             <label>File Name</label>
-                            <div class="file-name-wrapper" onclick="copyFileName('${lora.file_name}')">
-                                <span id="file-name">${lora.file_name || 'N/A'}</span>
-                                <i class="fas fa-copy" title="Copy file name"></i>
+                            <div class="file-name-wrapper">
+                                <span id="file-name" class="file-name-content">${lora.file_name || 'N/A'}</span>
+                                <button class="edit-file-name-btn" title="Edit file name">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="info-item location-size">
@@ -130,6 +132,7 @@ export function showLoraModal(lora) {
     setupTriggerWordsEditMode();
     setupModelNameEditing();
     setupBaseModelEditing();
+    setupFileNameEditing();
     
     // If we have a model ID but no description, fetch it
     if (lora.civitai?.modelId && !lora.modelDescription) {
@@ -1561,4 +1564,170 @@ function setupBaseModelEditing() {
             }
         });
     });
+}
+
+// New function to handle file name editing
+function setupFileNameEditing() {
+    const fileNameContent = document.querySelector('.file-name-content');
+    const editBtn = document.querySelector('.edit-file-name-btn');
+    
+    if (!fileNameContent || !editBtn) return;
+    
+    // Show edit button on hover
+    const fileNameWrapper = document.querySelector('.file-name-wrapper');
+    fileNameWrapper.addEventListener('mouseenter', () => {
+        editBtn.classList.add('visible');
+    });
+    
+    fileNameWrapper.addEventListener('mouseleave', () => {
+        if (!fileNameWrapper.classList.contains('editing')) {
+            editBtn.classList.remove('visible');
+        }
+    });
+    
+    // Handle edit button click
+    editBtn.addEventListener('click', () => {
+        fileNameWrapper.classList.add('editing');
+        fileNameContent.setAttribute('contenteditable', 'true');
+        fileNameContent.focus();
+        
+        // Store original value for comparison later
+        fileNameContent.dataset.originalValue = fileNameContent.textContent.trim();
+        
+        // Place cursor at the end
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.selectNodeContents(fileNameContent);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        editBtn.classList.add('visible');
+    });
+    
+    // Handle keyboard events in edit mode
+    fileNameContent.addEventListener('keydown', function(e) {
+        if (!this.getAttribute('contenteditable')) return;
+        
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur(); // Trigger save on Enter
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            // Restore original value
+            this.textContent = this.dataset.originalValue;
+            exitEditMode();
+        }
+    });
+    
+    // Handle input validation
+    fileNameContent.addEventListener('input', function() {
+        if (!this.getAttribute('contenteditable')) return;
+        
+        // Replace invalid characters for filenames
+        const invalidChars = /[\\/:*?"<>|]/g;
+        if (invalidChars.test(this.textContent)) {
+            const cursorPos = window.getSelection().getRangeAt(0).startOffset;
+            this.textContent = this.textContent.replace(invalidChars, '');
+            
+            // Restore cursor position
+            const range = document.createRange();
+            const sel = window.getSelection();
+            const newPos = Math.min(cursorPos, this.textContent.length);
+            
+            if (this.firstChild) {
+                range.setStart(this.firstChild, newPos);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+            
+            showToast('Invalid characters removed from filename', 'warning');
+        }
+    });
+    
+    // Handle focus out - save changes
+    fileNameContent.addEventListener('blur', async function() {
+        if (!this.getAttribute('contenteditable')) return;
+        
+        const newFileName = this.textContent.trim();
+        const originalValue = this.dataset.originalValue;
+        
+        // Basic validation
+        if (!newFileName) {
+            // Restore original value if empty
+            this.textContent = originalValue;
+            showToast('File name cannot be empty', 'error');
+            exitEditMode();
+            return;
+        }
+        
+        if (newFileName === originalValue) {
+            // No changes, just exit edit mode
+            exitEditMode();
+            return;
+        }
+        
+        try {
+            // Get the full file path
+            const filePath = document.querySelector('#loraModal .modal-content')
+                .querySelector('.file-path').textContent + originalValue + '.safetensors';
+                
+            // Call API to rename the file
+            const response = await fetch('/api/rename_lora', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    file_path: filePath,
+                    new_file_name: newFileName
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('File name updated successfully', 'success');
+                
+                // Update card in the gallery
+                const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+                if (loraCard) {
+                    // Update the card's filepath attribute to the new path
+                    loraCard.dataset.filepath = result.new_file_path;
+                    loraCard.dataset.file_name = newFileName;
+                    
+                    // Update the filename display in the card
+                    const cardFileName = loraCard.querySelector('.card-filename');
+                    if (cardFileName) {
+                        cardFileName.textContent = newFileName;
+                    }
+                }
+                
+                // Handle the case where we need to reload the page
+                if (result.reload_required) {
+                    showToast('Reloading page to apply changes...', 'info');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            } else {
+                // Show error and restore original filename
+                showToast(result.error || 'Failed to update file name', 'error');
+                this.textContent = originalValue;
+            }
+        } catch (error) {
+            console.error('Error saving filename:', error);
+            showToast('Failed to update file name', 'error');
+            this.textContent = originalValue;
+        } finally {
+            exitEditMode();
+        }
+    });
+    
+    function exitEditMode() {
+        fileNameContent.removeAttribute('contenteditable');
+        fileNameWrapper.classList.remove('editing');
+        editBtn.classList.remove('visible');
+    }
 }

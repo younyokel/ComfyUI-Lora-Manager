@@ -543,25 +543,53 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    cursor: pointer;
     padding: 4px;
     border-radius: var(--border-radius-xs);
     transition: background-color 0.2s;
+    position: relative;
 }
 
 .file-name-wrapper:hover {
     background: oklch(var(--lora-accent) / 0.1);
 }
 
-.file-name-wrapper i {
-    color: var(--text-color);
-    opacity: 0.5;
-    transition: opacity 0.2s;
+.file-name-content {
+    padding: 2px 4px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid transparent;
+    flex: 1;
 }
 
-.file-name-wrapper:hover i {
-    opacity: 1;
-    color: var(--lora-accent);
+.file-name-wrapper.editing .file-name-content {
+    border: 1px solid var(--lora-accent);
+    background: var(--bg-color);
+    outline: none;
+}
+
+.edit-file-name-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    opacity: 0;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: var(--border-radius-xs);
+    transition: all 0.2s ease;
+    margin-left: var(--space-1);
+}
+
+.edit-file-name-btn.visible,
+.file-name-wrapper:hover .edit-file-name-btn {
+    opacity: 0.5;
+}
+
+.edit-file-name-btn:hover {
+    opacity: 0.8 !important;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .edit-file-name-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Base Model and Size combined styles */
