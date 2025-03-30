@@ -20,6 +20,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.2  
+* **Faster Initialization for Forge Users** - Improved first-run efficiency by utilizing existing `.json` and `.civitai.info` files from Forge’s CivitAI helper extension, making migration smoother.  
+* **LoRA Filename Editing** - Added support for renaming LoRA files directly within LoRA Manager.  
+* **Recipe Editing** - Users can now edit recipe names and tags.  
+* **Retain Deleted LoRAs in Recipes** - Deleted LoRAs will remain listed in recipes, allowing future functionality to reconnect them once re-obtained.  
+* **Download Missing LoRAs from Recipes** - Easily fetch missing LoRAs associated with a recipe.
+
 ### v0.8.1
 * **Base Model Correction** - Added support for modifying base model associations to fix incorrect metadata for non-CivitAI LoRAs
 * **LoRA Loader Flexibility** - Made CLIP input optional for model-only workflows like Hunyuan video generation
