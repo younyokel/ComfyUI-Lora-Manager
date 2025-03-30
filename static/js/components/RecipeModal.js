@@ -1,5 +1,6 @@
 // Recipe Modal Component
 import { showToast } from '../utils/uiHelpers.js';
+import { state } from '../state/index.js';
 
 class RecipeModal {
     constructor() {
@@ -48,6 +49,21 @@ class RecipeModal {
                     // Position the tooltip
                     tooltip.style.top = (badgeRect.bottom + 4) + 'px';
                     tooltip.style.left = (badgeRect.right - tooltip.offsetWidth) + 'px';
+                }
+            }
+            
+            // Add tooltip positioning for missing badge
+            if (event.target.closest('.recipe-status.missing')) {
+                const badge = event.target.closest('.recipe-status.missing');
+                const tooltip = badge.querySelector('.missing-tooltip');
+                
+                if (tooltip) {
+                    // Get badge position
+                    const badgeRect = badge.getBoundingClientRect();
+                    
+                    // Position the tooltip
+                    tooltip.style.top = (badgeRect.bottom + 4) + 'px';
+                    tooltip.style.left = (badgeRect.left) + 'px';
                 }
             }
         }, true);
@@ -304,7 +320,10 @@ class RecipeModal {
                     statusHTML = `<div class="recipe-status ready"><i class="fas fa-check-circle"></i> Ready to use</div>`;
                 } else if (missingLorasCount > 0) {
                     // Some LoRAs are missing (prioritize showing missing over deleted)
-                    statusHTML = `<div class="recipe-status missing"><i class="fas fa-exclamation-triangle"></i> ${missingLorasCount} missing</div>`;
+                    statusHTML = `<div class="recipe-status missing">
+                        <i class="fas fa-exclamation-triangle"></i> ${missingLorasCount} missing
+                        <div class="missing-tooltip">Click to download missing LoRAs</div>
+                    </div>`;
                 } else if (deletedLorasCount > 0 && missingLorasCount === 0) {
                     // Some LoRAs are deleted but none are missing
                     statusHTML = `<div class="recipe-status partial"><i class="fas fa-info-circle"></i> ${deletedLorasCount} deleted</div>`;
@@ -312,6 +331,15 @@ class RecipeModal {
             }
             
             lorasCountElement.innerHTML = `<i class="fas fa-layer-group"></i> ${totalCount} LoRAs ${statusHTML}`;
+            
+            // Add click handler for missing LoRAs status
+            setTimeout(() => {
+                const missingStatus = document.querySelector('.recipe-status.missing');
+                if (missingStatus && missingLorasCount > 0) {
+                    missingStatus.classList.add('clickable');
+                    missingStatus.addEventListener('click', () => this.showDownloadMissingLorasModal());
+                }
+            }, 100);
         }
         
         if (lorasListElement && recipe.loras && recipe.loras.length > 0) {
@@ -385,6 +413,8 @@ class RecipeModal {
             lorasListElement.innerHTML = '<div class="no-loras">No LoRAs associated with this recipe</div>';
             this.recipeLorasSyntax = '';
         }
+
+        console.log(this.currentRecipe.loras);
         
         // Show the modal
         modalManager.showModal('recipeModal');
@@ -699,6 +729,105 @@ class RecipeModal {
             console.error('Failed to copy text: ', err);
             showToast('Failed to copy text', 'error');
         });
+    }
+
+    // Add new method to handle downloading missing LoRAs
+    async showDownloadMissingLorasModal() {
+        console.log("currentRecipe", this.currentRecipe);
+        // Get missing LoRAs from the current recipe
+        const missingLoras = this.currentRecipe.loras.filter(lora => !lora.inLibrary);
+        console.log("missingLoras", missingLoras);
+        
+        if (missingLoras.length === 0) {
+            showToast('No missing LoRAs to download', 'info');
+            return;
+        }
+
+        try {
+            state.loadingManager.showSimpleLoading('Getting version info for missing LoRAs...');
+
+            // Get version info for each missing LoRA by calling the appropriate API endpoint
+            const missingLorasWithVersionInfoPromises = missingLoras.map(async lora => {
+                let endpoint;
+                
+                // Determine which endpoint to use based on available data
+                if (lora.modelVersionId) {
+                    endpoint = `/api/civitai/model/${lora.modelVersionId}`;
+                } else if (lora.hash) {
+                    endpoint = `/api/civitai/model/${lora.hash}`;
+                } else {
+                    console.error("Missing both hash and modelVersionId for lora:", lora);
+                    return null;
+                }
+                
+                const response = await fetch(endpoint);
+                const versionInfo = await response.json();
+                
+                // Return original lora data combined with version info
+                return {
+                    ...lora,
+                    civitaiInfo: versionInfo
+                };
+            });
+            
+            // Wait for all API calls to complete
+            const lorasWithVersionInfo = await Promise.all(missingLorasWithVersionInfoPromises);
+            console.log("Loras with version info:", lorasWithVersionInfo);
+            
+            // Filter out null values (failed requests)
+            const validLoras = lorasWithVersionInfo.filter(lora => lora !== null);
+            
+            if (validLoras.length === 0) {
+                showToast('Failed to get information for missing LoRAs', 'error');
+                return;
+            }
+            
+            // Close the recipe modal first
+            modalManager.closeModal('recipeModal');
+            
+            // Prepare data for import manager using the retrieved information
+            const recipeData = {
+                loras: validLoras.map(lora => {
+                    const civitaiInfo = lora.civitaiInfo;
+                    const modelFile = civitaiInfo.files ? 
+                        civitaiInfo.files.find(file => file.type === 'Model') : null;
+                    
+                    return {
+                        // Basic lora info
+                        name: civitaiInfo.model?.name || lora.name,
+                        version: civitaiInfo.name || '',
+                        strength: lora.strength || 1.0,
+                        
+                        // Model identifiers
+                        hash: modelFile?.hashes?.SHA256?.toLowerCase() || lora.hash,
+                        modelVersionId: civitaiInfo.id || lora.modelVersionId,
+                        
+                        // Metadata
+                        thumbnailUrl: civitaiInfo.images?.[0]?.url || '',
+                        baseModel: civitaiInfo.baseModel || '',
+                        downloadUrl: civitaiInfo.downloadUrl || '',
+                        size: modelFile ? (modelFile.sizeKB * 1024) : 0,
+                        file_name: modelFile ? modelFile.name.split('.')[0] : '',
+                        
+                        // Status flags
+                        existsLocally: false,
+                        isDeleted: civitaiInfo.error === "Model not found",
+                        isEarlyAccess: !!civitaiInfo.earlyAccessEndsAt,
+                        earlyAccessEndsAt: civitaiInfo.earlyAccessEndsAt || ''
+                    };
+                })
+            };
+            
+            console.log("recipeData for import:", recipeData);
+            
+            // Call ImportManager's download missing LoRAs method
+            window.importManager.downloadMissingLoras(recipeData, this.currentRecipe.id);
+        } catch (error) {
+            console.error("Error downloading missing LoRAs:", error);
+            showToast('Error preparing LoRAs for download', 'error');
+        } finally {
+            state.loadingManager.hide();
+        }
     }
 }
 

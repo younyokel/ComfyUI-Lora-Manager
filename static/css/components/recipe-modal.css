@@ -655,3 +655,46 @@
     position: fixed; /* Keep as fixed for Chrome */
     z-index: 100;
 }
+
+/* Add styles for missing LoRAs download feature */
+.recipe-status.missing {
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.recipe-status.missing:hover {
+    background-color: rgba(var(--lora-warning-rgb, 255, 165, 0), 0.2);
+}
+
+.recipe-status.missing .missing-tooltip {
+    position: absolute;
+    display: none;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: var(--z-overlay);
+    width: max-content;
+    max-width: 200px;
+    font-size: 0.85rem;
+    font-weight: normal;
+    margin-left: -100px;
+    margin-top: -65px;
+}
+
+.recipe-status.missing:hover .missing-tooltip {
+    display: block;
+}
+
+.recipe-status.clickable {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+}
+
+.recipe-status.clickable:hover {
+    background-color: rgba(var(--lora-warning-rgb, 255, 165, 0), 0.2);
+}

@@ -26,7 +26,7 @@ export class ImportManager {
         this.importMode = 'upload'; // Default mode: 'upload' or 'url'
     }
 
-    showImportModal() {
+    showImportModal(recipeData = null, recipeId = null) {
         if (!this.initialized) {
             // Check if modal exists
             const modal = document.getElementById('importModal');
@@ -39,6 +39,10 @@ export class ImportManager {
         
         // Always reset the state when opening the modal
         this.resetSteps();
+        if (recipeData) {
+            this.downloadableLoRAs = recipeData.loras;
+            this.recipeId = recipeId;
+        }
         
         // Show the modal
         modalManager.showModal('importModal', null, () => {
@@ -831,219 +835,233 @@ export class ImportManager {
     }
 
     async saveRecipe() {
-        if (!this.recipeName) {
+        // Check if we're in download-only mode (for existing recipe)
+        const isDownloadOnly = !!this.recipeId;
+
+        console.log("isDownloadOnly", isDownloadOnly);
+        
+        if (!isDownloadOnly && !this.recipeName) {
             showToast('Please enter a recipe name', 'error');
             return;
         }
         
         try {
-            // First save the recipe
-            this.loadingManager.showSimpleLoading('Saving recipe...');
+            this.loadingManager.showSimpleLoading(isDownloadOnly ? 'Preparing download...' : 'Saving recipe...');
             
-            // Create form data for save request
-            const formData = new FormData();
-            
-            // Handle image data - either from file upload or from URL mode
-            if (this.recipeImage) {
-                // File upload mode
-                formData.append('image', this.recipeImage);
-            } else if (this.recipeData && this.recipeData.image_base64) {
-                // URL mode with base64 data
-                formData.append('image_base64', this.recipeData.image_base64);
-            } else if (this.importMode === 'url') {
-                // Fallback for URL mode - tell backend to fetch the image again
-                const urlInput = document.getElementById('imageUrlInput');
-                if (urlInput && urlInput.value) {
-                    formData.append('image_url', urlInput.value);
+            // If we're only downloading LoRAs for an existing recipe, skip the recipe save step
+            if (!isDownloadOnly) {
+                // First save the recipe
+                // Create form data for save request
+                const formData = new FormData();
+                
+                // Handle image data - either from file upload or from URL mode
+                if (this.recipeImage) {
+                    // File upload mode
+                    formData.append('image', this.recipeImage);
+                } else if (this.recipeData && this.recipeData.image_base64) {
+                    // URL mode with base64 data
+                    formData.append('image_base64', this.recipeData.image_base64);
+                } else if (this.importMode === 'url') {
+                    // Fallback for URL mode - tell backend to fetch the image again
+                    const urlInput = document.getElementById('imageUrlInput');
+                    if (urlInput && urlInput.value) {
+                        formData.append('image_url', urlInput.value);
+                    } else {
+                        throw new Error('No image data available');
+                    }
                 } else {
                     throw new Error('No image data available');
                 }
-            } else {
-                throw new Error('No image data available');
+                
+                formData.append('name', this.recipeName);
+                formData.append('tags', JSON.stringify(this.recipeTags));
+                
+                // Prepare complete metadata including generation parameters
+                const completeMetadata = {
+                    base_model: this.recipeData.base_model || "",
+                    loras: this.recipeData.loras || [],
+                    gen_params: this.recipeData.gen_params || {},
+                    raw_metadata: this.recipeData.raw_metadata || {}
+                };
+                
+                formData.append('metadata', JSON.stringify(completeMetadata));
+            
+                // Send save request
+                const response = await fetch('/api/recipes/save', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    // Handle save error
+                    console.error("Failed to save recipe:", result.error);
+                    showToast(result.error, 'error');
+                    // Close modal
+                    modalManager.closeModal('importModal');
+                    return;
+                }
             }
-            
-            formData.append('name', this.recipeName);
-            formData.append('tags', JSON.stringify(this.recipeTags));
-            
-            // Prepare complete metadata including generation parameters
-            const completeMetadata = {
-                base_model: this.recipeData.base_model || "",
-                loras: this.recipeData.loras || [],
-                gen_params: this.recipeData.gen_params || {},
-                raw_metadata: this.recipeData.raw_metadata || {}
-            };
-            
-            formData.append('metadata', JSON.stringify(completeMetadata));
-            
-            // Send save request
-            const response = await fetch('/api/recipes/save', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                // Handle successful save
+
+            // Check if we need to download LoRAs
+            if (this.downloadableLoRAs && this.downloadableLoRAs.length > 0) {
+                // For download, we need to validate the target path
+                const loraRoot = document.getElementById('importLoraRoot')?.value;
+                if (!loraRoot) {
+                    throw new Error('Please select a LoRA root directory');
+                }
                 
+                // Build target path
+                let targetPath = loraRoot;
+                if (this.selectedFolder) {
+                    targetPath += '/' + this.selectedFolder;
+                }
                 
-                // Check if we need to download LoRAs
-                if (this.downloadableLoRAs && this.downloadableLoRAs.length > 0) {
-                    // For download, we need to validate the target path
-                    const loraRoot = document.getElementById('importLoraRoot')?.value;
-                    if (!loraRoot) {
-                        throw new Error('Please select a LoRA root directory');
-                    }
-                    
-                    // Build target path
-                    let targetPath = loraRoot;
-                    if (this.selectedFolder) {
-                        targetPath += '/' + this.selectedFolder;
-                    }
-                    
-                    const newFolder = document.getElementById('importNewFolder')?.value?.trim();
-                    if (newFolder) {
-                        targetPath += '/' + newFolder;
-                    }
-                    
-                    // Set up WebSocket for progress updates
-                    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                    const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
-                    
-                    // Show enhanced loading with progress details for multiple items
-                    const updateProgress = this.loadingManager.showDownloadProgress(this.downloadableLoRAs.length);
-                    
-                    let completedDownloads = 0;
-                    let failedDownloads = 0;
-                    let earlyAccessFailures = 0;
-                    let currentLoraProgress = 0;
-                    
-                    // Set up progress tracking for current download
-                    ws.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        if (data.status === 'progress') {
-                            // Update current LoRA progress
-                            currentLoraProgress = data.progress;
-                            
-                            // Get current LoRA name
-                            const currentLora = this.downloadableLoRAs[completedDownloads + failedDownloads];
-                            const loraName = currentLora ? currentLora.name : '';
-                            
-                            // Update progress display
-                            updateProgress(currentLoraProgress, completedDownloads, loraName);
-                            
-                            // Add more detailed status messages based on progress
-                            if (currentLoraProgress < 3) {
-                                this.loadingManager.setStatus(
-                                    `Preparing download for LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
-                                );
-                            } else if (currentLoraProgress === 3) {
-                                this.loadingManager.setStatus(
-                                    `Downloaded preview for LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
-                                );
-                            } else if (currentLoraProgress > 3 && currentLoraProgress < 100) {
-                                this.loadingManager.setStatus(
-                                    `Downloading LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
-                                );
-                            } else {
-                                this.loadingManager.setStatus(
-                                    `Finalizing LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
-                                );
-                            }
-                        }
-                    };
-                    
-                    for (let i = 0; i < this.downloadableLoRAs.length; i++) {
-                        const lora = this.downloadableLoRAs[i];
+                const newFolder = document.getElementById('importNewFolder')?.value?.trim();
+                if (newFolder) {
+                    targetPath += '/' + newFolder;
+                }
+                
+                // Set up WebSocket for progress updates
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+                
+                // Show enhanced loading with progress details for multiple items
+                const updateProgress = this.loadingManager.showDownloadProgress(this.downloadableLoRAs.length);
+                
+                let completedDownloads = 0;
+                let failedDownloads = 0;
+                let earlyAccessFailures = 0;
+                let currentLoraProgress = 0;
+                
+                // Set up progress tracking for current download
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.status === 'progress') {
+                        // Update current LoRA progress
+                        currentLoraProgress = data.progress;
                         
-                        // Reset current LoRA progress for new download
-                        currentLoraProgress = 0;
+                        // Get current LoRA name
+                        const currentLora = this.downloadableLoRAs[completedDownloads + failedDownloads];
+                        const loraName = currentLora ? currentLora.name : '';
                         
-                        // Initial status update for new LoRA
-                        this.loadingManager.setStatus(`Starting download for LoRA ${i+1}/${this.downloadableLoRAs.length}`);
-                        updateProgress(0, completedDownloads, lora.name);
+                        // Update progress display
+                        updateProgress(currentLoraProgress, completedDownloads, loraName);
                         
-                        try {
-                            // Download the LoRA
-                            const response = await fetch('/api/download-lora', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    download_url: lora.downloadUrl,
-                                    lora_root: loraRoot,
-                                    relative_path: targetPath.replace(loraRoot + '/', '')
-                                })
-                            });
-                            
-                            if (!response.ok) {
-                                const errorText = await response.text();
-                                console.error(`Failed to download LoRA ${lora.name}: ${errorText}`);
-                                
-                                // Check if this is an early access error (status 401 is the key indicator)
-                                if (response.status === 401 || 
-                                   (errorText.toLowerCase().includes('early access') || 
-                                    errorText.toLowerCase().includes('purchase'))) {
-                                    earlyAccessFailures++;
-                                    this.loadingManager.setStatus(
-                                        `Failed to download ${lora.name}: Early Access required`
-                                    );
-                                }
-                                
-                                failedDownloads++;
-                                // Continue with next download
-                            } else {
-                                completedDownloads++;
-                                
-                                // Update progress to show completion of current LoRA
-                                updateProgress(100, completedDownloads, '');
-                                
-                                if (completedDownloads + failedDownloads < this.downloadableLoRAs.length) {
-                                    this.loadingManager.setStatus(
-                                        `Completed ${completedDownloads}/${this.downloadableLoRAs.length} LoRAs. Starting next download...`
-                                    );
-                                }
-                            }
-                        } catch (downloadError) {
-                            console.error(`Error downloading LoRA ${lora.name}:`, downloadError);
-                            failedDownloads++;
-                            // Continue with next download
-                        }
-                    }
-                    
-                    // Close WebSocket
-                    ws.close();
-                    
-                    // Show appropriate completion message based on results
-                    if (failedDownloads === 0) {
-                        showToast(`All ${completedDownloads} LoRAs downloaded successfully`, 'success');
-                    } else {
-                        if (earlyAccessFailures > 0) {
-                            showToast(
-                                `Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs. ${earlyAccessFailures} failed due to Early Access restrictions.`,
-                                'error'
+                        // Add more detailed status messages based on progress
+                        if (currentLoraProgress < 3) {
+                            this.loadingManager.setStatus(
+                                `Preparing download for LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
+                            );
+                        } else if (currentLoraProgress === 3) {
+                            this.loadingManager.setStatus(
+                                `Downloaded preview for LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
+                            );
+                        } else if (currentLoraProgress > 3 && currentLoraProgress < 100) {
+                            this.loadingManager.setStatus(
+                                `Downloading LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
                             );
                         } else {
-                            showToast(`Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs`, 'error');
+                            this.loadingManager.setStatus(
+                                `Finalizing LoRA ${completedDownloads + failedDownloads + 1}/${this.downloadableLoRAs.length}`
+                            );
                         }
                     }
+                };
+                
+                for (let i = 0; i < this.downloadableLoRAs.length; i++) {
+                    const lora = this.downloadableLoRAs[i];
+                    
+                    // Reset current LoRA progress for new download
+                    currentLoraProgress = 0;
+                    
+                    // Initial status update for new LoRA
+                    this.loadingManager.setStatus(`Starting download for LoRA ${i+1}/${this.downloadableLoRAs.length}`);
+                    updateProgress(0, completedDownloads, lora.name);
+                    
+                    try {
+                        // Download the LoRA
+                        const response = await fetch('/api/download-lora', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                download_url: lora.downloadUrl,
+                                model_version_id: lora.modelVersionId,
+                                model_hash: lora.hash,
+                                lora_root: loraRoot,
+                                relative_path: targetPath.replace(loraRoot + '/', '')
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error(`Failed to download LoRA ${lora.name}: ${errorText}`);
+                            
+                            // Check if this is an early access error (status 401 is the key indicator)
+                            if (response.status === 401 || 
+                               (errorText.toLowerCase().includes('early access') || 
+                                errorText.toLowerCase().includes('purchase'))) {
+                                earlyAccessFailures++;
+                                this.loadingManager.setStatus(
+                                    `Failed to download ${lora.name}: Early Access required`
+                                );
+                            }
+                            
+                            failedDownloads++;
+                            // Continue with next download
+                        } else {
+                            completedDownloads++;
+                            
+                            // Update progress to show completion of current LoRA
+                            updateProgress(100, completedDownloads, '');
+                            
+                            if (completedDownloads + failedDownloads < this.downloadableLoRAs.length) {
+                                this.loadingManager.setStatus(
+                                    `Completed ${completedDownloads}/${this.downloadableLoRAs.length} LoRAs. Starting next download...`
+                                );
+                            }
+                        }
+                    } catch (downloadError) {
+                        console.error(`Error downloading LoRA ${lora.name}:`, downloadError);
+                        failedDownloads++;
+                        // Continue with next download
+                    }
                 }
+                
+                // Close WebSocket
+                ws.close();
+                
+                // Show appropriate completion message based on results
+                if (failedDownloads === 0) {
+                    showToast(`All ${completedDownloads} LoRAs downloaded successfully`, 'success');
+                } else {
+                    if (earlyAccessFailures > 0) {
+                        showToast(
+                            `Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs. ${earlyAccessFailures} failed due to Early Access restrictions.`,
+                            'error'
+                        );
+                    } else {
+                        showToast(`Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs`, 'error');
+                    }
+                }
+            }
 
-                // Show success message for recipe save
-                showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
-                
-                // Close modal and reload recipes
-                modalManager.closeModal('importModal');
-                
-                window.recipeManager.loadRecipes(true); // true to reset pagination
-                
+            // Show success message
+            if (isDownloadOnly) {
+                showToast('LoRAs downloaded successfully', 'success');
             } else {
-                // Handle error
-                console.error(`Failed to save recipe: ${result.error}`);
-                // Show error message to user
-                showToast(result.error, 'error');
+                showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
             }
             
+            // Close modal
+            modalManager.closeModal('importModal');
+            
+            // Refresh the recipe
+            window.recipeManager.loadRecipes(this.recipeId);
+            
         } catch (error) {
-            console.error('Error saving recipe:', error);
+            console.error('Error:', error);
             showToast(error.message, 'error');
         } finally {
             this.loadingManager.hide();
@@ -1204,5 +1222,34 @@ export class ImportManager {
         }
         
         return true;
+    }
+
+    // Add new method to handle downloading missing LoRAs from a recipe
+    downloadMissingLoras(recipeData, recipeId) {
+        // Store the recipe data and ID
+        this.recipeData = recipeData;
+        this.recipeId = recipeId;
+        
+        // Show the location step directly
+        this.showImportModal(recipeData, recipeId);
+        this.proceedToLocation();
+        
+        // Update the modal title to reflect we're downloading for an existing recipe
+        const modalTitle = document.querySelector('#importModal h2');
+        if (modalTitle) {
+            modalTitle.textContent = 'Download Missing LoRAs';
+        }
+        
+        // Update the save button text
+        const saveButton = document.querySelector('#locationStep .primary-btn');
+        if (saveButton) {
+            saveButton.textContent = 'Download Missing LoRAs';
+        }
+        
+        // Hide the back button since we're skipping steps
+        const backButton = document.querySelector('#locationStep .secondary-btn');
+        if (backButton) {
+            backButton.style.display = 'none';
+        }
     }
 }

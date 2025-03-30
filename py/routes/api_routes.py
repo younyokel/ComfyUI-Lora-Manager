@@ -42,6 +42,8 @@ class ApiRoutes:
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
         app.router.add_get('/api/folders', routes.get_folders)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
+        app.router.add_get('/api/civitai/model/{modelVersionId}', routes.get_civitai_model)
+        app.router.add_get('/api/civitai/model/{hash}', routes.get_civitai_model)
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
@@ -566,6 +568,23 @@ class ApiRoutes:
         except Exception as e:
             logger.error(f"Error fetching model versions: {e}")
             return web.Response(status=500, text=str(e))
+        
+    async def get_civitai_model(self, request: web.Request) -> web.Response:
+        """Get CivitAI model details by model version ID or hash"""
+        try:
+            model_version_id = request.match_info['modelVersionId']
+            if not model_version_id:
+                hash = request.match_info['hash']
+                model = await self.civitai_client.get_model_by_hash(hash)
+                return web.json_response(model)
+            
+            # Get model details from Civitai API    
+            model = await self.civitai_client.get_model_version_info(model_version_id)
+            return web.json_response(model)
+        except Exception as e:
+            logger.error(f"Error fetching model details: {e}")
+            return web.Response(status=500, text=str(e))
+    
 
     async def download_lora(self, request: web.Request) -> web.Response:
         async with self._download_lock:
@@ -579,8 +598,22 @@ class ApiRoutes:
                         'progress': progress
                     })
                 
+                # Check which identifier is provided
+                download_url = data.get('download_url')
+                model_hash = data.get('model_hash')
+                model_version_id = data.get('model_version_id')
+                
+                # Validate that at least one identifier is provided
+                if not any([download_url, model_hash, model_version_id]):
+                    return web.Response(
+                        status=400, 
+                        text="Missing required parameter: Please provide either 'download_url', 'hash', or 'modelVersionId'"
+                    )
+                
                 result = await self.download_manager.download_from_civitai(
-                    download_url=data.get('download_url'),
+                    download_url=download_url,
+                    model_hash=model_hash,
+                    model_version_id=model_version_id,
                     save_dir=data.get('lora_root'),
                     relative_path=data.get('relative_path'),
                     progress_callback=progress_callback

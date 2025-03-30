@@ -13,8 +13,9 @@ class DownloadManager:
         self.civitai_client = CivitaiClient()
         self.file_monitor = file_monitor
 
-    async def download_from_civitai(self, download_url: str, save_dir: str, relative_path: str = '', 
-                                  progress_callback=None) -> Dict:
+    async def download_from_civitai(self, download_url: str = None, model_hash: str = None, 
+                                  model_version_id: str = None, save_dir: str = None, 
+                                  relative_path: str = '', progress_callback=None) -> Dict:
         try:
             # Update save directory with relative path if provided
             if relative_path:
@@ -22,9 +23,21 @@ class DownloadManager:
                 # Create directory if it doesn't exist
                 os.makedirs(save_dir, exist_ok=True)
 
-            # Get version info
-            version_id = download_url.split('/')[-1]
-            version_info = await self.civitai_client.get_model_version_info(version_id)
+            # Get version info based on the provided identifier
+            version_info = None
+            
+            if download_url:
+                # Extract version ID from download URL
+                version_id = download_url.split('/')[-1]
+                version_info = await self.civitai_client.get_model_version_info(version_id)
+            elif model_version_id:
+                # Use model version ID directly
+                version_info = await self.civitai_client.get_model_version_info(model_version_id)
+            elif model_hash:
+                # Get model by hash
+                version_info = await self.civitai_client.get_model_by_hash(model_hash)
+
+            
             if not version_info:
                 return {'success': False, 'error': 'Failed to fetch model metadata'}
 
@@ -89,7 +102,7 @@ class DownloadManager:
             
             # 6. 开始下载流程
             result = await self._execute_download(
-                download_url=download_url,
+                download_url=file_info.get('downloadUrl', ''),
                 save_dir=save_dir,
                 metadata=metadata,
                 version_info=version_info,
