@@ -80,12 +80,7 @@ class CivitaiClient:
                     if response.status == 401:
                         logger.warning(f"Unauthorized access to resource: {url} (Status 401)")
                         
-                        # Check if this is an API key issue (has Set-Cookie headers)
-                        if 'Set-Cookie' in response.headers:
-                            return False, "Invalid or missing CivitAI API key. Please check your API key in settings."
-                        
-                        # Otherwise it's an early access restriction
-                        return False, "Early access restriction: You must purchase early access to download this LoRA."
+                        return False, "Invalid or missing CivitAI API key, or early access restriction."
                     
                     # Handle other client errors that might be permission-related
                     if response.status == 403:

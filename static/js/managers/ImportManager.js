@@ -893,7 +893,7 @@ export class ImportManager {
                 });
                 
                 const result = await response.json();
-                
+
                 if (!result.success) {
                     // Handle save error
                     console.error("Failed to save recipe:", result.error);
@@ -905,6 +905,7 @@ export class ImportManager {
             }
 
             // Check if we need to download LoRAs
+            let failedDownloads = 0;
             if (this.downloadableLoRAs && this.downloadableLoRAs.length > 0) {
                 // For download, we need to validate the target path
                 const loraRoot = document.getElementById('importLoraRoot')?.value;
@@ -931,8 +932,7 @@ export class ImportManager {
                 const updateProgress = this.loadingManager.showDownloadProgress(this.downloadableLoRAs.length);
                 
                 let completedDownloads = 0;
-                let failedDownloads = 0;
-                let earlyAccessFailures = 0;
+                let accessFailures = 0;
                 let currentLoraProgress = 0;
                 
                 // Set up progress tracking for current download
@@ -999,12 +999,10 @@ export class ImportManager {
                             console.error(`Failed to download LoRA ${lora.name}: ${errorText}`);
                             
                             // Check if this is an early access error (status 401 is the key indicator)
-                            if (response.status === 401 || 
-                               (errorText.toLowerCase().includes('early access') || 
-                                errorText.toLowerCase().includes('purchase'))) {
-                                earlyAccessFailures++;
+                            if (response.status === 401) {
+                                accessFailures++;
                                 this.loadingManager.setStatus(
-                                    `Failed to download ${lora.name}: Early Access required`
+                                    `Failed to download ${lora.name}: Access restricted`
                                 );
                             }
                             
@@ -1036,9 +1034,9 @@ export class ImportManager {
                 if (failedDownloads === 0) {
                     showToast(`All ${completedDownloads} LoRAs downloaded successfully`, 'success');
                 } else {
-                    if (earlyAccessFailures > 0) {
+                    if (accessFailures > 0) {
                         showToast(
-                            `Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs. ${earlyAccessFailures} failed due to Early Access restrictions.`,
+                            `Downloaded ${completedDownloads} of ${this.downloadableLoRAs.length} LoRAs. ${accessFailures} failed due to access restrictions. Check your API key in settings or early access status.`,
                             'error'
                         );
                     } else {
@@ -1049,7 +1047,9 @@ export class ImportManager {
 
             // Show success message
             if (isDownloadOnly) {
-                showToast('LoRAs downloaded successfully', 'success');
+                if (failedDownloads === 0) {    
+                    showToast('LoRAs downloaded successfully', 'success');
+                }
             } else {
                 showToast(`Recipe "${this.recipeName}" saved successfully`, 'success');
             }
