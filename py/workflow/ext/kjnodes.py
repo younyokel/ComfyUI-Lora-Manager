@@ -48,6 +48,10 @@ def transform_empty_latent_presets(inputs: Dict) -> Dict:
     
     return {"width": width, "height": height, "size": f"{width}x{height}"}
 
+def transform_int_constant(inputs: Dict) -> int:
+    """Transform function for INTConstant nodes"""
+    return inputs.get("value", 0)
+
 # =============================================================================
 # Register Mappers
 # =============================================================================
@@ -65,6 +69,10 @@ KJNODES_MAPPERS = {
     "EmptyLatentImagePresets": {
         "inputs_to_track": ["dimensions", "invert", "batch_size"],
         "transform_func": transform_empty_latent_presets
+    },
+    "INTConstant": {
+        "inputs_to_track": ["value"],
+        "transform_func": transform_int_constant
     }
 }
 
