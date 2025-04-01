@@ -1,7 +1,7 @@
 {
     "3": {
         "inputs": {
-            "seed": 241,
+            "seed": 42,
             "steps": 20,
             "cfg": 8,
             "sampler_name": "euler_ancestral",
@@ -121,7 +121,7 @@
     },
     "21": {
         "inputs": {
-            "string": "masterpiece, best quality, good quality, very aesthetic, absurdres, newest, 8K, depth of field, focused subject, close up, stylized, in gold and neon shades, wabi sabi, 1girl, rainbow angel wings, looking at viewer, dynamic angle, from below, from side, relaxing",
+            "string": "masterpiece, best quality, good quality, very awa, newest, highres, absurdres, 1girl, solo, dress, standing, flower, outdoors, water, white flower, pink flower, scenery, reflection, rain, dark, ripples, yellow flower, puddle, colorful, abstract, standing on liquidi¼\nvery Wide Shot, limited palette,",
             "strip_newlines": false
         },
         "class_type": "StringConstantMultiline",
@@ -151,15 +151,19 @@
             "group_mode": true,
             "toggle_trigger_words": [
                 {
-                    "text": "in the style of ck-rw",
+                    "text": "xxx667_illu",
                     "active": true
                 },
                 {
-                    "text": "in the style of cksc",
+                    "text": "glowing",
                     "active": true
                 },
                 {
-                    "text": "artist:moriimee",
+                    "text": "glitch",
+                    "active": true
+                },
+                {
+                    "text": "15546+456868",
                     "active": true
                 },
                 {
@@ -173,7 +177,7 @@
                     "_isDummy": true
                 }
             ],
-            "orinalMessage": "in the style of ck-rw,, in the style of cksc,, artist:moriimee",
+            "orinalMessage": "xxx667_illu,, glowing,, glitch,, 15546+456868",
             "trigger_words": [
                 "56",
                 2
@@ -186,22 +190,32 @@
     },
     "56": {
         "inputs": {
-            "text": "<lora:ck-shadow-circuit-IL-000012:0.78> <lora:MoriiMee_Gothic_Niji_Style_Illustrious_r1:0.45> <lora:ck-nc-cyberpunk-IL-000011:0.4>",
+            "text": "<lora:ponyv6_noobE11_2_adamW-000017:0.3> <lora:XXX667:0.4> <lora:114558v4df2fsdf5:0.6> <lora:illustriousXL_stabilizer_v1.23:0.3> <lora:mon_monmon2133:0.5>",
             "loras": [
                 {
-                    "name": "ck-shadow-circuit-IL-000012",
-                    "strength": 0.78,
+                    "name": "ponyv6_noobE11_2_adamW-000017",
+                    "strength": 0.3,
                     "active": true
                 },
                 {
-                    "name": "MoriiMee_Gothic_Niji_Style_Illustrious_r1",
-                    "strength": 0.45,
-                    "active": true
-                },
-                {
-                    "name": "ck-nc-cyberpunk-IL-000011",
+                    "name": "XXX667",
                     "strength": 0.4,
-                    "active": false
+                    "active": true
+                },
+                {
+                    "name": "114558v4df2fsdf5",
+                    "strength": 0.6,
+                    "active": true
+                },
+                {
+                    "name": "illustriousXL_stabilizer_v1.23",
+                    "strength": 0.3,
+                    "active": true
+                },
+                {
+                    "name": "mon_monmon2133",
+                    "strength": 0.5,
+                    "active": true
                 },
                 {
                     "name": "__dummy_item1__",
@@ -273,7 +287,7 @@
                 {
                     "name": "ck-neon-retrowave-IL-000012",
                     "strength": 0.8,
-                    "active": true
+                    "active": false
                 },
                 {
                     "name": "__dummy_item1__",

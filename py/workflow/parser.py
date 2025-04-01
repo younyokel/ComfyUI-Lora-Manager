@@ -4,7 +4,7 @@ Main workflow parser implementation for ComfyUI
 import json
 import logging
 from typing import Dict, List, Any, Optional, Union, Set
-from .mappers import get_mapper, get_all_mappers, load_extensions
+from .mappers import get_mapper, get_all_mappers, load_extensions, process_node
 from .utils import (
     load_workflow, save_output, find_node_by_type,
     trace_model_path
@@ -45,10 +45,9 @@ class WorkflowParser:
         node_type = node_data.get("class_type")
         
         result = None
-        mapper = get_mapper(node_type)
-        if mapper:
+        if get_mapper(node_type):
             try:
-                result = mapper.process(node_id, node_data, workflow, self)
+                result = process_node(node_id, node_data, workflow, self)
                 # Cache the result
                 self.node_results_cache[node_id] = result
             except Exception as e:
