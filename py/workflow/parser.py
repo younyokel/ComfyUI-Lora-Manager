@@ -166,71 +166,33 @@ class WorkflowParser:
             logger.warning("No suitable sampler node found in workflow")
             return {}
         
-        # Start parsing from the sampler node
-        result = {
-            "gen_params": {},
-            "loras": ""
-        }
-        
         # Process sampler node to extract parameters
         sampler_result = self.process_node(sampler_node_id, workflow)
-        if sampler_result:
-            # Process the result
-            for key, value in sampler_result.items():
-                # Special handling for the positive prompt from FluxGuidance
-                if key == "positive" and isinstance(value, dict):
-                    # Extract guidance value
-                    if "guidance" in value:
-                        result["gen_params"]["guidance"] = value["guidance"]
-                    
-                    # Extract prompt
-                    if "prompt" in value:
-                        result["gen_params"]["prompt"] = value["prompt"]
-                else:
-                    # Normal handling for other values
-                    result["gen_params"][key] = value
+        logger.info(f"Sampler result: {sampler_result}")
+        if not sampler_result:
+            return {}
         
-        # Process the positive prompt node if it exists and we don't have a prompt yet
-        if "prompt" not in result["gen_params"] and "positive" in sampler_result:
-            positive_value = sampler_result.get("positive")
-            if isinstance(positive_value, str):
-                result["gen_params"]["prompt"] = positive_value
-        
-        # Manually check for FluxGuidance if we don't have guidance value
-        if "guidance" not in result["gen_params"]:
-            flux_node_id = find_node_by_type(workflow, "FluxGuidance")
-            if flux_node_id:
-                # Get the direct input from the node
-                node_inputs = workflow[flux_node_id].get("inputs", {})
-                if "guidance" in node_inputs:
-                    result["gen_params"]["guidance"] = node_inputs["guidance"]
-        
-        # Extract loras from the model input of sampler
-        sampler_node = workflow.get(sampler_node_id, {})
-        sampler_inputs = sampler_node.get("inputs", {})
-        if "model" in sampler_inputs and isinstance(sampler_inputs["model"], list):
-            loras_text = self.collect_loras_from_model(sampler_inputs["model"], workflow)
-            if loras_text:
-                result["loras"] = loras_text
+        # Return the sampler result directly - it's already in the format we need
+        # This simplifies the structure and makes it easier to use in recipe_routes.py
         
         # Handle standard ComfyUI names vs our output format
-        if "cfg" in result["gen_params"]:
-            result["gen_params"]["cfg_scale"] = result["gen_params"].pop("cfg")
+        if "cfg" in sampler_result:
+            sampler_result["cfg_scale"] = sampler_result.pop("cfg")
             
         # Add clip_skip = 1 to match reference output if not already present
-        if "clip_skip" not in result["gen_params"]:
-            result["gen_params"]["clip_skip"] = "1"
+        if "clip_skip" not in sampler_result:
+            sampler_result["clip_skip"] = "1"
         
         # Ensure the prompt is a string and not a nested dictionary
-        if "prompt" in result["gen_params"] and isinstance(result["gen_params"]["prompt"], dict):
-            if "prompt" in result["gen_params"]["prompt"]:
-                result["gen_params"]["prompt"] = result["gen_params"]["prompt"]["prompt"]
+        if "prompt" in sampler_result and isinstance(sampler_result["prompt"], dict):
+            if "prompt" in sampler_result["prompt"]:
+                sampler_result["prompt"] = sampler_result["prompt"]["prompt"]
         
         # Save the result if requested
         if output_path:
-            save_output(result, output_path)
+            save_output(sampler_result, output_path)
             
-        return result
+        return sampler_result
 
 
 def parse_workflow(workflow_path: str, output_path: Optional[str] = None) -> Dict:
@@ -245,4 +207,4 @@ def parse_workflow(workflow_path: str, output_path: Optional[str] = None) -> Dic
         Dictionary containing extracted parameters
     """
     parser = WorkflowParser()
-    return parser.parse_workflow(workflow_path, output_path) 
+    return parser.parse_workflow(workflow_path, output_path)

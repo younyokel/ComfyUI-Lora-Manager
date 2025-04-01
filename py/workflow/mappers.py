@@ -125,6 +125,15 @@ def transform_ksampler(inputs: Dict) -> Dict:
     # Add clip_skip if present
     if "clip_skip" in inputs:
         result["clip_skip"] = str(inputs.get("clip_skip", ""))
+
+    # Add guidance if present
+    if "guidance" in inputs:
+        result["guidance"] = str(inputs.get("guidance", ""))
+
+    # Add model if present
+    if "model" in inputs:
+        result["checkpoint"] = inputs.get("model", {}).get("checkpoint", "")
+        result["loras"] = inputs.get("model", {}).get("loras", "")
         
     return result
 
@@ -167,8 +176,13 @@ def transform_lora_loader(inputs: Dict) -> Dict:
                 lora_name = stack_entry[0]
                 strength = stack_entry[1]
                 lora_texts.append(f"<lora:{lora_name}:{strength}>")
+
+    result = {
+        "checkpoint": inputs.get("model", {}).get("checkpoint", ""),
+        "loras": " ".join(lora_texts)
+    }
     
-    return {"loras": " ".join(lora_texts)}
+    return result
 
 def transform_lora_stacker(inputs: Dict) -> Dict:
     """Transform function for LoraStacker nodes"""
@@ -276,7 +290,7 @@ NODE_MAPPERS = {
     },
     # LoraManager nodes
     "Lora Loader (LoraManager)": {
-        "inputs_to_track": ["loras", "lora_stack"],
+        "inputs_to_track": ["model", "loras", "lora_stack"],
         "transform_func": transform_lora_loader
     },
     "Lora Stacker (LoraManager)": {

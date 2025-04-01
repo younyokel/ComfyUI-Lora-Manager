@@ -254,51 +254,6 @@
             "title": "Text Load Line From File"
         }
     },
-    "223": {
-        "inputs": {
-            "filename": "%time_%seed",
-            "path": "%date",
-            "extension": "jpeg",
-            "steps": [
-                "246",
-                0
-            ],
-            "cfg": 3.5,
-            "modelname": "flux_dev",
-            "sampler_name": "dpmpp_2m",
-            "scheduler": "beta",
-            "positive": [
-                "203",
-                0
-            ],
-            "negative": "",
-            "width": [
-                "48",
-                1
-            ],
-            "height": [
-                "48",
-                2
-            ],
-            "lossless_webp": true,
-            "quality_jpeg_or_webp": 100,
-            "optimize_png": false,
-            "counter": 0,
-            "denoise": 1,
-            "clip_skip": 1,
-            "time_format": "%Y-%m-%d-%H%M%S",
-            "save_workflow_as_json": false,
-            "embed_workflow_in_png": false,
-            "images": [
-                "8",
-                0
-            ]
-        },
-        "class_type": "Image Saver",
-        "_meta": {
-            "title": "Image Saver"
-        }
-    },
     "226": {
         "inputs": {
             "images": [
@@ -325,11 +280,7 @@
             "group_mode": true,
             "toggle_trigger_words": [
                 {
-                    "text": "perfection style",
-                    "active": true
-                },
-                {
-                    "text": "mythp0rt",
+                    "text": "bo-exposure",
                     "active": true
                 },
                 {
@@ -343,7 +294,7 @@
                     "_isDummy": true
                 }
             ],
-            "orinalMessage": "perfection style,, mythp0rt",
+            "orinalMessage": "bo-exposure",
             "trigger_words": [
                 "299",
                 2
@@ -382,7 +333,6 @@
     },
     "298": {
         "inputs": {
-            "text": "flux1/testing/matmillerartFLUX.safetensors,0.2,0.2",
             "anything": [
                 "297",
                 0
