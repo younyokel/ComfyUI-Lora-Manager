@@ -178,7 +178,8 @@ export class UpdateService {
                 if (this.updateInfo.changelog && this.updateInfo.changelog.length > 0) {
                     this.updateInfo.changelog.forEach(item => {
                         const listItem = document.createElement('li');
-                        listItem.textContent = item;
+                        // Parse markdown in changelog items
+                        listItem.innerHTML = this.parseMarkdown(item);
                         changelogList.appendChild(listItem);
                     });
                 } else {
@@ -199,6 +200,25 @@ export class UpdateService {
             const versionTag = this.latestVersion.replace(/^v/, '');
             githubLink.href = `https://github.com/willmiao/ComfyUI-Lora-Manager/releases/tag/v${versionTag}`;
         }
+    }
+    
+    // Simple markdown parser for changelog items
+    parseMarkdown(text) {
+        if (!text) return '';
+        
+        // Handle bold text (**text**)
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Handle italic text (*text*)
+        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Handle inline code (`code`)
+        text = text.replace(/`(.*?)`/g, '<code>$1</code>');
+        
+        // Handle links [text](url)
+        text = text.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+        
+        return text;
     }
     
     toggleUpdateModal() {

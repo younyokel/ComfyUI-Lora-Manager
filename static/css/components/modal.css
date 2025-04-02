@@ -515,3 +515,43 @@ input:checked + .toggle-slider:before {
     margin-top: var(--space-1);
     text-align: center;
 }
+
+/* Add styles for markdown elements in changelog */
+.changelog-item ul {
+    padding-left: 20px;
+    margin-top: 8px;
+}
+
+.changelog-item li {
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.changelog-item strong {
+    font-weight: 600;
+}
+
+.changelog-item em {
+    font-style: italic;
+}
+
+.changelog-item code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+[data-theme="dark"] .changelog-item code {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.changelog-item a {
+    color: var(--lora-accent);
+    text-decoration: none;
+}
+
+.changelog-item a:hover {
+    text-decoration: underline;
+}
