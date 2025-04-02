@@ -6,9 +6,6 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
-# Import the mapper registration functions from the parent module
-from workflow.mappers import create_mapper, register_mapper
-
 # =============================================================================
 # Transform Functions
 # =============================================================================
@@ -121,11 +118,11 @@ def transform_checkpoint_loader(inputs: Dict) -> Dict:
     return {"checkpoint": ckpt_name} if ckpt_name else {}
 
 # =============================================================================
-# Register Mappers
+# Node Mapper Definitions
 # =============================================================================
 
 # Define the mappers for ComfyUI core nodes not in main mapper
-COMFYUI_CORE_MAPPERS = {
+NODE_MAPPERS_EXT = {
     # KSamplers
     "SamplerCustomAdvanced": {
         "inputs_to_track": ["noise", "guider", "sampler", "sigmas", "latent_image"],
@@ -163,16 +160,4 @@ COMFYUI_CORE_MAPPERS = {
         "inputs_to_track": ["ckpt_name"],
         "transform_func": transform_checkpoint_loader
     }
-}
-
-# Register all ComfyUI core mappers
-for node_type, config in COMFYUI_CORE_MAPPERS.items():
-    mapper = create_mapper(
-        node_type=node_type,
-        inputs_to_track=config["inputs_to_track"],
-        transform_func=config["transform_func"]
-    )
-    register_mapper(mapper)
-    logger.info(f"Registered ComfyUI core mapper for node type: {node_type}")
-
-logger.info(f"Loaded ComfyUI core extension with {len(COMFYUI_CORE_MAPPERS)} mappers") 
+} 

@@ -211,7 +211,7 @@ class RecipeScanner:
                         lora['hash'] = hash_from_civitai
                         metadata_updated = True
                     else:
-                        logger.warning(f"Could not get hash for modelVersionId {model_version_id}")
+                        logger.debug(f"Could not get hash for modelVersionId {model_version_id}")
             
             # If has hash but no file_name, look up in lora library
             if 'hash' in lora and (not lora.get('file_name') or not lora['file_name']):
@@ -261,7 +261,7 @@ class RecipeScanner:
             version_info = await self._civitai_client.get_model_version_info(model_version_id)
             
             if not version_info or not version_info.get('files'):
-                logger.warning(f"No files found in version info for ID: {model_version_id}")
+                logger.debug(f"No files found in version info for ID: {model_version_id}")
                 return None
                 
             # Get hash from the first file
@@ -269,7 +269,7 @@ class RecipeScanner:
                 if file_info.get('hashes', {}).get('SHA256'):
                     return file_info['hashes']['SHA256']
                     
-            logger.warning(f"No SHA256 hash found in version info for ID: {model_version_id}")
+            logger.debug(f"No SHA256 hash found in version info for ID: {model_version_id}")
             return None
         except Exception as e:
             logger.error(f"Error getting hash from Civitai: {e}")
@@ -286,7 +286,7 @@ class RecipeScanner:
             if version_info and 'name' in version_info:
                 return version_info['name']
                     
-            logger.warning(f"No version name found for modelVersionId {model_version_id}")
+            logger.debug(f"No version name found for modelVersionId {model_version_id}")
             return None
         except Exception as e:
             logger.error(f"Error getting model version name from Civitai: {e}")

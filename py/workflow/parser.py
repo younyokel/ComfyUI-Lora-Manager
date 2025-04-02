@@ -15,14 +15,13 @@ logger = logging.getLogger(__name__)
 class WorkflowParser:
     """Parser for ComfyUI workflows"""
     
-    def __init__(self, load_extensions_on_init: bool = True):
+    def __init__(self):
         """Initialize the parser with mappers"""
         self.processed_nodes: Set[str] = set()  # Track processed nodes to avoid cycles
         self.node_results_cache: Dict[str, Any] = {}  # Cache for processed node results
         
-        # Load extensions if requested
-        if load_extensions_on_init:
-            load_extensions()
+        # Load extensions
+        load_extensions()
     
     def process_node(self, node_id: str, workflow: Dict) -> Any:
         """Process a single node and extract relevant information"""
@@ -89,7 +88,7 @@ class WorkflowParser:
         
         # If we found SamplerCustomAdvanced nodes, return the first one
         if sampler_advanced_nodes:
-            logger.info(f"Found SamplerCustomAdvanced node: {sampler_advanced_nodes[0]}")
+            logger.debug(f"Found SamplerCustomAdvanced node: {sampler_advanced_nodes[0]}")
             return sampler_advanced_nodes[0]
         
         # If we have KSampler nodes, look for one with denoise=1.0
@@ -101,11 +100,11 @@ class WorkflowParser:
                 
                 # Check if denoise is 1.0 (allowing for small floating point differences)
                 if abs(float(denoise) - 1.0) < 0.001:
-                    logger.info(f"Found KSampler node with denoise=1.0: {node_id}")
+                    logger.debug(f"Found KSampler node with denoise=1.0: {node_id}")
                     return node_id
             
             # If no KSampler with denoise=1.0 found, use the first one
-            logger.info(f"No KSampler with denoise=1.0 found, using first KSampler: {ksampler_nodes[0]}")
+            logger.debug(f"No KSampler with denoise=1.0 found, using first KSampler: {ksampler_nodes[0]}")
             return ksampler_nodes[0]
         
         # No sampler nodes found
@@ -168,7 +167,6 @@ class WorkflowParser:
         
         # Process sampler node to extract parameters
         sampler_result = self.process_node(sampler_node_id, workflow)
-        logger.info(f"Sampler result: {sampler_result}")
         if not sampler_result:
             return {}
         

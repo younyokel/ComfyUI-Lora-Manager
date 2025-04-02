@@ -303,8 +303,8 @@ NODE_MAPPERS = {
     }   
 }
 
-def register_default_mappers() -> None:
-    """Register all default mappers from the NODE_MAPPERS dictionary"""
+def register_all_mappers() -> None:
+    """Register all mappers from the NODE_MAPPERS dictionary"""
     for node_type, config in NODE_MAPPERS.items():
         mapper = create_mapper(
             node_type=node_type,
@@ -312,7 +312,7 @@ def register_default_mappers() -> None:
             transform_func=config["transform_func"]
         )
         register_mapper(mapper)
-    logger.info(f"Registered {len(NODE_MAPPERS)} default node mappers")
+    logger.info(f"Registered {len(NODE_MAPPERS)} node mappers")
 
 # =============================================================================
 # Extension Loading
@@ -322,8 +322,8 @@ def load_extensions(ext_dir: str = None) -> None:
     """
     Load mapper extensions from the specified directory
     
-    Extension files should define mappers using the create_mapper function
-    and then call register_mapper to add them to the registry.
+    Extension files should define a NODE_MAPPERS_EXT dictionary containing mapper configurations.
+    These will be added to the global NODE_MAPPERS dictionary and registered automatically.
     """
     # Use default path if none provided
     if ext_dir is None:
@@ -349,9 +349,19 @@ def load_extensions(ext_dir: str = None) -> None:
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
-                    logger.info(f"Loaded extension module: {filename}")
+                    
+                    # Check if the module defines NODE_MAPPERS_EXT
+                    if hasattr(module, 'NODE_MAPPERS_EXT'):
+                        # Add the extension mappers to the global NODE_MAPPERS dictionary
+                        NODE_MAPPERS.update(module.NODE_MAPPERS_EXT)
+                        logger.info(f"Added {len(module.NODE_MAPPERS_EXT)} mappers from extension: {filename}")
+                    else:
+                        logger.warning(f"Extension {filename} does not define NODE_MAPPERS_EXT dictionary")
             except Exception as e:
                 logger.warning(f"Error loading extension {filename}: {e}")
+    
+    # Re-register all mappers after loading extensions
+    register_all_mappers()
 
 # Initialize the registry with default mappers
-register_default_mappers() 
+# register_default_mappers() 

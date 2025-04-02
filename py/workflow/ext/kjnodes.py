@@ -7,9 +7,6 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Import the mapper registration functions from the parent module
-from workflow.mappers import create_mapper, register_mapper
-
 # =============================================================================
 # Transform Functions
 # =============================================================================
@@ -53,11 +50,11 @@ def transform_int_constant(inputs: Dict) -> int:
     return inputs.get("value", 0)
 
 # =============================================================================
-# Register Mappers
+# Node Mapper Definitions
 # =============================================================================
 
 # Define the mappers for KJNodes
-KJNODES_MAPPERS = {
+NODE_MAPPERS_EXT = {
     "JoinStrings": {
         "inputs_to_track": ["string1", "string2", "delimiter"],
         "transform_func": transform_join_strings
@@ -74,16 +71,4 @@ KJNODES_MAPPERS = {
         "inputs_to_track": ["value"],
         "transform_func": transform_int_constant
     }
-}
-
-# Register all KJNodes mappers
-for node_type, config in KJNODES_MAPPERS.items():
-    mapper = create_mapper(
-        node_type=node_type,
-        inputs_to_track=config["inputs_to_track"],
-        transform_func=config["transform_func"]
-    )
-    register_mapper(mapper)
-    logger.info(f"Registered KJNodes mapper for node type: {node_type}")
-
-logger.info(f"Loaded KJNodes extension with {len(KJNODES_MAPPERS)} mappers") 
+} 
