@@ -46,7 +46,7 @@ def get_all_mappers() -> Dict[str, Dict]:
 # Node Processing Function
 # =============================================================================
 
-def process_node(node_id: str, node_data: Dict, workflow: Dict, parser: 'WorkflowParser') -> Any:
+def process_node(node_id: str, node_data: Dict, workflow: Dict, parser: 'WorkflowParser') -> Any: # type: ignore
     """Process a node using its mapper and extract relevant information"""
     node_type = node_data.get("class_type")
     mapper = get_mapper(node_type)
