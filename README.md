@@ -20,6 +20,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.3
+* **Enhanced Workflow Parser** - Rebuilt workflow analysis engine with improved support for ComfyUI core nodes and easier extensibility
+* **Improved Recipe System** - Refined the experimental Save Recipe functionality with better workflow integration
+* **New Save Image Node** - Added experimental node with metadata support for perfect CivitAI compatibility
+  * Supports dynamic filename prefixes with variables [1](https://github.com/nkchocoai/ComfyUI-SaveImageWithMetaData?tab=readme-ov-file#filename_prefix)
+* **Default LoRA Root Setting** - Added configuration option for setting your preferred LoRA directory
+
 ### v0.8.2  
 * **Faster Initialization for Forge Users** - Improved first-run efficiency by utilizing existing `.json` and `.civitai.info` files from Forge’s CivitAI helper extension, making migration smoother.  
 * **LoRA Filename Editing** - Added support for renaming LoRA files directly within LoRA Manager.  
@@ -41,52 +48,6 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 * **Simplified Workflow Application** - Quickly apply saved recipes to new projects
 * **Enhanced UI & UX** - Improved interface design and user experience
 * **Bug Fixes & Stability** - Resolved various issues and enhanced overall performance
-
-### v0.7.37
-* Added NSFW content control settings (blur mature content and SFW-only filter)
-* Implemented intelligent blur effects for previews and showcase media
-* Added manual content rating option through context menu
-* Enhanced user experience with configurable content visibility
-* Fixed various bugs and improved stability
-
-### v0.7.36
-* Enhanced LoRA details view with model descriptions and tags display
-* Added tag filtering system for improved model discovery
-* Implemented editable trigger words functionality
-* Improved TriggerWord Toggle node with new group mode option for granular control
-* Added new Lora Stacker node with cross-compatibility support (works with efficiency nodes, ComfyRoll, easy-use, etc.)
-* Fixed several bugs
-
-### v0.7.35-beta
-* Added base model filtering
-* Implemented bulk operations (copy syntax, move multiple LoRAs)
-* Added ability to edit LoRA model names in details view
-* Added update checker with notification system
-* Added support modal for user feedback and community links
-
-### v0.7.33
-* Enhanced LoRA Loader node with visual strength adjustment widgets
-* Added toggle switches for LoRA enable/disable
-* Implemented image tooltips for LoRA preview
-* Added TriggerWord Toggle node with visual word selection
-* Fixed various bugs and improved stability
-
-### v0.7.3
-* Added "Lora Loader (LoraManager)" custom node for workflows
-* Implemented one-click LoRA integration
-* Added direct copying of LoRA syntax from manager interface
-* Added automatic preset strength value application
-* Added automatic trigger word loading
-
-### v0.7.0
-* Added direct CivitAI integration for downloading LoRAs
-* Implemented version selection for model downloads
-* Added target folder selection for downloads
-* Added context menu with quick actions
-* Added force refresh for CivitAI data
-* Implemented LoRA movement between folders
-* Added personal usage tips and notes for LoRAs
-* Improved performance for details window
 
 [View Update History](./update_logs.md)
 
@@ -168,6 +129,15 @@ pip install requirements.txt
    - Click copy button or use right-click menu "Copy LoRA syntax"
    - Paste into the Lora Loader node's text input
    - The node will automatically apply preset strength and trigger words
+
+---
+
+## Credits
+
+This project has been inspired by and benefited from other excellent ComfyUI extensions:
+
+- [ComfyUI-SaveImageWithMetaData](https://github.com/Comfy-Community/ComfyUI-SaveImageWithMetaData) - For the image metadata functionality
+- [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) - For the lora loader functionality
 
 ---
 

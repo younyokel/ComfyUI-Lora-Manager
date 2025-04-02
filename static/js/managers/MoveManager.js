@@ -2,6 +2,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
 import { modalManager } from './ModalManager.js';
+import { getStorageItem } from '../utils/storageHelpers.js';
 
 class MoveManager {
     constructor() {
@@ -86,6 +87,12 @@ class MoveManager {
             this.loraRootSelect.innerHTML = data.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
+
+            // Set default lora root if available
+            const defaultRoot = getStorageItem('settings', {}).default_loras_root;
+            if (defaultRoot && data.roots.includes(defaultRoot)) {
+                this.loraRootSelect.value = defaultRoot;
+            }
 
             this.updatePathPreview();
             modalManager.showModal('moveModal');

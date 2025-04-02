@@ -341,8 +341,7 @@ body.modal-open {
 
 .setting-item {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
     margin-bottom: var(--space-2);
     padding: var(--space-1);
     border-radius: var(--border-radius-xs);
@@ -357,7 +356,8 @@ body.modal-open {
 }
 
 .setting-info {
-    flex: 1;
+    margin-bottom: var(--space-1);
+    width: 100%;
 }
 
 .setting-info label {
@@ -367,7 +367,39 @@ body.modal-open {
 }
 
 .setting-control {
-    padding-left: var(--space-2);
+    width: 100%;
+    margin-bottom: var(--space-1);
+}
+
+/* Select Control Styles */
+.select-control {
+    width: 100%;
+}
+
+.select-control select {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background-color: var(--lora-surface);
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+
+/* Fix dark theme select dropdown text color */
+[data-theme="dark"] .select-control select {
+    background-color: rgba(30, 30, 30, 0.9);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .select-control select option {
+    background-color: #2d2d2d;
+    color: var(--text-color);
+}
+
+.select-control select:focus {
+    border-color: var(--lora-accent);
+    outline: none;
 }
 
 /* Toggle Switch */
@@ -482,4 +514,44 @@ input:checked + .toggle-slider:before {
     font-style: italic;
     margin-top: var(--space-1);
     text-align: center;
+}
+
+/* Add styles for markdown elements in changelog */
+.changelog-item ul {
+    padding-left: 20px;
+    margin-top: 8px;
+}
+
+.changelog-item li {
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.changelog-item strong {
+    font-weight: 600;
+}
+
+.changelog-item em {
+    font-style: italic;
+}
+
+.changelog-item code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+[data-theme="dark"] .changelog-item code {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.changelog-item a {
+    color: var(--lora-accent);
+    text-decoration: none;
+}
+
+.changelog-item a:hover {
+    text-decoration: underline;
 }

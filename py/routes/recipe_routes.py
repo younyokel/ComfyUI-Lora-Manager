@@ -783,8 +783,8 @@ class RecipeRoutes:
             # Parse the workflow to extract generation parameters and loras
             parsed_workflow = self.parser.parse_workflow(workflow_json)
 
-            if not parsed_workflow or not parsed_workflow.get("gen_params"):
-                return web.json_response({"error": "Could not extract generation parameters from workflow"}, status=400)
+            if not parsed_workflow:
+                return web.json_response({"error": "Could not extract parameters from workflow"}, status=400)
             
             # Get the lora stack from the parsed workflow
             lora_stack = parsed_workflow.get("loras", "")
@@ -880,7 +880,9 @@ class RecipeRoutes:
                 "created_date": time.time(),
                 "base_model": most_common_base_model,
                 "loras": loras_data,
-                "gen_params": parsed_workflow.get("gen_params", {}),  # Use the parsed workflow parameters
+                "checkpoint": parsed_workflow.get("checkpoint", ""),
+                "gen_params": {key: value for key, value in parsed_workflow.items() 
+                               if key not in ['checkpoint', 'loras']},
                 "loras_stack": lora_stack  # Include the original lora stack string
             }
             
