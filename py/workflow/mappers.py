@@ -97,55 +97,7 @@ def process_node(node_id: str, node_data: Dict, workflow: Dict, parser: 'Workflo
 # Transform Functions
 # =============================================================================
 
-def transform_ksampler(inputs: Dict) -> Dict:
-    """Transform function for KSampler nodes"""
-    result = {
-        "seed": str(inputs.get("seed", "")),
-        "steps": str(inputs.get("steps", "")),
-        "cfg": str(inputs.get("cfg", "")),
-        "sampler": inputs.get("sampler_name", ""),
-        "scheduler": inputs.get("scheduler", ""),
-    }
-    
-    # Process positive prompt
-    if "positive" in inputs:
-        result["prompt"] = inputs["positive"]
-    
-    # Process negative prompt
-    if "negative" in inputs:
-        result["negative_prompt"] = inputs["negative"]
-    
-    # Get dimensions from latent image
-    if "latent_image" in inputs and isinstance(inputs["latent_image"], dict):
-        width = inputs["latent_image"].get("width", 0)
-        height = inputs["latent_image"].get("height", 0)
-        if width and height:
-            result["size"] = f"{width}x{height}"
-    
-    # Add clip_skip if present
-    if "clip_skip" in inputs:
-        result["clip_skip"] = str(inputs.get("clip_skip", ""))
 
-    # Add guidance if present
-    if "guidance" in inputs:
-        result["guidance"] = str(inputs.get("guidance", ""))
-
-    # Add model if present
-    if "model" in inputs:
-        result["checkpoint"] = inputs.get("model", {}).get("checkpoint", "")
-        result["loras"] = inputs.get("model", {}).get("loras", "")
-        
-    return result
-
-def transform_empty_latent(inputs: Dict) -> Dict:
-    """Transform function for EmptyLatentImage nodes"""
-    width = inputs.get("width", 0)
-    height = inputs.get("height", 0)
-    return {"width": width, "height": height, "size": f"{width}x{height}"}
-
-def transform_clip_text(inputs: Dict) -> Any:
-    """Transform function for CLIPTextEncode nodes"""
-    return inputs.get("text", "")
 
 def transform_lora_loader(inputs: Dict) -> Dict:
     """Transform function for LoraLoader nodes"""
@@ -181,6 +133,9 @@ def transform_lora_loader(inputs: Dict) -> Dict:
         "checkpoint": inputs.get("model", {}).get("checkpoint", ""),
         "loras": " ".join(lora_texts)
     }
+
+    if "clip" in inputs:
+        result["clip_skip"] = inputs["clip"].get("clip_skip", "-1")
     
     return result
 
@@ -241,56 +196,16 @@ def transform_trigger_word_toggle(inputs: Dict) -> str:
     
     return ", ".join(active_words)
 
-def transform_flux_guidance(inputs: Dict) -> Dict:
-    """Transform function for FluxGuidance nodes"""
-    result = {}
-    
-    if "guidance" in inputs:
-        result["guidance"] = inputs["guidance"]
-    
-    if "conditioning" in inputs:
-        conditioning = inputs["conditioning"]
-        if isinstance(conditioning, str):
-            result["prompt"] = conditioning
-        else:
-            result["prompt"] = "Unknown prompt"
-    
-    return result
-
 # =============================================================================
 # Node Mapper Definitions
 # =============================================================================
 
 # Central definition of all supported node types and their configurations
 NODE_MAPPERS = {
-    # ComfyUI core nodes
-    "KSampler": {
-        "inputs_to_track": [
-            "seed", "steps", "cfg", "sampler_name", "scheduler", 
-            "denoise", "positive", "negative", "latent_image",
-            "model", "clip_skip"
-        ],
-        "transform_func": transform_ksampler
-    },
-    "EmptyLatentImage": {
-        "inputs_to_track": ["width", "height", "batch_size"],
-        "transform_func": transform_empty_latent
-    },
-    "EmptySD3LatentImage": {
-        "inputs_to_track": ["width", "height", "batch_size"],
-        "transform_func": transform_empty_latent
-    },
-    "CLIPTextEncode": {
-        "inputs_to_track": ["text", "clip"],
-        "transform_func": transform_clip_text
-    },
-    "FluxGuidance": {
-        "inputs_to_track": ["guidance", "conditioning"],
-        "transform_func": transform_flux_guidance
-    },
+    
     # LoraManager nodes
     "Lora Loader (LoraManager)": {
-        "inputs_to_track": ["model", "loras", "lora_stack"],
+        "inputs_to_track": ["model", "clip", "loras", "lora_stack"],
         "transform_func": transform_lora_loader
     },
     "Lora Stacker (LoraManager)": {
