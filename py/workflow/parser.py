@@ -111,33 +111,6 @@ class WorkflowParser:
         logger.warning("No sampler nodes found in workflow")
         return None
     
-    def collect_loras_from_model(self, model_input: List, workflow: Dict) -> str:
-        """Collect loras information from the model node chain"""
-        if not isinstance(model_input, list) or len(model_input) != 2:
-            return ""
-            
-        model_node_id, _ = model_input
-        # Convert node_id to string if it's an integer
-        if isinstance(model_node_id, int):
-            model_node_id = str(model_node_id)
-            
-        # Process the model node
-        model_result = self.process_node(model_node_id, workflow)
-        
-        # If this is a Lora Loader node, return the loras text
-        if model_result and isinstance(model_result, dict) and "loras" in model_result:
-            return model_result["loras"]
-            
-        # If not a lora loader, check the node's inputs for a model connection
-        node_data = workflow.get(model_node_id, {})
-        inputs = node_data.get("inputs", {})
-        
-        # If this node has a model input, follow that path
-        if "model" in inputs and isinstance(inputs["model"], list):
-            return self.collect_loras_from_model(inputs["model"], workflow)
-            
-        return ""
-    
     def parse_workflow(self, workflow_data: Union[str, Dict], output_path: Optional[str] = None) -> Dict:
         """
         Parse the workflow and extract generation parameters
