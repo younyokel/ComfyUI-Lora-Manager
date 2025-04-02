@@ -53,7 +53,7 @@ export class SettingsManager {
         this.initialized = true;
     }
 
-    loadSettingsToUI() {
+    async loadSettingsToUI() {
         // Set frontend settings from state
         const blurMatureContentCheckbox = document.getElementById('blurMatureContent');
         if (blurMatureContentCheckbox) {
@@ -65,8 +65,50 @@ export class SettingsManager {
             // Sync with state (backend will set this via template)
             state.global.settings.show_only_sfw = showOnlySFWCheckbox.checked;
         }
+
+        // Load default lora root
+        await this.loadLoraRoots();
         
         // Backend settings are loaded from the template directly
+    }
+
+    async loadLoraRoots() {
+        try {
+            const defaultLoraRootSelect = document.getElementById('defaultLoraRoot');
+            if (!defaultLoraRootSelect) return;
+            
+            // Fetch lora roots
+            const response = await fetch('/api/lora-roots');
+            if (!response.ok) {
+                throw new Error('Failed to fetch LoRA roots');
+            }
+            
+            const data = await response.json();
+            if (!data.roots || data.roots.length === 0) {
+                throw new Error('No LoRA roots found');
+            }
+            
+            // Clear existing options except the first one (No Default)
+            const noDefaultOption = defaultLoraRootSelect.querySelector('option[value=""]');
+            defaultLoraRootSelect.innerHTML = '';
+            defaultLoraRootSelect.appendChild(noDefaultOption);
+            
+            // Add options for each root
+            data.roots.forEach(root => {
+                const option = document.createElement('option');
+                option.value = root;
+                option.textContent = root;
+                defaultLoraRootSelect.appendChild(option);
+            });
+            
+            // Set selected value from settings
+            const defaultRoot = state.global.settings.default_loras_root || '';
+            defaultLoraRootSelect.value = defaultRoot;
+            
+        } catch (error) {
+            console.error('Error loading LoRA roots:', error);
+            showToast('Failed to load LoRA roots: ' + error.message, 'error');
+        }
     }
 
     toggleSettings() {
@@ -81,14 +123,16 @@ export class SettingsManager {
     async saveSettings() {
         // Get frontend settings from UI
         const blurMatureContent = document.getElementById('blurMatureContent').checked;
+        const showOnlySFW = document.getElementById('showOnlySFW').checked;
+        const defaultLoraRoot = document.getElementById('defaultLoraRoot').value;
         
         // Get backend settings
         const apiKey = document.getElementById('civitaiApiKey').value;
-        const showOnlySFW = document.getElementById('showOnlySFW').checked;
         
         // Update frontend state and save to localStorage
         state.global.settings.blurMatureContent = blurMatureContent;
         state.global.settings.show_only_sfw = showOnlySFW;
+        state.global.settings.default_loras_root = defaultLoraRoot;
         
         // Save settings to localStorage
         setStorageItem('settings', state.global.settings);

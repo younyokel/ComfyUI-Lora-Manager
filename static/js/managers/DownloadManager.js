@@ -3,7 +3,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
-
+import { getStorageItem } from '../utils/storageHelpers.js';
 export class DownloadManager {
     constructor() {
         this.currentVersion = null;
@@ -245,6 +245,12 @@ export class DownloadManager {
             loraRoot.innerHTML = data.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
+
+            // Set default lora root if available
+            const defaultRoot = getStorageItem('settings', {}).default_loras_root;
+            if (defaultRoot && data.roots.includes(defaultRoot)) {
+                loraRoot.value = defaultRoot;
+            }
 
             // Initialize folder browser after loading roots
             this.initializeFolderBrowser();

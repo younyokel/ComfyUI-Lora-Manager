@@ -66,6 +66,26 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Add Folder Settings Section -->
+            <div class="settings-section">
+                <h3>Folder Settings</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <label for="defaultLoraRoot">Default LoRA Root</label>
+                    </div>
+                    <div class="setting-control select-control">
+                        <select id="defaultLoraRoot">
+                            <option value="">No Default</option>
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                    </div>
+                    <div class="input-help">
+                        Set the default LoRA root directory for downloads, imports and moves
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="modal-actions">
             <button class="primary-btn" onclick="settingsManager.saveSettings()">Save</button>

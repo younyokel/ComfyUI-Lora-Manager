@@ -1,6 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
+import { getStorageItem } from '../utils/storageHelpers.js';
 
 export class ImportManager {
     constructor() {
@@ -779,6 +780,12 @@ export class ImportManager {
                 loraRoot.innerHTML = rootsData.roots.map(root => 
                     `<option value="${root}">${root}</option>`
                 ).join('');
+                
+                // Set default lora root if available
+                const defaultRoot = getStorageItem('settings', {}).default_loras_root;
+                if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
+                    loraRoot.value = defaultRoot;
+                }
             }
             
             // Fetch folders
