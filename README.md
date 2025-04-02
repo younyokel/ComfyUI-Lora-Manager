@@ -20,6 +20,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.3
+* **Enhanced Workflow Parser** - Rebuilt workflow analysis engine with improved support for ComfyUI core nodes and easier extensibility
+* **Improved Recipe System** - Refined the experimental Save Recipe functionality with better workflow integration
+* **New Save Image Node** - Added experimental node with metadata support for perfect CivitAI compatibility
+  * Supports dynamic filename prefixes with variables [1](https://github.com/nkchocoai/ComfyUI-SaveImageWithMetaData?tab=readme-ov-file#filename_prefix)
+* **Default LoRA Root Setting** - Added configuration option for setting your preferred LoRA directory
+
 ### v0.8.2  
 * **Faster Initialization for Forge Users** - Improved first-run efficiency by utilizing existing `.json` and `.civitai.info` files from Forge’s CivitAI helper extension, making migration smoother.  
 * **LoRA Filename Editing** - Added support for renaming LoRA files directly within LoRA Manager.  
@@ -168,6 +175,15 @@ pip install requirements.txt
    - Click copy button or use right-click menu "Copy LoRA syntax"
    - Paste into the Lora Loader node's text input
    - The node will automatically apply preset strength and trigger words
+
+---
+
+## Credits
+
+This project has been inspired by and benefited from other excellent ComfyUI extensions:
+
+- [ComfyUI-SaveImageWithMetaData](https://github.com/Comfy-Community/ComfyUI-SaveImageWithMetaData) - For the image metadata functionality
+- [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) - For the lora loader functionality
 
 ---
 
