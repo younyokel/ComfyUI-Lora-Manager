@@ -53,6 +53,9 @@ class RecipeRoutes:
         # Add new endpoint for updating recipe metadata (name and tags)
         app.router.add_put('/api/recipe/{recipe_id}/update', routes.update_recipe)
         
+        # Add new endpoint for reconnecting deleted LoRAs
+        app.router.add_post('/api/recipe/lora/reconnect', routes.reconnect_lora)
+        
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
         
@@ -762,7 +765,7 @@ class RecipeRoutes:
                         return web.json_response({"error": "Invalid workflow JSON"}, status=400)
             
             if not workflow_json:
-                return web.json_response({"error": "Missing required workflow_json field"}, status=400)
+                return web.json_response({"error": "Missing workflow JSON"}, status=400)
             
             # Find the latest image in the temp directory
             temp_dir = config.temp_directory
@@ -1020,4 +1023,114 @@ class RecipeRoutes:
             })
         except Exception as e:
             logger.error(f"Error updating recipe: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def reconnect_lora(self, request: web.Request) -> web.Response:
+        """Reconnect a deleted LoRA in a recipe to a local LoRA file"""
+        try:
+            # Parse request data
+            data = await request.json()
+            
+            # Validate required fields
+            required_fields = ['recipe_id', 'lora_data', 'target_name']
+            for field in required_fields:
+                if field not in data:
+                    return web.json_response({
+                        "error": f"Missing required field: {field}"
+                    }, status=400)
+            
+            recipe_id = data['recipe_id']
+            lora_data = data['lora_data']
+            target_name = data['target_name']
+            
+            # Get recipe scanner
+            scanner = self.recipe_scanner
+            lora_scanner = scanner._lora_scanner
+            
+            # Check if recipe exists
+            recipe_path = os.path.join(scanner.recipes_dir, f"{recipe_id}.recipe.json")
+            if not os.path.exists(recipe_path):
+                return web.json_response({"error": "Recipe not found"}, status=404)
+                
+            # Find target LoRA by name
+            target_lora = await lora_scanner.get_lora_info_by_name(target_name)
+            if not target_lora:
+                return web.json_response({"error": f"Local LoRA not found with name: {target_name}"}, status=404)
+                
+            # Load recipe data
+            with open(recipe_path, 'r', encoding='utf-8') as f:
+                recipe_data = json.load(f)
+                
+            # Find the deleted LoRA in the recipe
+            found = False
+            updated_lora = None
+            
+            # Identification can be by hash, modelVersionId, or modelName
+            for i, lora in enumerate(recipe_data.get('loras', [])):
+                match_found = False
+                
+                # Try to match by available identifiers
+                if 'hash' in lora and 'hash' in lora_data and lora['hash'] == lora_data['hash']:
+                    match_found = True
+                elif 'modelVersionId' in lora and 'modelVersionId' in lora_data and lora['modelVersionId'] == lora_data['modelVersionId']:
+                    match_found = True
+                elif 'modelName' in lora and 'modelName' in lora_data and lora['modelName'] == lora_data['modelName']:
+                    match_found = True
+                    
+                if match_found:
+                    # Update LoRA data
+                    lora['isDeleted'] = False
+                    lora['file_name'] = target_name
+                    
+                    # Update with information from the target LoRA
+                    if 'sha256' in target_lora:
+                        lora['hash'] = target_lora['sha256'].lower()
+                    if target_lora.get("civitai"):
+                        lora['modelName'] = target_lora['civitai']['model']['name']
+                        lora['modelVersionName'] = target_lora['civitai']['name']
+                        lora['modelVersionId'] = target_lora['civitai']['id']
+                        
+                    # Keep original fields for identification
+                    
+                    # Mark as found and store updated lora
+                    found = True
+                    updated_lora = dict(lora)  # Make a copy for response
+                    break
+                    
+            if not found:
+                return web.json_response({"error": "Could not find matching deleted LoRA in recipe"}, status=404)
+                
+            # Save updated recipe
+            with open(recipe_path, 'w', encoding='utf-8') as f:
+                json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+
+            updated_lora['inLibrary'] = True
+            updated_lora['preview_url'] = target_lora['preview_url']
+            updated_lora['localPath'] = target_lora['file_path']
+                
+            # Update in cache if it exists
+            if scanner._cache is not None:
+                for cache_item in scanner._cache.raw_data:
+                    if cache_item.get('id') == recipe_id:
+                        # Replace loras array with updated version
+                        cache_item['loras'] = recipe_data['loras']
+                        
+                        # Resort the cache
+                        asyncio.create_task(scanner._cache.resort())
+                        break
+                        
+            # Update EXIF metadata if image exists
+            image_path = recipe_data.get('file_path')
+            if image_path and os.path.exists(image_path):
+                from ..utils.exif_utils import ExifUtils
+                ExifUtils.append_recipe_metadata(image_path, recipe_data)
+                
+            return web.json_response({
+                "success": True,
+                "recipe_id": recipe_id,
+                "updated_lora": updated_lora
+            })
+            
+        except Exception as e:
+            logger.error(f"Error reconnecting LoRA: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500)
