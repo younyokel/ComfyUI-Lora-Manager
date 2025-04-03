@@ -134,7 +134,7 @@ def transform_lora_loader(inputs: Dict) -> Dict:
         "loras": " ".join(lora_texts)
     }
 
-    if "clip" in inputs:
+    if "clip" in inputs and isinstance(inputs["clip"], dict):
         result["clip_skip"] = inputs["clip"].get("clip_skip", "-1")
     
     return result
