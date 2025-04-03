@@ -94,17 +94,59 @@ class LoraFileHandler(FileSystemEventHandler):
             return
         if self._should_ignore(event.src_path):
             return
-        logger.info(f"LoRA file created: {event.src_path}")
-        self._schedule_update('add', event.src_path)
+        
+        # Check if file is still being downloaded
+        try:
+            file_size = os.path.getsize(event.src_path)
+            # Record the file path and size to handle potential deletion during download
+            self.add_ignore_path(event.src_path, file_size)
+            
+            # Only process file if it exists and has non-zero size
+            if os.path.exists(event.src_path) and file_size > 0:
+                logger.info(f"LoRA file created: {event.src_path} (size: {file_size} bytes)")
+                self._schedule_update('add', event.src_path)
+            else:
+                logger.debug(f"Ignoring empty or non-existent file: {event.src_path}")
+        except FileNotFoundError:
+            # File disappeared between event and our check - likely a temporary download file
+            logger.debug(f"File disappeared before processing: {event.src_path}")
+        except Exception as e:
+            logger.error(f"Error processing create event for {event.src_path}: {str(e)}")
 
     def on_deleted(self, event):
         if event.is_directory or not event.src_path.endswith('.safetensors'):
             return
+        
+        # If this path is in our ignore list, it might be part of a download process
+        # Don't remove it from the cache yet
         if self._should_ignore(event.src_path):
+            logger.debug(f"Ignoring delete event for in-progress download: {event.src_path}")
             return
+            
         logger.info(f"LoRA file deleted: {event.src_path}")
         self._schedule_update('remove', event.src_path)
         
+    def on_modified(self, event):
+        if event.is_directory or not event.src_path.endswith('.safetensors'):
+            return
+        if self._should_ignore(event.src_path):
+            return
+        
+        try:
+            # File modification could indicate download completion
+            file_size = os.path.getsize(event.src_path)
+            if file_size > 0:
+                logger.debug(f"LoRA file modified: {event.src_path} (size: {file_size} bytes)")
+                # Update the ignore timeout based on the new size
+                self.add_ignore_path(event.src_path, file_size)
+                # Schedule an update to add the file once the ignore period expires
+                self._schedule_update('add', event.src_path)
+        except FileNotFoundError:
+            # File disappeared - ignore
+            pass
+        except Exception as e:
+            logger.error(f"Error processing modify event for {event.src_path}: {str(e)}")
+
     def _schedule_update(self, action: str, file_path: str): #file_path is a real path
         """Schedule a cache update"""
         with self.lock:
@@ -120,8 +162,8 @@ class LoraFileHandler(FileSystemEventHandler):
         if self.update_task is None or self.update_task.done():
             self.update_task = asyncio.create_task(self._process_changes())
 
-    async def _process_changes(self, delay: float = 2.0):
-        """Process pending changes with debouncing"""
+    async def _process_changes(self, delay: float = 5.0):
+        """Process pending changes with debouncing - increased delay to allow downloads to complete"""
         await asyncio.sleep(delay)
         
         try:
@@ -134,13 +176,34 @@ class LoraFileHandler(FileSystemEventHandler):
             
             logger.info(f"Processing {len(changes)} file changes")
 
+            # First collect all actions by file path to handle contradicting events
+            actions_by_path = {}
+            for action, file_path in changes:
+                # For the same file path, 'add' takes precedence over 'remove'
+                if file_path not in actions_by_path or action == 'add':
+                    actions_by_path[file_path] = action
+            
+            # Process the final actions
             cache = await self.scanner.get_cached_data()
             needs_resort = False
             new_folders = set()
             
-            for action, file_path in changes:
+            for file_path, action in actions_by_path.items():
                 try:
+                    # For 'add' actions, verify the file still exists and is complete
                     if action == 'add':
+                        # Convert to real path for file system operations
+                        real_path = config.map_link_to_path(file_path)
+                        
+                        if not os.path.exists(real_path):
+                            logger.warning(f"Skipping add for non-existent file: {real_path}")
+                            continue
+                            
+                        file_size = os.path.getsize(real_path)
+                        if file_size == 0:
+                            logger.warning(f"Skipping add for empty file: {real_path}")
+                            continue
+                        
                         # Scan new file
                         lora_data = await self.scanner.scan_single_lora(file_path)
                         if lora_data:
@@ -157,6 +220,7 @@ class LoraFileHandler(FileSystemEventHandler):
                                     lora_data['file_path']
                                 )
                             needs_resort = True
+                            logger.info(f"Added LoRA to cache: {file_path}")
                             
                     elif action == 'remove':
                         # Find the lora to remove so we can update tags count

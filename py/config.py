@@ -85,6 +85,17 @@ class Config:
                 mapped_path = normalized_path.replace(target_path, link_path, 1)
                 return mapped_path
         return path
+    
+    def map_link_to_path(self, link_path: str) -> str:
+        """将符号链接路径映射回实际路径"""
+        normalized_link = os.path.normpath(link_path).replace(os.sep, '/')
+        # 检查路径是否包含在任何映射的目标路径中
+        for target_path, link_path in self._path_mappings.items():
+            if normalized_link.startswith(target_path):
+                # 如果路径以目标路径开头，则替换为实际路径
+                mapped_path = normalized_link.replace(target_path, link_path, 1)
+                return mapped_path
+        return link_path
 
     def _init_lora_paths(self) -> List[str]:
         """Initialize and validate LoRA paths from ComfyUI settings"""
