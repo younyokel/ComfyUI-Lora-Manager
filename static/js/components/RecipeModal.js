@@ -31,6 +31,16 @@ class RecipeModal {
                 !event.target.closest('.edit-icon')) {
                 this.saveTagsEdit();
             }
+
+            // Handle reconnect input
+            const reconnectContainers = document.querySelectorAll('.lora-reconnect-container');
+            reconnectContainers.forEach(container => {
+                if (container.classList.contains('active') && 
+                    !container.contains(event.target) && 
+                    !event.target.closest('.deleted-badge.reconnectable')) {
+                    this.hideReconnectInput(container);
+                }
+            });
         });
     }
     
@@ -358,8 +368,9 @@ class RecipeModal {
                         </div>`;
                 } else if (isDeleted) {
                     localStatus = `
-                        <div class="deleted-badge">
-                            <i class="fas fa-trash-alt"></i> Deleted
+                        <div class="deleted-badge reconnectable" data-lora-index="${recipe.loras.indexOf(lora)}">
+                            <span class="badge-text"><i class="fas fa-trash-alt"></i> Deleted</span>
+                            <div class="reconnect-tooltip">Click to reconnect with a local LoRA</div>
                         </div>`;
                 } else {
                     localStatus = `
@@ -387,7 +398,7 @@ class RecipeModal {
                 }
 
                 return `
-                    <div class="${loraItemClass}">
+                    <div class="${loraItemClass}" data-lora-index="${recipe.loras.indexOf(lora)}">
                         <div class="recipe-lora-thumbnail">
                             ${previewMedia}
                         </div>
@@ -401,10 +412,28 @@ class RecipeModal {
                                 <div class="recipe-lora-weight">Weight: ${lora.strength || 1.0}</div>
                                 ${lora.baseModel ? `<div class="base-model">${lora.baseModel}</div>` : ''}
                             </div>
+                            <div class="lora-reconnect-container" data-lora-index="${recipe.loras.indexOf(lora)}">
+                                <div class="reconnect-instructions">
+                                    <p>Enter LoRA Syntax or Name to Reconnect:</p>
+                                    <small>Example: <code>&lt;lora:Boris_Vallejo_BV_flux_D:1&gt;</code> or just <code>Boris_Vallejo_BV_flux_D</code></small>
+                                </div>
+                                <div class="reconnect-form">
+                                    <input type="text" class="reconnect-input" placeholder="Enter LoRA name or syntax">
+                                    <div class="reconnect-actions">
+                                        <button class="reconnect-cancel-btn">Cancel</button>
+                                        <button class="reconnect-confirm-btn">Reconnect</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
+            
+            // Add event listeners for reconnect functionality
+            setTimeout(() => {
+                this.setupReconnectButtons();
+            }, 100);
             
             // Generate recipe syntax for copy button (this is now a placeholder, actual syntax will be fetched from the API)
             this.recipeLorasSyntax = '';
@@ -825,6 +854,155 @@ class RecipeModal {
         } catch (error) {
             console.error("Error downloading missing LoRAs:", error);
             showToast('Error preparing LoRAs for download', 'error');
+        } finally {
+            state.loadingManager.hide();
+        }
+    }
+
+    // New methods for reconnecting LoRAs
+    setupReconnectButtons() {
+        // Add event listeners to all deleted badges
+        const deletedBadges = document.querySelectorAll('.deleted-badge.reconnectable');
+        deletedBadges.forEach(badge => {
+            badge.addEventListener('mouseenter', () => {
+                badge.querySelector('.badge-text').innerHTML = 'Reconnect';
+            });
+            
+            badge.addEventListener('mouseleave', () => {
+                badge.querySelector('.badge-text').innerHTML = '<i class="fas fa-trash-alt"></i> Deleted';
+            });
+            
+            badge.addEventListener('click', (e) => {
+                const loraIndex = badge.getAttribute('data-lora-index');
+                this.showReconnectInput(loraIndex);
+            });
+        });
+        
+        // Add event listeners to reconnect cancel buttons
+        const cancelButtons = document.querySelectorAll('.reconnect-cancel-btn');
+        cancelButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const container = button.closest('.lora-reconnect-container');
+                this.hideReconnectInput(container);
+            });
+        });
+        
+        // Add event listeners to reconnect confirm buttons
+        const confirmButtons = document.querySelectorAll('.reconnect-confirm-btn');
+        confirmButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const container = button.closest('.lora-reconnect-container');
+                const input = container.querySelector('.reconnect-input');
+                const loraIndex = container.getAttribute('data-lora-index');
+                this.reconnectLora(loraIndex, input.value);
+            });
+        });
+        
+        // Add keydown handlers to reconnect inputs
+        const reconnectInputs = document.querySelectorAll('.reconnect-input');
+        reconnectInputs.forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const container = input.closest('.lora-reconnect-container');
+                    const loraIndex = container.getAttribute('data-lora-index');
+                    this.reconnectLora(loraIndex, input.value);
+                } else if (e.key === 'Escape') {
+                    const container = input.closest('.lora-reconnect-container');
+                    this.hideReconnectInput(container);
+                }
+            });
+        });
+    }
+    
+    showReconnectInput(loraIndex) {
+        // Hide any currently active reconnect containers
+        document.querySelectorAll('.lora-reconnect-container.active').forEach(active => {
+            active.classList.remove('active');
+        });
+        
+        // Show the reconnect container for this lora
+        const container = document.querySelector(`.lora-reconnect-container[data-lora-index="${loraIndex}"]`);
+        if (container) {
+            container.classList.add('active');
+            const input = container.querySelector('.reconnect-input');
+            input.focus();
+        }
+    }
+    
+    hideReconnectInput(container) {
+        if (container && container.classList.contains('active')) {
+            container.classList.remove('active');
+            const input = container.querySelector('.reconnect-input');
+            if (input) input.value = '';
+        }
+    }
+    
+    async reconnectLora(loraIndex, inputValue) {
+        if (!inputValue || !inputValue.trim()) {
+            showToast('Please enter a LoRA name or syntax', 'error');
+            return;
+        }
+        
+        try {
+            // Parse input value to extract file_name
+            let loraSyntaxMatch = inputValue.match(/<lora:([^:>]+)(?::[^>]+)?>/);
+            let fileName = loraSyntaxMatch ? loraSyntaxMatch[1] : inputValue.trim();
+            
+            // Remove any file extension if present
+            fileName = fileName.replace(/\.\w+$/, '');
+            
+            // Get the deleted lora data
+            const deletedLora = this.currentRecipe.loras[loraIndex];
+            if (!deletedLora) {
+                showToast('Error: Could not find the LoRA in the recipe', 'error');
+                return;
+            }
+            
+            state.loadingManager.showSimpleLoading('Reconnecting LoRA...');
+            
+            // Call API to reconnect the LoRA
+            const response = await fetch('/api/recipe/lora/reconnect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    recipe_id: this.recipeId,
+                    lora_data: deletedLora,
+                    target_name: fileName
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Hide the reconnect input
+                const container = document.querySelector(`.lora-reconnect-container[data-lora-index="${loraIndex}"]`);
+                this.hideReconnectInput(container);
+                
+                // Update the current recipe with the updated lora data
+                this.currentRecipe.loras[loraIndex] = result.updated_lora;
+                
+                // Show success message
+                showToast('LoRA reconnected successfully', 'success');
+                
+                // Refresh modal to show updated content
+                setTimeout(() => {
+                    this.showRecipeDetails(this.currentRecipe);
+                }, 500);
+                
+                // Refresh recipes list
+                if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
+                    setTimeout(() => {
+                        window.recipeManager.loadRecipes(true);
+                    }, 1000);
+                }
+            } else {
+                showToast(`Error: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error reconnecting LoRA:', error);
+            showToast(`Error reconnecting LoRA: ${error.message}`, 'error');
         } finally {
             state.loadingManager.hide();
         }

@@ -584,7 +584,7 @@
     font-size: 0.9em;
 }
 
-/* Deleted badge */
+/* Deleted badge with reconnect functionality */
 .deleted-badge {
     display: inline-flex;
     align-items: center;
@@ -601,6 +601,138 @@
 .deleted-badge i {
     margin-right: 4px;
     font-size: 0.9em;
+}
+
+/* Add reconnect functionality styles */
+.deleted-badge.reconnectable {
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.deleted-badge.reconnectable:hover {
+    background-color: var(--lora-accent);
+}
+
+.deleted-badge .reconnect-tooltip {
+    position: absolute;
+    display: none;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: var(--z-overlay);
+    width: max-content;
+    max-width: 200px;
+    font-size: 0.85rem;
+    font-weight: normal;
+    top: calc(100% + 5px);
+    left: 0;
+    margin-left: -100px;
+}
+
+.deleted-badge.reconnectable:hover .reconnect-tooltip {
+    display: block;
+}
+
+/* LoRA reconnect container */
+.lora-reconnect-container {
+    display: none;
+    flex-direction: column;
+    background: var(--lora-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    padding: 12px;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.lora-reconnect-container.active {
+    display: flex;
+}
+
+.reconnect-instructions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.reconnect-instructions p {
+    margin: 0;
+    font-size: 0.95em;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.reconnect-instructions small {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.reconnect-instructions code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+[data-theme="dark"] .reconnect-instructions code {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.reconnect-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reconnect-input {
+    width: calc(100% - 20px);
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.reconnect-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.reconnect-cancel-btn, 
+.reconnect-confirm-btn {
+    padding: 6px 12px;
+    border-radius: var(--border-radius-xs);
+    font-size: 0.85em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.reconnect-cancel-btn {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.reconnect-confirm-btn {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.reconnect-cancel-btn:hover {
+    background: var(--lora-surface);
+}
+
+.reconnect-confirm-btn:hover {
+    background: color-mix(in oklch, var(--lora-accent), black 10%);
 }
 
 /* Recipe status partial state */
