@@ -34,6 +34,7 @@ class SaveImage:
                 "file_format": (["png", "jpeg", "webp"],),
             },
             "optional": {
+                "custom_prompt": ("STRING", {"default": "", "forceInput": True}),
                 "lossless_webp": ("BOOLEAN", {"default": True}),
                 "quality": ("INT", {"default": 100, "min": 1, "max": 100}),
                 "embed_workflow": ("BOOLEAN", {"default": False}),
@@ -60,7 +61,7 @@ class SaveImage:
                 return item.get('sha256')
         return None
 
-    async def format_metadata(self, parsed_workflow):
+    async def format_metadata(self, parsed_workflow, custom_prompt=None):
         """Format metadata in the requested format similar to userComment example"""
         if not parsed_workflow:
             return ""
@@ -68,6 +69,10 @@ class SaveImage:
         # Extract the prompt and negative prompt
         prompt = parsed_workflow.get('prompt', '')
         negative_prompt = parsed_workflow.get('negative_prompt', '')
+        
+        # Override prompt with custom_prompt if provided
+        if custom_prompt:
+            prompt = custom_prompt
         
         # Extract loras from the prompt if present
         loras_text = parsed_workflow.get('loras', '')
@@ -240,7 +245,8 @@ class SaveImage:
         return filename
 
     def save_images(self, images, filename_prefix, file_format, prompt=None, extra_pnginfo=None, 
-                   lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True):
+                   lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True,
+                   custom_prompt=None):
         """Save images with metadata"""
         results = []
         
@@ -248,11 +254,12 @@ class SaveImage:
         parser = WorkflowParser()
         if prompt:
             parsed_workflow = parser.parse_workflow(prompt)
+            print("parsed_workflow", parsed_workflow)
         else:
             parsed_workflow = {}
             
         # Get or create metadata asynchronously
-        metadata = asyncio.run(self.format_metadata(parsed_workflow))
+        metadata = asyncio.run(self.format_metadata(parsed_workflow, custom_prompt))
         
         # Process filename_prefix with pattern substitution
         filename_prefix = self.format_filename(filename_prefix, parsed_workflow)
@@ -338,7 +345,8 @@ class SaveImage:
         return results
 
     def process_image(self, images, filename_prefix="ComfyUI", file_format="png", prompt=None, extra_pnginfo=None,
-                     lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True):
+                     lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True,
+                     custom_prompt=""):
         """Process and save image with metadata"""
         # Make sure the output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
@@ -356,7 +364,8 @@ class SaveImage:
             lossless_webp,
             quality,
             embed_workflow,
-            add_counter_to_filename
+            add_counter_to_filename,
+            custom_prompt if custom_prompt.strip() else None
         )
         
         return (images,)

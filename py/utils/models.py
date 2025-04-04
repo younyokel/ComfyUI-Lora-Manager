@@ -75,3 +75,31 @@ class LoraMetadata:
             self.modified = os.path.getmtime(file_path)
             self.file_path = file_path.replace(os.sep, '/')
 
+@dataclass
+class CheckpointMetadata:
+    """Represents the metadata structure for a Checkpoint model"""
+    file_name: str              # The filename without extension
+    model_name: str             # The checkpoint's name defined by the creator
+    file_path: str              # Full path to the model file
+    size: int                   # File size in bytes
+    modified: float             # Last modified timestamp
+    sha256: str                 # SHA256 hash of the file
+    base_model: str             # Base model type (SD1.5/SD2.1/SDXL/etc.)
+    preview_url: str            # Preview image URL
+    preview_nsfw_level: int = 0 # NSFW level of the preview image
+    model_type: str = "checkpoint"  # Model type (checkpoint, inpainting, etc.)
+    notes: str = ""             # Additional notes
+    from_civitai: bool = True   # Whether from Civitai
+    civitai: Optional[Dict] = None  # Civitai API data if available
+    tags: List[str] = None      # Model tags
+    modelDescription: str = ""  # Full model description
+    
+    # Additional checkpoint-specific fields
+    resolution: Optional[str] = None  # Native resolution (e.g., 512x512, 1024x1024)
+    vae_included: bool = False       # Whether VAE is included in the checkpoint
+    architecture: str = ""           # Model architecture (if known)
+    
+    def __post_init__(self):
+        if self.tags is None:
+            self.tags = []
+
