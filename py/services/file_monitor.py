@@ -150,10 +150,9 @@ class LoraFileHandler(FileSystemEventHandler):
     def _schedule_update(self, action: str, file_path: str): #file_path is a real path
         """Schedule a cache update"""
         with self.lock:
-            # 使用 config 中的方法映射路径
-            mapped_path = config.map_path_to_link(file_path)
-            normalized_path = mapped_path.replace(os.sep, '/')
-            self.pending_changes.add((action, normalized_path))
+            # Store the real path rather than trying to map it here
+            # This ensures we have the actual file system path when checking existence later
+            self.pending_changes.add((action, file_path))
             
             self.loop.call_soon_threadsafe(self._create_update_task)
 
@@ -192,8 +191,8 @@ class LoraFileHandler(FileSystemEventHandler):
                 try:
                     # For 'add' actions, verify the file still exists and is complete
                     if action == 'add':
-                        # Convert to real path for file system operations
-                        real_path = config.map_link_to_path(file_path)
+                        # Use the original real path from the event for file system checks
+                        real_path = file_path
                         
                         if not os.path.exists(real_path):
                             logger.warning(f"Skipping add for non-existent file: {real_path}")
@@ -204,8 +203,12 @@ class LoraFileHandler(FileSystemEventHandler):
                             logger.warning(f"Skipping add for empty file: {real_path}")
                             continue
                         
-                        # Scan new file
-                        lora_data = await self.scanner.scan_single_lora(file_path)
+                        # Map the real path to link path for the cache after confirming file exists
+                        mapped_path = config.map_path_to_link(real_path)
+                        normalized_path = mapped_path.replace(os.sep, '/')
+                        
+                        # Scan new file with the mapped path
+                        lora_data = await self.scanner.scan_single_lora(normalized_path)
                         if lora_data:
                             # Update tags count
                             for tag in lora_data.get('tags', []):
@@ -220,11 +223,27 @@ class LoraFileHandler(FileSystemEventHandler):
                                     lora_data['file_path']
                                 )
                             needs_resort = True
-                            logger.info(f"Added LoRA to cache: {file_path}")
+                            logger.info(f"Added LoRA to cache: {normalized_path}")
+                            
+                            # Remove from ignore list now that it's been successfully processed
+                            # This allows delete events to be processed immediately
+                            real_path_normalized = os.path.realpath(real_path).replace(os.sep, '/')
+                            alt_path = real_path_normalized.replace('/', '\\')
+                            
+                            if real_path_normalized in self._ignore_paths:
+                                logger.debug(f"Removing successfully processed file from ignore list: {real_path_normalized}")
+                                del self._ignore_paths[real_path_normalized]
+                            
+                            if alt_path in self._ignore_paths:
+                                del self._ignore_paths[alt_path]
                             
                     elif action == 'remove':
+                        # Map the path for removal operations
+                        mapped_path = config.map_path_to_link(file_path)
+                        normalized_path = mapped_path.replace(os.sep, '/')
+                        
                         # Find the lora to remove so we can update tags count
-                        lora_to_remove = next((item for item in cache.raw_data if item['file_path'] == file_path), None)
+                        lora_to_remove = next((item for item in cache.raw_data if item['file_path'] == normalized_path), None)
                         if lora_to_remove:
                             # Update tags count by reducing counts
                             for tag in lora_to_remove.get('tags', []):
@@ -234,16 +253,16 @@ class LoraFileHandler(FileSystemEventHandler):
                                         del self.scanner._tags_count[tag]
                         
                         # Remove from cache and hash index
-                        logger.info(f"Removing {file_path} from cache")
-                        self.scanner._hash_index.remove_by_path(file_path)
+                        logger.info(f"Removing {normalized_path} from cache")
+                        self.scanner._hash_index.remove_by_path(normalized_path)
                         cache.raw_data = [
                             item for item in cache.raw_data 
-                            if item['file_path'] != file_path
+                            if item['file_path'] != normalized_path
                         ]
                         needs_resort = True
                         
                 except Exception as e:
-                    logger.error(f"Error processing {action} for {file_path}: {e}")
+                    logger.error(f"Error processing {action} for {file_path}: {e}", exc_info=True)
             
             if needs_resort:
                 await cache.resort()
@@ -253,7 +272,7 @@ class LoraFileHandler(FileSystemEventHandler):
                 cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
                 
         except Exception as e:
-            logger.error(f"Error in process_changes: {e}")
+            logger.error(f"Error in process_changes: {e}", exc_info=True)
 
 
 class LoraFileMonitor:
