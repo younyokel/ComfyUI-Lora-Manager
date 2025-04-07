@@ -254,7 +254,6 @@ class SaveImage:
         parser = WorkflowParser()
         if prompt:
             parsed_workflow = parser.parse_workflow(prompt)
-            print("parsed_workflow", parsed_workflow)
         else:
             parsed_workflow = {}
             
@@ -264,38 +263,40 @@ class SaveImage:
         # Process filename_prefix with pattern substitution
         filename_prefix = self.format_filename(filename_prefix, parsed_workflow)
         
-        # Process each image
+        # Get initial save path info once for the batch
+        full_output_folder, filename, counter, subfolder, processed_prefix = folder_paths.get_save_image_path(
+            filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0]
+        )
+        
+        # Create directory if it doesn't exist
+        if not os.path.exists(full_output_folder):
+            os.makedirs(full_output_folder, exist_ok=True)
+        
+        # Process each image with incrementing counter
         for i, image in enumerate(images):
             # Convert the tensor image to numpy array
             img = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
             
-            # Create directory if filename_prefix contains path separators
-            output_path = os.path.join(self.output_dir, filename_prefix)
-            if not os.path.exists(os.path.dirname(output_path)):
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                
-            # Use folder_paths.get_save_image_path for better counter handling
-            full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
-                filename_prefix, self.output_dir, img.width, img.height
-            )
-            
             # Generate filename with counter if needed
+            base_filename = filename
             if add_counter_to_filename:
-                filename += f"_{counter:05}"
+                # Use counter + i to ensure unique filenames for all images in batch
+                current_counter = counter + i
+                base_filename += f"_{current_counter:05}"
                 
             # Set file extension and prepare saving parameters
             if file_format == "png":
-                file = filename + ".png"
+                file = base_filename + ".png"
                 file_extension = ".png"
                 save_kwargs = {"optimize": True, "compress_level": self.compress_level}
                 pnginfo = PngImagePlugin.PngInfo()
             elif file_format == "jpeg":
-                file = filename + ".jpg"
+                file = base_filename + ".jpg"
                 file_extension = ".jpg"
                 save_kwargs = {"quality": quality, "optimize": True}
             elif file_format == "webp":
-                file = filename + ".webp" 
+                file = base_filename + ".webp" 
                 file_extension = ".webp"
                 save_kwargs = {"quality": quality, "lossless": lossless_webp}
             
@@ -351,8 +352,11 @@ class SaveImage:
         # Make sure the output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
         
-        # Convert single image to list for consistent processing
-        images = [images[0]] if len(images.shape) == 3 else [img for img in images]
+        # Ensure images is always a list of images
+        if len(images.shape) == 3:  # Single image (height, width, channels)
+            images = [images]
+        else:  # Multiple images (batch, height, width, channels)
+            images = [img for img in images]
         
         # Save all images
         results = self.save_images(
