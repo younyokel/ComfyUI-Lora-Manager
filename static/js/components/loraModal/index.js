@@ -10,6 +10,7 @@ import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';
+import { loadRecipesForLora } from './RecipeTab.js'; // Add import for recipe tab
 import { 
     setupModelNameEditing, 
     setupBaseModelEditing, 
@@ -116,6 +117,7 @@ export function showLoraModal(lora) {
                     <div class="showcase-tabs">
                         <button class="tab-btn active" data-tab="showcase">Examples</button>
                         <button class="tab-btn" data-tab="description">Model Description</button>
+                        <button class="tab-btn" data-tab="recipes">Recipes</button>
                     </div>
                     
                     <div class="tab-content">
@@ -131,6 +133,12 @@ export function showLoraModal(lora) {
                                 <div class="model-description-content">
                                     ${lora.modelDescription || ''}
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <div id="recipes-tab" class="tab-pane">
+                            <div class="recipes-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading recipes...
                             </div>
                         </div>
                     </div>
@@ -157,6 +165,9 @@ export function showLoraModal(lora) {
     if (lora.civitai?.modelId && !lora.modelDescription) {
         loadModelDescription(lora.civitai.modelId, lora.file_path);
     }
+    
+    // Load recipes for this Lora
+    loadRecipesForLora(lora.model_name, lora.sha256);
 }
 
 // Copy file name function

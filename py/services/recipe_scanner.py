@@ -330,7 +330,7 @@ class RecipeScanner:
             logger.error(f"Error getting base model for lora: {e}")
             return None
 
-    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None, search_options: dict = None):
+    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None, search_options: dict = None, lora_hash: str = None, bypass_filters: bool = False):
         """Get paginated and filtered recipe data
         
         Args:
@@ -340,69 +340,89 @@ class RecipeScanner:
             search: Search term
             filters: Dictionary of filters to apply
             search_options: Dictionary of search options to apply
+            lora_hash: Optional SHA256 hash of a LoRA to filter recipes by
+            bypass_filters: If True, ignore other filters when a lora_hash is provided
         """
         cache = await self.get_cached_data()
 
         # Get base dataset
         filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
         
-        # Apply search filter
-        if search:
-            # Default search options if none provided
-            if not search_options:
-                search_options = {
-                    'title': True,
-                    'tags': True,
-                    'lora_name': True,
-                    'lora_model': True
-                }
+        # Special case: Filter by LoRA hash (takes precedence if bypass_filters is True)
+        if lora_hash:
+            # Filter recipes that contain this LoRA hash
+            filtered_data = [
+                item for item in filtered_data
+                if 'loras' in item and any(
+                    lora.get('hash', '').lower() == lora_hash.lower() 
+                    for lora in item['loras']
+                )
+            ]
             
-            # Build the search predicate based on search options
-            def matches_search(item):
-                # Search in title if enabled
-                if search_options.get('title', True):
-                    if fuzzy_match(str(item.get('title', '')), search):
-                        return True
-                
-                # Search in tags if enabled
-                if search_options.get('tags', True) and 'tags' in item:
-                    for tag in item['tags']:
-                        if fuzzy_match(tag, search):
-                            return True
-                
-                # Search in lora file names if enabled
-                if search_options.get('lora_name', True) and 'loras' in item:
-                    for lora in item['loras']:
-                        if fuzzy_match(str(lora.get('file_name', '')), search):
-                            return True
-                
-                # Search in lora model names if enabled
-                if search_options.get('lora_model', True) and 'loras' in item:
-                    for lora in item['loras']:
-                        if fuzzy_match(str(lora.get('modelName', '')), search):
-                            return True
-                
-                # No match found
-                return False
-            
-            # Filter the data using the search predicate
-            filtered_data = [item for item in filtered_data if matches_search(item)]
+            if bypass_filters:
+                # Skip other filters if bypass_filters is True
+                pass
+            # Otherwise continue with normal filtering after applying LoRA hash filter
         
-        # Apply additional filters
-        if filters:
-            # Filter by base model
-            if 'base_model' in filters and filters['base_model']:
-                filtered_data = [
-                    item for item in filtered_data
-                    if item.get('base_model', '') in filters['base_model']
-                ]
+        # Skip further filtering if we're only filtering by LoRA hash with bypass enabled
+        if not (lora_hash and bypass_filters):
+            # Apply search filter
+            if search:
+                # Default search options if none provided
+                if not search_options:
+                    search_options = {
+                        'title': True,
+                        'tags': True,
+                        'lora_name': True,
+                        'lora_model': True
+                    }
+                
+                # Build the search predicate based on search options
+                def matches_search(item):
+                    # Search in title if enabled
+                    if search_options.get('title', True):
+                        if fuzzy_match(str(item.get('title', '')), search):
+                            return True
+                    
+                    # Search in tags if enabled
+                    if search_options.get('tags', True) and 'tags' in item:
+                        for tag in item['tags']:
+                            if fuzzy_match(tag, search):
+                                return True
+                    
+                    # Search in lora file names if enabled
+                    if search_options.get('lora_name', True) and 'loras' in item:
+                        for lora in item['loras']:
+                            if fuzzy_match(str(lora.get('file_name', '')), search):
+                                return True
+                    
+                    # Search in lora model names if enabled
+                    if search_options.get('lora_model', True) and 'loras' in item:
+                        for lora in item['loras']:
+                            if fuzzy_match(str(lora.get('modelName', '')), search):
+                                return True
+                    
+                    # No match found
+                    return False
+                
+                # Filter the data using the search predicate
+                filtered_data = [item for item in filtered_data if matches_search(item)]
             
-            # Filter by tags
-            if 'tags' in filters and filters['tags']:
-                filtered_data = [
-                    item for item in filtered_data
-                    if any(tag in item.get('tags', []) for tag in filters['tags'])
-                ]
+            # Apply additional filters
+            if filters:
+                # Filter by base model
+                if 'base_model' in filters and filters['base_model']:
+                    filtered_data = [
+                        item for item in filtered_data
+                        if item.get('base_model', '') in filters['base_model']
+                    ]
+                
+                # Filter by tags
+                if 'tags' in filters and filters['tags']:
+                    filtered_data = [
+                        item for item in filtered_data
+                        if any(tag in item.get('tags', []) for tag in filters['tags'])
+                    ]
 
         # Calculate pagination
         total_items = len(filtered_data)
@@ -430,6 +450,74 @@ class RecipeScanner:
         }
         
         return result
+    
+    async def get_recipe_by_id(self, recipe_id: str) -> dict:
+        """Get a single recipe by ID with all metadata and formatted URLs
+        
+        Args:
+            recipe_id: The ID of the recipe to retrieve
+            
+        Returns:
+            Dict containing the recipe data or None if not found
+        """
+        if not recipe_id:
+            return None
+            
+        # Get all recipes from cache
+        cache = await self.get_cached_data()
+        
+        # Find the recipe with the specified ID
+        recipe = next((r for r in cache.raw_data if str(r.get('id', '')) == recipe_id), None)
+        
+        if not recipe:
+            return None
+            
+        # Format the recipe with all needed information
+        formatted_recipe = {**recipe}  # Copy all fields
+        
+        # Format file path to URL
+        if 'file_path' in formatted_recipe:
+            formatted_recipe['file_url'] = self._format_file_url(formatted_recipe['file_path'])
+            
+        # Format dates for display
+        for date_field in ['created_date', 'modified']:
+            if date_field in formatted_recipe:
+                formatted_recipe[f"{date_field}_formatted"] = self._format_timestamp(formatted_recipe[date_field])
+                
+        # Add lora metadata
+        if 'loras' in formatted_recipe:
+            for lora in formatted_recipe['loras']:
+                if 'hash' in lora and lora['hash']:
+                    lora_hash = lora['hash'].lower()
+                    lora['inLibrary'] = self._lora_scanner.has_lora_hash(lora_hash)
+                    lora['preview_url'] = self._lora_scanner.get_preview_url_by_hash(lora_hash)
+                    lora['localPath'] = self._lora_scanner.get_lora_path_by_hash(lora_hash)
+                    
+        return formatted_recipe
+        
+    def _format_file_url(self, file_path: str) -> str:
+        """Format file path as URL for serving in web UI"""
+        if not file_path:
+            return '/loras_static/images/no-preview.png'
+            
+        try:
+            # Format file path as a URL that will work with static file serving
+            recipes_dir = os.path.join(config.loras_roots[0], "recipes").replace(os.sep, '/')
+            if file_path.replace(os.sep, '/').startswith(recipes_dir):
+                relative_path = os.path.relpath(file_path, config.loras_roots[0]).replace(os.sep, '/')
+                return f"/loras_static/root1/preview/{relative_path}"
+                
+            # If not in recipes dir, try to create a valid URL from the file name
+            file_name = os.path.basename(file_path)
+            return f"/loras_static/root1/preview/recipes/{file_name}"
+        except Exception as e:
+            logger.error(f"Error formatting file URL: {e}")
+            return '/loras_static/images/no-preview.png'
+    
+    def _format_timestamp(self, timestamp: float) -> str:
+        """Format timestamp for display"""
+        from datetime import datetime
+        return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
     async def update_recipe_metadata(self, recipe_id: str, metadata: dict) -> bool:
         """Update recipe metadata (like title and tags) in both file system and cache

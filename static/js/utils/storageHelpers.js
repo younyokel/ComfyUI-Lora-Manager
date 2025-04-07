@@ -70,6 +70,53 @@ export function removeStorageItem(key) {
 }
 
 /**
+ * Get an item from sessionStorage with namespace support
+ * @param {string} key - The key without prefix
+ * @param {any} defaultValue - Default value if key doesn't exist
+ * @returns {any} The stored value or defaultValue
+ */
+export function getSessionItem(key, defaultValue = null) {
+    // Try with prefix
+    const prefixedValue = sessionStorage.getItem(STORAGE_PREFIX + key);
+    
+    if (prefixedValue !== null) {
+        // If it's a JSON string, parse it
+        try {
+            return JSON.parse(prefixedValue);
+        } catch (e) {
+            return prefixedValue;
+        }
+    }
+    
+    // Return default value if key doesn't exist
+    return defaultValue;
+}
+
+/**
+ * Set an item in sessionStorage with namespace prefix
+ * @param {string} key - The key without prefix
+ * @param {any} value - The value to store
+ */
+export function setSessionItem(key, value) {
+    const prefixedKey = STORAGE_PREFIX + key;
+    
+    // Convert objects and arrays to JSON strings
+    if (typeof value === 'object' && value !== null) {
+        sessionStorage.setItem(prefixedKey, JSON.stringify(value));
+    } else {
+        sessionStorage.setItem(prefixedKey, value);
+    }
+}
+
+/**
+ * Remove an item from sessionStorage with namespace prefix
+ * @param {string} key - The key without prefix
+ */
+export function removeSessionItem(key) {
+    sessionStorage.removeItem(STORAGE_PREFIX + key);
+}
+
+/**
  * Migrate all existing localStorage items to use the prefix
  * This should be called once during application initialization
  */

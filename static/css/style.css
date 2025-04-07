@@ -18,6 +18,7 @@
 @import 'components/search-filter.css';
 @import 'components/bulk.css';
 @import 'components/shared.css';
+@import 'components/filter-indicator.css';
 
 .initialization-notice {
     display: flex;

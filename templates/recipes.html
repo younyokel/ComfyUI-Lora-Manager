@@ -32,6 +32,13 @@
             <div title="Import recipes" class="control-group">
                 <button onclick="importManager.showImportModal()"><i class="fas fa-file-import"></i> Import</button>
             </div>
+            <!-- Custom filter indicator button (hidden by default) -->
+            <div id="customFilterIndicator" class="control-group hidden">
+                <button class="filter-active">
+                    <i class="fas fa-filter"></i> <span id="customFilterText">Filtered by LoRA</span>
+                    <i class="fas fa-times-circle clear-filter"></i>
+                </button>
+            </div>
         </div>
     </div>
     

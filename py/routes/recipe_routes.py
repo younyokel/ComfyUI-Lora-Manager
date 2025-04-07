@@ -60,6 +60,9 @@ class RecipeRoutes:
         app.on_startup.append(routes._init_cache)
         
         app.router.add_post('/api/recipes/save-from-widget', routes.save_recipe_from_widget)
+        
+        # Add route to get recipes for a specific Lora
+        app.router.add_get('/api/recipes/for-lora', routes.get_recipes_for_lora)
     
     async def _init_cache(self, app):
         """Initialize cache on startup"""
@@ -98,6 +101,10 @@ class RecipeRoutes:
             base_models = request.query.get('base_models', None)
             tags = request.query.get('tags', None)
             
+            # New parameter: get LoRA hash filter
+            lora_hash = request.query.get('lora_hash', None)
+            bypass_filters = request.query.get('bypass_filters', 'false').lower() == 'true'
+            
             # Parse filter parameters
             filters = {}
             if base_models:
@@ -113,14 +120,16 @@ class RecipeRoutes:
                 'lora_model': search_lora_model
             }
 
-            # Get paginated data
+            # Get paginated data with the new lora_hash parameter
             result = await self.recipe_scanner.get_paginated_data(
                 page=page,
                 page_size=page_size,
                 sort_by=sort_by,
                 search=search,
                 filters=filters,
-                search_options=search_options
+                search_options=search_options,
+                lora_hash=lora_hash,
+                bypass_filters=bypass_filters
             )
             
             # Format the response data with static URLs for file paths
@@ -148,20 +157,14 @@ class RecipeRoutes:
         """Get detailed information about a specific recipe"""
         try:
             recipe_id = request.match_info['recipe_id']
-
-            # Get all recipes from cache
-            cache = await self.recipe_scanner.get_cached_data()
             
-            # Find the specific recipe
-            recipe = next((r for r in cache.raw_data if str(r.get('id', '')) == recipe_id), None)
+            # Use the new get_recipe_by_id method from recipe_scanner
+            recipe = await self.recipe_scanner.get_recipe_by_id(recipe_id)
             
             if not recipe:
                 return web.json_response({"error": "Recipe not found"}, status=404)
             
-            # Format recipe data
-            formatted_recipe = self._format_recipe_data(recipe)
-            
-            return web.json_response(formatted_recipe)
+            return web.json_response(recipe)
         except Exception as e:
             logger.error(f"Error retrieving recipe details: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500)
@@ -1134,3 +1137,49 @@ class RecipeRoutes:
         except Exception as e:
             logger.error(f"Error reconnecting LoRA: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500)
+
+    async def get_recipes_for_lora(self, request: web.Request) -> web.Response:
+        """Get recipes that use a specific Lora"""
+        try:
+            lora_hash = request.query.get('hash')
+            
+            # Hash is required
+            if not lora_hash:
+                return web.json_response({'success': False, 'error': 'Lora hash is required'}, status=400)
+            
+            # Log the search parameters
+            logger.info(f"Getting recipes for Lora by hash: {lora_hash}")
+            
+            # Get all recipes from cache
+            cache = await self.recipe_scanner.get_cached_data()
+            
+            # Filter recipes that use this Lora by hash
+            matching_recipes = []
+            for recipe in cache.raw_data:
+                # Check if any of the recipe's loras match this hash
+                loras = recipe.get('loras', [])
+                for lora in loras:
+                    if lora.get('hash', '').lower() == lora_hash.lower():
+                        matching_recipes.append(recipe)
+                        break  # No need to check other loras in this recipe
+            
+            # Process the recipes similar to get_paginated_data to ensure all needed data is available
+            for recipe in matching_recipes:
+                # Add inLibrary information for each lora
+                if 'loras' in recipe:
+                    for lora in recipe['loras']:
+                        if 'hash' in lora and lora['hash']:
+                            lora['inLibrary'] = self.recipe_scanner._lora_scanner.has_lora_hash(lora['hash'].lower())
+                            lora['preview_url'] = self.recipe_scanner._lora_scanner.get_preview_url_by_hash(lora['hash'].lower())
+                            lora['localPath'] = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(lora['hash'].lower())
+                
+                # Ensure file_url is set (needed by frontend)
+                if 'file_path' in recipe:
+                    recipe['file_url'] = self._format_recipe_file_url(recipe['file_path'])
+                else:
+                    recipe['file_url'] = '/loras_static/images/no-preview.png'
+            
+            return web.json_response({'success': True, 'recipes': matching_recipes})
+        except Exception as e:
+            logger.error(f"Error getting recipes for Lora: {str(e)}")
+            return web.json_response({'success': False, 'error': str(e)}, status=500)
