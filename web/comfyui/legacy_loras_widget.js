@@ -5,13 +5,6 @@ export function addLorasWidget(node, name, opts, callback) {
   // Create container for loras
   const container = document.createElement("div");
   container.className = "comfy-loras-container";
-  
-  // Set initial height using CSS variables approach
-  const defaultHeight = 200;
-  container.style.setProperty('--comfy-widget-min-height', `${defaultHeight}px`);
-  container.style.setProperty('--comfy-widget-max-height', `${defaultHeight * 2}px`);
-  container.style.setProperty('--comfy-widget-height', `${defaultHeight}px`);
-  
   Object.assign(container.style, {
     display: "flex",
     flexDirection: "column",
@@ -20,18 +13,10 @@ export function addLorasWidget(node, name, opts, callback) {
     backgroundColor: "rgba(40, 44, 52, 0.6)",
     borderRadius: "6px",
     width: "100%",
-    boxSizing: "border-box",
-    overflow: "auto"
   });
 
   // Initialize default value
   const defaultValue = opts?.defaultVal || [];
-
-  // Fixed sizes for component calculations
-  const LORA_ENTRY_HEIGHT = 44; // Height of a single lora entry
-  const HEADER_HEIGHT = 40; // Height of the header section
-  const CONTAINER_PADDING = 12; // Top and bottom padding
-  const EMPTY_CONTAINER_HEIGHT = 100; // Height when no loras are present
 
   // Parse LoRA entries from value
   const parseLoraValue = (value) => {
@@ -42,23 +27,6 @@ export function addLorasWidget(node, name, opts, callback) {
   // Format LoRA data
   const formatLoraValue = (loras) => {
     return loras;
-  };
-
-  // Function to update widget height consistently
-  const updateWidgetHeight = (height) => {
-    // Ensure minimum height
-    const finalHeight = Math.max(defaultHeight, height);
-    
-    // Update CSS variables
-    container.style.setProperty('--comfy-widget-min-height', `${finalHeight}px`);
-    container.style.setProperty('--comfy-widget-height', `${finalHeight}px`);
-    
-    // Force node to update size after a short delay to ensure DOM is updated
-    if (node) {
-      setTimeout(() => {
-        node.setDirtyCanvas(true, true);
-      }, 10);
-    }
   };
 
   // Function to create toggle element
@@ -139,7 +107,7 @@ export function addLorasWidget(node, name, opts, callback) {
     return button;
   };
 
-  // Preview tooltip class
+  // 添加预览弹窗组件
   class PreviewTooltip {
     constructor() {
       this.element = document.createElement('div');
@@ -154,31 +122,31 @@ export function addLorasWidget(node, name, opts, callback) {
         maxWidth: '300px',
       });
       document.body.appendChild(this.element);
-      this.hideTimeout = null;
+      this.hideTimeout = null;  // 添加超时处理变量
       
-      // Add global click event to hide tooltip
+      // 添加全局点击事件来隐藏tooltip
       document.addEventListener('click', () => this.hide());
       
-      // Add scroll event listener
+      // 添加滚动事件监听
       document.addEventListener('scroll', () => this.hide(), true);
     }
 
     async show(loraName, x, y) {
       try {
-        // Clear previous hide timer
+        // 清除之前的隐藏定时器
         if (this.hideTimeout) {
           clearTimeout(this.hideTimeout);
           this.hideTimeout = null;
         }
 
-        // Don't redisplay the same lora preview
+        // 如果已经显示同一个lora的预览，则不重复显示
         if (this.element.style.display === 'block' && this.currentLora === loraName) {
           return;
         }
 
         this.currentLora = loraName;
         
-        // Get preview URL
+        // 获取预览URL
         const response = await api.fetchApi(`/lora-preview-url?name=${encodeURIComponent(loraName)}`, {
           method: 'GET'
         });
@@ -192,7 +160,7 @@ export function addLorasWidget(node, name, opts, callback) {
           throw new Error('No preview available');
         }
 
-        // Clear existing content
+        // 清除现有内容
         while (this.element.firstChild) {
           this.element.removeChild(this.element.firstChild);
         }
@@ -249,7 +217,7 @@ export function addLorasWidget(node, name, opts, callback) {
         mediaContainer.appendChild(nameLabel);
         this.element.appendChild(mediaContainer);
         
-        // Add fade-in effect
+        // 添加淡入效果
         this.element.style.opacity = '0';
         this.element.style.display = 'block';
         this.position(x, y);
@@ -264,20 +232,20 @@ export function addLorasWidget(node, name, opts, callback) {
     }
 
     position(x, y) {
-      // Ensure preview box doesn't exceed viewport boundaries
+      // 确保预览框不超出视窗边界
       const rect = this.element.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      let left = x + 10; // Default 10px offset to the right of mouse
-      let top = y + 10;  // Default 10px offset below mouse
+      let left = x + 10; // 默认在鼠标右侧偏移10px
+      let top = y + 10;  // 默认在鼠标下方偏移10px
 
-      // Check right boundary
+      // 检查右边界
       if (left + rect.width > viewportWidth) {
         left = x - rect.width - 10;
       }
 
-      // Check bottom boundary
+      // 检查下边界
       if (top + rect.height > viewportHeight) {
         top = y - rect.height - 10;
       }
@@ -289,13 +257,13 @@ export function addLorasWidget(node, name, opts, callback) {
     }
 
     hide() {
-      // Use fade-out effect
+      // 使用淡出效果
       if (this.element.style.display === 'block') {
         this.element.style.opacity = '0';
         this.hideTimeout = setTimeout(() => {
           this.element.style.display = 'none';
           this.currentLora = null;
-          // Stop video playback
+          // 停止视频播放
           const video = this.element.querySelector('video');
           if (video) {
             video.pause();
@@ -309,14 +277,14 @@ export function addLorasWidget(node, name, opts, callback) {
       if (this.hideTimeout) {
         clearTimeout(this.hideTimeout);
       }
-      // Remove all event listeners
+      // 移除所有事件监听器
       document.removeEventListener('click', () => this.hide());
       document.removeEventListener('scroll', () => this.hide(), true);
       this.element.remove();
     }
   }
 
-  // Create preview tooltip instance
+  // 创建预览tooltip实例
   const previewTooltip = new PreviewTooltip();
 
   // Function to create menu item
@@ -389,7 +357,7 @@ export function addLorasWidget(node, name, opts, callback) {
       padding: '4px 0',
       zIndex: 1000,
       boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-      minWidth: '180px',
+       minWidth: '180px',
     });
 
     // View on Civitai option with globe icon
@@ -479,7 +447,7 @@ export function addLorasWidget(node, name, opts, callback) {
       borderTop: '1px solid rgba(255, 255, 255, 0.1)',
     });
 
-    menu.appendChild(viewOnCivitaiOption);
+    menu.appendChild(viewOnCivitaiOption); // Add the new menu option
     menu.appendChild(deleteOption);
     menu.appendChild(separator);
     menu.appendChild(saveOption);
@@ -515,16 +483,12 @@ export function addLorasWidget(node, name, opts, callback) {
         padding: "20px 0",
         color: "rgba(226, 232, 240, 0.8)",
         fontStyle: "italic",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        MozUserSelect: "none",
-        msUserSelect: "none",
-        width: "100%"
+        userSelect: "none",     // Add this line to prevent text selection
+        WebkitUserSelect: "none",  // For Safari support
+        MozUserSelect: "none",     // For Firefox support
+        msUserSelect: "none",      // For IE/Edge support
       });
       container.appendChild(emptyMessage);
-      
-      // Set fixed height for empty state
-      updateWidgetHeight(EMPTY_CONTAINER_HEIGHT);
       return;
     }
 
@@ -558,10 +522,10 @@ export function addLorasWidget(node, name, opts, callback) {
       color: "rgba(226, 232, 240, 0.8)",
       fontSize: "13px",
       marginLeft: "8px",
-      userSelect: "none",
-      WebkitUserSelect: "none",
-      MozUserSelect: "none",
-      msUserSelect: "none",
+      userSelect: "none",     // Add this line to prevent text selection
+      WebkitUserSelect: "none",  // For Safari support
+      MozUserSelect: "none",     // For Firefox support
+      msUserSelect: "none",      // For IE/Edge support
     });
 
     const toggleContainer = document.createElement("div");
@@ -579,10 +543,10 @@ export function addLorasWidget(node, name, opts, callback) {
       color: "rgba(226, 232, 240, 0.8)",
       fontSize: "13px",
       marginRight: "8px",
-      userSelect: "none",
-      WebkitUserSelect: "none",
-      MozUserSelect: "none",
-      msUserSelect: "none",
+      userSelect: "none",     // Add this line to prevent text selection
+      WebkitUserSelect: "none",  // For Safari support
+      MozUserSelect: "none",     // For Firefox support
+      msUserSelect: "none",      // For IE/Edge support
     });
 
     header.appendChild(toggleContainer);
@@ -631,11 +595,11 @@ export function addLorasWidget(node, name, opts, callback) {
         whiteSpace: "nowrap",
         color: active ? "rgba(226, 232, 240, 0.9)" : "rgba(226, 232, 240, 0.6)",
         fontSize: "13px",
-        cursor: "pointer",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        MozUserSelect: "none",
-        msUserSelect: "none",
+        cursor: "pointer", // Add pointer cursor to indicate hoverable area
+        userSelect: "none",     // Add this line to prevent text selection
+        WebkitUserSelect: "none",  // For Safari support
+        MozUserSelect: "none",     // For Firefox support
+        msUserSelect: "none",      // For IE/Edge support
       });
 
       // Move preview tooltip events to nameEl instead of loraEl
@@ -681,7 +645,7 @@ export function addLorasWidget(node, name, opts, callback) {
         const loraIndex = lorasData.findIndex(l => l.name === name);
         
         if (loraIndex >= 0) {
-          lorasData[loraIndex].strength = (parseFloat(lorasData[loraIndex].strength) - 0.05).toFixed(2);
+          lorasData[loraIndex].strength = (lorasData[loraIndex].strength - 0.05).toFixed(2);
           
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
@@ -705,7 +669,7 @@ export function addLorasWidget(node, name, opts, callback) {
         outline: "none",
       });
 
-      // Add hover effect
+      // 添加hover效果
       strengthEl.addEventListener('mouseenter', () => {
         strengthEl.style.border = "1px solid rgba(226, 232, 240, 0.2)";
       });
@@ -716,11 +680,11 @@ export function addLorasWidget(node, name, opts, callback) {
         }
       });
 
-      // Handle focus
+      // 处理焦点
       strengthEl.addEventListener('focus', () => {
         strengthEl.style.border = "1px solid rgba(66, 153, 225, 0.6)";
         strengthEl.style.background = "rgba(0, 0, 0, 0.2)";
-        // Auto-select all content
+        // 自动选中所有内容
         strengthEl.select();
       });
 
@@ -729,29 +693,29 @@ export function addLorasWidget(node, name, opts, callback) {
         strengthEl.style.background = "none";
       });
 
-      // Handle input changes
+      // 处理输入变化
       strengthEl.addEventListener('change', () => {
         let newValue = parseFloat(strengthEl.value);
         
-        // Validate input
+        // 验证输入
         if (isNaN(newValue)) {
           newValue = 1.0;
         }
         
-        // Update value
+        // 更新数值
         const lorasData = parseLoraValue(widget.value);
         const loraIndex = lorasData.findIndex(l => l.name === name);
         
         if (loraIndex >= 0) {
           lorasData[loraIndex].strength = newValue.toFixed(2);
           
-          // Update value and trigger callback
+          // 更新值并触发回调
           const newLorasValue = formatLoraValue(lorasData);
           widget.value = newLorasValue;
         }
       });
 
-      // Handle key events
+      // 处理按键事件
       strengthEl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           strengthEl.blur();
@@ -793,17 +757,13 @@ export function addLorasWidget(node, name, opts, callback) {
 
       container.appendChild(loraEl);
     });
-    
-    // Calculate height based on number of loras and fixed sizes
-    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (lorasData.length * LORA_ENTRY_HEIGHT);
-    updateWidgetHeight(calculatedHeight);
   };
 
   // Store the value in a variable to avoid recursion
   let widgetValue = defaultValue;
 
-  // Create widget with new DOM Widget API
-  const widget = node.addDOMWidget(name, "custom", container, {
+  // Create widget with initial properties
+  const widget = node.addDOMWidget(name, "loras", container, {
     getValue: function() {
       return widgetValue;
     },
@@ -818,28 +778,29 @@ export function addLorasWidget(node, name, opts, callback) {
 
       widgetValue = uniqueValue;
       renderLoras(widgetValue, widget);
+      
+      // Update container height after rendering
+      requestAnimationFrame(() => {
+        const minHeight = this.getMinHeight();
+        container.style.height = `${minHeight}px`;
+        
+        // Force node to update size
+        node.setSize([node.size[0], node.computeSize()[1]]);
+        node.setDirtyCanvas(true, true);
+      });
     },
     getMinHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-min-height')) || defaultHeight;
+      // Calculate height based on content
+      const lorasCount = parseLoraValue(widgetValue).length;
+      return Math.max(
+        100,
+        lorasCount > 0 ? 60 + lorasCount * 44 : 60
+      );
     },
-    getMaxHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-max-height')) || defaultHeight * 2;
-    },
-    getHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-height')) || defaultHeight;
-    },
-    hideOnZoom: true,
-    selectOn: ['click', 'focus'],
-    afterResize: function(node) {
-      // Re-render after node resize
-      if (this.value && this.value.length > 0) {
-        renderLoras(this.value, this);
-      }
-    }
   });
 
   widget.value = defaultValue;
-  
+
   widget.callback = callback;
 
   widget.serializeValue = () => {
@@ -855,7 +816,7 @@ export function addLorasWidget(node, name, opts, callback) {
     previewTooltip.cleanup();
   };
 
-  return { minWidth: 400, minHeight: defaultHeight, widget };
+  return { minWidth: 400, minHeight: 200, widget };
 }
 
 // Function to directly save the recipe without dialog
@@ -863,6 +824,7 @@ async function saveRecipeDirectly(widget) {
   try {
     // Get the workflow data from the ComfyUI app
     const prompt = await app.graphToPrompt();
+    console.log('Prompt:', prompt);
     
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {
@@ -917,4 +879,4 @@ async function saveRecipeDirectly(widget) {
       });
     }
   }
-} 
+}

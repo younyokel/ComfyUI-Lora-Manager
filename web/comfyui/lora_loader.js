@@ -1,8 +1,13 @@
 import { app } from "../../scripts/app.js";
-import { addLorasWidget } from "./loras_widget.js";
+import { dynamicImportByVersion } from "./utils.js";
 
 // Extract pattern into a constant for consistent use
 const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)>/g;
+
+// Function to get the appropriate loras widget based on ComfyUI version
+async function getLorasWidgetModule() {
+    return await dynamicImportByVersion("./loras_widget.js", "./legacy_loras_widget.js");
+}
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -44,7 +49,7 @@ app.registerExtension({
             });
 
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {
+            requestAnimationFrame(async () => {
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
@@ -67,6 +72,10 @@ app.registerExtension({
                 
                 // Add flag to prevent callback loops
                 let isUpdating = false;
+                
+                // Dynamically load the appropriate widget module
+                const lorasModule = await getLorasWidgetModule();
+                const { addLorasWidget } = lorasModule;
                  
                 // Get the widget object directly from the returned object
                 const result = addLorasWidget(node, "loras", {
