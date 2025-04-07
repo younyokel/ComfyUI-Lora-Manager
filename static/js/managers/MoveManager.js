@@ -173,11 +173,20 @@ class MoveManager {
             })
         });
 
+        const result = await response.json();
+        
         if (!response.ok) {
+            if (result && result.error) {
+                throw new Error(result.error);
+            }
             throw new Error('Failed to move model');
         }
 
-        showToast('Model moved successfully', 'success');
+        if (result && result.message) {
+            showToast(result.message, 'info');
+        } else {
+            showToast('Model moved successfully', 'success');
+        }
     }
     
     async moveBulkModels(filePaths, targetPath) {
@@ -202,11 +211,44 @@ class MoveManager {
             })
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
             throw new Error('Failed to move models');
         }
 
-        showToast(`Successfully moved ${movedPaths.length} models`, 'success');
+        // Display results with more details
+        if (result.success) {
+            if (result.failure_count > 0) {
+                // Some files failed to move
+                showToast(`Moved ${result.success_count} models, ${result.failure_count} failed`, 'warning');
+                
+                // Log details about failures
+                console.log('Move operation results:', result.results);
+                
+                // Get list of failed files with reasons
+                const failedFiles = result.results
+                    .filter(r => !r.success)
+                    .map(r => {
+                        const fileName = r.path.substring(r.path.lastIndexOf('/') + 1);
+                        return `${fileName}: ${r.message}`;
+                    });
+                
+                // Show first few failures in a toast
+                if (failedFiles.length > 0) {
+                    const failureMessage = failedFiles.length <= 3 
+                        ? failedFiles.join('\n')
+                        : failedFiles.slice(0, 3).join('\n') + `\n(and ${failedFiles.length - 3} more)`;
+                    
+                    showToast(`Failed moves:\n${failureMessage}`, 'warning', 6000);
+                }
+            } else {
+                // All files moved successfully
+                showToast(`Successfully moved ${result.success_count} models`, 'success');
+            }
+        } else {
+            throw new Error(result.message || 'Failed to move models');
+        }
     }
 }
 

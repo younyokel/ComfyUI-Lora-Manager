@@ -667,11 +667,27 @@ class ApiRoutes:
         """Handle model move request"""
         try:
             data = await request.json()
-            file_path = data.get('file_path')
-            target_path = data.get('target_path')
+            file_path = data.get('file_path') # full path of the model file, e.g. /path/to/model.safetensors
+            target_path = data.get('target_path') # folder path to move the model to, e.g. /path/to/target_folder
             
             if not file_path or not target_path:
                 return web.Response(text='File path and target path are required', status=400)
+
+            # Check if source and destination are the same
+            source_dir = os.path.dirname(file_path)
+            if os.path.normpath(source_dir) == os.path.normpath(target_path):
+                logger.info(f"Source and target directories are the same: {source_dir}")
+                return web.json_response({'success': True, 'message': 'Source and target directories are the same'})
+
+            # Check if target file already exists
+            file_name = os.path.basename(file_path)
+            target_file_path = os.path.join(target_path, file_name).replace(os.sep, '/')
+            
+            if os.path.exists(target_file_path):
+                return web.json_response({
+                    'success': False, 
+                    'error': f"Target file already exists: {target_file_path}"
+                }, status=409)  # 409 Conflict
 
             # Call scanner to handle the move operation
             success = await self.scanner.move_model(file_path, target_path)
@@ -821,33 +837,55 @@ class ApiRoutes:
         """Handle bulk model move request"""
         try:
             data = await request.json()
-            file_paths = data.get('file_paths', [])
-            target_path = data.get('target_path')
+            file_paths = data.get('file_paths', []) # list of full paths of the model files, e.g. ["/path/to/model1.safetensors", "/path/to/model2.safetensors"]
+            target_path = data.get('target_path') # folder path to move the models to, e.g. "/path/to/target_folder"
             
             if not file_paths or not target_path:
                 return web.Response(text='File paths and target path are required', status=400)
 
             results = []
             for file_path in file_paths:
+                # Check if source and destination are the same
+                source_dir = os.path.dirname(file_path)
+                if os.path.normpath(source_dir) == os.path.normpath(target_path):
+                    results.append({
+                        "path": file_path, 
+                        "success": True, 
+                        "message": "Source and target directories are the same"
+                    })
+                    continue
+                
+                # Check if target file already exists
+                file_name = os.path.basename(file_path)
+                target_file_path = os.path.join(target_path, file_name).replace(os.sep, '/')
+                
+                if os.path.exists(target_file_path):
+                    results.append({
+                        "path": file_path, 
+                        "success": False, 
+                        "message": f"Target file already exists: {target_file_path}"
+                    })
+                    continue
+                
+                # Try to move the model
                 success = await self.scanner.move_model(file_path, target_path)
-                results.append({"path": file_path, "success": success})
+                results.append({
+                    "path": file_path, 
+                    "success": success,
+                    "message": "Success" if success else "Failed to move model"
+                })
             
-            # Count successes
+            # Count successes and failures
             success_count = sum(1 for r in results if r["success"])
+            failure_count = len(results) - success_count
             
-            if success_count == len(file_paths):
-                return web.json_response({
-                    'success': True,
-                    'message': f'Successfully moved {success_count} models'
-                })
-            elif success_count > 0:
-                return web.json_response({
-                    'success': True,
-                    'message': f'Moved {success_count} of {len(file_paths)} models',
-                    'results': results
-                })
-            else:
-                return web.Response(text='Failed to move any models', status=500)
+            return web.json_response({
+                'success': True,
+                'message': f'Moved {success_count} of {len(file_paths)} models',
+                'results': results,
+                'success_count': success_count,
+                'failure_count': failure_count
+            })
                 
         except Exception as e:
             logger.error(f"Error moving models in bulk: {e}", exc_info=True)
@@ -962,7 +1000,7 @@ class ApiRoutes:
                 'base_models': base_models
             })
         except Exception as e:
-            logger.error(f"Error retrieving base models: {e}", exc_info=True)
+            logger.error(f"Error retrieving base models: {e}")
             return web.json_response({
                 'success': False,
                 'error': str(e)
