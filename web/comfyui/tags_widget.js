@@ -2,19 +2,35 @@ export function addTagsWidget(node, name, opts, callback) {
   // Create container for tags
   const container = document.createElement("div");
   container.className = "comfy-tags-container";
+  
+  // Set initial height
+  const defaultHeight = 150;
+  container.style.setProperty('--comfy-widget-min-height', `${defaultHeight}px`);
+  container.style.setProperty('--comfy-widget-max-height', `${defaultHeight * 2}px`);
+  container.style.setProperty('--comfy-widget-height', `${defaultHeight}px`);
+  
   Object.assign(container.style, {
     display: "flex",
     flexWrap: "wrap",
-    gap: "4px",    // 从8px减小到4px
+    gap: "4px",
     padding: "6px",
-    minHeight: "30px",
-    backgroundColor: "rgba(40, 44, 52, 0.6)",  // Darker, more modern background
-    borderRadius: "6px",    // Slightly larger radius
+    backgroundColor: "rgba(40, 44, 52, 0.6)",
+    borderRadius: "6px",
     width: "100%",
+    boxSizing: "border-box",
+    overflow: "auto",
+    alignItems: "flex-start" // Ensure tags align at the top of each row
   });
 
   // Initialize default value as array
   const initialTagsData = opts?.defaultVal || [];
+
+  // Fixed sizes for tag elements to avoid zoom-related calculation issues
+  const TAG_HEIGHT = 26; // Adjusted height of a single tag including margins
+  const TAGS_PER_ROW = 3; // Approximate number of tags per row
+  const ROW_GAP = 2; // Reduced gap between rows
+  const CONTAINER_PADDING = 12; // Top and bottom padding
+  const EMPTY_CONTAINER_HEIGHT = 60; // Height when no tags are present
 
   // Function to render tags from array data
   const renderTags = (tagsData, widget) => {
@@ -38,11 +54,28 @@ export function addTagsWidget(node, name, opts, callback) {
         WebkitUserSelect: "none",
         MozUserSelect: "none",
         msUserSelect: "none",
+        width: "100%"
       });
       container.appendChild(emptyMessage);
+      
+      // Set fixed height for empty state
+      updateWidgetHeight(EMPTY_CONTAINER_HEIGHT);
       return;
     }
 
+    // Create a row container approach for better layout control
+    let rowContainer = document.createElement("div");
+    rowContainer.className = "comfy-tags-row";
+    Object.assign(rowContainer.style, {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "4px",
+      width: "100%",
+      marginBottom: "2px" // Small gap between rows
+    });
+    container.appendChild(rowContainer);
+
+    let tagCount = 0;
     normalizedTags.forEach((tagData, index) => {
       const { text, active } = tagData;
       const tagEl = document.createElement("div");
@@ -65,44 +98,75 @@ export function addTagsWidget(node, name, opts, callback) {
         widget.value = updatedTags;
       });
 
-      container.appendChild(tagEl);
+      rowContainer.appendChild(tagEl);
+      tagCount++;
     });
+    
+    // Calculate height based on number of tags and fixed sizes
+    const tagsCount = normalizedTags.length;
+    const rows = Math.ceil(tagsCount / TAGS_PER_ROW);
+    const calculatedHeight = CONTAINER_PADDING + (rows * TAG_HEIGHT) + ((rows - 1) * ROW_GAP);
+    
+    // Update widget height with calculated value
+    updateWidgetHeight(calculatedHeight);
+  };
+
+  // Function to update widget height consistently
+  const updateWidgetHeight = (height) => {
+    // Ensure minimum height
+    const finalHeight = Math.max(defaultHeight, height);
+    
+    // Update CSS variables
+    container.style.setProperty('--comfy-widget-min-height', `${finalHeight}px`);
+    container.style.setProperty('--comfy-widget-height', `${finalHeight}px`);
+    
+    // Force node to update size after a short delay to ensure DOM is updated
+    if (node) {
+      setTimeout(() => {
+        node.setDirtyCanvas(true, true);
+      }, 10);
+    }
   };
 
   // Helper function to update tag style based on active state
   function updateTagStyle(tagEl, active) {
     const baseStyles = {
-      padding: "4px 12px",    // 垂直内边距从6px减小到4px
-      borderRadius: "6px",    // Matching container radius
-      maxWidth: "200px",      // Increased max width
+      padding: "4px 10px", // Slightly reduced horizontal padding
+      borderRadius: "6px",
+      maxWidth: "200px",
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
-      fontSize: "13px",       // Slightly larger font
+      fontSize: "13px",
       cursor: "pointer",
-      transition: "all 0.2s ease",  // Smoother transition
+      transition: "all 0.2s ease",
       border: "1px solid transparent",
-      display: "inline-block",
+      display: "inline-flex", // Changed to inline-flex for better text alignment
+      alignItems: "center", // Center text vertically
+      justifyContent: "center", // Center text horizontally
       boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-      margin: "2px",          // 从4px减小到2px
-      userSelect: "none",     // Add this line to prevent text selection
-      WebkitUserSelect: "none",  // For Safari support
-      MozUserSelect: "none",     // For Firefox support
-      msUserSelect: "none",      // For IE/Edge support
+      margin: "1px", // Reduced margin
+      userSelect: "none",
+      WebkitUserSelect: "none",
+      MozUserSelect: "none",
+      msUserSelect: "none",
+      height: "20px", // Slightly increased height to prevent text cutoff
+      minHeight: "20px", // Ensure consistent height
+      boxSizing: "border-box" // Ensure padding doesn't affect the overall size
     };
 
     if (active) {
       Object.assign(tagEl.style, {
         ...baseStyles,
-        backgroundColor: "rgba(66, 153, 225, 0.9)",  // Modern blue
+        backgroundColor: "rgba(66, 153, 225, 0.9)",
         color: "white",
         borderColor: "rgba(66, 153, 225, 0.9)",
       });
     } else {
       Object.assign(tagEl.style, {
         ...baseStyles,
-        backgroundColor: "rgba(45, 55, 72, 0.7)",    // Darker inactive state
-        color: "rgba(226, 232, 240, 0.8)",          // Lighter text for contrast
+        backgroundColor: "rgba(45, 55, 72, 0.7)",
+        color: "rgba(226, 232, 240, 0.8)",
         borderColor: "rgba(226, 232, 240, 0.2)",
       });
     }
@@ -122,72 +186,48 @@ export function addTagsWidget(node, name, opts, callback) {
   // Store the value as array
   let widgetValue = initialTagsData;
 
-  // Create widget with initial properties
-  const widget = node.addDOMWidget(name, "tags", container, {
+  // Create widget with new DOM Widget API
+  const widget = node.addDOMWidget(name, "custom", container, {
     getValue: function() {
       return widgetValue;
     },
     setValue: function(v) {
       widgetValue = v;
       renderTags(widgetValue, widget);
-
-      // Update container height after rendering
-      requestAnimationFrame(() => {
-        const minHeight = this.getMinHeight();
-        container.style.height = `${minHeight}px`;
-        
-        // Force node to update size
-        node.setSize([node.size[0], node.computeSize()[1]]);
-        node.setDirtyCanvas(true, true);
-      });
     },
     getMinHeight: function() {
-      const minHeight = 150;
-      // If no tags or only showing the empty message, return a minimum height
-      if (widgetValue.length === 0) {
-        return minHeight; // Height for empty state with message
-      }
-      
-      // Get all tag elements
-      const tagElements = container.querySelectorAll('.comfy-tag');
-      
-      if (tagElements.length === 0) {
-        return minHeight; // Fallback if elements aren't rendered yet
-      }
-      
-      // Calculate the actual height based on tag positions
-      let maxBottom = 0;
-      
-      tagElements.forEach(tag => {
-        const rect = tag.getBoundingClientRect();
-        const tagBottom = rect.bottom - container.getBoundingClientRect().top;
-        maxBottom = Math.max(maxBottom, tagBottom);
-      });
-      
-      // Add padding (top and bottom padding of container)
-      const computedStyle = window.getComputedStyle(container);
-      const paddingTop = parseInt(computedStyle.paddingTop, 10) || 0;
-      const paddingBottom = parseInt(computedStyle.paddingBottom, 10) || 0;
-      
-      // Add extra buffer for potential wrapping issues and to ensure no clipping
-      const extraBuffer = 20;
-      
-      // Round up to nearest 5px for clean sizing and ensure minimum height
-      return Math.max(minHeight, Math.ceil((maxBottom + paddingBottom + extraBuffer) / 5) * 5);
+      return parseInt(container.style.getPropertyValue('--comfy-widget-min-height')) || defaultHeight;
     },
+    getMaxHeight: function() {
+      return parseInt(container.style.getPropertyValue('--comfy-widget-max-height')) || defaultHeight * 2;
+    },
+    getHeight: function() {
+      return parseInt(container.style.getPropertyValue('--comfy-widget-height')) || defaultHeight;
+    },
+    hideOnZoom: true,
+    selectOn: ['click', 'focus'],
+    afterResize: function(node) {
+      // Re-render tags after node resize
+      if (this.value && this.value.length > 0) {
+        renderTags(this.value, this);
+      }
+    }
   });
 
+  // Set initial value
   widget.value = initialTagsData;
 
+  // Set callback
   widget.callback = callback;
 
+  // Add serialization method to avoid ComfyUI serialization issues
   widget.serializeValue = () => {
-    // Add dummy items to avoid the 2-element serialization issue, a bug in comfyui
+    // Add dummy items to avoid the 2-element serialization issue
     return [...widgetValue, 
         { text: "__dummy_item__", active: false, _isDummy: true },
         { text: "__dummy_item__", active: false, _isDummy: true }
       ];
   };
 
-  return { minWidth: 300, minHeight: 150, widget };
-}
+  return { minWidth: 300, minHeight: defaultHeight, widget };
+} 

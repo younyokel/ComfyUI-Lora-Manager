@@ -1,8 +1,35 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { addTagsWidget } from "./tags_widget.js";
 
 const CONVERTED_TYPE = 'converted-widget'
+
+function getComfyUIFrontendVersion() {
+    // 直接访问全局变量
+    return window['__COMFYUI_FRONTEND_VERSION__'];
+}
+
+// Dynamically import the appropriate tags widget based on app version
+function getTagsWidgetModule() {
+    // Parse app version and compare with 1.12.6
+    const currentVersion = getComfyUIFrontendVersion() || "0.0.0";
+    console.log("currentVersion", currentVersion);
+    const versionParts = currentVersion.split('.').map(part => parseInt(part, 10));
+    const requiredVersion = [1, 12, 6];
+    
+    // Compare version numbers
+    for (let i = 0; i < 3; i++) {
+        if (versionParts[i] > requiredVersion[i]) {
+            console.log("Using tags_widget.js");
+            return import("./tags_widget.js");
+        } else if (versionParts[i] < requiredVersion[i]) {
+            console.log("Using legacy_tags_widget.js");
+            return import("./legacy_tags_widget.js");
+        }
+    }
+    
+    // If we get here, versions are equal, use the new module
+    return import("./tags_widget.js");
+}
 
 // TriggerWordToggle extension for ComfyUI
 app.registerExtension({
@@ -26,7 +53,11 @@ app.registerExtension({
             });
 
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {        
+            requestAnimationFrame(async () => {
+                // Dynamically import the appropriate tags widget module
+                const tagsWidgetModule = await getTagsWidgetModule();
+                const { addTagsWidget } = tagsWidgetModule;
+                
                 // Get the widget object directly from the returned object
                 const result = addTagsWidget(node, "toggle_trigger_words", {
                     defaultVal: []
