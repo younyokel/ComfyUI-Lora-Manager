@@ -20,6 +20,11 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.4
+* **Node Layout Improvements** - Fixed layout issues with LoRA Loader and Trigger Words Toggle nodes in newer ComfyUI frontend versions
+* **Recipe LoRA Reconnection** - Added ability to reconnect deleted LoRAs in recipes by clicking the "deleted" badge in recipe details
+* **Bug Fixes & Stability** - Resolved various issues for improved reliability
+
 ### v0.8.3
 * **Enhanced Workflow Parser** - Rebuilt workflow analysis engine with improved support for ComfyUI core nodes and easier extensibility
 * **Improved Recipe System** - Refined the experimental Save Recipe functionality with better workflow integration
