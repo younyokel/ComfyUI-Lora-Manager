@@ -15,7 +15,7 @@ export function addLorasWidget(node, name, opts, callback) {
   Object.assign(container.style, {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "5px",
     padding: "6px",
     backgroundColor: "rgba(40, 44, 52, 0.6)",
     borderRadius: "6px",
@@ -28,7 +28,7 @@ export function addLorasWidget(node, name, opts, callback) {
   const defaultValue = opts?.defaultVal || [];
 
   // Fixed sizes for component calculations
-  const LORA_ENTRY_HEIGHT = 44; // Height of a single lora entry
+  const LORA_ENTRY_HEIGHT = 40; // Height of a single lora entry
   const HEADER_HEIGHT = 40; // Height of the header section
   const CONTAINER_PADDING = 12; // Top and bottom padding
   const EMPTY_CONTAINER_HEIGHT = 100; // Height when no loras are present
@@ -537,7 +537,7 @@ export function addLorasWidget(node, name, opts, callback) {
       alignItems: "center",
       padding: "4px 8px",
       borderBottom: "1px solid rgba(226, 232, 240, 0.2)",
-      marginBottom: "8px"
+      marginBottom: "5px"
     });
 
     // Add toggle all control
@@ -599,11 +599,11 @@ export function addLorasWidget(node, name, opts, callback) {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "8px",
+        padding: "6px",
         borderRadius: "6px",
         backgroundColor: active ? "rgba(45, 55, 72, 0.7)" : "rgba(35, 40, 50, 0.5)",
         transition: "all 0.2s ease",
-        marginBottom: "6px",
+        marginBottom: "4px",
       });
 
       // Create toggle for this lora
