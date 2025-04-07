@@ -1,6 +1,6 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
-import { showLoraModal, toggleShowcase, scrollToTop } from './components/LoraModal.js';
+import { showLoraModal, toggleShowcase, scrollToTop } from './components/loraModal/index.js';
 import { loadMoreLoras, fetchCivitai, deleteModel, replacePreview, resetAndReload, refreshLoras } from './api/loraApi.js';
 import { 
     restoreFolderFilter, 

@@ -1,6 +1,6 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
-import { showLoraModal } from './LoraModal.js';
+import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
 
