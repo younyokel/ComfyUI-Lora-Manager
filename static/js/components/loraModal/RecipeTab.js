@@ -192,29 +192,20 @@ function copyRecipeSyntax(recipeId) {
  * @param {string} loraHash - The hash of the Lora to filter by
  * @param {boolean} createNew - Whether to open the create recipe dialog
  */
-function navigateToRecipesPage(loraName, loraHash, createNew = false) {
+function navigateToRecipesPage(loraName, loraHash) {
     // Close the current modal
     if (window.modalManager) {
         modalManager.closeModal('loraModal');
     }
     
     // Clear any previous filters first
-    removeSessionItem('filterLoraName');
-    removeSessionItem('filterLoraHash');
-    removeSessionItem('bypassExistingFilters');
+    removeSessionItem('lora_to_recipe_filterLoraName');
+    removeSessionItem('lora_to_recipe_filterLoraHash');
     removeSessionItem('viewRecipeId');
     
     // Store the LoRA name and hash filter in sessionStorage
-    setSessionItem('filterLoraName', loraName);
-    setSessionItem('filterLoraHash', loraHash);
-    
-    // Set a flag to indicate we're navigating with a specific filter
-    setSessionItem('bypassExistingFilters', 'true');
-    
-    // Set flag to open create dialog if requested
-    if (createNew) {
-        setSessionItem('openCreateRecipeDialog', 'true');
-    }
+    setSessionItem('lora_to_recipe_filterLoraName', loraName);
+    setSessionItem('lora_to_recipe_filterLoraHash', loraHash);
     
     // Directly navigate to recipes page
     window.location.href = '/loras/recipes';
@@ -233,7 +224,6 @@ function navigateToRecipeDetails(recipeId) {
     // Clear any previous filters first
     removeSessionItem('filterLoraName');
     removeSessionItem('filterLoraHash');
-    removeSessionItem('bypassExistingFilters');
     removeSessionItem('viewRecipeId');
     
     // Store the recipe ID in sessionStorage to load on recipes page

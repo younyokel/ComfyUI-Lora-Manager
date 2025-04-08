@@ -132,13 +132,9 @@ class ApiRoutes:
             page = int(request.query.get('page', '1'))
             page_size = int(request.query.get('page_size', '20'))
             sort_by = request.query.get('sort_by', 'name')
-            folder = request.query.get('folder')
-            search = request.query.get('search', '').lower()
-            fuzzy = request.query.get('fuzzy', 'false').lower() == 'true'
-            
-            # Parse base models filter parameter
-            base_models = request.query.get('base_models', '').split(',')
-            base_models = [model.strip() for model in base_models if model.strip()]
+            folder = request.query.get('folder', None)
+            search = request.query.get('search', None)
+            fuzzy_search = request.query.get('fuzzy', 'false').lower() == 'true'
             
             # Parse search options
             search_filename = request.query.get('search_filename', 'true').lower() == 'true'
@@ -146,62 +142,68 @@ class ApiRoutes:
             search_tags = request.query.get('search_tags', 'false').lower() == 'true'
             recursive = request.query.get('recursive', 'false').lower() == 'true'
             
-            # Validate parameters
-            if page < 1 or page_size < 1 or page_size > 100:
-                return web.json_response({
-                    'error': 'Invalid pagination parameters'
-                }, status=400)
+            # Get filter parameters
+            base_models = request.query.get('base_models', None)
+            tags = request.query.get('tags', None)
             
-            if sort_by not in ['date', 'name']:
-                return web.json_response({
-                    'error': 'Invalid sort parameter'
-                }, status=400)
+            # New parameters for recipe filtering
+            lora_hash = request.query.get('lora_hash', None)
+            lora_hashes = request.query.get('lora_hashes', None)
             
-            # Parse tags filter parameter
-            tags = request.query.get('tags', '').split(',')
-            tags = [tag.strip() for tag in tags if tag.strip()]
+            # Parse filter parameters
+            filters = {}
+            if base_models:
+                filters['base_model'] = base_models.split(',')
+            if tags:
+                filters['tags'] = tags.split(',')
             
-            # Get paginated data with search and filters
-            result = await self.scanner.get_paginated_data(
-                page=page,
-                page_size=page_size,
-                sort_by=sort_by,
+            # Add search options to filters
+            search_options = {
+                'filename': search_filename,
+                'modelname': search_modelname,
+                'tags': search_tags,
+                'recursive': recursive
+            }
+            
+            # Add lora hash filtering options
+            hash_filters = {}
+            if lora_hash:
+                hash_filters['single_hash'] = lora_hash.lower()
+            elif lora_hashes:
+                hash_filters['multiple_hashes'] = [h.lower() for h in lora_hashes.split(',')]
+            
+            # Get file data
+            data = await self.scanner.get_paginated_data(
+                page, 
+                page_size, 
+                sort_by=sort_by, 
                 folder=folder,
                 search=search,
-                fuzzy=fuzzy,
-                base_models=base_models,  # Pass base models filter
-                tags=tags,  # Add tags parameter
-                search_options={
-                    'filename': search_filename,
-                    'modelname': search_modelname,
-                    'tags': search_tags,
-                    'recursive': recursive
-                }
+                fuzzy_search=fuzzy_search,
+                base_models=filters.get('base_model', None),
+                tags=filters.get('tags', None),
+                search_options=search_options,
+                hash_filters=hash_filters
             )
-            
-            # Format the response data
-            formatted_items = [
-                self._format_lora_response(item) 
-                for item in result['items']
-            ]
 
             # Get all available folders from cache
             cache = await self.scanner.get_cached_data()
             
-            return web.json_response({
-                'items': formatted_items,
-                'total': result['total'],
-                'page': result['page'],
-                'page_size': result['page_size'],
-                'total_pages': result['total_pages'],
-                'folders': cache.folders
-            })
+            # Convert output to match expected format
+            result = {
+                'items': [self._format_lora_response(lora) for lora in data['items']],
+                'folders': cache.folders,
+                'total': data['total'],
+                'page': data['page'],
+                'page_size': data['page_size'],
+                'total_pages': data['total_pages']
+            }
+            
+            return web.json_response(result)
             
         except Exception as e:
-            logger.error(f"Error in get_loras: {str(e)}", exc_info=True)
-            return web.json_response({
-                'error': 'Internal server error'
-            }, status=500)
+            logger.error(f"Error retrieving loras: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
 
     def _format_lora_response(self, lora: Dict) -> Dict:
         """Format LoRA data for API response"""
@@ -831,7 +833,10 @@ class ApiRoutes:
 
         except Exception as e:
             logger.error(f"Error getting lora Civitai URL: {e}", exc_info=True)
-            return web.Response(text=str(e), status=500)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
 
     async def move_models_bulk(self, request: web.Request) -> web.Response:
         """Handle bulk model move request"""

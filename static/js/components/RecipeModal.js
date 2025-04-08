@@ -1,6 +1,7 @@
 // Recipe Modal Component
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
+import { setSessionItem, removeSessionItem } from '../utils/storageHelpers.js';
 
 class RecipeModal {
     constructor() {
@@ -294,7 +295,7 @@ class RecipeModal {
         } else {
             // No generation parameters available
             if (promptElement) promptElement.textContent = 'No prompt information available';
-            if (negativePromptElement) negativePromptElement.textContent = 'No negative prompt information available';
+            if (negativePromptElement) promptElement.textContent = 'No negative prompt information available';
             if (otherParamsElement) otherParamsElement.innerHTML = '<div class="no-params">No parameters available</div>';
         }
         
@@ -342,8 +343,15 @@ class RecipeModal {
             
             lorasCountElement.innerHTML = `<i class="fas fa-layer-group"></i> ${totalCount} LoRAs ${statusHTML}`;
             
-            // Add click handler for missing LoRAs status
+            // Add event listeners for buttons and status indicators
             setTimeout(() => {
+                // Set up click handler for View LoRAs button
+                const viewRecipeLorasBtn = document.getElementById('viewRecipeLorasBtn');
+                if (viewRecipeLorasBtn) {
+                    viewRecipeLorasBtn.addEventListener('click', () => this.navigateToLorasPage());
+                }
+                
+                // Add click handler for missing LoRAs status
                 const missingStatus = document.querySelector('.recipe-status.missing');
                 if (missingStatus && missingLorasCount > 0) {
                     missingStatus.classList.add('clickable');
@@ -433,6 +441,7 @@ class RecipeModal {
             // Add event listeners for reconnect functionality
             setTimeout(() => {
                 this.setupReconnectButtons();
+                this.setupLoraItemsClickable();
             }, 100);
             
             // Generate recipe syntax for copy button (this is now a placeholder, actual syntax will be fetched from the API)
@@ -1007,6 +1016,65 @@ class RecipeModal {
             state.loadingManager.hide();
         }
     }
+
+    // New method to navigate to the LoRAs page
+    navigateToLorasPage(specificLoraIndex = null) {
+        // Close the current modal
+        modalManager.closeModal('recipeModal');
+        
+        // Clear any previous filters first
+        removeSessionItem('recipe_to_lora_filterLoraHash');
+        removeSessionItem('recipe_to_lora_filterLoraHashes');
+        removeSessionItem('filterRecipeName');
+        removeSessionItem('viewLoraDetail');
+        
+        if (specificLoraIndex !== null) {
+            // If a specific LoRA index is provided, navigate to view just that one LoRA
+            const lora = this.currentRecipe.loras[specificLoraIndex];
+            if (lora && lora.hash) {
+                // Set session storage to open the LoRA modal directly
+                setSessionItem('recipe_to_lora_filterLoraHash', lora.hash.toLowerCase());
+                setSessionItem('viewLoraDetail', 'true');
+                setSessionItem('filterRecipeName', this.currentRecipe.title);
+            }
+        } else {
+            // If no specific LoRA index is provided, show all LoRAs from this recipe
+            // Collect all hashes from the recipe's LoRAs
+            const loraHashes = this.currentRecipe.loras
+                .filter(lora => lora.hash)
+                .map(lora => lora.hash.toLowerCase());
+                
+            if (loraHashes.length > 0) {
+                // Store the LoRA hashes and recipe name in sessionStorage
+                setSessionItem('recipe_to_lora_filterLoraHashes', JSON.stringify(loraHashes));
+                setSessionItem('filterRecipeName', this.currentRecipe.title);
+            }
+        }
+        
+        // Navigate to the LoRAs page
+        window.location.href = '/loras';
+    }
+
+    // New method to make LoRA items clickable
+    setupLoraItemsClickable() {
+        const loraItems = document.querySelectorAll('.recipe-lora-item');
+        loraItems.forEach(item => {
+            // Get the lora index from the data attribute
+            const loraIndex = parseInt(item.dataset.loraIndex);
+            
+            item.addEventListener('click', (e) => {
+                // If the click is on the reconnect container or badge, don't navigate
+                if (e.target.closest('.lora-reconnect-container') || 
+                    e.target.closest('.deleted-badge') ||
+                    e.target.closest('.reconnect-tooltip')) {
+                    return;
+                }
+                
+                // Navigate to the LoRAs page with the specific LoRA index
+                this.navigateToLorasPage(loraIndex);
+            });
+        });
+    }
 }
 
-export { RecipeModal }; 
+export { RecipeModal };

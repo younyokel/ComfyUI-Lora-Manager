@@ -330,7 +330,7 @@ class RecipeScanner:
             logger.error(f"Error getting base model for lora: {e}")
             return None
 
-    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None, search_options: dict = None, lora_hash: str = None, bypass_filters: bool = False):
+    async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'date', search: str = None, filters: dict = None, search_options: dict = None, lora_hash: str = None, bypass_filters: bool = True):
         """Get paginated and filtered recipe data
         
         Args:

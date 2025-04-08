@@ -136,9 +136,9 @@ class LoraScanner:
             )
 
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
-                               folder: str = None, search: str = None, fuzzy: bool = False,
+                               folder: str = None, search: str = None, fuzzy_search: bool = False,
                                base_models: list = None, tags: list = None,
-                               search_options: dict = None) -> Dict:
+                               search_options: dict = None, hash_filters: dict = None) -> Dict:
         """Get paginated and filtered lora data
         
         Args:
@@ -147,10 +147,11 @@ class LoraScanner:
             sort_by: Sort method ('name' or 'date')
             folder: Filter by folder path
             search: Search term
-            fuzzy: Use fuzzy matching for search
+            fuzzy_search: Use fuzzy matching for search
             base_models: List of base models to filter by
             tags: List of tags to filter by
             search_options: Dictionary with search options (filename, modelname, tags, recursive)
+            hash_filters: Dictionary with hash filtering options (single_hash or multiple_hashes)
         """
         cache = await self.get_cached_data()
 
@@ -160,90 +161,108 @@ class LoraScanner:
                 'filename': True,
                 'modelname': True,
                 'tags': False,
-                'recursive': False
+                'recursive': False,
             }
 
         # Get the base data set
         filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
         
+        # Apply hash filtering if provided (highest priority)
+        if hash_filters:
+            single_hash = hash_filters.get('single_hash')
+            multiple_hashes = hash_filters.get('multiple_hashes')
+            
+            if single_hash:
+                # Filter by single hash
+                single_hash = single_hash.lower()  # Ensure lowercase for matching
+                filtered_data = [
+                    lora for lora in filtered_data
+                    if lora.get('sha256', '').lower() == single_hash
+                ]
+            elif multiple_hashes:
+                # Filter by multiple hashes
+                hash_set = set(hash.lower() for hash in multiple_hashes)  # Convert to set for faster lookup
+                filtered_data = [
+                    lora for lora in filtered_data
+                    if lora.get('sha256', '').lower() in hash_set
+                ]
+            
+
+            # Jump to pagination
+            total_items = len(filtered_data)
+            start_idx = (page - 1) * page_size
+            end_idx = min(start_idx + page_size, total_items)
+            
+            result = {
+                'items': filtered_data[start_idx:end_idx],
+                'total': total_items,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_items + page_size - 1) // page_size
+            }
+            
+            return result
+        
         # Apply SFW filtering if enabled
         if settings.get('show_only_sfw', False):
             filtered_data = [
-                item for item in filtered_data
-                if not item.get('preview_nsfw_level') or item.get('preview_nsfw_level') < NSFW_LEVELS['R']
+                lora for lora in filtered_data
+                if not lora.get('preview_nsfw_level') or lora.get('preview_nsfw_level') < NSFW_LEVELS['NSFW']
             ]
         
         # Apply folder filtering
         if folder is not None:
             if search_options.get('recursive', False):
-                # Recursive mode: match all paths starting with this folder
+                # Recursive folder filtering - include all subfolders
                 filtered_data = [
-                    item for item in filtered_data 
-                    if item['folder'].startswith(folder + '/') or item['folder'] == folder
+                    lora for lora in filtered_data
+                    if lora['folder'].startswith(folder)
                 ]
             else:
-                # Non-recursive mode: match exact folder
+                # Exact folder filtering
                 filtered_data = [
-                    item for item in filtered_data 
-                    if item['folder'] == folder
+                    lora for lora in filtered_data
+                    if lora['folder'] == folder
                 ]
         
         # Apply base model filtering
         if base_models and len(base_models) > 0:
             filtered_data = [
-                item for item in filtered_data
-                if item.get('base_model') in base_models
+                lora for lora in filtered_data
+                if lora.get('base_model') in base_models
             ]
         
         # Apply tag filtering
         if tags and len(tags) > 0:
             filtered_data = [
-                item for item in filtered_data
-                if any(tag in item.get('tags', []) for tag in tags)
+                lora for lora in filtered_data
+                if any(tag in lora.get('tags', []) for tag in tags)
             ]
         
         # Apply search filtering
         if search:
             search_results = []
-            for item in filtered_data:
-                # Check filename if enabled
-                if search_options.get('filename', True):
-                    if fuzzy:
-                        if fuzzy_match(item.get('file_name', ''), search):
-                            search_results.append(item)
-                            continue
-                    else:
-                        if search.lower() in item.get('file_name', '').lower():
-                            search_results.append(item)
-                            continue
-                            
-                # Check model name if enabled
-                if search_options.get('modelname', True):
-                    if fuzzy:
-                        if fuzzy_match(item.get('model_name', ''), search):
-                            search_results.append(item)
-                            continue
-                    else:
-                        if search.lower() in item.get('model_name', '').lower():
-                            search_results.append(item)
-                            continue
-                            
-                # Check tags if enabled
-                if search_options.get('tags', False) and item.get('tags'):
-                    found_tag = False
-                    for tag in item['tags']:
-                        if fuzzy:
-                            if fuzzy_match(tag, search):
-                                found_tag = True
-                                break
-                        else:
-                            if search.lower() in tag.lower():
-                                found_tag = True
-                                break
-                    if found_tag:
-                        search_results.append(item)
+            search_opts = search_options or {}
+            
+            for lora in filtered_data:
+                # Search by file name
+                if search_opts.get('filename', True):
+                    if fuzzy_match(lora.get('file_name', ''), search):
+                        search_results.append(lora)
                         continue
                         
+                # Search by model name
+                if search_opts.get('modelname', True):
+                    if fuzzy_match(lora.get('model_name', ''), search):
+                        search_results.append(lora)
+                        continue
+                        
+                # Search by tags
+                if search_opts.get('tags', False) and 'tags' in lora:
+                    if any(fuzzy_match(tag, search) for tag in lora['tags']):
+                        search_results.append(lora)
+                        continue
+            
             filtered_data = search_results
 
         # Calculate pagination

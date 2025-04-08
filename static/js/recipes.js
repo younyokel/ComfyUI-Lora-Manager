@@ -71,18 +71,15 @@ class RecipeManager {
     }
     
     _checkCustomFilter() {
-        // Check for bypass filter flag
-        const bypassExistingFilters = getSessionItem('bypassExistingFilters');
-        
         // Check for Lora filter
-        const filterLoraName = getSessionItem('filterLoraName');
-        const filterLoraHash = getSessionItem('filterLoraHash');
+        const filterLoraName = getSessionItem('lora_to_recipe_filterLoraName');
+        const filterLoraHash = getSessionItem('lora_to_recipe_filterLoraHash');
         
         // Check for specific recipe ID
         const viewRecipeId = getSessionItem('viewRecipeId');
         
         // Set custom filter if any parameter is present
-        if (bypassExistingFilters || filterLoraName || filterLoraHash || viewRecipeId) {
+        if (filterLoraName || filterLoraHash || viewRecipeId) {
             this.customFilter = {
                 active: true,
                 loraName: filterLoraName,
@@ -90,25 +87,8 @@ class RecipeManager {
                 recipeId: viewRecipeId
             };
             
-            // Clean up session storage after reading
-            removeSessionItem('bypassExistingFilters');
-            
             // Show custom filter indicator
             this._showCustomFilterIndicator();
-        }
-        
-        // Check for create recipe dialog flag
-        const openCreateRecipeDialog = getSessionItem('openCreateRecipeDialog');
-        if (openCreateRecipeDialog) {
-            // Clean up session storage
-            removeSessionItem('openCreateRecipeDialog');
-            
-            // Schedule showing the create dialog after the page loads
-            setTimeout(() => {
-                if (this.importManager && typeof this.importManager.showImportModal === 'function') {
-                    this.importManager.showImportModal();
-                }
-            }, 500);
         }
     }
     
@@ -176,8 +156,8 @@ class RecipeManager {
         }
         
         // Clear any session storage items
-        removeSessionItem('filterLoraName');
-        removeSessionItem('filterLoraHash');
+        removeSessionItem('lora_to_recipe_filterLoraName');
+        removeSessionItem('lora_to_recipe_filterLoraHash');
         removeSessionItem('viewRecipeId');
         
         // Reload recipes without custom filter
@@ -367,7 +347,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Export for use in other modules
 export { RecipeManager };
-
-// The RecipesManager class from the original file is preserved below (commented out)
-// If needed, functionality can be migrated to the new RecipeManager class above
-// ...rest of the existing code...

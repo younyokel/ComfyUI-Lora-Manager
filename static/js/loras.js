@@ -17,7 +17,7 @@ import { LoraContextMenu } from './components/ContextMenu.js';
 import { moveManager } from './managers/MoveManager.js';
 import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
-import { setStorageItem, getStorageItem } from './utils/storageHelpers.js';
+import { setStorageItem, getStorageItem, getSessionItem, removeSessionItem } from './utils/storageHelpers.js';
 
 // Initialize the LoRA page
 class LoraPageManager {
@@ -69,6 +69,9 @@ class LoraPageManager {
         initFolderTagsVisibility();
         new LoraContextMenu();
         
+        // Check for custom filters from recipe page navigation
+        this.checkCustomFilters();
+        
         // Initialize cards for current bulk mode state (should be false initially)
         updateCardsForBulkMode(state.bulkMode);
         
@@ -79,6 +82,80 @@ class LoraPageManager {
         appCore.initializePageFeatures();
     }
 
+    // Check for custom filter parameters in session storage
+    checkCustomFilters() {
+        const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
+        const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
+        const filterRecipeName = getSessionItem('filterRecipeName');
+        const viewLoraDetail = getSessionItem('viewLoraDetail');
+
+        console.log("Checking custom filters...");
+        console.log("filterLoraHash:", filterLoraHash);
+        console.log("filterLoraHashes:", filterLoraHashes);
+        console.log("filterRecipeName:", filterRecipeName);
+        console.log("viewLoraDetail:", viewLoraDetail);
+        
+        if ((filterLoraHash || filterLoraHashes) && filterRecipeName) {
+            // Found custom filter parameters, set up the custom filter
+            
+            // Show the filter indicator
+            const indicator = document.getElementById('customFilterIndicator');
+            const filterText = indicator.querySelector('.customFilterText');
+            
+            if (indicator && filterText) {
+                indicator.classList.remove('hidden');
+                
+                // Set text content with recipe name
+                const filterType = filterLoraHash && viewLoraDetail ? "Viewing LoRA from" : "Viewing LoRAs from";
+                const displayText = `${filterType}: ${filterRecipeName}`;
+                
+                filterText.textContent = this._truncateText(displayText, 30);
+                filterText.setAttribute('title', displayText);
+                
+                // Add click handler for the clear button
+                const clearBtn = indicator.querySelector('.clear-filter');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', this.clearCustomFilter);
+                }
+            }
+            
+            // If we're viewing a specific LoRA detail, set up to open the modal
+            if (filterLoraHash && viewLoraDetail) {
+                // Store this to fetch after initial load completes
+                state.pendingLoraHash = filterLoraHash;
+            }
+        }
+    }
+    
+    // Helper to truncate text with ellipsis
+    _truncateText(text, maxLength) {
+        return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    }
+    
+    // Clear the custom filter and reload the page
+    clearCustomFilter = async () => {
+        console.log("Clearing custom filter...");
+        // Remove filter parameters from session storage
+        removeSessionItem('recipe_to_lora_filterLoraHash');
+        removeSessionItem('recipe_to_lora_filterLoraHashes');
+        removeSessionItem('filterRecipeName');
+        removeSessionItem('viewLoraDetail');
+        
+        // Hide the filter indicator
+        const indicator = document.getElementById('customFilterIndicator');
+        if (indicator) {
+            indicator.classList.add('hidden');
+        }
+        
+        // Reset state
+        if (state.pendingLoraHash) {
+            delete state.pendingLoraHash;
+        }
+        
+        // Reload the loras
+        await resetAndReload();
+    }
+    
     loadSortPreference() {
         const savedSort = getStorageItem('loras_sort');
         if (savedSort) {

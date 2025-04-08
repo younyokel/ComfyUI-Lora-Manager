@@ -400,6 +400,27 @@
     gap: var(--space-1);
 }
 
+/* View LoRAs button */
+.view-loras-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-xs);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.view-loras-btn:hover {
+    opacity: 1;
+    background: var(--lora-surface);
+    color: var(--lora-accent);
+}
+
 #recipeLorasCount {
     font-size: 0.9em;
     color: var(--text-color);
@@ -433,6 +454,14 @@
     will-change: transform;
     /* Create a new containing block for absolutely positioned descendants */
     transform: translateZ(0);
+    cursor: pointer; /* Make it clear the item is clickable */
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.recipe-lora-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: var(--lora-accent);
 }
 
 .recipe-lora-item.exists-locally {

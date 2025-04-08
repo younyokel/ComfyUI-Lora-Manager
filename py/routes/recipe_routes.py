@@ -103,7 +103,6 @@ class RecipeRoutes:
             
             # New parameter: get LoRA hash filter
             lora_hash = request.query.get('lora_hash', None)
-            bypass_filters = request.query.get('bypass_filters', 'false').lower() == 'true'
             
             # Parse filter parameters
             filters = {}
@@ -128,8 +127,7 @@ class RecipeRoutes:
                 search=search,
                 filters=filters,
                 search_options=search_options,
-                lora_hash=lora_hash,
-                bypass_filters=bypass_filters
+                lora_hash=lora_hash
             )
             
             # Format the response data with static URLs for file paths

@@ -4,6 +4,7 @@ import { createLoraCard } from '../components/LoraCard.js';
 import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 import { showDeleteModal } from '../utils/modalUtils.js';
 import { toggleFolder } from '../utils/uiHelpers.js';
+import { getSessionItem } from '../utils/storageHelpers.js';
 
 export async function loadMoreLoras(resetPage = false, updateFolders = false) {
     const pageState = getCurrentPageState();
@@ -54,6 +55,28 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
             if (pageState.filters.baseModel && pageState.filters.baseModel.length > 0) {
                 // Convert the array of base models to a comma-separated string
                 params.append('base_models', pageState.filters.baseModel.join(','));
+            }
+        }
+
+        // Check for recipe-based filtering parameters from session storage
+        const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
+        const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
+
+        console.log('Filter Lora Hash:', filterLoraHash);
+        console.log('Filter Lora Hashes:', filterLoraHashes);
+        
+        // Add hash filter parameter if present
+        if (filterLoraHash) {
+            params.append('lora_hash', filterLoraHash);
+        } 
+        // Add multiple hashes filter if present
+        else if (filterLoraHashes) {
+            try {
+                if (Array.isArray(filterLoraHashes) && filterLoraHashes.length > 0) {
+                    params.append('lora_hashes', filterLoraHashes.join(','));
+                }
+            } catch (error) {
+                console.error('Error parsing lora hashes from session storage:', error);
             }
         }
 
