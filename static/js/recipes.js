@@ -124,10 +124,10 @@ class RecipeManager {
         indicator.classList.remove('hidden');
         
         // Add pulse animation
-        const button = indicator.querySelector('button');
-        if (button) {
-            button.classList.add('animate');
-            setTimeout(() => button.classList.remove('animate'), 600);
+        const filterElement = indicator.querySelector('.filter-active');
+        if (filterElement) {
+            filterElement.classList.add('animate');
+            setTimeout(() => filterElement.classList.remove('animate'), 600);
         }
         
         // Add click handler for clear filter button

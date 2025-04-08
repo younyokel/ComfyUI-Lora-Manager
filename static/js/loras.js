@@ -117,6 +117,13 @@ class LoraPageManager {
                 if (clearBtn) {
                     clearBtn.addEventListener('click', this.clearCustomFilter);
                 }
+
+                // Add pulse animation
+                const filterElement = indicator.querySelector('.filter-active');
+                if (filterElement) {
+                    filterElement.classList.add('animate');
+                    setTimeout(() => filterElement.classList.remove('animate'), 600);
+                }
             }
             
             // If we're viewing a specific LoRA detail, set up to open the modal
