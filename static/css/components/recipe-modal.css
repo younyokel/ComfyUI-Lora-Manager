@@ -441,6 +441,7 @@
     gap: 10px;
     overflow-y: auto;
     flex: 1;
+    padding-top: 4px; /* Add padding to prevent first item from being cut off when hovered */
 }
 
 .recipe-lora-item {
