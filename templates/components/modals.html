@@ -17,16 +17,24 @@
         <button class="close" onclick="modalManager.closeModal('settingsModal')">&times;</button>
         <h2>Settings</h2>
         <div class="settings-form">
-            <div class="input-group">
-                <label for="civitaiApiKey">Civitai API Key:</label>
-                <div class="api-key-input">
-                    <input type="password" 
-                           id="civitaiApiKey" 
-                           placeholder="Enter your Civitai API key"
-                           value="{{ settings.get('civitai_api_key', '') }}" />
-                    <button class="toggle-visibility" onclick="toggleApiKeyVisibility(this)">
-                        <i class="fas fa-eye"></i>
-                    </button>
+            <div class="setting-item api-key-item">
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <label for="civitaiApiKey">Civitai API Key:</label>
+                    </div>
+                    <div class="setting-control">
+                        <div class="api-key-input">
+                            <input type="password" 
+                                id="civitaiApiKey" 
+                                placeholder="Enter your Civitai API key"
+                                value="{{ settings.get('civitai_api_key', '') }}"
+                                onblur="settingsManager.saveInputSetting('civitaiApiKey', 'civitai_api_key')"
+                                onkeydown="if(event.key === 'Enter') { this.blur(); }" />
+                            <button class="toggle-visibility" onclick="toggleApiKeyVisibility(this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="input-help">
                     Used for authentication when downloading models from Civitai
@@ -37,32 +45,61 @@
                 <h3>Content Filtering</h3>
                 
                 <div class="setting-item">
-                    <div class="setting-info">
-                        <label for="blurMatureContent">Blur NSFW Content</label>
-                        <div class="input-help">
-                            Blur mature (NSFW) content preview images
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="blurMatureContent">Blur NSFW Content</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="blurMatureContent" checked 
+                                       onchange="settingsManager.saveToggleSetting('blurMatureContent', 'blur_mature_content')">
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
                     </div>
-                    <div class="setting-control">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="blurMatureContent" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                    <div class="input-help">
+                        Blur mature (NSFW) content preview images
                     </div>
                 </div>
                 
                 <div class="setting-item">
-                    <div class="setting-info">
-                        <label for="showOnlySFW">Show Only SFW Results</label>
-                        <div class="input-help">
-                            Filter out all NSFW content when browsing and searching
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="showOnlySFW">Show Only SFW Results</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="showOnlySFW" value="{{ settings.get('show_only_sfw', False) }}" {% if settings.get('show_only_sfw', False) %}checked{% endif %}
+                                       onchange="settingsManager.saveToggleSetting('showOnlySFW', 'show_only_sfw')">
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
                     </div>
-                    <div class="setting-control">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="showOnlySFW" value="{{ settings.get('show_only_sfw', False) }}" {% if settings.get('show_only_sfw', False) %}checked{% endif %}>
-                            <span class="toggle-slider"></span>
-                        </label>
+                    <div class="input-help">
+                        Filter out all NSFW content when browsing and searching
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Video Settings Section -->
+            <div class="settings-section">
+                <h3>Video Settings</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="autoplayOnHover">Autoplay Videos on Hover</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoplayOnHover" 
+                                       onchange="settingsManager.saveToggleSetting('autoplayOnHover', 'autoplay_on_hover')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Only play video previews when hovering over them
                     </div>
                 </div>
             </div>
@@ -72,32 +109,22 @@
                 <h3>Folder Settings</h3>
                 
                 <div class="setting-item">
-                    <div class="setting-info">
-                        <label for="defaultLoraRoot">Default LoRA Root</label>
-                    </div>
-                    <div class="setting-control select-control">
-                        <select id="defaultLoraRoot">
-                            <option value="">No Default</option>
-                            <!-- Options will be loaded dynamically -->
-                        </select>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="defaultLoraRoot">Default LoRA Root</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="defaultLoraRoot" onchange="settingsManager.saveSelectSetting('defaultLoraRoot', 'default_lora_root')">
+                                <option value="">No Default</option>
+                                <!-- Options will be loaded dynamically -->
+                            </select>
+                        </div>
                     </div>
                     <div class="input-help">
                         Set the default LoRA root directory for downloads, imports and moves
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-actions">
-            <button class="primary-btn" onclick="settingsManager.saveSettings()">Save</button>
-        </div>
-        <!-- Add the new links section -->
-        <div class="settings-links">
-            <a href="https://github.com/willmiao/ComfyUI-Lora-Manager" target="_blank" class="settings-link" title="GitHub Repository">
-                <i class="fab fa-github"></i>
-            </a>
-            <a href="https://github.com/willmiao/ComfyUI-Lora-Manager/issues/new" target="_blank" class="settings-link" title="Report Issue">
-                <i class="fas fa-bug"></i>
-            </a>
         </div>
     </div>
 </div>

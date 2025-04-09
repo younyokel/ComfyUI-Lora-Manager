@@ -4,7 +4,7 @@ import { LoadingManager } from './managers/LoadingManager.js';
 import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
 import { HeaderManager } from './components/Header.js';
-import { SettingsManager } from './managers/SettingsManager.js';
+import { settingsManager } from './managers/SettingsManager.js';
 import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { migrateStorageItems } from './utils/storageHelpers.js';
@@ -26,7 +26,7 @@ export class AppCore {
         modalManager.initialize();
         updateService.initialize();
         window.modalManager = modalManager;
-        window.settingsManager = new SettingsManager();
+        window.settingsManager = settingsManager;
         
         // Initialize UI components
         window.headerManager = new HeaderManager();
@@ -76,4 +76,4 @@ document.addEventListener('DOMContentLoaded', () => {
 export const appCore = new AppCore();
 
 // Export common utilities for global use
-export { showToast, lazyLoadImages, initializeInfiniteScroll }; 
+export { showToast, lazyLoadImages, initializeInfiniteScroll };

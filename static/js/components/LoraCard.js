@@ -57,10 +57,15 @@ export function createLoraCard(lora) {
         nsfwText = "R-rated Content";
     }
 
+    // Check if autoplayOnHover is enabled for video previews
+    const autoplayOnHover = state.global.settings.autoplayOnHover || false;
+    const isVideo = previewUrl.endsWith('.mp4');
+    const videoAttrs = autoplayOnHover ? 'controls muted loop' : 'controls autoplay muted loop';
+
     card.innerHTML = `
         <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
-            ${previewUrl.endsWith('.mp4') ? 
-                `<video controls autoplay muted loop>
+            ${isVideo ? 
+                `<video ${videoAttrs}>
                     <source src="${versionedPreviewUrl}" type="video/mp4">
                 </video>` :
                 `<img src="${versionedPreviewUrl}" alt="${lora.model_name}">`
@@ -244,6 +249,26 @@ export function createLoraCard(lora) {
         const actions = card.querySelectorAll('.card-actions');
         actions.forEach(actionGroup => {
             actionGroup.style.display = 'none';
+        });
+    }
+    
+    // Add autoplayOnHover handlers for video elements if needed
+    const videoElement = card.querySelector('video');
+    if (videoElement && autoplayOnHover) {
+        const cardPreview = card.querySelector('.card-preview');
+        
+        // Remove autoplay attribute and pause initially
+        videoElement.removeAttribute('autoplay');
+        videoElement.pause();
+        
+        // Add mouse events to trigger play/pause
+        cardPreview.addEventListener('mouseenter', () => {
+            videoElement.play();
+        });
+        
+        cardPreview.addEventListener('mouseleave', () => {
+            videoElement.pause();
+            videoElement.currentTime = 0;
         });
     }
 

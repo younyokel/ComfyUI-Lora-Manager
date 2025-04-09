@@ -65,6 +65,12 @@ export class SettingsManager {
             // Sync with state (backend will set this via template)
             state.global.settings.show_only_sfw = showOnlySFWCheckbox.checked;
         }
+        
+        // Set video autoplay on hover setting
+        const autoplayOnHoverCheckbox = document.getElementById('autoplayOnHover');
+        if (autoplayOnHoverCheckbox) {
+            autoplayOnHoverCheckbox.checked = state.global.settings.autoplayOnHover || false;
+        }
 
         // Load default lora root
         await this.loadLoraRoots();
@@ -120,11 +126,170 @@ export class SettingsManager {
         this.isOpen = !this.isOpen;
     }
 
+    // Auto-save methods for different control types
+
+    // For toggle switches
+    async saveToggleSetting(elementId, settingKey) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const value = element.checked;
+        
+        // Update frontend state
+        if (settingKey === 'blur_mature_content') {
+            state.global.settings.blurMatureContent = value;
+        } else if (settingKey === 'show_only_sfw') {
+            state.global.settings.show_only_sfw = value;
+        } else if (settingKey === 'autoplay_on_hover') {
+            state.global.settings.autoplayOnHover = value;
+        } else {
+            // For any other settings that might be added in the future
+            state.global.settings[settingKey] = value;
+        }
+        
+        // Save to localStorage
+        setStorageItem('settings', state.global.settings);
+        
+        try {
+            // For backend settings, make API call
+            if (['show_only_sfw', 'blur_mature_content', 'autoplay_on_hover'].includes(settingKey)) {
+                const payload = {};
+                payload[settingKey] = value;
+                
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save setting');
+                }
+                
+                showToast(`${settingKey.replace(/_/g, ' ')} updated`, 'success');
+            }
+            
+            // Apply frontend settings immediately
+            this.applyFrontendSettings();
+            
+            if (settingKey === 'show_only_sfw') {
+                this.reloadContent();
+            }
+            
+        } catch (error) {
+            showToast('Failed to save setting: ' + error.message, 'error');
+        }
+    }
+    
+    // For select dropdowns
+    async saveSelectSetting(elementId, settingKey) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const value = element.value;
+        
+        // Update frontend state
+        if (settingKey === 'default_lora_root') {
+            state.global.settings.default_loras_root = value;
+        } else {
+            // For any other settings that might be added in the future
+            state.global.settings[settingKey] = value;
+        }
+        
+        // Save to localStorage
+        setStorageItem('settings', state.global.settings);
+        
+        try {
+            // For backend settings, make API call
+            const payload = {};
+            payload[settingKey] = value;
+            
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save setting');
+            }
+            
+            showToast(`${settingKey.replace(/_/g, ' ')} updated`, 'success');
+            
+        } catch (error) {
+            showToast('Failed to save setting: ' + error.message, 'error');
+        }
+    }
+    
+    // For input fields
+    async saveInputSetting(elementId, settingKey) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const value = element.value;
+        
+        // For API key or other inputs that need to be saved on backend
+        try {
+            // Check if value has changed from existing value
+            const currentValue = state.global.settings[settingKey] || '';
+            if (value === currentValue) {
+                return; // No change, exit early
+            }
+            
+            // Update state
+            state.global.settings[settingKey] = value;
+            
+            // Save to localStorage if appropriate
+            if (!settingKey.includes('api_key')) { // Don't store API keys in localStorage for security
+                setStorageItem('settings', state.global.settings);
+            }
+            
+            // For backend settings, make API call
+            const payload = {};
+            payload[settingKey] = value;
+            
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save setting');
+            }
+            
+            showToast(`${settingKey.replace(/_/g, ' ')} updated`, 'success');
+            
+        } catch (error) {
+            showToast('Failed to save setting: ' + error.message, 'error');
+        }
+    }
+
+    async reloadContent() {
+        if (this.currentPage === 'loras') {
+            // Reload the loras without updating folders
+            await resetAndReload(false);
+        } else if (this.currentPage === 'recipes') {
+            // Reload the recipes without updating folders
+            await window.recipeManager.loadRecipes();
+        } else if (this.currentPage === 'checkpoints') {
+            // Reload the checkpoints without updating folders
+            await window.checkpointsManager.loadCheckpoints();
+        }
+    }
+
     async saveSettings() {
         // Get frontend settings from UI
         const blurMatureContent = document.getElementById('blurMatureContent').checked;
         const showOnlySFW = document.getElementById('showOnlySFW').checked;
         const defaultLoraRoot = document.getElementById('defaultLoraRoot').value;
+        const autoplayOnHover = document.getElementById('autoplayOnHover').checked;
         
         // Get backend settings
         const apiKey = document.getElementById('civitaiApiKey').value;
@@ -133,6 +298,7 @@ export class SettingsManager {
         state.global.settings.blurMatureContent = blurMatureContent;
         state.global.settings.show_only_sfw = showOnlySFW;
         state.global.settings.default_loras_root = defaultLoraRoot;
+        state.global.settings.autoplayOnHover = autoplayOnHover;
         
         // Save settings to localStorage
         setStorageItem('settings', state.global.settings);
@@ -186,10 +352,41 @@ export class SettingsManager {
             }
         });
         
+        // Apply autoplay setting to existing videos in card previews
+        const autoplayOnHover = state.global.settings.autoplayOnHover;
+        document.querySelectorAll('.card-preview video').forEach(video => {
+            // Remove previous event listeners by cloning and replacing the element
+            const videoParent = video.parentElement;
+            const videoClone = video.cloneNode(true);
+            
+            if (autoplayOnHover) {
+                // Pause video initially and set up mouse events for hover playback
+                videoClone.removeAttribute('autoplay');
+                videoClone.pause();
+                
+                // Add mouse events to the parent element
+                videoParent.onmouseenter = () => videoClone.play();
+                videoParent.onmouseleave = () => {
+                    videoClone.pause();
+                    videoClone.currentTime = 0;
+                };
+            } else {
+                // Use default autoplay behavior
+                videoClone.setAttribute('autoplay', '');
+                videoParent.onmouseenter = null;
+                videoParent.onmouseleave = null;
+            }
+            
+            videoParent.replaceChild(videoClone, video);
+        });
+        
         // For show_only_sfw, there's no immediate action needed as it affects content loading
         // The setting will take effect on next reload
     }
 }
+
+// Create singleton instance
+export const settingsManager = new SettingsManager();
 
 // Helper function for toggling API key visibility
 export function toggleApiKeyVisibility(button) {
