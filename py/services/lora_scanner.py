@@ -207,7 +207,7 @@ class LoraScanner:
         if settings.get('show_only_sfw', False):
             filtered_data = [
                 lora for lora in filtered_data
-                if not lora.get('preview_nsfw_level') or lora.get('preview_nsfw_level') < NSFW_LEVELS['NSFW']
+                if not lora.get('preview_nsfw_level') or lora.get('preview_nsfw_level') < NSFW_LEVELS['R']
             ]
         
         # Apply folder filtering
