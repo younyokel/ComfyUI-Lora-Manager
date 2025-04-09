@@ -20,6 +20,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.5
+* **Enhanced LoRA & Recipe Connectivity** - Added Recipes tab in LoRA details to see all recipes using a specific LoRA
+* **Improved Navigation** - New shortcuts to jump between related LoRAs and Recipes with one-click navigation
+* **Video Preview Controls** - Added "Autoplay Videos on Hover" setting to optimize performance and reduce resource usage
+* **UI Experience Refinements** - Smoother transitions between related content pages
+
 ### v0.8.4
 * **Node Layout Improvements** - Fixed layout issues with LoRA Loader and Trigger Words Toggle nodes in newer ComfyUI frontend versions
 * **Recipe LoRA Reconnection** - Added ability to reconnect deleted LoRAs in recipes by clicking the "deleted" badge in recipe details
