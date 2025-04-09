@@ -168,7 +168,7 @@ export class SettingsManager {
                     throw new Error('Failed to save setting');
                 }
                 
-                showToast(`${settingKey.replace(/_/g, ' ')} updated`, 'success');
+                showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
             }
             
             // Apply frontend settings immediately
@@ -218,7 +218,7 @@ export class SettingsManager {
                 throw new Error('Failed to save setting');
             }
             
-            showToast(`${settingKey.replace(/_/g, ' ')} updated`, 'success');
+            showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
             
         } catch (error) {
             showToast('Failed to save setting: ' + error.message, 'error');
@@ -264,7 +264,7 @@ export class SettingsManager {
                 throw new Error('Failed to save setting');
             }
             
-            showToast(`${settingKey.replace(/_/g, ' ')} updated`, 'success');
+            showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
             
         } catch (error) {
             showToast('Failed to save setting: ' + error.message, 'error');
