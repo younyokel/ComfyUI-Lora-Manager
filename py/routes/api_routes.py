@@ -17,6 +17,7 @@ from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
 from ..services.recipe_scanner import RecipeScanner
+from ..utils.constants import PREVIEW_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -244,17 +245,11 @@ class ApiRoutes:
         patterns = [
             f"{file_name}.safetensors",  # Required
             f"{file_name}.metadata.json",
-            f"{file_name}.preview.png",
-            f"{file_name}.preview.jpg",
-            f"{file_name}.preview.jpeg",
-            f"{file_name}.preview.webp",
-            f"{file_name}.preview.mp4",
-            f"{file_name}.png",
-            f"{file_name}.jpg",
-            f"{file_name}.jpeg",
-            f"{file_name}.webp",
-            f"{file_name}.mp4"
         ]
+        
+        # 添加所有预览文件扩展名
+        for ext in PREVIEW_EXTENSIONS:
+            patterns.append(f"{file_name}{ext}")
         
         deleted = []
         main_file = patterns[0]
@@ -1054,17 +1049,11 @@ class ApiRoutes:
             patterns = [
                 f"{old_file_name}.safetensors",  # Required
                 f"{old_file_name}.metadata.json",
-                f"{old_file_name}.preview.png",
-                f"{old_file_name}.preview.jpg",
-                f"{old_file_name}.preview.jpeg",
-                f"{old_file_name}.preview.webp",
-                f"{old_file_name}.preview.mp4",
-                f"{old_file_name}.png",
-                f"{old_file_name}.jpg",
-                f"{old_file_name}.jpeg",
-                f"{old_file_name}.webp",
-                f"{old_file_name}.mp4"
             ]
+            
+            # 添加所有预览文件扩展名
+            for ext in PREVIEW_EXTENSIONS:
+                patterns.append(f"{old_file_name}{ext}")
             
             # Find all matching files
             existing_files = []

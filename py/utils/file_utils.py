@@ -8,6 +8,7 @@ from typing import Dict, Optional, Type
 from .model_utils import determine_base_model
 from .lora_metadata import extract_lora_metadata, extract_checkpoint_metadata
 from .models import BaseModelMetadata, LoraMetadata, CheckpointMetadata
+from .constants import PREVIEW_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +22,9 @@ async def calculate_sha256(file_path: str) -> str:
 
 def find_preview_file(base_name: str, dir_path: str) -> str:
     """Find preview file for given base name in directory"""
-    preview_patterns = [
-        f"{base_name}.preview.png",
-        f"{base_name}.preview.jpg",
-        f"{base_name}.preview.jpeg",
-        f"{base_name}.preview.mp4",
-        f"{base_name}.png",
-        f"{base_name}.jpg", 
-        f"{base_name}.jpeg",
-        f"{base_name}.mp4"
-    ]
     
-    for pattern in preview_patterns:
-        full_pattern = os.path.join(dir_path, pattern)
+    for ext in PREVIEW_EXTENSIONS:
+        full_pattern = os.path.join(dir_path, f"{base_name}{ext}")
         if os.path.exists(full_pattern):
             return full_pattern.replace(os.sep, "/")
     return ""

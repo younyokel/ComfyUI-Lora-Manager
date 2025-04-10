@@ -11,6 +11,7 @@ from ..config import config
 from ..utils.file_utils import load_metadata, get_file_info, find_preview_file, save_metadata
 from .model_cache import ModelCache
 from .model_hash_index import ModelHashIndex
+from ..utils.constants import PREVIEW_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -384,9 +385,7 @@ class ModelScanner:
                 shutil.move(source_metadata, target_metadata)
                 metadata = await self._update_metadata_paths(target_metadata, target_file)
             
-            preview_extensions = ['.preview.png', '.preview.jpeg', '.preview.jpg', '.preview.mp4',
-                               '.png', '.jpeg', '.jpg', '.mp4']
-            for ext in preview_extensions:
+            for ext in PREVIEW_EXTENSIONS:
                 source_preview = os.path.join(source_dir, f"{base_name}{ext}")
                 if os.path.exists(source_preview):
                     target_preview = os.path.join(target_path, f"{base_name}{ext}")
@@ -491,10 +490,8 @@ class ModelScanner:
             return None
             
         base_name = os.path.splitext(file_path)[0]
-        preview_extensions = ['.preview.png', '.preview.jpeg', '.preview.jpg', '.preview.mp4',
-                            '.png', '.jpeg', '.jpg', '.mp4']
         
-        for ext in preview_extensions:
+        for ext in PREVIEW_EXTENSIONS:
             preview_path = f"{base_name}{ext}"
             if os.path.exists(preview_path):
                 return config.get_preview_static_url(preview_path)
