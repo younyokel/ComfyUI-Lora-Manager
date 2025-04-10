@@ -1,6 +1,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { CheckpointModal } from './CheckpointModal.js';
+import { NSFW_LEVELS } from '../utils/constants.js';
 
 // Create an instance of the modal
 const checkpointModal = new CheckpointModal();
@@ -28,28 +29,73 @@ export function createCheckpointCard(checkpoint) {
         card.dataset.tags = JSON.stringify(checkpoint.tags);
     }
 
+    // Store NSFW level if available
+    const nsfwLevel = checkpoint.preview_nsfw_level !== undefined ? checkpoint.preview_nsfw_level : 0;
+    card.dataset.nsfwLevel = nsfwLevel;
+    
+    // Determine if the preview should be blurred based on NSFW level and user settings
+    const shouldBlur = state.settings.blurMatureContent && nsfwLevel > NSFW_LEVELS.PG13;
+    if (shouldBlur) {
+        card.classList.add('nsfw-content');
+    }
+
     // Determine preview URL
     const previewUrl = checkpoint.preview_url || '/loras_static/images/no-preview.png';
     const version = state.previewVersions ? state.previewVersions.get(checkpoint.file_path) : null;
     const versionedPreviewUrl = version ? `${previewUrl}?t=${version}` : previewUrl;
 
+    // Determine NSFW warning text based on level
+    let nsfwText = "Mature Content";
+    if (nsfwLevel >= NSFW_LEVELS.XXX) {
+        nsfwText = "XXX-rated Content";
+    } else if (nsfwLevel >= NSFW_LEVELS.X) {
+        nsfwText = "X-rated Content";
+    } else if (nsfwLevel >= NSFW_LEVELS.R) {
+        nsfwText = "R-rated Content";
+    }
+
+    // Check if autoplayOnHover is enabled for video previews
+    const autoplayOnHover = state.global?.settings?.autoplayOnHover || false;
+    const isVideo = previewUrl.endsWith('.mp4');
+    const videoAttrs = autoplayOnHover ? 'controls muted loop' : 'controls autoplay muted loop';
+
     card.innerHTML = `
-        <div class="card-preview">
-            <img src="${versionedPreviewUrl}" alt="${checkpoint.model_name}">
+        <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
+            ${isVideo ? 
+                `<video ${videoAttrs}>
+                    <source src="${versionedPreviewUrl}" type="video/mp4">
+                </video>` :
+                `<img src="${versionedPreviewUrl}" alt="${checkpoint.model_name}">`
+            }
             <div class="card-header">
-                <span class="base-model-label" title="${checkpoint.base_model || 'Unknown'}">
-                    ${checkpoint.base_model || 'Unknown'}
+                ${shouldBlur ? 
+                  `<button class="toggle-blur-btn" title="Toggle blur">
+                      <i class="fas fa-eye"></i>
+                  </button>` : ''}
+                <span class="base-model-label ${shouldBlur ? 'with-toggle' : ''}" title="${checkpoint.base_model}">
+                    ${checkpoint.base_model}
                 </span>
                 <div class="card-actions">
                     <i class="fas fa-globe" 
                        title="${checkpoint.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
                        ${!checkpoint.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
                     </i>
+                    <i class="fas fa-copy" 
+                       title="Copy Checkpoint Name">
+                    </i>
                     <i class="fas fa-trash" 
                        title="Delete Model">
                     </i>
                 </div>
             </div>
+            ${shouldBlur ? `
+                <div class="nsfw-overlay">
+                    <div class="nsfw-warning">
+                        <p>${nsfwText}</p>
+                        <button class="show-content-btn">Show</button>
+                    </div>
+                </div>
+            ` : ''}
             <div class="card-footer">
                 <div class="model-info">
                     <span class="model-name">${checkpoint.model_name}</span>
@@ -98,6 +144,79 @@ export function createCheckpointCard(checkpoint) {
         checkpointModal.showCheckpointDetails(checkpointMeta);
     });
 
+    // Toggle blur button functionality
+    const toggleBlurBtn = card.querySelector('.toggle-blur-btn');
+    if (toggleBlurBtn) {
+        toggleBlurBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const preview = card.querySelector('.card-preview');
+            const isBlurred = preview.classList.toggle('blurred');
+            const icon = toggleBlurBtn.querySelector('i');
+            
+            // Update the icon based on blur state
+            if (isBlurred) {
+                icon.className = 'fas fa-eye';
+            } else {
+                icon.className = 'fas fa-eye-slash';
+            }
+            
+            // Toggle the overlay visibility
+            const overlay = card.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = isBlurred ? 'flex' : 'none';
+            }
+        });
+    }
+
+    // Show content button functionality
+    const showContentBtn = card.querySelector('.show-content-btn');
+    if (showContentBtn) {
+        showContentBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const preview = card.querySelector('.card-preview');
+            preview.classList.remove('blurred');
+            
+            // Update the toggle button icon
+            const toggleBtn = card.querySelector('.toggle-blur-btn');
+            if (toggleBtn) {
+                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+            }
+            
+            // Hide the overlay
+            const overlay = card.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        });
+    }
+
+    // Copy button click event
+    card.querySelector('.fa-copy')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const checkpointName = card.dataset.file_name;
+        
+        try {
+            // Modern clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(checkpointName);
+            } else {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = checkpointName;
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-99999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            showToast('Checkpoint name copied', 'success');
+        } catch (err) {
+            console.error('Copy failed:', err);
+            showToast('Copy failed', 'error');
+        }
+    });
+
     // Civitai button click event
     if (checkpoint.from_civitai) {
         card.querySelector('.fa-globe')?.addEventListener('click', e => {
@@ -118,15 +237,54 @@ export function createCheckpointCard(checkpoint) {
         replaceCheckpointPreview(checkpoint.file_path);
     });
 
+    // Add autoplayOnHover handlers for video elements if needed
+    const videoElement = card.querySelector('video');
+    if (videoElement && autoplayOnHover) {
+        const cardPreview = card.querySelector('.card-preview');
+        
+        // Remove autoplay attribute and pause initially
+        videoElement.removeAttribute('autoplay');
+        videoElement.pause();
+        
+        // Add mouse events to trigger play/pause
+        cardPreview.addEventListener('mouseenter', () => {
+            videoElement.play();
+        });
+        
+        cardPreview.addEventListener('mouseleave', () => {
+            videoElement.pause();
+            videoElement.currentTime = 0;
+        });
+    }
+
     return card;
 }
 
 // These functions will be implemented in checkpointApi.js
 function openCivitai(modelName) {
+    // Check if the global function exists (registered by PageControls)
     if (window.openCivitai) {
         window.openCivitai(modelName);
     } else {
-        console.log('Opening Civitai for:', modelName);
+        // Fallback implementation
+        const card = document.querySelector(`.lora-card[data-name="${modelName}"]`);
+        if (!card) return;
+        
+        const metaData = JSON.parse(card.dataset.meta || '{}');
+        const civitaiId = metaData.modelId;
+        const versionId = metaData.id;
+        
+        // Build URL
+        if (civitaiId) {
+            let url = `https://civitai.com/models/${civitaiId}`;
+            if (versionId) {
+                url += `?modelVersionId=${versionId}`;
+            }
+            window.open(url, '_blank');
+        } else {
+            // If no ID, try searching by name
+            window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
+        }
     }
 }
 
