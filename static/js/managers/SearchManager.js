@@ -302,6 +302,7 @@ export class SearchManager {
           pageState.searchOptions = {
             filename: options.filename || false,
             modelname: options.modelname || false,
+            tags: options.tags || false,
             recursive: recursive
           };
         }

@@ -70,6 +70,8 @@ export class FilterManager {
             let tagsEndpoint = '/api/loras/top-tags?limit=20';
             if (this.currentPage === 'recipes') {
                 tagsEndpoint = '/api/recipes/top-tags?limit=20';
+            } else if (this.currentPage === 'checkpoints') {
+                tagsEndpoint = '/api/checkpoints/top-tags?limit=20';
             }
             
             const response = await fetch(tagsEndpoint);
@@ -143,7 +145,8 @@ export class FilterManager {
             apiEndpoint = '/api/loras/base-models';
         } else if (this.currentPage === 'recipes') {
             apiEndpoint = '/api/recipes/base-models';
-        } else {
+        } else if (this.currentPage === 'checkpoints') {
+            apiEndpoint = '/api/checkpoints/base-models';
             return; // No API endpoint for other pages
         }
         
