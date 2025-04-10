@@ -132,7 +132,6 @@ export class LorasControls extends PageControls {
         
         // Reload the loras
         await resetAndReload();
-        showToast('Filter cleared', 'info');
     }
     
     /**

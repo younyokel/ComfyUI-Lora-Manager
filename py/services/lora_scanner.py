@@ -362,26 +362,6 @@ class LoraScanner(ModelScanner):
         """Get hash for a LoRA by its file path"""
         return self._hash_index.get_hash(file_path) 
 
-    def get_preview_url_by_hash(self, sha256: str) -> Optional[str]:
-        """Get preview static URL for a LoRA by its hash"""
-        # Get the file path first
-        file_path = self._hash_index.get_path(sha256.lower())
-        if not file_path:
-            return None
-            
-        # Determine the preview file path (typically same name with different extension)
-        base_name = os.path.splitext(file_path)[0]
-        preview_extensions = ['.preview.png', '.preview.jpeg', '.preview.jpg', '.preview.mp4',
-                            '.png', '.jpeg', '.jpg', '.mp4']
-        
-        for ext in preview_extensions:
-            preview_path = f"{base_name}{ext}"
-            if os.path.exists(preview_path):
-                # Convert to static URL using config
-                return config.get_preview_static_url(preview_path)
-        
-        return None
-
     async def get_top_tags(self, limit: int = 20) -> List[Dict[str, any]]:
         """Get top tags sorted by count"""
         # Make sure cache is initialized
