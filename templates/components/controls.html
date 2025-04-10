@@ -16,21 +16,25 @@
                 </select>
             </div>
             <div title="Refresh model list" class="control-group">
-                <button onclick="refreshLoras()"><i class="fas fa-sync"></i> Refresh</button>
+                <button data-action="refresh"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            
+            <div class="control-group">
+                <button data-action="fetch" title="Fetch from Civitai"><i class="fas fa-download"></i> Fetch</button>
             </div>
             <div class="control-group">
-                <button onclick="fetchCivitai()" title="Fetch from Civitai"><i class="fas fa-download"></i> Fetch</button>
-            </div>
-            <div class="control-group">
-                <button onclick="downloadManager.showDownloadModal()" title="Download from URL">
+                <button data-action="download" title="Download from URL">
                     <i class="fas fa-cloud-download-alt"></i> Download
                 </button>
             </div>
+            <!-- Conditional buttons based on page -->
+            {% if request.path == '/loras' %}
             <div class="control-group">
-                <button id="bulkOperationsBtn" onclick="bulkManager.toggleBulkMode()" title="Bulk Operations">
+                <button id="bulkOperationsBtn" data-action="bulk" title="Bulk Operations">
                     <i class="fas fa-th-large"></i> Bulk
                 </button>
             </div>
+            {% endif %}
             <div id="customFilterIndicator" class="control-group hidden">
                 <div class="filter-active">
                     <i class="fas fa-filter"></i> <span class="customFilterText" title=""></span>
@@ -39,7 +43,7 @@
             </div>
         </div>
         <div class="toggle-folders-container">
-            <button class="toggle-folders-btn icon-only" onclick="toggleFolderTags()" title="Toggle folder tags">
+            <button class="toggle-folders-btn icon-only" title="Toggle folder tags">
                 <i class="fas fa-tags"></i>
             </button>
         </div>

@@ -1,68 +1,30 @@
 import { appCore } from './core.js';
-import { state, getCurrentPageState } from './state/index.js';
-import { 
-    loadMoreCheckpoints, 
-    resetAndReload, 
-    refreshCheckpoints, 
-    deleteCheckpoint,
-    replaceCheckpointPreview
-} from './api/checkpointApi.js';
-import { 
-    restoreFolderFilter, 
-    toggleFolder, 
-    openCivitai, 
-    showToast 
-} from './utils/uiHelpers.js';
-import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
-import { setStorageItem, getStorageItem } from './utils/storageHelpers.js';
+import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
+import { createPageControls } from './components/controls/index.js';
 
 // Initialize the Checkpoints page
 class CheckpointsPageManager {
     constructor() {
-        // Get page state
-        this.pageState = getCurrentPageState();
+        // Initialize page controls
+        this.pageControls = createPageControls('checkpoints');
         
-        // Set default values
-        this.pageState.pageSize = 20;
-        this.pageState.isLoading = false;
-        this.pageState.hasMore = true;
-        
-        // Expose functions to window object
-        this._exposeGlobalFunctions();
+        // Expose only necessary functions to global scope
+        this._exposeRequiredGlobalFunctions();
     }
     
-    _exposeGlobalFunctions() {
-        // API functions
-        window.loadCheckpoints = (reset = true) => this.loadCheckpoints(reset);
-        window.refreshCheckpoints = refreshCheckpoints;
-        window.deleteCheckpoint = deleteCheckpoint;
-        window.replaceCheckpointPreview = replaceCheckpointPreview;
-        
-        // UI helper functions
-        window.toggleFolder = toggleFolder;
-        window.openCivitai = openCivitai;
+    _exposeRequiredGlobalFunctions() {
+        // Minimal set of functions that need to remain global
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
         window.toggleApiKeyVisibility = toggleApiKeyVisibility;
-        
-        // Add reference to this manager
-        window.checkpointManager = this;
     }
     
     async initialize() {
-        // Initialize event listeners
-        this._initEventListeners();
-        
-        // Restore folder filters if available
-        restoreFolderFilter('checkpoints');
-        
-        // Load sort preference
-        this._loadSortPreference();
-        
-        // Load initial checkpoints
-        await this.loadCheckpoints();
+        // Initialize page-specific components
+        this.pageControls.restoreFolderFilter();
+        this.pageControls.initFolderTagsVisibility();
         
         // Initialize infinite scroll
         initializeInfiniteScroll('checkpoints');
@@ -71,49 +33,6 @@ class CheckpointsPageManager {
         appCore.initializePageFeatures();
         
         console.log('Checkpoints Manager initialized');
-    }
-    
-    _initEventListeners() {
-        // Sort select handler
-        const sortSelect = document.getElementById('sortSelect');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', async (e) => {
-                this.pageState.sortBy = e.target.value;
-                this._saveSortPreference(e.target.value);
-                await resetAndReload();
-            });
-        }
-        
-        // Folder tags handler
-        document.querySelectorAll('.folder-tags .tag').forEach(tag => {
-            tag.addEventListener('click', toggleFolder);
-        });
-        
-        // Refresh button handler
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => refreshCheckpoints());
-        }
-    }
-    
-    _loadSortPreference() {
-        const savedSort = getStorageItem('checkpoints_sort');
-        if (savedSort) {
-            this.pageState.sortBy = savedSort;
-            const sortSelect = document.getElementById('sortSelect');
-            if (sortSelect) {
-                sortSelect.value = savedSort;
-            }
-        }
-    }
-    
-    _saveSortPreference(sortValue) {
-        setStorageItem('checkpoints_sort', sortValue);
-    }
-    
-    // Load checkpoints with optional pagination reset
-    async loadCheckpoints(resetPage = true) {
-        await loadMoreCheckpoints(resetPage);
     }
 }
 

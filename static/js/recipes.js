@@ -251,6 +251,11 @@ class RecipeManager {
             // Update pagination state based on current page and total pages
             this.pageState.hasMore = data.page < data.total_pages;
             
+            // Increment the page number AFTER successful loading
+            if (data.items.length > 0) {
+                this.pageState.currentPage++;
+            }
+            
         } catch (error) {
             console.error('Error loading recipes:', error);
             appCore.showToast('Failed to load recipes', 'error');

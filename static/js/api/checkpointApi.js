@@ -101,6 +101,11 @@ export async function loadMoreCheckpoints(resetPagination = true) {
             const card = createCheckpointCard(checkpoint);
             grid.appendChild(card);
         });
+        
+        // Increment the page number AFTER successful loading
+        if (data.items.length > 0) {
+            pageState.currentPage++;
+        }
     } catch (error) {
         console.error('Error loading checkpoints:', error);
         showToast('Failed to load checkpoints', 'error');

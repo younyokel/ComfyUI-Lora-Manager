@@ -19,7 +19,6 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
             // Clear grid if resetting
             const grid = document.getElementById('loraGrid');
             if (grid) grid.innerHTML = '';
-            initializeInfiniteScroll();
         }
         
         const params = new URLSearchParams({
@@ -62,9 +61,6 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
         const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
         const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
 
-        console.log('Filter Lora Hash:', filterLoraHash);
-        console.log('Filter Lora Hashes:', filterLoraHashes);
-        
         // Add hash filter parameter if present
         if (filterLoraHash) {
             params.append('lora_hash', filterLoraHash);
@@ -93,13 +89,10 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
             pageState.hasMore = false;
         } else if (data.items.length > 0) {
             pageState.hasMore = pageState.currentPage < data.total_pages;
-            pageState.currentPage++;
             appendLoraCards(data.items);
             
-            const sentinel = document.getElementById('scroll-sentinel');
-            if (sentinel && state.observer) {
-                state.observer.observe(sentinel);
-            }
+            // Increment the page number AFTER successful loading
+            pageState.currentPage++;
         } else {
             pageState.hasMore = false;
         }
@@ -303,10 +296,7 @@ export async function resetAndReload(updateFolders = false) {
     const pageState = getCurrentPageState();
     console.log('Resetting with state:', { ...pageState });
     
-    // Initialize infinite scroll - will reset the observer
-    initializeInfiniteScroll();
-    
-    // Load more loras with reset flag
+    // Reset pagination and load more loras
     await loadMoreLoras(true, updateFolders);
 }
 
