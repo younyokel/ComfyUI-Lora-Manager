@@ -35,9 +35,61 @@ class RecipeScanner:
             if lora_scanner:
                 self._lora_scanner = lora_scanner
             self._initialized = True
-            
-            # Initialization will be scheduled by LoraManager
     
+    async def initialize_in_background(self) -> None:
+        """Initialize cache in background using thread pool"""
+        try:
+            # Set initial empty cache to avoid None reference errors
+            if self._cache is None:
+                self._cache = RecipeCache(
+                    raw_data=[],
+                    sorted_by_name=[],
+                    sorted_by_date=[]
+                )
+            
+            # Mark as initializing to prevent concurrent initializations
+            self._is_initializing = True
+            
+            try:
+                # Use thread pool to execute CPU-intensive operations
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    None,  # Use default thread pool
+                    self._initialize_recipe_cache_sync  # Run synchronous version in thread
+                )
+                logger.info("Recipe cache initialization completed in background thread")
+            finally:
+                # Mark initialization as complete regardless of outcome
+                self._is_initializing = False
+        except Exception as e:
+            logger.error(f"Recipe Scanner: Error initializing cache in background: {e}")
+    
+    def _initialize_recipe_cache_sync(self):
+        """Synchronous version of recipe cache initialization for thread pool execution"""
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Create a synchronous method to bypass the async lock
+            def sync_initialize_cache():
+                # Directly call the internal scan method to avoid lock issues
+                raw_data = loop.run_until_complete(self.scan_all_recipes())
+                
+                # Update cache
+                self._cache.raw_data = raw_data
+                loop.run_until_complete(self._cache.resort())
+                
+                return self._cache
+            
+            # Run our sync initialization that avoids lock conflicts
+            return sync_initialize_cache()
+        except Exception as e:
+            logger.error(f"Error in thread-based recipe cache initialization: {e}")
+        finally:
+            # Clean up the event loop
+            loop.close()
+
     @property
     def recipes_dir(self) -> str:
         """Get path to recipes directory"""
@@ -60,49 +112,48 @@ class RecipeScanner:
         if self._is_initializing and not force_refresh:
             return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
 
-        # Try to acquire the lock with a timeout to prevent deadlocks
-        try:
-            async with self._initialization_lock:
-                # Check again after acquiring the lock
-                if self._cache is not None and not force_refresh:
-                    return self._cache
-                
-                # Mark as initializing to prevent concurrent initializations
-                self._is_initializing = True
-                
-                try:
-                    # Remove dependency on lora scanner initialization
-                    # Scan for recipe data directly
-                    raw_data = await self.scan_all_recipes()
+        # If force refresh is requested, initialize the cache directly
+        if force_refresh:
+            # Try to acquire the lock with a timeout to prevent deadlocks
+            try:
+                async with self._initialization_lock:
+                    # Mark as initializing to prevent concurrent initializations
+                    self._is_initializing = True
                     
-                    # Update cache
-                    self._cache = RecipeCache(
-                        raw_data=raw_data,
-                        sorted_by_name=[],
-                        sorted_by_date=[]
-                    )
+                    try:
+                        # Scan for recipe data directly
+                        raw_data = await self.scan_all_recipes()
+                        
+                        # Update cache
+                        self._cache = RecipeCache(
+                            raw_data=raw_data,
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        
+                        # Resort cache
+                        await self._cache.resort()
+                        
+                        return self._cache
                     
-                    # Resort cache
-                    await self._cache.resort()
-                    
-                    return self._cache
-                
-                except Exception as e:
-                    logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
-                    # Create empty cache on error
-                    self._cache = RecipeCache(
-                        raw_data=[],
-                        sorted_by_name=[],
-                        sorted_by_date=[]
-                    )
-                    return self._cache
-                finally:
-                    # Mark initialization as complete
-                    self._is_initializing = False
+                    except Exception as e:
+                        logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
+                        # Create empty cache on error
+                        self._cache = RecipeCache(
+                            raw_data=[],
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        return self._cache
+                    finally:
+                        # Mark initialization as complete
+                        self._is_initializing = False
+            
+            except Exception as e:
+                logger.error(f"Unexpected error in get_cached_data: {e}")
         
-        except Exception as e:
-            logger.error(f"Unexpected error in get_cached_data: {e}")
-            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
+        # Return the cache (may be empty or partially initialized)
+        return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
     
     async def scan_all_recipes(self) -> List[Dict]:
         """Scan all recipe JSON files and return metadata"""

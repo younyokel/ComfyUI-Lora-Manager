@@ -2,12 +2,14 @@ import os
 import json
 import asyncio
 import aiohttp
+import jinja2
 from aiohttp import web
 import logging
 from datetime import datetime
 
 from ..services.checkpoint_scanner import CheckpointScanner
 from ..config import config
+from ..services.settings_manager import settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,10 @@ class CheckpointsRoutes:
     
     def __init__(self):
         self.scanner = CheckpointScanner()
+        self.template_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(config.templates_path),
+            autoescape=True
+        )
         
     def setup_routes(self, app):
         """Register routes with the aiohttp app"""
@@ -144,3 +150,59 @@ class CheckpointsRoutes:
         except Exception as e:
             logger.error(f"Error in get_checkpoint_info: {e}", exc_info=True)
             return web.json_response({"error": str(e)}, status=500)
+
+    async def handle_checkpoints_page(self, request: web.Request) -> web.Response:
+        """Handle GET /checkpoints request"""
+        try:
+            # 检查缓存初始化状态，根据initialize_in_background的工作方式调整判断逻辑
+            is_initializing = (
+                self.scanner._cache is None or 
+                len(self.scanner._cache.raw_data) == 0 or
+                hasattr(self.scanner, '_is_initializing') and self.scanner._is_initializing
+            )
+
+            if is_initializing:
+                # 如果正在初始化，返回一个只包含加载提示的页面
+                template = self.template_env.get_template('checkpoints.html')
+                rendered = template.render(
+                    folders=[],  # 空文件夹列表
+                    is_initializing=True,  # 新增标志
+                    settings=settings,  # Pass settings to template
+                    request=request  # Pass the request object to the template
+                )
+                
+                logger.info("Checkpoints page is initializing, returning loading page")
+            else:
+                # 正常流程 - 获取已经初始化好的缓存数据
+                try:
+                    cache = await self.scanner.get_cached_data(force_refresh=False)
+                    template = self.template_env.get_template('checkpoints.html')
+                    rendered = template.render(
+                        folders=cache.folders,
+                        is_initializing=False,
+                        settings=settings,  # Pass settings to template
+                        request=request  # Pass the request object to the template
+                    )
+                    logger.debug(f"Checkpoints page loaded successfully with {len(cache.raw_data)} items")
+                except Exception as cache_error:
+                    logger.error(f"Error loading checkpoints cache data: {cache_error}")
+                    # 如果获取缓存失败，也显示初始化页面
+                    template = self.template_env.get_template('checkpoints.html')
+                    rendered = template.render(
+                        folders=[],
+                        is_initializing=True,
+                        settings=settings,
+                        request=request
+                    )
+                    logger.info("Checkpoints cache error, returning initialization page")
+            
+            return web.Response(
+                text=rendered,
+                content_type='text/html'
+            )
+        except Exception as e:
+            logger.error(f"Error handling checkpoints request: {e}", exc_info=True)
+            return web.Response(
+                text="Error loading checkpoints page",
+                status=500
+            )

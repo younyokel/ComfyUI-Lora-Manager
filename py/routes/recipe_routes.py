@@ -1146,7 +1146,7 @@ class RecipeRoutes:
                 return web.json_response({'success': False, 'error': 'Lora hash is required'}, status=400)
             
             # Log the search parameters
-            logger.info(f"Getting recipes for Lora by hash: {lora_hash}")
+            logger.debug(f"Getting recipes for Lora by hash: {lora_hash}")
             
             # Get all recipes from cache
             cache = await self.recipe_scanner.get_cached_data()

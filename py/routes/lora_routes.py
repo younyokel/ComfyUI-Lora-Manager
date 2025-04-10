@@ -58,13 +58,11 @@ class LoraRoutes:
     async def handle_loras_page(self, request: web.Request) -> web.Response:
         """Handle GET /loras request"""
         try:
-            # 检查缓存初始化状态，增强判断条件
+            # 检查缓存初始化状态，根据initialize_in_background的工作方式调整判断逻辑
             is_initializing = (
                 self.scanner._cache is None or 
-                (self.scanner._initialization_task is not None and 
-                not self.scanner._initialization_task.done()) or
-                (self.scanner._cache is not None and len(self.scanner._cache.raw_data) == 0 and 
-                 self.scanner._initialization_task is not None)
+                len(self.scanner._cache.raw_data) == 0 or
+                hasattr(self.scanner, '_is_initializing') and self.scanner._is_initializing
             )
 
             if is_initializing:
@@ -79,7 +77,7 @@ class LoraRoutes:
                 
                 logger.info("Loras page is initializing, returning loading page")
             else:
-                # 正常流程 - 但不要等待缓存刷新
+                # 正常流程 - 获取已经初始化好的缓存数据
                 try:
                     cache = await self.scanner.get_cached_data(force_refresh=False)
                     template = self.template_env.get_template('loras.html')
@@ -117,32 +115,45 @@ class LoraRoutes:
     async def handle_recipes_page(self, request: web.Request) -> web.Response:
         """Handle GET /loras/recipes request"""
         try:
-            # Check cache initialization status
+            # 检查缓存初始化状态，与handle_loras_page保持一致的逻辑
             is_initializing = (
-                self.recipe_scanner._cache is None and 
-                (self.recipe_scanner._initialization_task is not None and 
-                not self.recipe_scanner._initialization_task.done())
+                self.recipe_scanner._cache is None or 
+                len(self.recipe_scanner._cache.raw_data) == 0 or
+                hasattr(self.recipe_scanner, '_is_initializing') and self.recipe_scanner._is_initializing
             )
 
             if is_initializing:
-                # If initializing, return a loading page
+                # 如果正在初始化，返回一个只包含加载提示的页面
                 template = self.template_env.get_template('recipes.html')
                 rendered = template.render(
                     is_initializing=True,
                     settings=settings,
                     request=request  # Pass the request object to the template
                 )
-            else:
-                # return empty recipes
-                recipes_data = []
                 
-                template = self.template_env.get_template('recipes.html')
-                rendered = template.render(
-                    recipes=recipes_data,
-                    is_initializing=False,
-                    settings=settings,
-                    request=request  # Pass the request object to the template
-                )
+                logger.info("Recipes page is initializing, returning loading page")
+            else:
+                # 正常流程 - 获取已经初始化好的缓存数据
+                try:
+                    cache = await self.recipe_scanner.get_cached_data(force_refresh=False)
+                    template = self.template_env.get_template('recipes.html')
+                    rendered = template.render(
+                        recipes=[],  # Frontend will load recipes via API
+                        is_initializing=False,
+                        settings=settings,
+                        request=request  # Pass the request object to the template
+                    )
+                    logger.debug(f"Recipes page loaded successfully with {len(cache.raw_data)} items")
+                except Exception as cache_error:
+                    logger.error(f"Error loading recipe cache data: {cache_error}")
+                    # 如果获取缓存失败，也显示初始化页面
+                    template = self.template_env.get_template('recipes.html')
+                    rendered = template.render(
+                        is_initializing=True,
+                        settings=settings,
+                        request=request
+                    )
+                    logger.info("Recipe cache error, returning initialization page")
             
             return web.Response(
                 text=rendered,
