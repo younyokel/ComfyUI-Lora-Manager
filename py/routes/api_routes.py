@@ -396,7 +396,7 @@ class ApiRoutes:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(local_metadata, f, indent=2, ensure_ascii=False)
 
-        await self.scanner.update_single_lora_cache(local_metadata['file_path'], local_metadata['file_path'], local_metadata)
+        await self.scanner.update_single_model_cache(local_metadata['file_path'], local_metadata['file_path'], local_metadata)
 
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:
         """Fetch CivitAI metadata for all loras in the background"""
@@ -745,7 +745,7 @@ class ApiRoutes:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
 
             # Update cache
-            await self.scanner.update_single_lora_cache(file_path, file_path, metadata)
+            await self.scanner.update_single_model_cache(file_path, file_path, metadata)
 
             # If model_name was updated, resort the cache
             if 'model_name' in metadata_updates:
@@ -1132,7 +1132,7 @@ class ApiRoutes:
             
             # Update the scanner cache
             if metadata:
-                await self.scanner.update_single_lora_cache(file_path, new_file_path, metadata)
+                await self.scanner.update_single_model_cache(file_path, new_file_path, metadata)
                 
                 # Update recipe files and cache if hash is available
                 if hash_value:

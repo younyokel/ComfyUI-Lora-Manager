@@ -315,7 +315,7 @@ class LoraScanner(ModelScanner):
                     break
             
             # Update cache
-            await self.update_single_lora_cache(source_path, target_lora, metadata)
+            await self.update_single_model_cache(source_path, target_lora, metadata)
             
             return True
             
@@ -323,62 +323,6 @@ class LoraScanner(ModelScanner):
             logger.error(f"Error moving model: {e}", exc_info=True)
             return False
         
-    async def update_single_lora_cache(self, original_path: str, new_path: str, metadata: Dict) -> bool:
-        cache = await self.get_cached_data()
-        
-        # Find the existing item to remove its tags from count
-        existing_item = next((item for item in cache.raw_data if item['file_path'] == original_path), None)
-        if existing_item and 'tags' in existing_item:
-            for tag in existing_item.get('tags', []):
-                if tag in self._tags_count:
-                    self._tags_count[tag] = max(0, self._tags_count[tag] - 1)
-                    if self._tags_count[tag] == 0:
-                        del self._tags_count[tag]
-        
-        # Remove old path from hash index if exists
-        self._hash_index.remove_by_path(original_path)
-        
-        # Remove the old entry from raw_data
-        cache.raw_data = [
-            item for item in cache.raw_data 
-            if item['file_path'] != original_path
-        ]
-        
-        if metadata:
-            # If this is an update to an existing path (not a move), ensure folder is preserved
-            if original_path == new_path:
-                # Find the folder from existing entries or calculate it
-                existing_folder = next((item['folder'] for item in cache.raw_data 
-                                      if item['file_path'] == original_path), None)
-                if existing_folder:
-                    metadata['folder'] = existing_folder
-                else:
-                    metadata['folder'] = self._calculate_folder(new_path)
-            else:
-                # For moved files, recalculate the folder
-                metadata['folder'] = self._calculate_folder(new_path)
-            
-            # Add the updated metadata to raw_data
-            cache.raw_data.append(metadata)
-            
-            # Update hash index with new path
-            if 'sha256' in metadata:
-                self._hash_index.add_entry(metadata['sha256'].lower(), new_path)
-            
-            # Update folders list
-            all_folders = set(item['folder'] for item in cache.raw_data)
-            cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
-            
-            # Update tags count with the new/updated tags
-            if 'tags' in metadata:
-                for tag in metadata.get('tags', []):
-                    self._tags_count[tag] = self._tags_count.get(tag, 0) + 1
-        
-        # Resort cache
-        await cache.resort()
-        
-        return True
-
     async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
         """Update file paths in metadata file"""
         try:
