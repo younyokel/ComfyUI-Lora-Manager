@@ -482,7 +482,8 @@ class ModelScanner:
     def get_hash_by_path(self, file_path: str) -> Optional[str]:
         """Get hash for a model by its file path"""
         return self._hash_index.get_hash(file_path)
-        
+
+    # TODO: Adjust this method to use metadata instead of finding the file    
     def get_preview_url_by_hash(self, sha256: str) -> Optional[str]:
         """Get preview static URL for a model by its hash"""
         file_path = self._hash_index.get_path(sha256.lower())

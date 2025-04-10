@@ -263,66 +263,6 @@ class LoraScanner(ModelScanner):
         
         return result
 
-    async def move_model(self, source_path: str, target_path: str) -> bool:
-        """Move a model and its associated files to a new location"""
-        try:
-            # Keep original path format
-            source_path = source_path.replace(os.sep, '/')
-            target_path = target_path.replace(os.sep, '/')
-            
-            # Rest of the code remains unchanged
-            base_name = os.path.splitext(os.path.basename(source_path))[0]
-            source_dir = os.path.dirname(source_path)
-            
-            os.makedirs(target_path, exist_ok=True)
-            
-            target_lora = os.path.join(target_path, f"{base_name}.safetensors").replace(os.sep, '/')
-
-            # Use real paths for file operations
-            real_source = os.path.realpath(source_path)
-            real_target = os.path.realpath(target_lora)
-            
-            file_size = os.path.getsize(real_source)
-            
-            if self.file_monitor:
-                self.file_monitor.handler.add_ignore_path(
-                    real_source,
-                    file_size
-                )
-                self.file_monitor.handler.add_ignore_path(
-                    real_target,
-                    file_size
-                )
-            
-            # Use real paths for file operations
-            shutil.move(real_source, real_target)
-            
-            # Move associated files
-            source_metadata = os.path.join(source_dir, f"{base_name}.metadata.json")
-            if os.path.exists(source_metadata):
-                target_metadata = os.path.join(target_path, f"{base_name}.metadata.json")
-                shutil.move(source_metadata, target_metadata)
-                metadata = await self._update_metadata_paths(target_metadata, target_lora)
-            
-            # Move preview file if exists
-            preview_extensions = ['.preview.png', '.preview.jpeg', '.preview.jpg', '.preview.mp4',
-                               '.png', '.jpeg', '.jpg', '.mp4']
-            for ext in preview_extensions:
-                source_preview = os.path.join(source_dir, f"{base_name}{ext}")
-                if os.path.exists(source_preview):
-                    target_preview = os.path.join(target_path, f"{base_name}{ext}")
-                    shutil.move(source_preview, target_preview)
-                    break
-            
-            # Update cache
-            await self.update_single_model_cache(source_path, target_lora, metadata)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error moving model: {e}", exc_info=True)
-            return False
-        
     async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
         """Update file paths in metadata file"""
         try:
