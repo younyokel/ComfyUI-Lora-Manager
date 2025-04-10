@@ -3,6 +3,7 @@ import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
+import { loadMoreCheckpoints } from './api/checkpointApi.js';
 
 // Initialize the Checkpoints page
 class CheckpointsPageManager {
@@ -19,6 +20,11 @@ class CheckpointsPageManager {
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
         window.toggleApiKeyVisibility = toggleApiKeyVisibility;
+        
+        // Add loadCheckpoints function to window for FilterManager compatibility
+        window.checkpointManager = {
+            loadCheckpoints: (reset) => loadMoreCheckpoints(reset)
+        };
     }
     
     async initialize() {
