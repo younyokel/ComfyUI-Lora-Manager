@@ -50,6 +50,11 @@ export class SettingsManager {
             observer.observe(settingsModal, { attributes: true });
         }
         
+        // Add event listeners for all toggle-visibility buttons
+        document.querySelectorAll('.toggle-visibility').forEach(button => {
+            button.addEventListener('click', () => this.toggleInputVisibility(button));
+        });
+        
         this.initialized = true;
     }
 
@@ -271,6 +276,19 @@ export class SettingsManager {
         }
     }
 
+    toggleInputVisibility(button) {
+        const input = button.parentElement.querySelector('input');
+        const icon = button.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+
     async reloadContent() {
         if (this.currentPage === 'loras') {
             // Reload the loras without updating folders
@@ -387,17 +405,3 @@ export class SettingsManager {
 
 // Create singleton instance
 export const settingsManager = new SettingsManager();
-
-// Helper function for toggling API key visibility
-export function toggleApiKeyVisibility(button) {
-    const input = button.parentElement.querySelector('input');
-    const icon = button.querySelector('i');
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fas fa-eye-slash';
-    } else {
-        input.type = 'password';
-        icon.className = 'fas fa-eye';
-    }
-}

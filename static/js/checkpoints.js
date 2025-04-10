@@ -1,5 +1,4 @@
 import { appCore } from './core.js';
-import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
@@ -19,7 +18,6 @@ class CheckpointsPageManager {
         // Minimal set of functions that need to remain global
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
-        window.toggleApiKeyVisibility = toggleApiKeyVisibility;
         
         // Add loadCheckpoints function to window for FilterManager compatibility
         window.checkpointManager = {

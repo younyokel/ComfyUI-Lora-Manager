@@ -4,7 +4,6 @@ import { showLoraModal, toggleShowcase, scrollToTop } from './components/loraMod
 import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { DownloadManager } from './managers/DownloadManager.js';
-import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu.js';
 import { createPageControls } from './components/controls/index.js';
@@ -34,7 +33,6 @@ class LoraPageManager {
         window.showLoraModal = showLoraModal;
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
-        window.toggleApiKeyVisibility = toggleApiKeyVisibility;
         window.downloadManager = this.downloadManager;
         window.moveManager = moveManager;
         window.toggleShowcase = toggleShowcase;
