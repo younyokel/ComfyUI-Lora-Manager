@@ -25,7 +25,7 @@ class CheckpointScanner(ModelScanner):
     def __init__(self):
         if not hasattr(self, '_initialized'):
             # Define supported file extensions
-            file_extensions = {'.safetensors', '.ckpt', '.pt', '.pth', '.sft'}
+            file_extensions = {'.safetensors', '.ckpt', '.pt', '.pth', '.sft', '.gguf'}
             super().__init__(
                 model_type="checkpoint",
                 model_class=CheckpointMetadata,
