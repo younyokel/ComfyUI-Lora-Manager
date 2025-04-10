@@ -250,3 +250,81 @@ async function _uploadPreview(filePath, file) {
         showToast(`Failed to update preview: ${error.message}`, 'error');
     }
 }
+
+// Fetch metadata from Civitai for checkpoints
+export async function fetchCivitai() {
+    let ws = null;
+    
+    await state.loadingManager.showWithProgress(async (loading) => {
+        try {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+            
+            const operationComplete = new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    switch(data.status) {
+                        case 'started':
+                            loading.setStatus('Starting metadata fetch...');
+                            break;
+                            
+                        case 'processing':
+                            const percent = ((data.processed / data.total) * 100).toFixed(1);
+                            loading.setProgress(percent);
+                            loading.setStatus(
+                                `Processing (${data.processed}/${data.total}) ${data.current_name}`
+                            );
+                            break;
+                            
+                        case 'completed':
+                            loading.setProgress(100);
+                            loading.setStatus(
+                                `Completed: Updated ${data.success} of ${data.processed} checkpoints`
+                            );
+                            resolve();
+                            break;
+                            
+                        case 'error':
+                            reject(new Error(data.error));
+                            break;
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    reject(new Error('WebSocket error: ' + error.message));
+                };
+            });
+            
+            await new Promise((resolve, reject) => {
+                ws.onopen = resolve;
+                ws.onerror = reject;
+            });
+            
+            const response = await fetch('/api/checkpoints/fetch-all-civitai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model_type: 'checkpoint' }) // Specify we're fetching checkpoint metadata
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch metadata');
+            }
+            
+            await operationComplete;
+            
+            await resetAndReload();
+            
+        } catch (error) {
+            console.error('Error fetching metadata:', error);
+            showToast('Failed to fetch metadata: ' + error.message, 'error');
+        } finally {
+            if (ws) {
+                ws.close();
+            }
+        }
+    }, {
+        initialMessage: 'Connecting...',
+        completionMessage: 'Metadata update complete'
+    });
+}

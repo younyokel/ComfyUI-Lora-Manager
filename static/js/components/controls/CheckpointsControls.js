@@ -1,6 +1,6 @@
 // CheckpointsControls.js - Specific implementation for the Checkpoints page
 import { PageControls } from './PageControls.js';
-import { loadMoreCheckpoints, resetAndReload, refreshCheckpoints } from '../../api/checkpointApi.js';
+import { loadMoreCheckpoints, resetAndReload, refreshCheckpoints, fetchCivitai } from '../../api/checkpointApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
 
 /**
@@ -31,6 +31,11 @@ export class CheckpointsControls extends PageControls {
             
             refreshModels: async () => {
                 return await refreshCheckpoints();
+            },
+            
+            // Add fetch from Civitai functionality for checkpoints
+            fetchFromCivitai: async () => {
+                return await fetchCivitai();
             },
             
             // No clearCustomFilter implementation is needed for checkpoints

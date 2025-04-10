@@ -97,20 +97,20 @@ export class PageControls {
      * Initialize page-specific event listeners
      */
     initPageSpecificListeners() {
+        // Fetch from Civitai button - available for both loras and checkpoints
+        const fetchButton = document.querySelector('[data-action="fetch"]');
+        if (fetchButton) {
+            fetchButton.addEventListener('click', () => this.fetchFromCivitai());
+        }
+        
         if (this.pageType === 'loras') {
-            // Fetch from Civitai button
-            const fetchButton = document.querySelector('[data-action="fetch"]');
-            if (fetchButton) {
-                fetchButton.addEventListener('click', () => this.fetchFromCivitai());
-            }
-            
-            // Download button
+            // Download button - LoRAs only
             const downloadButton = document.querySelector('[data-action="download"]');
             if (downloadButton) {
                 downloadButton.addEventListener('click', () => this.showDownloadModal());
             }
             
-            // Bulk operations button
+            // Bulk operations button - LoRAs only
             const bulkButton = document.querySelector('[data-action="bulk"]');
             if (bulkButton) {
                 bulkButton.addEventListener('click', () => this.toggleBulkMode());
@@ -332,11 +332,11 @@ export class PageControls {
     }
     
     /**
-     * Fetch metadata from Civitai (LoRAs only)
+     * Fetch metadata from Civitai (available for both LoRAs and Checkpoints)
      */
     async fetchFromCivitai() {
-        if (this.pageType !== 'loras' || !this.api) {
-            console.error('Fetch from Civitai is only available for LoRAs');
+        if (!this.api) {
+            console.error('API methods not registered');
             return;
         }
         
