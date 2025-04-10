@@ -1,10 +1,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
-import { CheckpointModal } from './CheckpointModal.js';
+import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
-
-// Create an instance of the modal
-const checkpointModal = new CheckpointModal();
 
 export function createCheckpointCard(checkpoint) {
     const card = document.createElement('div');
@@ -27,6 +24,10 @@ export function createCheckpointCard(checkpoint) {
     // Store tags if available
     if (checkpoint.tags && Array.isArray(checkpoint.tags)) {
         card.dataset.tags = JSON.stringify(checkpoint.tags);
+    }
+
+    if (checkpoint.modelDescription) {
+        card.dataset.modelDescription = checkpoint.modelDescription;
     }
 
     // Store NSFW level if available
@@ -139,9 +140,10 @@ export function createCheckpointCard(checkpoint) {
                     console.error('Failed to parse tags:', e);
                     return []; // Return empty array on error
                 }
-            })()
+            })(),
+            modelDescription: card.dataset.modelDescription || ''
         };
-        checkpointModal.showCheckpointDetails(checkpointMeta);
+        showCheckpointModal(checkpointMeta);
     });
 
     // Toggle blur button functionality
