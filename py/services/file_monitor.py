@@ -12,6 +12,9 @@ from .service_registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
 
+# Configuration constant to control file monitoring functionality
+ENABLE_FILE_MONITORING = False
+
 class BaseFileHandler(FileSystemEventHandler):
     """Base handler for file system events"""
     
@@ -404,6 +407,10 @@ class BaseFileMonitor:
     
     def start(self):
         """Start file monitoring"""
+        if not ENABLE_FILE_MONITORING:
+            logger.info("File monitoring is disabled via ENABLE_FILE_MONITORING setting")
+            return
+            
         for path in self.monitor_paths:
             try:
                 self.observer.schedule(self.handler, path, recursive=True)
@@ -415,11 +422,17 @@ class BaseFileMonitor:
     
     def stop(self):
         """Stop file monitoring"""
+        if not ENABLE_FILE_MONITORING:
+            return
+            
         self.observer.stop()
         self.observer.join()
     
     def rescan_links(self):
         """Rescan links when new ones are added"""
+        if not ENABLE_FILE_MONITORING:
+            return
+            
         # Find new paths not yet being monitored
         new_paths = set()
         for path in config._path_mappings.keys():
@@ -502,20 +515,28 @@ class CheckpointFileMonitor(BaseFileMonitor):
                 scanner = await CheckpointScanner.get_instance()
                 monitor_paths = scanner.get_model_roots()
                 
-                # Update monitor paths
+                # Update monitor paths - but don't actually monitor them
                 for path in monitor_paths:
                     real_path = os.path.realpath(path).replace(os.sep, '/')
                     cls._instance.monitor_paths.add(real_path)
                 
             return cls._instance
     
-    async def initialize_paths(self):
-        """Initialize monitor paths from scanner"""
-        if not self.monitor_paths:
-            scanner = await ServiceRegistry.get_checkpoint_scanner()
-            monitor_paths = scanner.get_model_roots()
+    def start(self):
+        """Override start to check global enable flag"""
+        if not ENABLE_FILE_MONITORING:
+            logger.info("Checkpoint file monitoring is disabled via ENABLE_FILE_MONITORING setting")
+            return
             
-            # Update monitor paths
-            for path in monitor_paths:
-                real_path = os.path.realpath(path).replace(os.sep, '/')
-                self.monitor_paths.add(real_path)
+        logger.info("Checkpoint file monitoring is temporarily disabled")
+        # Skip the actual monitoring setup
+        pass
+    
+    async def initialize_paths(self):
+        """Initialize monitor paths from scanner - currently disabled"""
+        if not ENABLE_FILE_MONITORING:
+            logger.info("Checkpoint path initialization skipped (monitoring disabled)")
+            return
+            
+        logger.info("Checkpoint file path initialization skipped (monitoring disabled)")
+        pass

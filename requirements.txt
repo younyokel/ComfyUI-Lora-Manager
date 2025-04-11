@@ -5,4 +5,5 @@ watchdog
 beautifulsoup4
 piexif
 Pillow
+olefile
 requests
