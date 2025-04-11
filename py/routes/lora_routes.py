@@ -1,10 +1,8 @@
 import os
 from aiohttp import web
 import jinja2
-from typing import Dict, List
+from typing import Dict
 import logging
-from ..services.lora_scanner import LoraScanner
-from ..services.recipe_scanner import RecipeScanner
 from ..config import config
 from ..services.settings_manager import settings
 from ..services.service_registry import ServiceRegistry  # Add ServiceRegistry import

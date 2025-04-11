@@ -6,17 +6,11 @@ from typing import Dict
 
 from ..utils.routes_common import ModelRouteUtils
 
-from ..services.file_monitor import LoraFileMonitor
-from ..services.download_manager import DownloadManager
-from ..services.civitai_client import CivitaiClient
 from ..config import config
-from ..services.lora_scanner import LoraScanner
-from operator import itemgetter
 from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
-from ..services.recipe_scanner import RecipeScanner
 from ..utils.constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
 from ..utils.exif_utils import ExifUtils
 from ..services.service_registry import ServiceRegistry
@@ -68,6 +62,7 @@ class ApiRoutes:
         app.router.add_get('/api/loras/base-models', routes.get_base_models)  # Add new route for base models
         app.router.add_get('/api/lora-civitai-url', routes.get_lora_civitai_url)  # Add new route for Civitai URL
         app.router.add_post('/api/rename_lora', routes.rename_lora)  # Add new route for renaming LoRA files
+        app.router.add_get('/api/loras/scan', routes.scan_loras)  # Add new route for scanning LoRA files
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -89,6 +84,15 @@ class ApiRoutes:
         if self.scanner is None:
             self.scanner = await ServiceRegistry.get_lora_scanner()
         return await ModelRouteUtils.handle_replace_preview(request, self.scanner)
+    
+    async def scan_loras(self, request: web.Request) -> web.Response:
+        """Force a rescan of LoRA files"""
+        try:                
+            await self.scanner.get_cached_data(force_refresh=True)
+            return web.json_response({"status": "success", "message": "LoRA scan completed"})
+        except Exception as e:
+            logger.error(f"Error in scan_loras: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
 
     async def get_loras(self, request: web.Request) -> web.Response:
         """Handle paginated LoRA data request"""

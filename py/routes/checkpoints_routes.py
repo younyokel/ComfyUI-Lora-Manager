@@ -7,10 +7,7 @@ import asyncio
 
 from ..utils.routes_common import ModelRouteUtils
 from ..utils.constants import NSFW_LEVELS
-from ..services.civitai_client import CivitaiClient
 from ..services.websocket_manager import ws_manager
-from ..services.checkpoint_scanner import CheckpointScanner
-from ..services.download_manager import DownloadManager
 from ..services.service_registry import ServiceRegistry
 from ..config import config
 from ..services.settings_manager import settings
