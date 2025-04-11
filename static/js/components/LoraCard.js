@@ -3,6 +3,7 @@ import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
+import { replacePreview } from '../api/loraApi.js'
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');

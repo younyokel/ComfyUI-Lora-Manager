@@ -538,3 +538,18 @@ class ModelScanner:
         except Exception as e:
             logger.error(f"Error getting model info by name: {e}", exc_info=True)
             return None
+        
+    async def update_preview_in_cache(self, file_path: str, preview_url: str) -> bool:
+        """Update preview URL in cache for a specific lora
+        
+        Args:
+            file_path: The file path of the lora to update
+            preview_url: The new preview URL
+            
+        Returns:
+            bool: True if the update was successful, False if cache doesn't exist or lora wasn't found
+        """
+        if self._cache is None:
+            return False
+
+        return await self._cache.update_preview_url(file_path, preview_url)
