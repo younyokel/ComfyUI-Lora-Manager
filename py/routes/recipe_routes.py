@@ -9,6 +9,7 @@ import asyncio
 from ..utils.exif_utils import ExifUtils
 from ..utils.recipe_parsers import RecipeParserFactory
 from ..services.civitai_client import CivitaiClient
+from ..utils.constants import CARD_PREVIEW_WIDTH
 
 from ..services.recipe_scanner import RecipeScanner
 from ..services.lora_scanner import LoraScanner
@@ -424,7 +425,7 @@ class RecipeRoutes:
             # Optimize the image (resize and convert to WebP)
             optimized_image, extension = ExifUtils.optimize_image(
                 image_data=image,
-                target_width=480,
+                target_width=CARD_PREVIEW_WIDTH,
                 format='webp',
                 quality=85,
                 preserve_metadata=True
@@ -828,7 +829,7 @@ class RecipeRoutes:
             # Optimize the image (resize and convert to WebP)
             optimized_image, extension = ExifUtils.optimize_image(
                 image_data=image,
-                target_width=480,
+                target_width=CARD_PREVIEW_WIDTH,
                 format='webp',
                 quality=85,
                 preserve_metadata=True

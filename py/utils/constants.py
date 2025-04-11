@@ -7,16 +7,19 @@ NSFW_LEVELS = {
     "Blocked": 32, # Probably not actually visible through the API without being logged in on model owner account?
 }
 
-# 预览文件扩展名
+# preview extensions
 PREVIEW_EXTENSIONS = [
+    '.webp',
+    '.preview.webp',
     '.preview.png', 
     '.preview.jpeg', 
     '.preview.jpg', 
-    '.preview.webp',
     '.preview.mp4',
     '.png', 
     '.jpeg', 
     '.jpg', 
-    '.webp',
     '.mp4'
 ]
+
+# Card preview image width
+CARD_PREVIEW_WIDTH = 480
