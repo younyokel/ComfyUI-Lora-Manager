@@ -5,6 +5,11 @@ from typing import Optional, Dict
 from .civitai_client import CivitaiClient
 from .file_monitor import LoraFileMonitor
 from ..utils.models import LoraMetadata
+from ..utils.constants import CARD_PREVIEW_WIDTH
+from ..utils.exif_utils import ExifUtils
+
+# Download to temporary file first
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -128,13 +133,54 @@ class DownloadManager:
                 if progress_callback:
                     await progress_callback(1)  # 1% progress for starting preview download
 
-                preview_ext = '.mp4' if images[0].get('type') == 'video' else '.png'
-                preview_path = os.path.splitext(save_path)[0] + '.preview' + preview_ext
-                if await self.civitai_client.download_preview_image(images[0]['url'], preview_path):
-                    metadata.preview_url = preview_path.replace(os.sep, '/')
-                    metadata.preview_nsfw_level = images[0].get('nsfwLevel', 0)
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
+                # Check if it's a video or an image
+                is_video = images[0].get('type') == 'video'
+                
+                if is_video:
+                    # For videos, use .mp4 extension
+                    preview_ext = '.mp4'
+                    preview_path = os.path.splitext(save_path)[0] + preview_ext
+                    
+                    # Download video directly
+                    if await self.civitai_client.download_preview_image(images[0]['url'], preview_path):
+                        metadata.preview_url = preview_path.replace(os.sep, '/')
+                        metadata.preview_nsfw_level = images[0].get('nsfwLevel', 0)
+                        with open(metadata_path, 'w', encoding='utf-8') as f:
+                            json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
+                else:
+                    # For images, use WebP format for better performance
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                        temp_path = temp_file.name
+                    
+                    # Download the original image to temp path
+                    if await self.civitai_client.download_preview_image(images[0]['url'], temp_path):
+                        # Optimize and convert to WebP
+                        preview_path = os.path.splitext(save_path)[0] + '.webp'
+                        
+                        # Use ExifUtils to optimize and convert the image
+                        optimized_data, _ = ExifUtils.optimize_image(
+                            image_data=temp_path,
+                            target_width=CARD_PREVIEW_WIDTH,
+                            format='webp',
+                            quality=85,
+                            preserve_metadata=True
+                        )
+                        
+                        # Save the optimized image
+                        with open(preview_path, 'wb') as f:
+                            f.write(optimized_data)
+                            
+                        # Update metadata
+                        metadata.preview_url = preview_path.replace(os.sep, '/')
+                        metadata.preview_nsfw_level = images[0].get('nsfwLevel', 0)
+                        with open(metadata_path, 'w', encoding='utf-8') as f:
+                            json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
+                        
+                        # Remove temporary file
+                        try:
+                            os.unlink(temp_path)
+                        except Exception as e:
+                            logger.warning(f"Failed to delete temp file: {e}")
 
                 # Report preview download completion
                 if progress_callback:
