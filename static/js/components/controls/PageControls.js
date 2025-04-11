@@ -103,13 +103,12 @@ export class PageControls {
             fetchButton.addEventListener('click', () => this.fetchFromCivitai());
         }
         
+        const downloadButton = document.querySelector('[data-action="download"]');
+        if (downloadButton) {
+            downloadButton.addEventListener('click', () => this.showDownloadModal());
+        }
+        
         if (this.pageType === 'loras') {
-            // Download button - LoRAs only
-            const downloadButton = document.querySelector('[data-action="download"]');
-            if (downloadButton) {
-                downloadButton.addEventListener('click', () => this.showDownloadModal());
-            }
-            
             // Bulk operations button - LoRAs only
             const bulkButton = document.querySelector('[data-action="bulk"]');
             if (bulkButton) {
@@ -349,14 +348,9 @@ export class PageControls {
     }
     
     /**
-     * Show download modal (LoRAs only)
+     * Show download modal
      */
     showDownloadModal() {
-        if (this.pageType !== 'loras' || !this.api) {
-            console.error('Download modal is only available for LoRAs');
-            return;
-        }
-        
         this.api.showDownloadModal();
     }
     

@@ -2,6 +2,7 @@
 import { PageControls } from './PageControls.js';
 import { loadMoreCheckpoints, resetAndReload, refreshCheckpoints, fetchCivitai } from '../../api/checkpointApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
+import { CheckpointDownloadManager } from '../../managers/CheckpointDownloadManager.js';
 
 /**
  * CheckpointsControls class - Extends PageControls for Checkpoint-specific functionality
@@ -10,6 +11,9 @@ export class CheckpointsControls extends PageControls {
     constructor() {
         // Initialize with 'checkpoints' page type
         super('checkpoints');
+        
+        // Initialize checkpoint download manager
+        this.downloadManager = new CheckpointDownloadManager();
         
         // Register API methods specific to the Checkpoints page
         this.registerCheckpointsAPI();
@@ -36,6 +40,11 @@ export class CheckpointsControls extends PageControls {
             // Add fetch from Civitai functionality for checkpoints
             fetchFromCivitai: async () => {
                 return await fetchCivitai();
+            },
+            
+            // Add show download modal functionality
+            showDownloadModal: () => {
+                this.downloadManager.showDownloadModal();
             },
             
             // No clearCustomFilter implementation is needed for checkpoints

@@ -35,6 +35,19 @@ export class ModalManager {
                 closeOnOutsideClick: true
             });
         }
+
+        // Add checkpointDownloadModal registration
+        const checkpointDownloadModal = document.getElementById('checkpointDownloadModal');
+        if (checkpointDownloadModal) {
+            this.registerModal('checkpointDownloadModal', {
+                element: checkpointDownloadModal,
+                onClose: () => {
+                    this.getModal('checkpointDownloadModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
+        }
         
         const deleteModal = document.getElementById('deleteModal');
         if (deleteModal) {

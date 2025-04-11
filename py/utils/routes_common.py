@@ -9,6 +9,7 @@ from .constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
 from ..config import config
 from ..services.civitai_client import CivitaiClient
 from ..utils.exif_utils import ExifUtils
+from ..services.download_manager import DownloadManager
 
 logger = logging.getLogger(__name__)
 
@@ -422,3 +423,81 @@ class ModelRouteUtils:
         except Exception as e:
             logger.error(f"Error replacing preview: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)
+
+    @staticmethod
+    async def handle_download_model(request: web.Request, download_manager: DownloadManager, model_type="lora") -> web.Response:
+        """Handle model download request
+        
+        Args:
+            request: The aiohttp request
+            download_manager: Instance of DownloadManager
+            model_type: Type of model ('lora' or 'checkpoint')
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            data = await request.json()
+            
+            # Create progress callback
+            async def progress_callback(progress):
+                from ..services.websocket_manager import ws_manager
+                await ws_manager.broadcast({
+                    'status': 'progress',
+                    'progress': progress
+                })
+            
+            # Check which identifier is provided
+            download_url = data.get('download_url')
+            model_hash = data.get('model_hash')
+            model_version_id = data.get('model_version_id')
+            
+            # Validate that at least one identifier is provided
+            if not any([download_url, model_hash, model_version_id]):
+                return web.Response(
+                    status=400, 
+                    text="Missing required parameter: Please provide either 'download_url', 'hash', or 'modelVersionId'"
+                )
+            
+            # Use the correct root directory based on model type
+            root_key = 'checkpoint_root' if model_type == 'checkpoint' else 'lora_root'
+            save_dir = data.get(root_key)
+            
+            result = await download_manager.download_from_civitai(
+                download_url=download_url,
+                model_hash=model_hash,
+                model_version_id=model_version_id,
+                save_dir=save_dir,
+                relative_path=data.get('relative_path', ''),
+                progress_callback=progress_callback,
+                model_type=model_type
+            )
+            
+            if not result.get('success', False):
+                error_message = result.get('error', 'Unknown error')
+                
+                # Return 401 for early access errors
+                if 'early access' in error_message.lower():
+                    logger.warning(f"Early access download failed: {error_message}")
+                    return web.Response(
+                        status=401,  # Use 401 status code to match Civitai's response
+                        text=f"Early Access Restriction: {error_message}"
+                    )
+                
+                return web.Response(status=500, text=error_message)
+            
+            return web.json_response(result)
+            
+        except Exception as e:
+            error_message = str(e)
+            
+            # Check if this might be an early access error
+            if '401' in error_message:
+                logger.warning(f"Early access error (401): {error_message}")
+                return web.Response(
+                    status=401,
+                    text="Early Access Restriction: This model requires purchase. Please buy early access on Civitai.com."
+                )
+            
+            logger.error(f"Error downloading {model_type}: {error_message}")
+            return web.Response(status=500, text=error_message)

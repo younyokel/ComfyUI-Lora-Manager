@@ -3,12 +3,16 @@ import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
 import { loadMoreCheckpoints } from './api/checkpointApi.js';
+import { CheckpointDownloadManager } from './managers/CheckpointDownloadManager.js';
 
 // Initialize the Checkpoints page
 class CheckpointsPageManager {
     constructor() {
         // Initialize page controls
         this.pageControls = createPageControls('checkpoints');
+        
+        // Initialize checkpoint download manager
+        window.checkpointDownloadManager = new CheckpointDownloadManager();
         
         // Expose only necessary functions to global scope
         this._exposeRequiredGlobalFunctions();
