@@ -1,4 +1,4 @@
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, openCivitai } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';

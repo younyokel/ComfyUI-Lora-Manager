@@ -1,15 +1,10 @@
 import os
 import json
-import asyncio
-from typing import Dict
-import aiohttp
 import jinja2
 from aiohttp import web
 import logging
-from datetime import datetime
 
-from ..utils.model_utils import determine_base_model
-
+from ..utils.routes_common import ModelRouteUtils
 from ..utils.constants import NSFW_LEVELS
 from ..services.civitai_client import CivitaiClient
 from ..services.websocket_manager import ws_manager
@@ -259,20 +254,8 @@ class CheckpointsRoutes:
             "from_civitai": checkpoint.get("from_civitai", True),
             "notes": checkpoint.get("notes", ""),
             "model_type": checkpoint.get("model_type", "checkpoint"),
-            "civitai": self._filter_civitai_data(checkpoint.get("civitai", {}))
+            "civitai": ModelRouteUtils.filter_civitai_data(checkpoint.get("civitai", {}))
         }
-    
-    def _filter_civitai_data(self, data):
-        """Filter relevant fields from CivitAI data"""
-        if not data:
-            return {}
-            
-        fields = [
-            "id", "modelId", "name", "createdAt", "updatedAt", 
-            "publishedAt", "trainedWords", "baseModel", "description",
-            "model", "images"
-        ]
-        return {k: data[k] for k in fields if k in data}
     
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:
         """Fetch CivitAI metadata for all checkpoints in the background"""
@@ -302,10 +285,11 @@ class CheckpointsRoutes:
             for cp in to_process:
                 try:
                     original_name = cp.get('model_name')
-                    if await self._fetch_and_update_single_checkpoint(
+                    if await ModelRouteUtils.fetch_and_update_model(
                         sha256=cp['sha256'],
                         file_path=cp['file_path'],
-                        checkpoint=cp
+                        model_data=cp,
+                        update_cache_func=self.scanner.update_single_model_cache
                     ):
                         success += 1
                         if original_name != cp.get('model_name'):
@@ -350,99 +334,6 @@ class CheckpointsRoutes:
             logger.error(f"Error in fetch_all_civitai for checkpoints: {e}")
             return web.Response(text=str(e), status=500)
         
-    async def _fetch_and_update_single_checkpoint(self, sha256: str, file_path: str, checkpoint: dict) -> bool:
-        """Fetch and update metadata for a single checkpoint without sorting"""
-        client = CivitaiClient()
-        try:
-            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
-            
-            # Load local metadata
-            local_metadata = self._load_local_metadata(metadata_path)
-
-            # Fetch metadata from Civitai
-            civitai_metadata = await client.get_model_by_hash(sha256)
-            if not civitai_metadata:
-                # Mark as not from CivitAI if not found
-                local_metadata['from_civitai'] = False
-                checkpoint['from_civitai'] = False
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(local_metadata, f, indent=2, ensure_ascii=False)
-                return False
-
-            # Update metadata with Civitai data
-            await self._update_model_metadata(
-                metadata_path, 
-                local_metadata, 
-                civitai_metadata, 
-                client
-            )
-            
-            # Update cache object directly
-            checkpoint.update({
-                'model_name': local_metadata.get('model_name'),
-                'preview_url': local_metadata.get('preview_url'),
-                'from_civitai': True,
-                'civitai': civitai_metadata
-            })
-                
-            return True
-
-        except Exception as e:
-            logger.error(f"Error fetching CivitAI data for checkpoint: {e}")
-            return False
-        finally:
-            await client.close()
-
-    def _load_local_metadata(self, metadata_path: str) -> Dict:
-        """Load local metadata file"""
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Error loading metadata from {metadata_path}: {e}")
-        return {}
-    
-    async def _update_model_metadata(self, metadata_path: str, local_metadata: Dict, 
-                                   civitai_metadata: Dict, client: CivitaiClient) -> None:
-        """Update local metadata with CivitAI data"""
-        local_metadata['civitai'] = civitai_metadata
-        
-        # Update model name if available
-        if 'model' in civitai_metadata:
-            if civitai_metadata.get('model', {}).get('name'):
-                local_metadata['model_name'] = civitai_metadata['model']['name']
-        
-            # Fetch additional model metadata (description and tags) if we have model ID
-            model_id = civitai_metadata['modelId']
-            if model_id:
-                model_metadata, _ = await client.get_model_metadata(str(model_id))
-                if model_metadata:
-                    local_metadata['modelDescription'] = model_metadata.get('description', '')
-                    local_metadata['tags'] = model_metadata.get('tags', [])
-        
-        # Update base model
-        local_metadata['base_model'] = determine_base_model(civitai_metadata.get('baseModel'))
-        
-        # Update preview if needed
-        if not local_metadata.get('preview_url') or not os.path.exists(local_metadata['preview_url']):
-            first_preview = next((img for img in civitai_metadata.get('images', [])), None)
-            if first_preview:
-                preview_ext = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]
-                base_name = os.path.splitext(os.path.splitext(os.path.basename(metadata_path))[0])[0]
-                preview_filename = base_name + preview_ext
-                preview_path = os.path.join(os.path.dirname(metadata_path), preview_filename)
-                
-                if await client.download_preview_image(first_preview['url'], preview_path):
-                    local_metadata['preview_url'] = preview_path.replace(os.sep, '/')
-                    local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
-
-        # Save updated metadata
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
-
-        await self.scanner.update_single_model_cache(local_metadata['file_path'], local_metadata['file_path'], local_metadata)
-    
     async def get_top_tags(self, request: web.Request) -> web.Response:
         """Handle request for top tags sorted by frequency"""
         try:
