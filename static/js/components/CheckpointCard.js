@@ -2,6 +2,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
+import { replaceCheckpointPreview as apiReplaceCheckpointPreview } from '../api/checkpointApi.js';
 
 export function createCheckpointCard(checkpoint) {
     const card = document.createElement('div');
@@ -305,6 +306,6 @@ function replaceCheckpointPreview(filePath) {
     if (window.replaceCheckpointPreview) {
         window.replaceCheckpointPreview(filePath);
     } else {
-        console.log('Replace checkpoint preview:', filePath);
+        apiReplaceCheckpointPreview(filePath);
     }
 }
