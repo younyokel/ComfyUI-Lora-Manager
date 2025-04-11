@@ -294,7 +294,10 @@ function deleteCheckpoint(filePath) {
     if (window.deleteCheckpoint) {
         window.deleteCheckpoint(filePath);
     } else {
-        console.log('Delete checkpoint:', filePath);
+        // Use the modal delete functionality
+        import('../utils/modalUtils.js').then(({ showDeleteModal }) => {
+            showDeleteModal(filePath, 'checkpoint');
+        });
     }
 }
 

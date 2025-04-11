@@ -34,6 +34,11 @@ class CheckpointsRoutes:
         app.router.add_get('/api/checkpoints/top-tags', self.get_top_tags)
         app.router.add_get('/api/checkpoints/scan', self.scan_checkpoints)
         app.router.add_get('/api/checkpoints/info/{name}', self.get_checkpoint_info)
+        
+        # Add new routes for model management similar to LoRA routes
+        app.router.add_post('/api/checkpoints/delete', self.delete_model)
+        app.router.add_post('/api/checkpoints/fetch-civitai', self.fetch_civitai)
+        app.router.add_post('/api/checkpoints/replace-preview', self.replace_preview)
 
     async def get_checkpoints(self, request):
         """Get paginated checkpoint data"""
@@ -461,3 +466,15 @@ class CheckpointsRoutes:
                 text="Error loading checkpoints page",
                 status=500
             )
+
+    async def delete_model(self, request: web.Request) -> web.Response:
+        """Handle checkpoint model deletion request"""
+        return await ModelRouteUtils.handle_delete_model(request, self.scanner)
+    
+    async def fetch_civitai(self, request: web.Request) -> web.Response:
+        """Handle CivitAI metadata fetch request for checkpoints"""
+        return await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
+    
+    async def replace_preview(self, request: web.Request) -> web.Response:
+        """Handle preview image replacement for checkpoints"""
+        return await ModelRouteUtils.handle_replace_preview(request, self.scanner)

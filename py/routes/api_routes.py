@@ -63,85 +63,15 @@ class ApiRoutes:
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
-        try:
-            data = await request.json()
-            file_path = data.get('file_path')
-            if not file_path:
-                return web.Response(text='Model path is required', status=400)
-
-            target_dir = os.path.dirname(file_path)
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            
-            deleted_files = await ModelRouteUtils.delete_model_files(
-                target_dir, 
-                file_name,
-                self.download_manager.file_monitor
-            )
-            
-            # Remove from cache
-            cache = await self.scanner.get_cached_data()
-            cache.raw_data = [item for item in cache.raw_data if item['file_path'] != file_path]
-            await cache.resort()
-
-            # update hash index
-            self.scanner._hash_index.remove_by_path(file_path)
-            
-            return web.json_response({
-                'success': True,
-                'deleted_files': deleted_files
-            })
-            
-        except Exception as e:
-            logger.error(f"Error deleting model: {e}", exc_info=True)
-            return web.Response(text=str(e), status=500)
+        return await ModelRouteUtils.handle_delete_model(request, self.scanner)
 
     async def fetch_civitai(self, request: web.Request) -> web.Response:
         """Handle CivitAI metadata fetch request"""
-        try:
-            data = await request.json()
-            metadata_path = os.path.splitext(data['file_path'])[0] + '.metadata.json'
-            
-            # Check if model is from CivitAI
-            local_metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
-
-            # Fetch and update metadata
-            civitai_metadata = await self.civitai_client.get_model_by_hash(local_metadata["sha256"])
-            if not civitai_metadata:
-                await ModelRouteUtils.handle_not_found_on_civitai(metadata_path, local_metadata)
-                return web.json_response({"success": False, "error": "Not found on CivitAI"}, status=404)
-
-            await ModelRouteUtils.update_model_metadata(metadata_path, local_metadata, civitai_metadata, self.civitai_client)
-            
-            # Update the cache
-            await self.scanner.update_single_model_cache(data['file_path'], data['file_path'], local_metadata)
-            
-            return web.json_response({"success": True})
-
-        except Exception as e:
-            logger.error(f"Error fetching from CivitAI: {e}", exc_info=True)
-            return web.json_response({"success": False, "error": str(e)}, status=500)
+        return await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
 
     async def replace_preview(self, request: web.Request) -> web.Response:
         """Handle preview image replacement request"""
-        try:
-            reader = await request.multipart()
-            preview_data, content_type = await self._read_preview_file(reader)
-            model_path = await self._read_model_path(reader)
-            
-            preview_path = await self._save_preview_file(model_path, preview_data, content_type)
-            await self._update_preview_metadata(model_path, preview_path)
-            
-            # Update preview URL in scanner cache
-            await self.scanner.update_preview_in_cache(model_path, preview_path)
-            
-            return web.json_response({
-                "success": True,
-                "preview_url": config.get_preview_static_url(preview_path)
-            })
-            
-        except Exception as e:
-            logger.error(f"Error replacing preview: {e}", exc_info=True)
-            return web.Response(text=str(e), status=500)
+        return await ModelRouteUtils.handle_replace_preview(request, self.scanner)
 
     async def get_loras(self, request: web.Request) -> web.Response:
         """Handle paginated LoRA data request"""
