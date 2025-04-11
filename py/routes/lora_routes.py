@@ -87,7 +87,6 @@ class LoraRoutes:
                         settings=settings,  # Pass settings to template
                         request=request  # Pass the request object to the template
                     )
-                    logger.debug(f"Loras page loaded successfully with {len(cache.raw_data)} items")
                 except Exception as cache_error:
                     logger.error(f"Error loading cache data: {cache_error}")
                     # 如果获取缓存失败，也显示初始化页面
@@ -143,7 +142,6 @@ class LoraRoutes:
                         settings=settings,
                         request=request  # Pass the request object to the template
                     )
-                    logger.debug(f"Recipes page loaded successfully with {len(cache.raw_data)} items")
                 except Exception as cache_error:
                     logger.error(f"Error loading recipe cache data: {cache_error}")
                     # 如果获取缓存失败，也显示初始化页面

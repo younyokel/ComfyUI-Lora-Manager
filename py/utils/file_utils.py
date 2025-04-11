@@ -8,7 +8,8 @@ from typing import Dict, Optional, Type
 from .model_utils import determine_base_model
 from .lora_metadata import extract_lora_metadata, extract_checkpoint_metadata
 from .models import BaseModelMetadata, LoraMetadata, CheckpointMetadata
-from .constants import PREVIEW_EXTENSIONS
+from .constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
+from .exif_utils import ExifUtils
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,38 @@ def find_preview_file(base_name: str, dir_path: str) -> str:
     for ext in PREVIEW_EXTENSIONS:
         full_pattern = os.path.join(dir_path, f"{base_name}{ext}")
         if os.path.exists(full_pattern):
+            # Check if this is an image and not already webp
+            if ext.lower().endswith(('.jpg', '.jpeg', '.png')) and not ext.lower().endswith('.webp'):
+                try:
+                    # Optimize the image to webp format
+                    webp_path = os.path.join(dir_path, f"{base_name}.webp")
+                    
+                    # Use ExifUtils to optimize the image
+                    with open(full_pattern, 'rb') as f:
+                        image_data = f.read()
+                    
+                    optimized_data, _ = ExifUtils.optimize_image(
+                        image_data=image_data,
+                        target_width=CARD_PREVIEW_WIDTH,
+                        format='webp',
+                        quality=85,
+                        preserve_metadata=True
+                    )
+                    
+                    # Save the optimized webp file
+                    with open(webp_path, 'wb') as f:
+                        f.write(optimized_data)
+                    
+                    logger.debug(f"Optimized preview image from {full_pattern} to {webp_path}")
+                    return webp_path.replace(os.sep, "/")
+                except Exception as e:
+                    logger.error(f"Error optimizing preview image {full_pattern}: {e}")
+                    # Fall back to original file if optimization fails
+                    return full_pattern.replace(os.sep, "/")
+            
+            # Return the original path for webp images or non-image files
             return full_pattern.replace(os.sep, "/")
+    
     return ""
 
 def normalize_path(path: str) -> str:
@@ -154,6 +186,7 @@ async def load_metadata(file_path: str, model_class: Type[BaseModelMetadata] = L
                     data['file_path'] = normalize_path(file_path)
                     needs_update = True
                 
+                # TODO: optimize preview image to webp format if not already done
                 preview_url = data.get('preview_url', '')
                 if not preview_url or not os.path.exists(preview_url):
                     base_name = os.path.splitext(os.path.basename(file_path))[0]

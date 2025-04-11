@@ -439,7 +439,6 @@ class CheckpointsRoutes:
                         settings=settings,  # Pass settings to template
                         request=request  # Pass the request object to the template
                     )
-                    logger.debug(f"Checkpoints page loaded successfully with {len(cache.raw_data)} items")
                 except Exception as cache_error:
                     logger.error(f"Error loading checkpoints cache data: {cache_error}")
                     # 如果获取缓存失败，也显示初始化页面
