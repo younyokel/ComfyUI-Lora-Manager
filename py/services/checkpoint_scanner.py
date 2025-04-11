@@ -8,6 +8,7 @@ from ..utils.models import CheckpointMetadata
 from ..config import config
 from .model_scanner import ModelScanner
 from .model_hash_index import ModelHashIndex
+from .service_registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
 

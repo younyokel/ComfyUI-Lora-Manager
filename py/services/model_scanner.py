@@ -12,13 +12,13 @@ from ..utils.file_utils import load_metadata, get_file_info, find_preview_file, 
 from .model_cache import ModelCache
 from .model_hash_index import ModelHashIndex
 from ..utils.constants import PREVIEW_EXTENSIONS
+from .service_registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
 
 class ModelScanner:
     """Base service for scanning and managing model files"""
     
-    _instance = None
     _lock = asyncio.Lock()
     
     def __init__(self, model_type: str, model_class: Type[BaseModelMetadata], file_extensions: Set[str], hash_index: Optional[ModelHashIndex] = None):
@@ -35,14 +35,17 @@ class ModelScanner:
         self.file_extensions = file_extensions
         self._cache = None
         self._hash_index = hash_index or ModelHashIndex()
-        self.file_monitor = None
         self._tags_count = {}  # Dictionary to store tag counts
         self._is_initializing = False  # Flag to track initialization state
+        
+        # Register this service
+        asyncio.create_task(self._register_service())
+        
+    async def _register_service(self):
+        """Register this instance with the ServiceRegistry"""
+        service_name = f"{self.model_type}_scanner"
+        await ServiceRegistry.register_service(service_name, self)
     
-    def set_file_monitor(self, monitor):
-        """Set file monitor instance"""
-        self.file_monitor = monitor
-
     async def initialize_in_background(self) -> None:
         """Initialize cache in background using thread pool"""
         try:
@@ -366,12 +369,20 @@ class ModelScanner:
             
             file_size = os.path.getsize(real_source)
             
-            if self.file_monitor:
-                self.file_monitor.handler.add_ignore_path(
+            # Get the appropriate file monitor through ServiceRegistry
+            if self.model_type == "lora":
+                monitor = await ServiceRegistry.get_lora_monitor()
+            elif self.model_type == "checkpoint":
+                monitor = await ServiceRegistry.get_checkpoint_monitor()
+            else:
+                monitor = None
+                
+            if monitor:
+                monitor.handler.add_ignore_path(
                     real_source,
                     file_size
                 )
-                self.file_monitor.handler.add_ignore_path(
+                monitor.handler.add_ignore_path(
                     real_target,
                     file_size
                 )

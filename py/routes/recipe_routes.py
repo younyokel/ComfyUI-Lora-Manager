@@ -16,6 +16,7 @@ from ..services.lora_scanner import LoraScanner
 from ..config import config
 from ..workflow.parser import WorkflowParser
 from ..utils.utils import download_civitai_image
+from ..services.service_registry import ServiceRegistry  # Add ServiceRegistry import
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,23 @@ class RecipeRoutes:
     """API route handlers for Recipe management"""
 
     def __init__(self):
-        self.recipe_scanner = RecipeScanner(LoraScanner())
-        self.civitai_client = CivitaiClient()
+        # Initialize service references as None, will be set during async init
+        self.recipe_scanner = None
+        self.civitai_client = None
         self.parser = WorkflowParser()
         
         # Pre-warm the cache
         self._init_cache_task = None
+
+    async def init_services(self):
+        """Initialize services from ServiceRegistry"""
+        if self.recipe_scanner is None:
+            self.recipe_scanner = await ServiceRegistry.get_recipe_scanner()
+            logger.info("RecipeRoutes: Retrieved RecipeScanner from ServiceRegistry")
+            
+        if self.civitai_client is None:
+            self.civitai_client = await ServiceRegistry.get_civitai_client()
+            logger.info("RecipeRoutes: Retrieved CivitaiClient from ServiceRegistry")
 
     @classmethod
     def setup_routes(cls, app: web.Application):
@@ -68,7 +80,10 @@ class RecipeRoutes:
     async def _init_cache(self, app):
         """Initialize cache on startup"""
         try:
-            # First, ensure the lora scanner is fully initialized
+            # Initialize services first
+            await self.init_services()
+            
+            # Now that services are initialized, get the lora scanner
             lora_scanner = self.recipe_scanner._lora_scanner
             
             # Get lora cache to ensure it's initialized
@@ -86,6 +101,9 @@ class RecipeRoutes:
     async def get_recipes(self, request: web.Request) -> web.Response:
         """API endpoint for getting paginated recipes"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             # Get query parameters with defaults
             page = int(request.query.get('page', '1'))
             page_size = int(request.query.get('page_size', '20'))
@@ -155,6 +173,9 @@ class RecipeRoutes:
     async def get_recipe_detail(self, request: web.Request) -> web.Response:
         """Get detailed information about a specific recipe"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             recipe_id = request.match_info['recipe_id']
             
             # Use the new get_recipe_by_id method from recipe_scanner
@@ -208,6 +229,9 @@ class RecipeRoutes:
         """Analyze an uploaded image or URL for recipe metadata"""
         temp_path = None
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             # Check if request contains multipart data (image) or JSON data (url)
             content_type = request.headers.get('Content-Type', '')
             
@@ -326,6 +350,9 @@ class RecipeRoutes:
     async def save_recipe(self, request: web.Request) -> web.Response:
         """Save a recipe to the recipes folder"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             reader = await request.multipart()
             
             # Process form data
@@ -527,6 +554,9 @@ class RecipeRoutes:
     async def delete_recipe(self, request: web.Request) -> web.Response:
         """Delete a recipe by ID"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             recipe_id = request.match_info['recipe_id']
             
             # Get recipes directory
@@ -574,6 +604,9 @@ class RecipeRoutes:
     async def get_top_tags(self, request: web.Request) -> web.Response:
         """Get top tags used in recipes"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             # Get limit parameter with default
             limit = int(request.query.get('limit', '20'))
             
@@ -606,6 +639,9 @@ class RecipeRoutes:
     async def get_base_models(self, request: web.Request) -> web.Response:
         """Get base models used in recipes"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             # Get all recipes from cache
             cache = await self.recipe_scanner.get_cached_data()
             
@@ -634,6 +670,9 @@ class RecipeRoutes:
     async def share_recipe(self, request: web.Request) -> web.Response:
         """Process a recipe image for sharing by adding metadata to EXIF"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             recipe_id = request.match_info['recipe_id']
             
             # Get all recipes from cache
@@ -693,6 +732,9 @@ class RecipeRoutes:
     async def download_shared_recipe(self, request: web.Request) -> web.Response:
         """Serve a processed recipe image for download"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             recipe_id = request.match_info['recipe_id']
             
             # Check if we have this shared recipe
@@ -749,6 +791,9 @@ class RecipeRoutes:
     async def save_recipe_from_widget(self, request: web.Request) -> web.Response:
         """Save a recipe from the LoRAs widget"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             reader = await request.multipart()
             
             # Process form data
@@ -923,6 +968,9 @@ class RecipeRoutes:
     async def get_recipe_syntax(self, request: web.Request) -> web.Response:
         """Generate recipe syntax for LoRAs in the recipe, looking up proper file names using hash_index"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             recipe_id = request.match_info['recipe_id']
             
             # Get all recipes from cache
@@ -1003,6 +1051,9 @@ class RecipeRoutes:
     async def update_recipe(self, request: web.Request) -> web.Response:
         """Update recipe metadata (name and tags)"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             recipe_id = request.match_info['recipe_id']
             data = await request.json()
             
@@ -1030,6 +1081,9 @@ class RecipeRoutes:
     async def reconnect_lora(self, request: web.Request) -> web.Response:
         """Reconnect a deleted LoRA in a recipe to a local LoRA file"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             # Parse request data
             data = await request.json()
             
@@ -1140,6 +1194,9 @@ class RecipeRoutes:
     async def get_recipes_for_lora(self, request: web.Request) -> web.Response:
         """Get recipes that use a specific Lora"""
         try:
+            # Ensure services are initialized
+            await self.init_services()
+            
             lora_hash = request.query.get('hash')
             
             # Hash is required

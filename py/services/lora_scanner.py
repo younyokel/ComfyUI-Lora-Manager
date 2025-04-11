@@ -13,6 +13,7 @@ from .lora_hash_index import LoraHashIndex
 from .settings_manager import settings
 from ..utils.constants import NSFW_LEVELS
 from ..utils.utils import fuzzy_match
+from .service_registry import ServiceRegistry
 import sys
 
 logger = logging.getLogger(__name__)
