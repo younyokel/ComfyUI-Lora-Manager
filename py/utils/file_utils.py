@@ -93,6 +93,17 @@ async def get_file_info(file_path: str, model_class: Type[BaseModelMetadata] = L
                     logger.debug(f"Using SHA256 from .json file for {file_path}")
         except Exception as e:
             logger.error(f"Error reading .json file for {file_path}: {e}")
+    
+    # If SHA256 is still not found, check for a .sha256 file
+    if sha256 is None:
+        sha256_file = f"{os.path.splitext(file_path)[0]}.sha256"
+        if os.path.exists(sha256_file):
+            try:
+                with open(sha256_file, 'r', encoding='utf-8') as f:
+                    sha256 = f.read().strip().lower()
+                    logger.debug(f"Using SHA256 from .sha256 file for {file_path}")
+            except Exception as e:
+                logger.error(f"Error reading .sha256 file for {file_path}: {e}")
 
     try:
         # If we didn't get SHA256 from the .json file, calculate it
