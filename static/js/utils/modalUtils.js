@@ -1,10 +1,12 @@
 import { modalManager } from '../managers/ModalManager.js';
 
 let pendingDeletePath = null;
+let pendingModelType = null;
 
-export function showDeleteModal(filePath) {
-    event.stopPropagation();
+export function showDeleteModal(filePath, modelType = 'lora') {
+    // event.stopPropagation();
     pendingDeletePath = filePath;
+    pendingModelType = modelType;
     
     const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
     const modelName = card.dataset.name;
@@ -23,11 +25,15 @@ export function showDeleteModal(filePath) {
 export async function confirmDelete() {
     if (!pendingDeletePath) return;
     
-    const modal = document.getElementById('deleteModal');
     const card = document.querySelector(`.lora-card[data-filepath="${pendingDeletePath}"]`);
     
     try {
-        const response = await fetch('/api/delete_model', {
+        // Use the appropriate endpoint based on model type
+        const endpoint = pendingModelType === 'checkpoint' ? 
+            '/api/checkpoints/delete' : 
+            '/api/delete_model';
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -53,4 +59,6 @@ export async function confirmDelete() {
 
 export function closeDeleteModal() {
     modalManager.closeModal('deleteModal');
-} 
+    pendingDeletePath = null;
+    pendingModelType = null;
+}

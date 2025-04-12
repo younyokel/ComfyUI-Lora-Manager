@@ -1,19 +1,19 @@
 /**
  * ModelMetadata.js
- * 处理LoRA模型元数据编辑相关的功能模块
+ * Handles checkpoint model metadata editing functionality
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { updateLoraCard } from '../../utils/cardUpdater.js';
+import { updateCheckpointCard } from '../../utils/cardUpdater.js';
 
 /**
- * 保存模型元数据到服务器
- * @param {string} filePath - 文件路径
- * @param {Object} data - 要保存的数据
- * @returns {Promise} 保存操作的Promise
+ * Save model metadata to the server
+ * @param {string} filePath - Path to the model file
+ * @param {Object} data - Metadata to save
+ * @returns {Promise} - Promise that resolves with the server response
  */
 export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/api/loras/save-metadata', {
+    const response = await fetch('/api/checkpoints/save-metadata', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -32,17 +32,14 @@ export async function saveModelMetadata(filePath, data) {
 }
 
 /**
- * 设置模型名称编辑功能
- * @param {string} filePath - 文件路径
+ * Set up model name editing functionality
+ * @param {string} filePath - The full file path of the model.
  */
 export function setupModelNameEditing(filePath) {
     const modelNameContent = document.querySelector('.model-name-content');
     const editBtn = document.querySelector('.edit-model-name-btn');
     
     if (!modelNameContent || !editBtn) return;
-    
-    // Store the file path in a data attribute for later use
-    modelNameContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const modelNameHeader = document.querySelector('.model-name-header');
@@ -81,10 +78,10 @@ export function setupModelNameEditing(filePath) {
         
         if (this.textContent.trim() === '') {
             // Restore original model name if empty
-            const filePath = this.dataset.filePath;
-            const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-            if (loraCard) {
-                this.textContent = loraCard.dataset.model_name;
+            // Use the passed filePath to find the card
+            const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
+            if (checkpointCard) {
+                this.textContent = checkpointCard.dataset.model_name;
             }
         }
     });
@@ -93,7 +90,7 @@ export function setupModelNameEditing(filePath) {
     modelNameContent.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const filePath = this.dataset.filePath;
+            // Use the passed filePath
             saveModelName(filePath);
             this.blur();
         }
@@ -101,7 +98,6 @@ export function setupModelNameEditing(filePath) {
     
     // Limit model name length
     modelNameContent.addEventListener('input', function() {
-        // Limit model name length
         if (this.textContent.length > 100) {
             this.textContent = this.textContent.substring(0, 100);
             // Place cursor at the end
@@ -118,8 +114,8 @@ export function setupModelNameEditing(filePath) {
 }
 
 /**
- * 保存模型名称
- * @param {string} filePath - 文件路径
+ * Save model name
+ * @param {string} filePath - File path
  */
 async function saveModelName(filePath) {
     const modelNameElement = document.querySelector('.model-name-content');
@@ -131,7 +127,7 @@ async function saveModelName(filePath) {
         return;
     }
     
-    // Check if model name is too long (limit to 100 characters)
+    // Check if model name is too long
     if (newModelName.length > 100) {
         showToast('Model name is too long (maximum 100 characters)', 'error');
         // Truncate the displayed text
@@ -142,27 +138,29 @@ async function saveModelName(filePath) {
     try {
         await saveModelMetadata(filePath, { model_name: newModelName });
         
-        // Update the corresponding lora card's dataset and display
-        updateLoraCard(filePath, { model_name: newModelName });
+        // Update the card with the new model name
+        updateCheckpointCard(filePath, { name: newModelName });
         
         showToast('Model name updated successfully', 'success');
+        
+        // No need to reload the entire page
+        // setTimeout(() => {
+        //     window.location.reload();
+        // }, 1500);
     } catch (error) {
         showToast('Failed to update model name', 'error');
     }
 }
 
 /**
- * 设置基础模型编辑功能
- * @param {string} filePath - 文件路径
+ * Set up base model editing functionality
+ * @param {string} filePath - The full file path of the model.
  */
 export function setupBaseModelEditing(filePath) {
     const baseModelContent = document.querySelector('.base-model-content');
     const editBtn = document.querySelector('.edit-base-model-btn');
     
     if (!baseModelContent || !editBtn) return;
-    
-    // Store the file path in a data attribute for later use
-    baseModelContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const baseModelDisplay = document.querySelector('.base-model-display');
@@ -261,10 +259,7 @@ export function setupBaseModelEditing(filePath) {
             
             // Only save if the value has actually changed
             if (valueChanged || baseModelContent.textContent.trim() !== originalValue) {
-                // Get file path from the dataset
-                const filePath = baseModelContent.dataset.filePath;
-                
-                // Save the changes, passing the original value for comparison
+                // Use the passed filePath for saving
                 saveBaseModel(filePath, originalValue);
             }
             
@@ -296,9 +291,9 @@ export function setupBaseModelEditing(filePath) {
 }
 
 /**
- * 保存基础模型
- * @param {string} filePath - 文件路径
- * @param {string} originalValue - 原始值（用于比较）
+ * Save base model
+ * @param {string} filePath - File path
+ * @param {string} originalValue - Original value (for comparison)
  */
 async function saveBaseModel(filePath, originalValue) {
     const baseModelElement = document.querySelector('.base-model-content');
@@ -312,8 +307,8 @@ async function saveBaseModel(filePath, originalValue) {
     try {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
         
-        // Update the corresponding lora card's dataset
-        updateLoraCard(filePath, { base_model: newBaseModel });
+        // Update the card with the new base model
+        updateCheckpointCard(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -322,17 +317,14 @@ async function saveBaseModel(filePath, originalValue) {
 }
 
 /**
- * 设置文件名编辑功能
- * @param {string} filePath - 文件路径
+ * Set up file name editing functionality
+ * @param {string} filePath - The full file path of the model.
  */
 export function setupFileNameEditing(filePath) {
     const fileNameContent = document.querySelector('.file-name-content');
     const editBtn = document.querySelector('.edit-file-name-btn');
     
     if (!fileNameContent || !editBtn) return;
-    
-    // Store the original file path
-    fileNameContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const fileNameWrapper = document.querySelector('.file-name-wrapper');
@@ -430,17 +422,15 @@ export function setupFileNameEditing(filePath) {
         }
         
         try {
-            // Get the file path from the dataset
-            const filePath = this.dataset.filePath;
-                
+            // Use the passed filePath (which includes the original filename)
             // Call API to rename the file
-            const response = await fetch('/api/rename_lora', {
+            const response = await fetch('/api/rename_checkpoint', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    file_path: filePath,
+                    file_path: filePath, // Use the full original path
                     new_file_name: newFileName
                 })
             });
@@ -450,10 +440,30 @@ export function setupFileNameEditing(filePath) {
             if (result.success) {
                 showToast('File name updated successfully', 'success');
                 
-                // Get the new file path and update the card
-                const newFilePath = filePath.replace(originalValue, newFileName);
-                // Pass the new file_name in the updates object for proper card update
-                updateLoraCard(filePath, { file_name: newFileName }, newFilePath);
+                // Get the new file path from the result
+                const pathParts = filePath.split(/[\\/]/);
+                pathParts.pop(); // Remove old filename
+                const newFilePath = [...pathParts, newFileName].join('/');
+                
+                // Update the checkpoint card with new file path
+                updateCheckpointCard(filePath, { 
+                    filepath: newFilePath,
+                    file_name: newFileName 
+                });
+                
+                // Update the file name display in the modal
+                document.querySelector('#file-name').textContent = newFileName;
+                
+                // Update the modal's data-filepath attribute
+                const modalContent = document.querySelector('#checkpointModal .modal-content');
+                if (modalContent) {
+                    modalContent.dataset.filepath = newFilePath;
+                }
+                
+                // Reload the page after a short delay to reflect changes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

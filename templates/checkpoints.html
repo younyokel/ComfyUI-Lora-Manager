@@ -8,18 +8,19 @@
 {% endblock %}
 
 {% block init_title %}Initializing Checkpoints Manager{% endblock %}
-{% block init_message %}Setting up checkpoints interface. This may take a few moments...{% endblock %}
+{% block init_message %}Scanning and building checkpoints cache. This may take a few moments...{% endblock %}
 {% block init_check_url %}/api/checkpoints?page=1&page_size=1{% endblock %}
 
+{% block additional_components %}
+{% include 'components/checkpoint_modals.html' %}
+{% endblock %}
+
 {% block content %}
-<div class="work-in-progress">
-    <div class="wip-content">
-        <i class="fas fa-tools"></i>
-        <h2>Checkpoints Manager</h2>
-        <p>This feature is currently under development and will be available soon.</p>
-        <p>Please check back later for updates!</p>
+    {% include 'components/controls.html' %}
+    <!-- Checkpoint cards container -->
+    <div class="card-grid" id="checkpointGrid">
+        <!-- Cards will be dynamically inserted here -->
     </div>
-</div>
 {% endblock %}
 
 {% block main_script %}

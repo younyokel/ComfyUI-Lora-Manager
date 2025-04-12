@@ -18,6 +18,7 @@ import {
     saveModelMetadata
 } from './ModelMetadata.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
+import { updateLoraCard } from '../../utils/cardUpdater.js';
 
 /**
  * 显示LoRA模型弹窗
@@ -152,14 +153,14 @@ export function showLoraModal(lora) {
     `;
     
     modalManager.showModal('loraModal', content);
-    setupEditableFields();
+    setupEditableFields(lora.file_path);
     setupShowcaseScroll();
     setupTabSwitching();
     setupTagTooltip();
     setupTriggerWordsEditMode();
-    setupModelNameEditing();
-    setupBaseModelEditing();
-    setupFileNameEditing();
+    setupModelNameEditing(lora.file_path);
+    setupBaseModelEditing(lora.file_path);
+    setupFileNameEditing(lora.file_path);
     
     // If we have a model ID but no description, fetch it
     if (lora.civitai?.modelId && !lora.modelDescription) {
@@ -188,10 +189,7 @@ window.saveNotes = async function(filePath) {
         await saveModelMetadata(filePath, { notes: content });
 
         // Update the corresponding lora card's dataset
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard) {
-            loraCard.dataset.notes = content;
-        }
+        updateLoraCard(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {
@@ -199,7 +197,7 @@ window.saveNotes = async function(filePath) {
     }
 };
 
-function setupEditableFields() {
+function setupEditableFields(filePath) {
     const editableFields = document.querySelectorAll('.editable-field [contenteditable]');
     
     editableFields.forEach(field => {
@@ -247,11 +245,6 @@ function setupEditableFields() {
         
         if (!key || !value) return;
 
-        const filePath = document.querySelector('#loraModal .modal-content')
-            .querySelector('.file-path').textContent + 
-            document.querySelector('#loraModal .modal-content')
-            .querySelector('#file-name').textContent + '.safetensors';
-
         const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
         const currentPresets = parsePresets(loraCard.dataset.usage_tips);
         
@@ -262,7 +255,9 @@ function setupEditableFields() {
             usage_tips: newPresetsJson
         });
 
-        loraCard.dataset.usage_tips = newPresetsJson;
+        // Update the card with the new usage tips
+        updateLoraCard(filePath, { usage_tips: newPresetsJson });
+        
         presetTags.innerHTML = renderPresetTags(currentPresets);
         
         presetSelector.value = '';
@@ -280,10 +275,6 @@ function setupEditableFields() {
                     return;
                 }
                 e.preventDefault();
-                const filePath = document.querySelector('#loraModal .modal-content')
-                    .querySelector('.file-path').textContent + 
-                    document.querySelector('#loraModal .modal-content')
-                    .querySelector('#file-name').textContent + '.safetensors';
                 await saveNotes(filePath);
             }
         });

@@ -1,5 +1,6 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { loadMoreLoras } from '../api/loraApi.js';
+import { loadMoreCheckpoints } from '../api/checkpointApi.js';
 import { debounce } from './debounce.js';
 
 export function initializeInfiniteScroll(pageType = 'loras') {
@@ -21,7 +22,6 @@ export function initializeInfiniteScroll(pageType = 'loras') {
         case 'recipes':
             loadMoreFunction = () => {
                 if (!pageState.isLoading && pageState.hasMore) {
-                    pageState.currentPage++;
                     window.recipeManager.loadRecipes(false); // false to not reset pagination
                 }
             };
@@ -30,15 +30,18 @@ export function initializeInfiniteScroll(pageType = 'loras') {
         case 'checkpoints':
             loadMoreFunction = () => {
                 if (!pageState.isLoading && pageState.hasMore) {
-                    pageState.currentPage++;
-                    window.checkpointManager.loadCheckpoints(false); // false to not reset pagination
+                    loadMoreCheckpoints(false); // false to not reset
                 }
             };
             gridId = 'checkpointGrid';
             break;
         case 'loras':
         default:
-            loadMoreFunction = () => loadMoreLoras(false); // false to not reset
+            loadMoreFunction = () => {
+                if (!pageState.isLoading && pageState.hasMore) {
+                    loadMoreLoras(false); // false to not reset
+                }
+            };
             gridId = 'loraGrid';
             break;
     }
@@ -85,4 +88,4 @@ export function initializeInfiniteScroll(pageType = 'loras') {
         
         state.observer.observe(sentinel);
     }
-} 
+}

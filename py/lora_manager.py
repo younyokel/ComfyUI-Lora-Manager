@@ -1,16 +1,11 @@
 import asyncio
-import os
 from server import PromptServer # type: ignore
 from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
 from .routes.recipe_routes import RecipeRoutes
 from .routes.checkpoints_routes import CheckpointsRoutes
-from .services.lora_scanner import LoraScanner
-from .services.recipe_scanner import RecipeScanner
-from .services.file_monitor import LoraFileMonitor
-from .services.lora_cache import LoraCache
-from .services.recipe_cache import RecipeCache
+from .services.service_registry import ServiceRegistry
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,7 +18,7 @@ class LoraManager:
         """Initialize and register all routes"""
         app = PromptServer.instance.app
 
-        added_targets = set()  # 用于跟踪已添加的目标路径
+        added_targets = set()  # Track already added target paths
         
         # Add static routes for each lora root
         for idx, root in enumerate(config.loras_roots, start=1):
@@ -35,15 +30,36 @@ class LoraManager:
                     if link == root:
                         real_root = target
                         break
-            # 为原始路径添加静态路由
+            # Add static route for original path
             app.router.add_static(preview_path, real_root)
             logger.info(f"Added static route {preview_path} -> {real_root}")
             
-            # 记录路由映射
+            # Record route mapping
             config.add_route_mapping(real_root, preview_path)
             added_targets.add(real_root)
         
-        # 为符号链接的目标路径添加额外的静态路由
+        # Get checkpoint scanner instance
+        checkpoint_scanner = asyncio.run(ServiceRegistry.get_checkpoint_scanner())
+        
+        # Add static routes for each checkpoint root
+        for idx, root in enumerate(checkpoint_scanner.get_model_roots(), start=1):
+            preview_path = f'/checkpoints_static/root{idx}/preview'
+            
+            real_root = root
+            if root in config._path_mappings.values():
+                for target, link in config._path_mappings.items():
+                    if link == root:
+                        real_root = target
+                        break
+            # Add static route for original path
+            app.router.add_static(preview_path, real_root)
+            logger.info(f"Added static route {preview_path} -> {real_root}")
+            
+            # Record route mapping
+            config.add_route_mapping(real_root, preview_path)
+            added_targets.add(real_root)
+        
+        # Add static routes for symlink target paths
         link_idx = 1
         
         for target_path, link_path in config._path_mappings.items():
@@ -59,78 +75,89 @@ class LoraManager:
         app.router.add_static('/loras_static', config.static_path)
         
         # Setup feature routes
-        routes = LoraRoutes()
+        lora_routes = LoraRoutes()
         checkpoints_routes = CheckpointsRoutes()
         
-        # Setup file monitoring
-        monitor = LoraFileMonitor(routes.scanner, config.loras_roots)
-        monitor.start()
-        
-        routes.setup_routes(app)
+        # Initialize routes
+        lora_routes.setup_routes(app)
         checkpoints_routes.setup_routes(app)
-        ApiRoutes.setup_routes(app, monitor)
+        ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         
-        # Store monitor in app for cleanup
-        app['lora_monitor'] = monitor
-        
-        # Schedule cache initialization using the application's startup handler
-        app.on_startup.append(lambda app: cls._schedule_cache_init(routes.scanner, routes.recipe_scanner))
+        # Schedule service initialization 
+        app.on_startup.append(lambda app: cls._initialize_services())
         
         # Add cleanup
         app.on_shutdown.append(cls._cleanup)
         app.on_shutdown.append(ApiRoutes.cleanup)
     
     @classmethod
-    async def _schedule_cache_init(cls, scanner: LoraScanner, recipe_scanner: RecipeScanner):
-        """Schedule cache initialization in the running event loop"""
+    async def _initialize_services(cls):
+        """Initialize all services using the ServiceRegistry"""
         try:
-            # 创建低优先级的初始化任务
-            lora_task = asyncio.create_task(cls._initialize_lora_cache(scanner), name='lora_cache_init')
+            logger.info("LoRA Manager: Initializing services via ServiceRegistry")
             
-            # Schedule recipe cache initialization with a delay to let lora scanner initialize first
-            recipe_task = asyncio.create_task(cls._initialize_recipe_cache(recipe_scanner, delay=2), name='recipe_cache_init')
+            # Initialize CivitaiClient first to ensure it's ready for other services
+            civitai_client = await ServiceRegistry.get_civitai_client()
+            
+            # Get file monitors through ServiceRegistry
+            lora_monitor = await ServiceRegistry.get_lora_monitor()
+            checkpoint_monitor = await ServiceRegistry.get_checkpoint_monitor()
+            
+            # Start monitors
+            lora_monitor.start()
+            logger.info("Lora monitor started")
+            
+            # Make sure checkpoint monitor has paths before starting
+            await checkpoint_monitor.initialize_paths()
+            checkpoint_monitor.start()
+            logger.info("Checkpoint monitor started")
+
+            # Register DownloadManager with ServiceRegistry
+            download_manager = await ServiceRegistry.get_download_manager()
+            
+            # Initialize WebSocket manager
+            ws_manager = await ServiceRegistry.get_websocket_manager()
+            
+            # Initialize scanners in background
+            lora_scanner = await ServiceRegistry.get_lora_scanner()
+            checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+            
+            # Initialize recipe scanner if needed
+            recipe_scanner = await ServiceRegistry.get_recipe_scanner()
+            
+            # Create low-priority initialization tasks
+            asyncio.create_task(lora_scanner.initialize_in_background(), name='lora_cache_init')
+            asyncio.create_task(checkpoint_scanner.initialize_in_background(), name='checkpoint_cache_init')
+            asyncio.create_task(recipe_scanner.initialize_in_background(), name='recipe_cache_init')
+            
+            logger.info("LoRA Manager: All services initialized and background tasks scheduled")
+                
         except Exception as e:
-            logger.error(f"LoRA Manager: Error scheduling cache initialization: {e}")
-    
-    @classmethod
-    async def _initialize_lora_cache(cls, scanner: LoraScanner):
-        """Initialize lora cache in background"""
-        try:
-            # 设置初始缓存占位
-            scanner._cache = LoraCache(
-                raw_data=[],
-                sorted_by_name=[],
-                sorted_by_date=[],
-                folders=[]
-            )
-            
-            # 分阶段加载缓存
-            await scanner.get_cached_data(force_refresh=True)
-        except Exception as e:
-            logger.error(f"LoRA Manager: Error initializing lora cache: {e}")
-    
-    @classmethod
-    async def _initialize_recipe_cache(cls, scanner: RecipeScanner, delay: float = 2.0):
-        """Initialize recipe cache in background with a delay"""
-        try:
-            # Wait for the specified delay to let lora scanner initialize first
-            await asyncio.sleep(delay)
-            
-            # Set initial empty cache
-            scanner._cache = RecipeCache(
-                raw_data=[],
-                sorted_by_name=[],
-                sorted_by_date=[]
-            )
-            
-            # Force refresh to load the actual data
-            await scanner.get_cached_data(force_refresh=True)
-        except Exception as e:
-            logger.error(f"LoRA Manager: Error initializing recipe cache: {e}")
+            logger.error(f"LoRA Manager: Error initializing services: {e}", exc_info=True)
     
     @classmethod
     async def _cleanup(cls, app):
-        """Cleanup resources"""
-        if 'lora_monitor' in app:
-            app['lora_monitor'].stop()
+        """Cleanup resources using ServiceRegistry"""
+        try:
+            logger.info("LoRA Manager: Cleaning up services")
+            
+            # Get monitors from ServiceRegistry
+            lora_monitor = await ServiceRegistry.get_service("lora_monitor")
+            if lora_monitor:
+                lora_monitor.stop()
+                logger.info("Stopped LoRA monitor")
+                
+            checkpoint_monitor = await ServiceRegistry.get_service("checkpoint_monitor")
+            if checkpoint_monitor:
+                checkpoint_monitor.stop()
+                logger.info("Stopped checkpoint monitor")
+                
+            # Close CivitaiClient gracefully
+            civitai_client = await ServiceRegistry.get_service("civitai_client")
+            if civitai_client:
+                await civitai_client.close()
+                logger.info("Closed CivitaiClient connection")
+                
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}", exc_info=True)

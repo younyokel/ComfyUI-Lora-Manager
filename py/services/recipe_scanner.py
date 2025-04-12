@@ -5,8 +5,8 @@ import json
 from typing import List, Dict, Optional, Any, Tuple
 from ..config import config
 from .recipe_cache import RecipeCache
+from .service_registry import ServiceRegistry
 from .lora_scanner import LoraScanner
-from .civitai_client import CivitaiClient
 from ..utils.utils import fuzzy_match
 import sys
 
@@ -18,11 +18,22 @@ class RecipeScanner:
     _instance = None
     _lock = asyncio.Lock()
     
+    @classmethod
+    async def get_instance(cls, lora_scanner: Optional[LoraScanner] = None):
+        """Get singleton instance of RecipeScanner"""
+        async with cls._lock:
+            if cls._instance is None:
+                if not lora_scanner:
+                    # Get lora scanner from service registry if not provided
+                    lora_scanner = await ServiceRegistry.get_lora_scanner()
+                cls._instance = cls(lora_scanner)
+            return cls._instance
+    
     def __new__(cls, lora_scanner: Optional[LoraScanner] = None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._lora_scanner = lora_scanner
-            cls._instance._civitai_client = CivitaiClient()
+            cls._instance._civitai_client = None  # Will be lazily initialized
         return cls._instance
     
     def __init__(self, lora_scanner: Optional[LoraScanner] = None):
@@ -35,9 +46,67 @@ class RecipeScanner:
             if lora_scanner:
                 self._lora_scanner = lora_scanner
             self._initialized = True
-            
-            # Initialization will be scheduled by LoraManager
     
+    async def _get_civitai_client(self):
+        """Lazily initialize CivitaiClient from registry"""
+        if self._civitai_client is None:
+            self._civitai_client = await ServiceRegistry.get_civitai_client()
+        return self._civitai_client
+    
+    async def initialize_in_background(self) -> None:
+        """Initialize cache in background using thread pool"""
+        try:
+            # Set initial empty cache to avoid None reference errors
+            if self._cache is None:
+                self._cache = RecipeCache(
+                    raw_data=[],
+                    sorted_by_name=[],
+                    sorted_by_date=[]
+                )
+            
+            # Mark as initializing to prevent concurrent initializations
+            self._is_initializing = True
+            
+            try:
+                # Use thread pool to execute CPU-intensive operations
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    None,  # Use default thread pool
+                    self._initialize_recipe_cache_sync  # Run synchronous version in thread
+                )
+                logger.info("Recipe cache initialization completed in background thread")
+            finally:
+                # Mark initialization as complete regardless of outcome
+                self._is_initializing = False
+        except Exception as e:
+            logger.error(f"Recipe Scanner: Error initializing cache in background: {e}")
+    
+    def _initialize_recipe_cache_sync(self):
+        """Synchronous version of recipe cache initialization for thread pool execution"""
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Create a synchronous method to bypass the async lock
+            def sync_initialize_cache():
+                # Directly call the internal scan method to avoid lock issues
+                raw_data = loop.run_until_complete(self.scan_all_recipes())
+                
+                # Update cache
+                self._cache.raw_data = raw_data
+                loop.run_until_complete(self._cache.resort())
+                
+                return self._cache
+            
+            # Run our sync initialization that avoids lock conflicts
+            return sync_initialize_cache()
+        except Exception as e:
+            logger.error(f"Error in thread-based recipe cache initialization: {e}")
+        finally:
+            # Clean up the event loop
+            loop.close()
+
     @property
     def recipes_dir(self) -> str:
         """Get path to recipes directory"""
@@ -60,49 +129,48 @@ class RecipeScanner:
         if self._is_initializing and not force_refresh:
             return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
 
-        # Try to acquire the lock with a timeout to prevent deadlocks
-        try:
-            async with self._initialization_lock:
-                # Check again after acquiring the lock
-                if self._cache is not None and not force_refresh:
-                    return self._cache
-                
-                # Mark as initializing to prevent concurrent initializations
-                self._is_initializing = True
-                
-                try:
-                    # Remove dependency on lora scanner initialization
-                    # Scan for recipe data directly
-                    raw_data = await self.scan_all_recipes()
+        # If force refresh is requested, initialize the cache directly
+        if force_refresh:
+            # Try to acquire the lock with a timeout to prevent deadlocks
+            try:
+                async with self._initialization_lock:
+                    # Mark as initializing to prevent concurrent initializations
+                    self._is_initializing = True
                     
-                    # Update cache
-                    self._cache = RecipeCache(
-                        raw_data=raw_data,
-                        sorted_by_name=[],
-                        sorted_by_date=[]
-                    )
+                    try:
+                        # Scan for recipe data directly
+                        raw_data = await self.scan_all_recipes()
+                        
+                        # Update cache
+                        self._cache = RecipeCache(
+                            raw_data=raw_data,
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        
+                        # Resort cache
+                        await self._cache.resort()
+                        
+                        return self._cache
                     
-                    # Resort cache
-                    await self._cache.resort()
-                    
-                    return self._cache
-                
-                except Exception as e:
-                    logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
-                    # Create empty cache on error
-                    self._cache = RecipeCache(
-                        raw_data=[],
-                        sorted_by_name=[],
-                        sorted_by_date=[]
-                    )
-                    return self._cache
-                finally:
-                    # Mark initialization as complete
-                    self._is_initializing = False
+                    except Exception as e:
+                        logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
+                        # Create empty cache on error
+                        self._cache = RecipeCache(
+                            raw_data=[],
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        return self._cache
+                    finally:
+                        # Mark initialization as complete
+                        self._is_initializing = False
+            
+            except Exception as e:
+                logger.error(f"Unexpected error in get_cached_data: {e}")
         
-        except Exception as e:
-            logger.error(f"Unexpected error in get_cached_data: {e}")
-            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
+        # Return the cache (may be empty or partially initialized)
+        return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
     
     async def scan_all_recipes(self) -> List[Dict]:
         """Scan all recipe JSON files and return metadata"""
@@ -255,10 +323,13 @@ class RecipeScanner:
     async def _get_hash_from_civitai(self, model_version_id: str) -> Optional[str]:
         """Get hash from Civitai API"""
         try:
-            if not self._civitai_client:
+            # Get CivitaiClient from ServiceRegistry
+            civitai_client = await self._get_civitai_client()
+            if not civitai_client:
+                logger.error("Failed to get CivitaiClient from ServiceRegistry")
                 return None
                 
-            version_info = await self._civitai_client.get_model_version_info(model_version_id)
+            version_info = await civitai_client.get_model_version_info(model_version_id)
             
             if not version_info or not version_info.get('files'):
                 logger.debug(f"No files found in version info for ID: {model_version_id}")
@@ -278,10 +349,12 @@ class RecipeScanner:
     async def _get_model_version_name(self, model_version_id: str) -> Optional[str]:
         """Get model version name from Civitai API"""
         try:
-            if not self._civitai_client:
+            # Get CivitaiClient from ServiceRegistry
+            civitai_client = await self._get_civitai_client()
+            if not civitai_client:
                 return None
                 
-            version_info = await self._civitai_client.get_model_version_info(model_version_id)
+            version_info = await civitai_client.get_model_version_info(model_version_id)
             
             if version_info and 'name' in version_info:
                 return version_info['name']

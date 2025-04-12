@@ -73,7 +73,7 @@ class Config:
         """添加静态路由映射"""
         normalized_path = os.path.normpath(path).replace(os.sep, '/')
         self._route_mappings[normalized_path] = route
-        logger.info(f"Added route mapping: {normalized_path} -> {route}")
+        # logger.info(f"Added route mapping: {normalized_path} -> {route}")
 
     def map_path_to_link(self, path: str) -> str:
         """将目标路径映射回符号链接路径"""

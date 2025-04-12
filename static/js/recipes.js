@@ -4,7 +4,6 @@ import { ImportManager } from './managers/ImportManager.js';
 import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
 import { getCurrentPageState } from './state/index.js';
-import { toggleApiKeyVisibility } from './managers/SettingsManager.js';
 import { getSessionItem, removeSessionItem } from './utils/storageHelpers.js';
 
 class RecipeManager {
@@ -67,7 +66,6 @@ class RecipeManager {
         // Only expose what's needed for the page
         window.recipeManager = this;
         window.importManager = this.importManager;
-        window.toggleApiKeyVisibility = toggleApiKeyVisibility;
     }
     
     _checkCustomFilter() {
@@ -250,6 +248,11 @@ class RecipeManager {
             
             // Update pagination state based on current page and total pages
             this.pageState.hasMore = data.page < data.total_pages;
+            
+            // Increment the page number AFTER successful loading
+            if (data.items.length > 0) {
+                this.pageState.currentPage++;
+            }
             
         } catch (error) {
             console.error('Error loading recipes:', error);

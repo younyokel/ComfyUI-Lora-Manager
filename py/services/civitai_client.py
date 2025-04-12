@@ -3,6 +3,7 @@ import aiohttp
 import os
 import json
 import logging
+import asyncio
 from email.parser import Parser
 from typing import Optional, Dict, Tuple, List
 from urllib.parse import unquote
@@ -11,7 +12,23 @@ from ..utils.models import LoraMetadata
 logger = logging.getLogger(__name__)
 
 class CivitaiClient:
+    _instance = None
+    _lock = asyncio.Lock()
+    
+    @classmethod
+    async def get_instance(cls):
+        """Get singleton instance of CivitaiClient"""
+        async with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
+
     def __init__(self):
+        # Check if already initialized for singleton pattern
+        if hasattr(self, '_initialized'):
+            return
+        self._initialized = True
+        
         self.base_url = "https://civitai.com/api/v1"
         self.headers = {
             'User-Agent': 'ComfyUI-LoRA-Manager/1.0'
