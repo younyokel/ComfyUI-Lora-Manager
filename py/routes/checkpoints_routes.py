@@ -59,7 +59,7 @@ class CheckpointsRoutes:
             # Parse query parameters
             page = int(request.query.get('page', '1'))
             page_size = min(int(request.query.get('page_size', '20')), 100)
-            sort_by = request.query.get('sort', 'name')
+            sort_by = request.query.get('sort_by', 'name')
             folder = request.query.get('folder', None)
             search = request.query.get('search', None)
             fuzzy_search = request.query.get('fuzzy_search', 'false').lower() == 'true'
