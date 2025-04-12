@@ -38,11 +38,8 @@ class LoraManager:
             config.add_route_mapping(real_root, preview_path)
             added_targets.add(real_root)
         
-        # Get checkpoint scanner instance
-        checkpoint_scanner = asyncio.run(ServiceRegistry.get_checkpoint_scanner())
-        
         # Add static routes for each checkpoint root
-        for idx, root in enumerate(checkpoint_scanner.get_model_roots(), start=1):
+        for idx, root in enumerate(config.checkpoints_roots, start=1):
             preview_path = f'/checkpoints_static/root{idx}/preview'
             
             real_root = root
@@ -60,16 +57,28 @@ class LoraManager:
             added_targets.add(real_root)
         
         # Add static routes for symlink target paths
-        link_idx = 1
+        link_idx = {
+            'lora': 1,
+            'checkpoint': 1
+        }
         
         for target_path, link_path in config._path_mappings.items():
             if target_path not in added_targets:
-                route_path = f'/loras_static/link_{link_idx}/preview'
+                # Determine if this is a checkpoint or lora link based on path
+                is_checkpoint = any(cp_root in link_path for cp_root in config.checkpoints_roots)
+                is_checkpoint = is_checkpoint or any(cp_root in target_path for cp_root in config.checkpoints_roots)
+                
+                if is_checkpoint:
+                    route_path = f'/checkpoints_static/link_{link_idx["checkpoint"]}/preview'
+                    link_idx["checkpoint"] += 1
+                else:
+                    route_path = f'/loras_static/link_{link_idx["lora"]}/preview'
+                    link_idx["lora"] += 1
+                
                 app.router.add_static(route_path, target_path)
                 logger.info(f"Added static route for link target {route_path} -> {target_path}")
                 config.add_route_mapping(target_path, route_path)
                 added_targets.add(target_path)
-                link_idx += 1
         
         # Add static route for plugin assets
         app.router.add_static('/loras_static', config.static_path)
