@@ -17,6 +17,7 @@ class Config:
         # 静态路由映射字典, target to route mapping
         self._route_mappings = {}
         self.loras_roots = self._init_lora_paths()
+        self.checkpoints_roots = self._init_checkpoint_paths()
         self.temp_directory = folder_paths.get_temp_directory()
         # 在初始化时扫描符号链接
         self._scan_symbolic_links()
@@ -39,8 +40,11 @@ class Config:
             return False
 
     def _scan_symbolic_links(self):
-        """扫描所有 LoRA 根目录中的符号链接"""
+        """扫描所有 LoRA 和 Checkpoint 根目录中的符号链接"""
         for root in self.loras_roots:
+            self._scan_directory_links(root)
+        
+        for root in self.checkpoints_roots:
             self._scan_directory_links(root)
 
     def _scan_directory_links(self, root: str):
@@ -108,6 +112,35 @@ class Config:
             raise ValueError("No valid loras folders found in ComfyUI configuration")
         
         # 初始化路径映射
+        for path in paths:
+            real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+            if real_path != path:
+                self.add_path_mapping(path, real_path)
+        
+        return paths
+
+    def _init_checkpoint_paths(self) -> List[str]:
+        """Initialize and validate checkpoint paths from ComfyUI settings"""
+        # Get checkpoint paths from folder_paths
+        checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
+        diffusion_paths = folder_paths.get_folder_paths("diffusers")
+        unet_paths = folder_paths.get_folder_paths("unet")
+        
+        # Combine all checkpoint-related paths
+        all_paths = checkpoint_paths + diffusion_paths + unet_paths
+        
+        # Filter and normalize paths
+        paths = sorted(set(path.replace(os.sep, "/") 
+                for path in all_paths 
+                if os.path.exists(path)), key=lambda p: p.lower())
+        
+        print("Found checkpoint roots:", paths)
+        
+        if not paths:
+            logger.warning("No valid checkpoint folders found in ComfyUI configuration")
+            return []
+        
+        # 初始化路径映射，与 LoRA 路径处理方式相同
         for path in paths:
             real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
             if real_path != path:
