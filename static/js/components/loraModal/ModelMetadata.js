@@ -452,12 +452,8 @@ export function setupFileNameEditing(filePath) {
                 
                 // Get the new file path and update the card
                 const newFilePath = filePath.replace(originalValue, newFileName);
-                updateLoraCard(filePath, {}, newFilePath);
-                
-                // Reload the page after a short delay to reflect changes
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                // Pass the new file_name in the updates object for proper card update
+                updateLoraCard(filePath, { file_name: newFileName }, newFilePath);
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

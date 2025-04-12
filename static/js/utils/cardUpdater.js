@@ -86,6 +86,11 @@ export function updateLoraCard(filePath, updates, newFilePath) {
                 if (modelNameElement) modelNameElement.textContent = value;
                 break;
 
+            case 'file_name':
+                // Update the file_name in the dataset
+                loraCard.dataset.file_name = value;
+                break;
+                
             case 'base_model':
                 // Update the base model label in the card header if it exists
                 const baseModelLabel = loraCard.querySelector('.base-model-label');
