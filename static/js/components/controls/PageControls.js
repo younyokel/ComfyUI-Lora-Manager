@@ -66,10 +66,16 @@ export class PageControls {
             });
         }
         
-        // Folder tags handler
-        document.querySelectorAll('.folder-tags .tag').forEach(tag => {
-            tag.addEventListener('click', (e) => this.handleFolderClick(e.currentTarget));
-        });
+        // Use event delegation for folder tags - this is the key fix
+        const folderTagsContainer = document.querySelector('.folder-tags-container');
+        if (folderTagsContainer) {
+            folderTagsContainer.addEventListener('click', (e) => {
+                const tag = e.target.closest('.tag');
+                if (tag) {
+                    this.handleFolderClick(tag);
+                }
+            });
+        }
         
         // Refresh button handler
         const refreshBtn = document.querySelector('[data-action="refresh"]');
@@ -186,14 +192,11 @@ export class PageControls {
         // Update the container
         folderTagsContainer.innerHTML = tagsHTML;
 
-        // Reattach click handlers
-        const tags = folderTagsContainer.querySelectorAll('.tag');
-        tags.forEach(tag => {
-            tag.addEventListener('click', (e) => this.handleFolderClick(e.currentTarget));
-            if (tag.dataset.folder === currentFolder) {
-                tag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        });
+        // Scroll active folder into view (no need to reattach click handlers)
+        const activeTag = folderTagsContainer.querySelector(`.tag[data-folder="${currentFolder}"]`);
+        if (activeTag) {
+            activeTag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
     
     /**
