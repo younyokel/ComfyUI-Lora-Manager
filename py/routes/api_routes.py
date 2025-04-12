@@ -55,7 +55,7 @@ class ApiRoutes:
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
-        app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
+        app.router.add_post('/api/loras/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
         app.router.add_get('/api/loras/top-tags', routes.get_top_tags)  # Add new route for top tags

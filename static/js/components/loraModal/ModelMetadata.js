@@ -12,7 +12,7 @@ import { BASE_MODELS } from '../../utils/constants.js';
  * @returns {Promise} 保存操作的Promise
  */
 export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/loras/api/save-metadata', {
+    const response = await fetch('/api/loras/save-metadata', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -632,7 +632,7 @@ window.saveNotes = async function(filePath) {
 };
 
 async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/loras/api/save-metadata', {
+    const response = await fetch('/api/loras/save-metadata', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
