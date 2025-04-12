@@ -4,6 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
+import { updateCheckpointCard } from '../../utils/cardUpdater.js';
 
 /**
  * Save model metadata to the server
@@ -12,7 +13,7 @@ import { BASE_MODELS } from '../../utils/constants.js';
  * @returns {Promise} - Promise that resolves with the server response
  */
 export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/checkpoints/api/save-metadata', {
+    const response = await fetch('/api/checkpoints/save-metadata', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -32,8 +33,9 @@ export async function saveModelMetadata(filePath, data) {
 
 /**
  * Set up model name editing functionality
+ * @param {string} filePath - The full file path of the model.
  */
-export function setupModelNameEditing() {
+export function setupModelNameEditing(filePath) {
     const modelNameContent = document.querySelector('.model-name-content');
     const editBtn = document.querySelector('.edit-model-name-btn');
     
@@ -76,10 +78,7 @@ export function setupModelNameEditing() {
         
         if (this.textContent.trim() === '') {
             // Restore original model name if empty
-            const filePath = document.querySelector('#checkpointModal .modal-content')
-                .querySelector('.file-path').textContent + 
-                document.querySelector('#checkpointModal .modal-content')
-                .querySelector('#file-name').textContent;
+            // Use the passed filePath to find the card
             const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
             if (checkpointCard) {
                 this.textContent = checkpointCard.dataset.model_name;
@@ -91,10 +90,7 @@ export function setupModelNameEditing() {
     modelNameContent.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const filePath = document.querySelector('#checkpointModal .modal-content')
-                .querySelector('.file-path').textContent + 
-                document.querySelector('#checkpointModal .modal-content')
-                .querySelector('#file-name').textContent;
+            // Use the passed filePath
             saveModelName(filePath);
             this.blur();
         }
@@ -142,22 +138,15 @@ async function saveModelName(filePath) {
     try {
         await saveModelMetadata(filePath, { model_name: newModelName });
         
-        // Update the corresponding checkpoint card's dataset and display
-        const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
-        if (checkpointCard) {
-            checkpointCard.dataset.model_name = newModelName;
-            const titleElement = checkpointCard.querySelector('.card-title');
-            if (titleElement) {
-                titleElement.textContent = newModelName;
-            }
-        }
+        // Update the card with the new model name
+        updateCheckpointCard(filePath, { name: newModelName });
         
         showToast('Model name updated successfully', 'success');
         
-        // Reload the page to reflect the sorted order
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        // No need to reload the entire page
+        // setTimeout(() => {
+        //     window.location.reload();
+        // }, 1500);
     } catch (error) {
         showToast('Failed to update model name', 'error');
     }
@@ -165,8 +154,9 @@ async function saveModelName(filePath) {
 
 /**
  * Set up base model editing functionality
+ * @param {string} filePath - The full file path of the model.
  */
-export function setupBaseModelEditing() {
+export function setupBaseModelEditing(filePath) {
     const baseModelContent = document.querySelector('.base-model-content');
     const editBtn = document.querySelector('.edit-base-model-btn');
     
@@ -269,13 +259,7 @@ export function setupBaseModelEditing() {
             
             // Only save if the value has actually changed
             if (valueChanged || baseModelContent.textContent.trim() !== originalValue) {
-                // Get file path for saving
-                const filePath = document.querySelector('#checkpointModal .modal-content')
-                    .querySelector('.file-path').textContent + 
-                    document.querySelector('#checkpointModal .modal-content')
-                    .querySelector('#file-name').textContent;
-                
-                // Save the changes, passing the original value for comparison
+                // Use the passed filePath for saving
                 saveBaseModel(filePath, originalValue);
             }
             
@@ -323,11 +307,8 @@ async function saveBaseModel(filePath, originalValue) {
     try {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
         
-        // Update the corresponding checkpoint card's dataset
-        const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
-        if (checkpointCard) {
-            checkpointCard.dataset.base_model = newBaseModel;
-        }
+        // Update the card with the new base model
+        updateCheckpointCard(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -337,8 +318,9 @@ async function saveBaseModel(filePath, originalValue) {
 
 /**
  * Set up file name editing functionality
+ * @param {string} filePath - The full file path of the model.
  */
-export function setupFileNameEditing() {
+export function setupFileNameEditing(filePath) {
     const fileNameContent = document.querySelector('.file-name-content');
     const editBtn = document.querySelector('.edit-file-name-btn');
     
@@ -440,10 +422,7 @@ export function setupFileNameEditing() {
         }
         
         try {
-            // Get the full file path
-            const filePath = document.querySelector('#checkpointModal .modal-content')
-                .querySelector('.file-path').textContent + originalValue;
-                
+            // Use the passed filePath (which includes the original filename)
             // Call API to rename the file
             const response = await fetch('/api/rename_checkpoint', {
                 method: 'POST',
@@ -451,7 +430,7 @@ export function setupFileNameEditing() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    file_path: filePath,
+                    file_path: filePath, // Use the full original path
                     new_file_name: newFileName
                 })
             });
@@ -461,11 +440,24 @@ export function setupFileNameEditing() {
             if (result.success) {
                 showToast('File name updated successfully', 'success');
                 
+                // Get the new file path from the result
+                const pathParts = filePath.split(/[\\/]/);
+                pathParts.pop(); // Remove old filename
+                const newFilePath = [...pathParts, newFileName].join('/');
+                
                 // Update the checkpoint card with new file path
-                const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
-                if (checkpointCard) {
-                    const newFilePath = filePath.replace(originalValue, newFileName);
-                    checkpointCard.dataset.filepath = newFilePath;
+                updateCheckpointCard(filePath, { 
+                    filepath: newFilePath,
+                    file_name: newFileName 
+                });
+                
+                // Update the file name display in the modal
+                document.querySelector('#file-name').textContent = newFileName;
+                
+                // Update the modal's data-filepath attribute
+                const modalContent = document.querySelector('#checkpointModal .modal-content');
+                if (modalContent) {
+                    modalContent.dataset.filepath = newFilePath;
                 }
                 
                 // Reload the page after a short delay to reflect changes

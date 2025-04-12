@@ -15,6 +15,7 @@ export function createCheckpointCard(checkpoint) {
     card.dataset.modified = checkpoint.modified;
     card.dataset.file_size = checkpoint.file_size;
     card.dataset.from_civitai = checkpoint.from_civitai;
+    card.dataset.notes = checkpoint.notes || '';
     card.dataset.base_model = checkpoint.base_model || 'Unknown';
 
     // Store metadata if available
@@ -124,6 +125,7 @@ export function createCheckpointCard(checkpoint) {
             file_size: parseInt(card.dataset.file_size || '0'),
             from_civitai: card.dataset.from_civitai === 'true',
             base_model: card.dataset.base_model,
+            notes: card.dataset.notes || '',
             preview_url: versionedPreviewUrl,
             // Parse civitai metadata from the card's dataset
             civitai: (() => {

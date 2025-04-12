@@ -15,6 +15,7 @@ import {
     saveModelMetadata
 } from './ModelMetadata.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
+import { updateCheckpointCard } from '../../utils/cardUpdater.js';
 
 /**
  * Display the checkpoint modal with the given checkpoint data
@@ -119,13 +120,13 @@ export function showCheckpointModal(checkpoint) {
     `;
     
     modalManager.showModal('checkpointModal', content);
-    setupEditableFields();
+    setupEditableFields(checkpoint.file_path);
     setupShowcaseScroll();
     setupTabSwitching();
     setupTagTooltip();
-    setupModelNameEditing();
-    setupBaseModelEditing();
-    setupFileNameEditing();
+    setupModelNameEditing(checkpoint.file_path);
+    setupBaseModelEditing(checkpoint.file_path);
+    setupFileNameEditing(checkpoint.file_path);
     
     // If we have a model ID but no description, fetch it
     if (checkpoint.civitai?.modelId && !checkpoint.modelDescription) {
@@ -135,8 +136,9 @@ export function showCheckpointModal(checkpoint) {
 
 /**
  * Set up editable fields in the checkpoint modal
+* @param {string} filePath - The full file path of the model.
  */
-function setupEditableFields() {
+function setupEditableFields(filePath) {
     const editableFields = document.querySelectorAll('.editable-field [contenteditable]');
     
     editableFields.forEach(field => {
@@ -165,10 +167,6 @@ function setupEditableFields() {
                     return;
                 }
                 e.preventDefault();
-                const filePath = document.querySelector('#checkpointModal .modal-content')
-                    .querySelector('.file-path').textContent + 
-                    document.querySelector('#checkpointModal .modal-content')
-                    .querySelector('#file-name').textContent;
                 await saveNotes(filePath);
             }
         });
@@ -185,10 +183,7 @@ async function saveNotes(filePath) {
         await saveModelMetadata(filePath, { notes: content });
 
         // Update the corresponding checkpoint card's dataset
-        const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
-        if (checkpointCard) {
-            checkpointCard.dataset.notes = content;
-        }
+        updateCheckpointCard(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {
