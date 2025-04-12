@@ -2,6 +2,7 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { showDeleteModal, confirmDelete } from '../utils/modalUtils.js';
+import { getSessionItem } from '../utils/storageHelpers.js';
 
 /**
  * Shared functionality for handling models (loras and checkpoints)
@@ -89,8 +90,8 @@ export async function loadMoreModels(options = {}) {
         // Add model-specific parameters
         if (modelType === 'lora') {
             // Check for recipe-based filtering parameters from session storage
-            const filterLoraHash = getSessionItem ? getSessionItem('recipe_to_lora_filterLoraHash') : null;
-            const filterLoraHashes = getSessionItem ? getSessionItem('recipe_to_lora_filterLoraHashes') : null;
+            const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
+            const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
 
             // Add hash filter parameter if present
             if (filterLoraHash) {
@@ -495,17 +496,4 @@ async function performDelete(filePath, modelType = 'lora') {
         console.error(`Error deleting ${modelType}:`, error);
         showToast(`Failed to delete ${modelType}: ${error.message}`, 'error');
     }
-}
-
-// Helper function to get session item - import if available, otherwise provide fallback
-function getSessionItem(key) {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-        const item = window.sessionStorage.getItem(key);
-        try {
-            return item ? JSON.parse(item) : null;
-        } catch (e) {
-            return item;
-        }
-    }
-    return null;
 }
