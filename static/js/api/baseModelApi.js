@@ -216,7 +216,6 @@ export async function resetAndReload(options = {}) {
     } = options;
     
     const pageState = getCurrentPageState();
-    console.log('Resetting with state:', { ...pageState });
     
     // Reset pagination and load more models
     if (typeof loadMoreFunction === 'function') {
