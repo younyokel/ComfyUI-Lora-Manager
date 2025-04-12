@@ -31,13 +31,8 @@ class RecipeRoutes:
 
     async def init_services(self):
         """Initialize services from ServiceRegistry"""
-        if self.recipe_scanner is None:
-            self.recipe_scanner = await ServiceRegistry.get_recipe_scanner()
-            logger.info("RecipeRoutes: Retrieved RecipeScanner from ServiceRegistry")
-            
-        if self.civitai_client is None:
-            self.civitai_client = await ServiceRegistry.get_civitai_client()
-            logger.info("RecipeRoutes: Retrieved CivitaiClient from ServiceRegistry")
+        self.recipe_scanner = await ServiceRegistry.get_recipe_scanner()
+        self.civitai_client = await ServiceRegistry.get_civitai_client()
 
     @classmethod
     def setup_routes(cls, app: web.Application):

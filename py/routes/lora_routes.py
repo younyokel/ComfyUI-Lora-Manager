@@ -24,13 +24,8 @@ class LoraRoutes:
 
     async def init_services(self):
         """Initialize services from ServiceRegistry"""
-        if self.scanner is None:
-            self.scanner = await ServiceRegistry.get_lora_scanner()
-            logger.info("LoraRoutes: Retrieved LoraScanner from ServiceRegistry")
-            
-        if self.recipe_scanner is None:
-            self.recipe_scanner = await ServiceRegistry.get_recipe_scanner()
-            logger.info("LoraRoutes: Retrieved RecipeScanner from ServiceRegistry")
+        self.scanner = await ServiceRegistry.get_lora_scanner()
+        self.recipe_scanner = await ServiceRegistry.get_recipe_scanner()
     
     def format_lora_data(self, lora: Dict) -> Dict:
         """Format LoRA data for template rendering"""

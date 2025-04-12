@@ -34,7 +34,7 @@ class ServiceRegistry:
         registry = cls.get_instance()
         async with cls._lock:
             if service_name not in registry._services:
-                logger.warning(f"Service {service_name} not found in registry")
+                logger.debug(f"Service {service_name} not found in registry")
                 return None
             return registry._services[service_name]
     

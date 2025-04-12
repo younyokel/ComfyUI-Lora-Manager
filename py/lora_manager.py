@@ -99,7 +99,6 @@ class LoraManager:
             
             # Initialize CivitaiClient first to ensure it's ready for other services
             civitai_client = await ServiceRegistry.get_civitai_client()
-            logger.info("CivitaiClient registered in ServiceRegistry")
             
             # Get file monitors through ServiceRegistry
             lora_monitor = await ServiceRegistry.get_lora_monitor()
@@ -116,11 +115,9 @@ class LoraManager:
 
             # Register DownloadManager with ServiceRegistry
             download_manager = await ServiceRegistry.get_download_manager()
-            logger.info("DownloadManager registered in ServiceRegistry")
             
             # Initialize WebSocket manager
             ws_manager = await ServiceRegistry.get_websocket_manager()
-            logger.info("WebSocketManager registered in ServiceRegistry")
             
             # Initialize scanners in background
             lora_scanner = await ServiceRegistry.get_lora_scanner()
