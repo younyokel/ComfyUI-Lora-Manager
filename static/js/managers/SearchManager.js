@@ -29,11 +29,32 @@ export class SearchManager {
       
       this.initEventListeners();
       this.loadSearchPreferences();
+      this.setupKeyboardShortcuts();
       
       updatePanelPositions();
       
       // Add resize listener
       window.addEventListener('resize', updatePanelPositions);
+    }
+    
+    // Add this new method to setup keyboard shortcuts
+    setupKeyboardShortcuts() {
+      // Add global keyboard shortcut listener for Ctrl+F or Cmd+F
+      document.addEventListener('keydown', (e) => {
+        // Check for Ctrl+F (Windows/Linux) or Cmd+F (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+          // Prevent default browser search behavior
+          e.preventDefault();
+          
+          // Focus the search input if it exists
+          if (this.searchInput) {
+            this.searchInput.focus();
+            
+            // Optionally select all text in the search input for easy replacement
+            this.searchInput.select();
+          }
+        }
+      });
     }
     
     initEventListeners() {
