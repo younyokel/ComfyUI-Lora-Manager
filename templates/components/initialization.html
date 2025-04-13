@@ -6,98 +6,78 @@
       <p class="init-subtitle" id="initSubtitle">{% block init_message %}Preparing your workspace...{% endblock %}</p>
     </div>
 
-    <div class="initialization-progress">
-      <div class="progress-bar-container">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-status" id="progressStatus">Initializing...</div>
+      <div class="progress-container">
         <div class="progress-bar" id="initProgressBar"></div>
       </div>
       <div class="progress-details">
-        <span class="progress-percentage" id="progressPercentage">0%</span>
-        <span class="progress-status" id="progressStatus">Starting initialization...</span>
+        <span id="progressPercentage">0%</span>
+        <span id="remainingTime">Estimating time...</span>
       </div>
     </div>
 
-    <div class="initialization-stages">
-      <div class="stage-item" id="stageScanFolders">
-        <div class="stage-icon">
-          <i class="fas fa-folder-open"></i>
-        </div>
-        <div class="stage-content">
-          <h4>Scanning Folders</h4>
-          <div class="stage-details" id="scanFoldersDetails">Discovering model directories...</div>
-        </div>
-        <div class="stage-status pending">
-          <i class="fas fa-clock"></i>
-        </div>
-      </div>
-
-      <div class="stage-item" id="stageCountModels">
-        <div class="stage-icon">
-          <i class="fas fa-calculator"></i>
-        </div>
-        <div class="stage-content">
-          <h4>Counting Models</h4>
-          <div class="stage-details" id="countModelsDetails">Analyzing files...</div>
-        </div>
-        <div class="stage-status pending">
-          <i class="fas fa-clock"></i>
-        </div>
-      </div>
-
-      <div class="stage-item" id="stageProcessModels">
-        <div class="stage-icon">
-          <i class="fas fa-cogs"></i>
-        </div>
-        <div class="stage-content">
-          <h4>Processing Models</h4>
-          <div class="stage-details" id="processModelsDetails">Reading model metadata...</div>
-        </div>
-        <div class="stage-status pending">
-          <i class="fas fa-clock"></i>
-        </div>
-      </div>
-
-      <div class="stage-item" id="stageFinalizing">
-        <div class="stage-icon">
-          <i class="fas fa-check-circle"></i>
-        </div>
-        <div class="stage-content">
-          <h4>Finalizing</h4>
-          <div class="stage-details" id="finalizingDetails">Building cache and optimizing...</div>
-        </div>
-        <div class="stage-status pending">
-          <i class="fas fa-clock"></i>
-        </div>
-      </div>
-    </div>
-
-    <div class="initialization-tips">
+    <div class="tips-container">
       <div class="tips-header">
         <i class="fas fa-lightbulb"></i>
-        <h3>Tips</h3>
+        <h3>Tips & Tricks</h3>
       </div>
-      <div class="tip-carousel" id="tipCarousel">
-        <div class="tip-item">
-          <p>You can drag and drop LoRA files into your folders to automatically import them.</p>
+      <div class="tips-content">
+        <div class="tip-carousel" id="tipCarousel">
+          <div class="tip-item active">
+            <div class="tip-image">
+              <img src="/static/images/tips/drag-drop.png" alt="Drag and Drop" onerror="this.src='/static/images/no-preview.png'">
+            </div>
+            <div class="tip-text">
+              <h4>Quick Import</h4>
+              <p>You can drag and drop LoRA files into your folders to automatically import them.</p>
+            </div>
+          </div>
+          <div class="tip-item">
+            <div class="tip-image">
+              <img src="/static/images/tips/civitai-download.png" alt="Civitai Download" onerror="this.src='/static/images/no-preview.png'">
+            </div>
+            <div class="tip-text">
+              <h4>Easy Download</h4>
+              <p>Use Civitai URLs to quickly download and install new models.</p>
+            </div>
+          </div>
+          <div class="tip-item">
+            <div class="tip-image">
+              <img src="/static/images/tips/recipes.png" alt="Recipes" onerror="this.src='/static/images/no-preview.png'">
+            </div>
+            <div class="tip-text">
+              <h4>Save Recipes</h4>
+              <p>Create recipes to save your favorite model combinations for future use.</p>
+            </div>
+          </div>
+          <div class="tip-item">
+            <div class="tip-image">
+              <img src="/static/images/tips/filter.png" alt="Filter Models" onerror="this.src='/static/images/no-preview.png'">
+            </div>
+            <div class="tip-text">
+              <h4>Fast Filtering</h4>
+              <p>Filter models by tags or base model type using the filter button in the header.</p>
+            </div>
+          </div>
+          <div class="tip-item">
+            <div class="tip-image">
+              <img src="/static/images/tips/search.png" alt="Quick Search" onerror="this.src='/static/images/no-preview.png'">
+            </div>
+            <div class="tip-text">
+              <h4>Quick Search</h4>
+              <p>Press Ctrl+F (Cmd+F on Mac) to quickly search within your current view.</p>
+            </div>
+          </div>
         </div>
-        <div class="tip-item">
-          <p>Use Civitai URLs to quickly download and install new models.</p>
+        <div class="tip-navigation">
+          <span class="tip-dot active" data-index="0"></span>
+          <span class="tip-dot" data-index="1"></span>
+          <span class="tip-dot" data-index="2"></span>
+          <span class="tip-dot" data-index="3"></span>
+          <span class="tip-dot" data-index="4"></span>
         </div>
-        <div class="tip-item">
-          <p>Create recipes to save your favorite model combinations for future use.</p>
-        </div>
-        <div class="tip-item">
-          <p>Filter models by tags or base model type using the filter button in the header.</p>
-        </div>
-        <div class="tip-item">
-          <p>Press Ctrl+F (Cmd+F on Mac) to quickly search within your current view.</p>
-        </div>
-      </div>
-      <div class="tip-navigation">
-        <span class="tip-dot active" data-index="0"></span>
-        <span class="tip-dot" data-index="1"></span>
-        <span class="tip-dot" data-index="2"></span>
-        <span class="tip-dot" data-index="3"></span>
-        <span class="tip-dot" data-index="4"></span>
       </div>
     </div>
   </div>

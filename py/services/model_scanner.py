@@ -62,11 +62,16 @@ class ModelScanner:
             # Set initializing flag to true
             self._is_initializing = True
             
+            # Determine the page type based on model type
+            page_type = 'loras' if self.model_type == 'lora' else 'checkpoints'
+            
             # First, count all model files to track progress
             await ws_manager.broadcast_init_progress({
                 'stage': 'scan_folders',
                 'progress': 0,
-                'details': f"Scanning {self.model_type} folders..."
+                'details': f"Scanning {self.model_type} folders...",
+                'scanner_type': self.model_type,
+                'pageType': page_type
             })
             
             # Count files in a separate thread to avoid blocking
@@ -79,7 +84,9 @@ class ModelScanner:
             await ws_manager.broadcast_init_progress({
                 'stage': 'count_models',
                 'progress': 1, # Changed from 10 to 1
-                'details': f"Found {total_files} {self.model_type} files"
+                'details': f"Found {total_files} {self.model_type} files",
+                'scanner_type': self.model_type,
+                'pageType': page_type
             })
             
             start_time = time.time()
@@ -88,14 +95,17 @@ class ModelScanner:
             await loop.run_in_executor(
                 None,  # Use default thread pool
                 self._initialize_cache_sync,  # Run synchronous version in thread
-                total_files  # Pass the total file count for progress reporting
+                total_files,  # Pass the total file count for progress reporting
+                page_type  # Pass the page type for progress reporting
             )
             
             # Send final progress update
             await ws_manager.broadcast_init_progress({
                 'stage': 'finalizing',
                 'progress': 99, # Changed from 95 to 99
-                'details': f"Finalizing {self.model_type} cache..."
+                'details': f"Finalizing {self.model_type} cache...",
+                'scanner_type': self.model_type,
+                'pageType': page_type
             })
             
             logger.info(f"{self.model_type.capitalize()} cache initialized in {time.time() - start_time:.2f} seconds. Found {len(self._cache.raw_data)} models")
@@ -106,7 +116,9 @@ class ModelScanner:
                 'stage': 'finalizing',
                 'progress': 100,
                 'status': 'complete',
-                'details': f"Completed! Found {len(self._cache.raw_data)} {self.model_type} files."
+                'details': f"Completed! Found {len(self._cache.raw_data)} {self.model_type} files.",
+                'scanner_type': self.model_type,
+                'pageType': page_type
             })
             
         except Exception as e:
@@ -154,7 +166,7 @@ class ModelScanner:
         
         return total_files
     
-    def _initialize_cache_sync(self, total_files=0):
+    def _initialize_cache_sync(self, total_files=0, page_type='loras'):
         """Synchronous version of cache initialization for thread pool execution"""
         try:
             # Create a new event loop for this thread
@@ -222,7 +234,9 @@ class ModelScanner:
                                                             await ws_manager.broadcast_init_progress({
                                                                 'stage': 'process_models',
                                                                 'progress': progress_percent,
-                                                                'details': f"Processing {self.model_type} files: {processed_files}/{total_files}"
+                                                                'details': f"Processing {self.model_type} files: {processed_files}/{total_files}",
+                                                                'scanner_type': self.model_type,
+                                                                'pageType': page_type
                                                             })
                                             
                                             elif entry.is_dir(follow_symlinks=True):
@@ -298,6 +312,9 @@ class ModelScanner:
             
             # Clear existing tags count
             self._tags_count = {}
+            
+            # Determine the page type based on model type
+            page_type = 'loras' if self.model_type == 'lora' else 'checkpoints'
             
             # Scan for new data
             raw_data = await self.scan_all_models()

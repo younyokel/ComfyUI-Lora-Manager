@@ -2,26 +2,38 @@
  * Initialization Component
  * Manages the display of initialization progress and status
  */
+import { appCore } from '../core.js';
+import { getSessionItem, setSessionItem } from '../utils/storageHelpers.js';
+import { state, getCurrentPageState } from '../state/index.js';
 
 class InitializationManager {
     constructor() {
         this.currentTipIndex = 0;
         this.tipInterval = null;
         this.websocket = null;
-        this.currentStage = null;
         this.progress = 0;
-        this.stages = [
-            { id: 'stageScanFolders', name: 'scan_folders' },
-            { id: 'stageCountModels', name: 'count_models' },
-            { id: 'stageProcessModels', name: 'process_models' },
-            { id: 'stageFinalizing', name: 'finalizing' }
-        ];
+        this.processingStartTime = null;
+        this.processedFilesCount = 0;
+        this.totalFilesCount = 0;
+        this.averageProcessingTime = null;
+        this.pageType = null; // Added page type property
     }
 
     /**
      * Initialize the component
      */
     initialize() {
+        // Initialize core application for theme and header functionality
+        appCore.initialize().then(() => {
+            console.log('Core application initialized for initialization component');
+        });
+
+        // Detect the current page type
+        this.detectPageType();
+
+        // Check session storage for saved progress
+        this.restoreProgress();
+        
         // Setup the tip carousel
         this.setupTipCarousel();
         
@@ -33,9 +45,65 @@ class InitializationManager {
         
         // Show first tip as active
         document.querySelector('.tip-item').classList.add('active');
-        
-        // Set the first stage as active
-        this.updateStage('scan_folders');
+    }
+
+    /**
+     * Detect the current page type
+     */
+    detectPageType() {
+        // Get the current page type from URL or data attribute
+        const path = window.location.pathname;
+        if (path.includes('/checkpoints')) {
+            this.pageType = 'checkpoints';
+        } else if (path.includes('/loras')) {
+            this.pageType = 'loras';
+        } else {
+            // Default to loras if can't determine
+            this.pageType = 'loras';
+        }
+        console.log(`Initialization component detected page type: ${this.pageType}`);
+    }
+
+    /**
+     * Get the storage key with page type prefix
+     */
+    getStorageKey(key) {
+        return `${this.pageType}_${key}`;
+    }
+
+    /**
+     * Restore progress from session storage if available
+     */
+    restoreProgress() {
+        const savedProgress = getSessionItem(this.getStorageKey('initProgress'));
+        if (savedProgress) {
+            console.log(`Restoring ${this.pageType} progress from session storage:`, savedProgress);
+            
+            // Restore progress percentage
+            if (savedProgress.progress !== undefined) {
+                this.updateProgress(savedProgress.progress);
+            }
+            
+            // Restore processed files count and total files
+            if (savedProgress.processedFiles !== undefined) {
+                this.processedFilesCount = savedProgress.processedFiles;
+            }
+            
+            if (savedProgress.totalFiles !== undefined) {
+                this.totalFilesCount = savedProgress.totalFiles;
+            }
+            
+            // Restore processing time metrics if available
+            if (savedProgress.averageProcessingTime !== undefined) {
+                this.averageProcessingTime = savedProgress.averageProcessingTime;
+                this.updateRemainingTime();
+            }
+            
+            // Restore progress status message
+            if (savedProgress.details) {
+                this.updateStatusMessage(savedProgress.details);
+            }
+        }
     }
 
     /**
@@ -82,7 +150,7 @@ class InitializationManager {
         
         // Set a simulated progress that moves forward slowly
         // This gives users feedback even if the backend isn't providing updates
-        let simulatedProgress = 0;
+        let simulatedProgress = this.progress || 0;
         const simulateInterval = setInterval(() => {
             simulatedProgress += 0.5;
             if (simulatedProgress > 95) {
@@ -129,29 +197,147 @@ class InitializationManager {
     handleProgressUpdate(data) {
         if (!data) return;
         
+        // Check if this update is for our page type
+        if (data.pageType && data.pageType !== this.pageType) {
+            console.log(`Ignoring update for ${data.pageType}, we're on ${this.pageType}`);
+            return;
+        }
+
+        // If no pageType is specified in the data but we have scanner_type, map it to pageType
+        if (!data.pageType && data.scanner_type) {
+            const scannerTypeToPageType = {
+                'lora': 'loras',
+                'checkpoint': 'checkpoints'
+            };
+            
+            if (scannerTypeToPageType[data.scanner_type] !== this.pageType) {
+                console.log(`Ignoring update for ${data.scanner_type}, we're on ${this.pageType}`);
+                return;
+            }
+        }
+        
+        // Save progress data to session storage
+        setSessionItem(this.getStorageKey('initProgress'), {
+            ...data,
+            averageProcessingTime: this.averageProcessingTime,
+            processedFiles: this.processedFilesCount,
+            totalFiles: this.totalFilesCount
+        });
+        
         // Update progress percentage
         if (data.progress !== undefined) {
             this.updateProgress(data.progress);
         }
         
-        // Update current stage
-        if (data.stage) {
-            this.updateStage(data.stage);
-        }
-        
         // Update stage-specific details
         if (data.details) {
-            this.updateStageDetails(data.stage, data.details);
+            this.updateStatusMessage(data.details);
+        }
+        
+        // Track files count for time estimation
+        if (data.stage === 'count_models' && data.details) {
+            const match = data.details.match(/Found (\d+)/);
+            if (match && match[1]) {
+                this.totalFilesCount = parseInt(match[1]);
+            }
+        }
+        
+        // Track processed files for time estimation
+        if (data.stage === 'process_models' && data.details) {
+            const match = data.details.match(/Processing .* files: (\d+)\/(\d+)/);
+            if (match && match[1] && match[2]) {
+                const currentCount = parseInt(match[1]);
+                const totalCount = parseInt(match[2]);
+                
+                // Make sure we have valid total count
+                if (totalCount > 0 && this.totalFilesCount === 0) {
+                    this.totalFilesCount = totalCount;
+                }
+                
+                // Start tracking processing time once we've processed some files
+                if (currentCount > 0 && !this.processingStartTime && this.processedFilesCount === 0) {
+                    this.processingStartTime = Date.now();
+                }
+                
+                // Calculate average processing time based on elapsed time and files processed
+                if (this.processingStartTime && currentCount > this.processedFilesCount) {
+                    const newFiles = currentCount - this.processedFilesCount;
+                    const elapsedTime = Date.now() - this.processingStartTime;
+                    const timePerFile = elapsedTime / currentCount; // ms per file
+                    
+                    // Update moving average
+                    if (!this.averageProcessingTime) {
+                        this.averageProcessingTime = timePerFile;
+                    } else {
+                        // Simple exponential moving average
+                        this.averageProcessingTime = this.averageProcessingTime * 0.7 + timePerFile * 0.3;
+                    }
+                    
+                    // Update remaining time estimate
+                    this.updateRemainingTime();
+                }
+                
+                this.processedFilesCount = currentCount;
+            }
         }
         
         // If initialization is complete, reload the page
         if (data.status === 'complete') {
             this.showCompletionMessage();
             
+            // Remove session storage data since we're done
+            setSessionItem(this.getStorageKey('initProgress'), null);
+            
             // Give the user a moment to see the completion message
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
+        }
+    }
+
+    /**
+     * Update the remaining time display based on current progress
+     */
+    updateRemainingTime() {
+        if (!this.averageProcessingTime || !this.totalFilesCount || this.totalFilesCount <= 0) {
+            document.getElementById('remainingTime').textContent = 'Estimating...';
+            return;
+        }
+        
+        const remainingFiles = this.totalFilesCount - this.processedFilesCount;
+        const remainingTimeMs = remainingFiles * this.averageProcessingTime;
+        
+        if (remainingTimeMs <= 0) {
+            document.getElementById('remainingTime').textContent = 'Almost done...';
+            return;
+        }
+        
+        // Format the time for display
+        let formattedTime;
+        if (remainingTimeMs < 60000) {
+            // Less than a minute
+            formattedTime = 'Less than a minute';
+        } else if (remainingTimeMs < 3600000) {
+            // Less than an hour
+            const minutes = Math.round(remainingTimeMs / 60000);
+            formattedTime = `~${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        } else {
+            // Hours and minutes
+            const hours = Math.floor(remainingTimeMs / 3600000);
+            const minutes = Math.round((remainingTimeMs % 3600000) / 60000);
+            formattedTime = `~${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        }
+        
+        document.getElementById('remainingTime').textContent = formattedTime + ' remaining';
+    }
+
+    /**
+     * Update status message
+     */
+    updateStatusMessage(message) {
+        const progressStatus = document.getElementById('progressStatus');
+        if (progressStatus) {
+            progressStatus.textContent = message;
         }
     }
 
@@ -170,89 +356,6 @@ class InitializationManager {
     }
 
     /**
-     * Update the current stage
-     */
-    updateStage(stageName) {
-        // Mark the previous stage as completed if it exists
-        if (this.currentStage) {
-            const previousStageElement = document.getElementById(this.currentStage);
-            if (previousStageElement) {
-                previousStageElement.classList.remove('active');
-                previousStageElement.classList.add('completed');
-                
-                // Update the stage status icon to completed
-                const statusElement = previousStageElement.querySelector('.stage-status');
-                if (statusElement) {
-                    statusElement.className = 'stage-status completed';
-                    statusElement.innerHTML = '<i class="fas fa-check"></i>';
-                }
-            }
-        }
-        
-        // Find and activate the new current stage
-        const stageInfo = this.stages.find(s => s.name === stageName);
-        if (stageInfo) {
-            this.currentStage = stageInfo.id;
-            const currentStageElement = document.getElementById(stageInfo.id);
-            
-            if (currentStageElement) {
-                currentStageElement.classList.add('active');
-                
-                // Update the stage status icon to in-progress
-                const statusElement = currentStageElement.querySelector('.stage-status');
-                if (statusElement) {
-                    statusElement.className = 'stage-status in-progress';
-                    statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                }
-                
-                // Update the progress status message
-                const progressStatus = document.getElementById('progressStatus');
-                if (progressStatus) {
-                    progressStatus.textContent = `${this.stageNameToDisplay(stageName)}...`;
-                }
-            }
-        }
-    }
-
-    /**
-     * Convert stage name to display text
-     */
-    stageNameToDisplay(stageName) {
-        switch (stageName) {
-            case 'scan_folders':
-                return 'Scanning folders';
-            case 'count_models':
-                return 'Counting models';
-            case 'process_models':
-                return 'Processing models';
-            case 'finalizing':
-                return 'Finalizing';
-            default:
-                return 'Initializing';
-        }
-    }
-
-    /**
-     * Update stage-specific details
-     */
-    updateStageDetails(stageName, details) {
-        const detailsMap = {
-            'scan_folders': 'scanFoldersDetails',
-            'count_models': 'countModelsDetails',
-            'process_models': 'processModelsDetails',
-            'finalizing': 'finalizingDetails'
-        };
-        
-        const detailsElementId = detailsMap[stageName];
-        if (detailsElementId) {
-            const detailsElement = document.getElementById(detailsElementId);
-            if (detailsElement && details) {
-                detailsElement.textContent = details;
-            }
-        }
-    }
-
-    /**
      * Setup the tip carousel to rotate through tips
      */
     setupTipCarousel() {
@@ -261,6 +364,7 @@ class InitializationManager {
         
         // Show the first tip
         tipItems[0].classList.add('active');
+        document.querySelector('.tip-dot').classList.add('active');
         
         // Set up automatic rotation
         this.tipInterval = setInterval(() => {
@@ -335,33 +439,16 @@ class InitializationManager {
      * Show completion message
      */
     showCompletionMessage() {
-        // Mark all stages as completed
-        this.stages.forEach(stage => {
-            const stageElement = document.getElementById(stage.id);
-            if (stageElement) {
-                stageElement.classList.remove('active');
-                stageElement.classList.add('completed');
-                
-                const statusElement = stageElement.querySelector('.stage-status');
-                if (statusElement) {
-                    statusElement.className = 'stage-status completed';
-                    statusElement.innerHTML = '<i class="fas fa-check"></i>';
-                }
-            }
-        });
-        
         // Update progress to 100%
         this.updateProgress(100);
         
         // Update status message
-        const progressStatus = document.getElementById('progressStatus');
-        if (progressStatus) {
-            progressStatus.textContent = 'Initialization complete!';
-        }
+        this.updateStatusMessage('Initialization complete!');
         
         // Update title and subtitle
         const initTitle = document.getElementById('initTitle');
         const initSubtitle = document.getElementById('initSubtitle');
+        const remainingTime = document.getElementById('remainingTime');
         
         if (initTitle) {
             initTitle.textContent = 'Initialization Complete';
@@ -369,6 +456,10 @@ class InitializationManager {
         
         if (initSubtitle) {
             initSubtitle.textContent = 'Reloading page...';
+        }
+        
+        if (remainingTime) {
+            remainingTime.textContent = 'Done!';
         }
     }
 

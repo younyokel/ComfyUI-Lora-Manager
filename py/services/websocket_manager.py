@@ -55,6 +55,14 @@ class WebSocketManager:
         if not self._init_websockets:
             return
             
+        # Ensure data has all required fields
+        if 'stage' not in data:
+            data['stage'] = 'processing'
+        if 'progress' not in data:
+            data['progress'] = 0
+        if 'details' not in data:
+            data['details'] = 'Processing...'
+            
         for ws in self._init_websockets:
             try:
                 await ws.send_json(data)
