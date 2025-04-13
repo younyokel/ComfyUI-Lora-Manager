@@ -9,6 +9,7 @@ class WebSocketManager:
     
     def __init__(self):
         self._websockets: Set[web.WebSocketResponse] = set()
+        self._init_websockets: Set[web.WebSocketResponse] = set()  # New set for initialization progress clients
         
     async def handle_connection(self, request: web.Request) -> web.WebSocketResponse:
         """Handle new WebSocket connection"""
@@ -23,6 +24,20 @@ class WebSocketManager:
         finally:
             self._websockets.discard(ws)
         return ws
+    
+    async def handle_init_connection(self, request: web.Request) -> web.WebSocketResponse:
+        """Handle new WebSocket connection for initialization progress"""
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        self._init_websockets.add(ws)
+        
+        try:
+            async for msg in ws:
+                if msg.type == web.WSMsgType.ERROR:
+                    logger.error(f'Init WebSocket error: {ws.exception()}')
+        finally:
+            self._init_websockets.discard(ws)
+        return ws
         
     async def broadcast(self, data: Dict):
         """Broadcast message to all connected clients"""
@@ -34,10 +49,25 @@ class WebSocketManager:
                 await ws.send_json(data)
             except Exception as e:
                 logger.error(f"Error sending progress: {e}")
+    
+    async def broadcast_init_progress(self, data: Dict):
+        """Broadcast initialization progress to connected clients"""
+        if not self._init_websockets:
+            return
+            
+        for ws in self._init_websockets:
+            try:
+                await ws.send_json(data)
+            except Exception as e:
+                logger.error(f"Error sending initialization progress: {e}")
                 
     def get_connected_clients_count(self) -> int:
         """Get number of connected clients"""
         return len(self._websockets)
 
+    def get_init_clients_count(self) -> int:
+        """Get number of initialization progress clients"""
+        return len(self._init_websockets)
+
 # Global instance
-ws_manager = WebSocketManager() 
+ws_manager = WebSocketManager()

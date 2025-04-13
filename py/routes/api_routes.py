@@ -46,6 +46,7 @@ class ApiRoutes:
         app.router.add_get('/api/loras', routes.get_loras)
         app.router.add_post('/api/fetch-all-civitai', routes.fetch_all_civitai)
         app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
+        app.router.add_get('/ws/init-progress', ws_manager.handle_init_connection)  # Add new WebSocket route
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
         app.router.add_get('/api/folders', routes.get_folders)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)

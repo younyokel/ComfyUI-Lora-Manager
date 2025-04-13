@@ -1,0 +1,104 @@
+<!-- Initialization Component -->
+<div class="initialization-container" id="initializationContainer">
+  <div class="initialization-content">
+    <div class="initialization-header">
+      <h2 id="initTitle">{% block init_title %}Initializing{% endblock %}</h2>
+      <p class="init-subtitle" id="initSubtitle">{% block init_message %}Preparing your workspace...{% endblock %}</p>
+    </div>
+
+    <div class="initialization-progress">
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="initProgressBar"></div>
+      </div>
+      <div class="progress-details">
+        <span class="progress-percentage" id="progressPercentage">0%</span>
+        <span class="progress-status" id="progressStatus">Starting initialization...</span>
+      </div>
+    </div>
+
+    <div class="initialization-stages">
+      <div class="stage-item" id="stageScanFolders">
+        <div class="stage-icon">
+          <i class="fas fa-folder-open"></i>
+        </div>
+        <div class="stage-content">
+          <h4>Scanning Folders</h4>
+          <div class="stage-details" id="scanFoldersDetails">Discovering model directories...</div>
+        </div>
+        <div class="stage-status pending">
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+
+      <div class="stage-item" id="stageCountModels">
+        <div class="stage-icon">
+          <i class="fas fa-calculator"></i>
+        </div>
+        <div class="stage-content">
+          <h4>Counting Models</h4>
+          <div class="stage-details" id="countModelsDetails">Analyzing files...</div>
+        </div>
+        <div class="stage-status pending">
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+
+      <div class="stage-item" id="stageProcessModels">
+        <div class="stage-icon">
+          <i class="fas fa-cogs"></i>
+        </div>
+        <div class="stage-content">
+          <h4>Processing Models</h4>
+          <div class="stage-details" id="processModelsDetails">Reading model metadata...</div>
+        </div>
+        <div class="stage-status pending">
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+
+      <div class="stage-item" id="stageFinalizing">
+        <div class="stage-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stage-content">
+          <h4>Finalizing</h4>
+          <div class="stage-details" id="finalizingDetails">Building cache and optimizing...</div>
+        </div>
+        <div class="stage-status pending">
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="initialization-tips">
+      <div class="tips-header">
+        <i class="fas fa-lightbulb"></i>
+        <h3>Tips</h3>
+      </div>
+      <div class="tip-carousel" id="tipCarousel">
+        <div class="tip-item">
+          <p>You can drag and drop LoRA files into your folders to automatically import them.</p>
+        </div>
+        <div class="tip-item">
+          <p>Use Civitai URLs to quickly download and install new models.</p>
+        </div>
+        <div class="tip-item">
+          <p>Create recipes to save your favorite model combinations for future use.</p>
+        </div>
+        <div class="tip-item">
+          <p>Filter models by tags or base model type using the filter button in the header.</p>
+        </div>
+        <div class="tip-item">
+          <p>Press Ctrl+F (Cmd+F on Mac) to quickly search within your current view.</p>
+        </div>
+      </div>
+      <div class="tip-navigation">
+        <span class="tip-dot active" data-index="0"></span>
+        <span class="tip-dot" data-index="1"></span>
+        <span class="tip-dot" data-index="2"></span>
+        <span class="tip-dot" data-index="3"></span>
+        <span class="tip-dot" data-index="4"></span>
+      </div>
+    </div>
+  </div>
+</div>
