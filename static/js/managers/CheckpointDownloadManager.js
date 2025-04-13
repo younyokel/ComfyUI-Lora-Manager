@@ -3,7 +3,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/checkpointApi.js';
-import { getStorageItem } from '../utils/storageHelpers.js';
+import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 
 export class CheckpointDownloadManager {
     constructor() {
@@ -338,8 +338,22 @@ export class CheckpointDownloadManager {
             showToast('Download completed successfully', 'success');
             modalManager.closeModal('checkpointDownloadModal');
             
-            // Update state and trigger reload with folder update
-            state.activeFolder = targetFolder;
+            // Update state specifically for the checkpoints page
+            state.pages.checkpoints.activeFolder = targetFolder;
+            
+            // Save the active folder preference to storage
+            setStorageItem('checkpoints_activeFolder', targetFolder);
+            
+            // Update UI to show the folder as selected
+            document.querySelectorAll('.folder-tags .tag').forEach(tag => {
+                const isActive = tag.dataset.folder === targetFolder;
+                tag.classList.toggle('active', isActive);
+                if (isActive && !tag.parentNode.classList.contains('collapsed')) {
+                    // Scroll the tag into view if folder tags are not collapsed
+                    tag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+
             await resetAndReload(true); // Pass true to update folders
 
         } catch (error) {
