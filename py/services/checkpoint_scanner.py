@@ -59,7 +59,6 @@ class CheckpointScanner(ModelScanner):
         
         # Sort for consistent order
         sorted_paths = sorted(all_paths, key=lambda p: p.lower())
-        logger.info(f"Found checkpoint roots: {sorted_paths}")
         
         return sorted_paths
     
