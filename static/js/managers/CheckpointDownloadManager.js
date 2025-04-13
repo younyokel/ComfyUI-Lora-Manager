@@ -76,8 +76,12 @@ export class CheckpointDownloadManager {
                 throw new Error('Invalid Civitai URL format');
             }
 
-            const response = await fetch(`/api/civitai/versions/${modelId}`);
+            const response = await fetch(`/api/checkpoints/civitai/versions/${modelId}`);
             if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
+                    throw new Error('This model is not a Checkpoint. Please switch to the LoRAs page to download LoRA models.');
+                }
                 throw new Error('Failed to fetch model versions');
             }
             

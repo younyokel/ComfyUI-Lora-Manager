@@ -45,6 +45,7 @@ class CheckpointsRoutes:
         app.router.add_get('/api/checkpoints/scan', self.scan_checkpoints)
         app.router.add_get('/api/checkpoints/info/{name}', self.get_checkpoint_info)
         app.router.add_get('/api/checkpoints/roots', self.get_checkpoint_roots)
+        app.router.add_get('/api/checkpoints/civitai/versions/{model_id}', self.get_civitai_versions)  # Add new route
         
         # Add new routes for model management similar to LoRA routes
         app.router.add_post('/api/checkpoints/delete', self.delete_model)
@@ -565,3 +566,56 @@ class CheckpointsRoutes:
         except Exception as e:
             logger.error(f"Error saving checkpoint metadata: {e}", exc_info=True)
             return web.Response(text=str(e), status=500)
+
+    async def get_civitai_versions(self, request: web.Request) -> web.Response:
+        """Get available versions for a Civitai checkpoint model with local availability info"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_checkpoint_scanner()
+                
+            # Get the civitai client from service registry
+            civitai_client = await ServiceRegistry.get_civitai_client()
+                
+            model_id = request.match_info['model_id']
+            response = await civitai_client.get_model_versions(model_id)
+            if not response or not response.get('modelVersions'):
+                return web.Response(status=404, text="Model not found")
+            
+            versions = response.get('modelVersions', [])
+            model_type = response.get('type', '')
+            
+            # Check model type - should be Checkpoint
+            if model_type.lower() != 'checkpoint':
+                return web.json_response({
+                    'error': f"Model type mismatch. Expected Checkpoint, got {model_type}"
+                }, status=400)
+            
+            # Check local availability for each version
+            for version in versions:
+                # Find the primary model file (type="Model" and primary=true) in the files list
+                model_file = next((file for file in version.get('files', []) 
+                                  if file.get('type') == 'Model' and file.get('primary') == True), None)
+                
+                # If no primary file found, try to find any model file
+                if not model_file:
+                    model_file = next((file for file in version.get('files', []) 
+                                      if file.get('type') == 'Model'), None)
+                
+                if model_file:
+                    sha256 = model_file.get('hashes', {}).get('SHA256')
+                    if sha256:
+                        # Set existsLocally and localPath at the version level
+                        version['existsLocally'] = self.scanner.has_hash(sha256)
+                        if version['existsLocally']:
+                            version['localPath'] = self.scanner.get_path_by_hash(sha256)
+                        
+                        # Also set the model file size at the version level for easier access
+                        version['modelSizeKB'] = model_file.get('sizeKB')
+                else:
+                    # No model file found in this version
+                    version['existsLocally'] = False
+                    
+            return web.json_response(versions)
+        except Exception as e:
+            logger.error(f"Error fetching checkpoint model versions: {e}")
+            return web.Response(status=500, text=str(e))

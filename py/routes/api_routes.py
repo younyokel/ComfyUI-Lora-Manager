@@ -358,9 +358,18 @@ class ApiRoutes:
                 self.civitai_client = await ServiceRegistry.get_civitai_client()
                 
             model_id = request.match_info['model_id']
-            versions = await self.civitai_client.get_model_versions(model_id)
-            if not versions:
+            response = await self.civitai_client.get_model_versions(model_id)
+            if not response or not response.get('modelVersions'):
                 return web.Response(status=404, text="Model not found")
+            
+            versions = response.get('modelVersions', [])
+            model_type = response.get('type', '')
+            
+            # Check model type - should be LORA
+            if model_type.lower() != 'lora':
+                return web.json_response({
+                    'error': f"Model type mismatch. Expected LORA, got {model_type}"
+                }, status=400)
             
             # Check local availability for each version
             for version in versions:
@@ -372,9 +381,9 @@ class ApiRoutes:
                     sha256 = model_file.get('hashes', {}).get('SHA256')
                     if sha256:
                         # Set existsLocally and localPath at the version level
-                        version['existsLocally'] = self.scanner.has_lora_hash(sha256)
+                        version['existsLocally'] = self.scanner.has_hash(sha256)
                         if version['existsLocally']:
-                            version['localPath'] = self.scanner.get_lora_path_by_hash(sha256)
+                            version['localPath'] = self.scanner.get_path_by_hash(sha256)
                         
                         # Also set the model file size at the version level for easier access
                         version['modelSizeKB'] = model_file.get('sizeKB')

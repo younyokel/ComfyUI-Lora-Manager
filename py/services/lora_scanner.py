@@ -293,15 +293,15 @@ class LoraScanner(ModelScanner):
     # Lora-specific hash index functionality
     def has_lora_hash(self, sha256: str) -> bool:
         """Check if a LoRA with given hash exists"""
-        return self._hash_index.has_hash(sha256.lower())
+        return self.has_hash(sha256)
         
     def get_lora_path_by_hash(self, sha256: str) -> Optional[str]:
         """Get file path for a LoRA by its hash"""
-        return self._hash_index.get_path(sha256.lower())
+        return self.get_path_by_hash(sha256)
         
     def get_lora_hash_by_path(self, file_path: str) -> Optional[str]:
         """Get hash for a LoRA by its file path"""
-        return self._hash_index.get_hash(file_path) 
+        return self.get_hash_by_path(file_path)
 
     async def get_top_tags(self, limit: int = 20) -> List[Dict[str, any]]:
         """Get top tags sorted by count"""

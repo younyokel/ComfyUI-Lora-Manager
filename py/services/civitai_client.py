@@ -172,7 +172,11 @@ class CivitaiClient:
                 if response.status != 200:
                     return None
                 data = await response.json()
-                return data.get('modelVersions', [])
+                # Also return model type along with versions
+                return {
+                    'modelVersions': data.get('modelVersions', []),
+                    'type': data.get('type', '')
+                }
         except Exception as e:
             logger.error(f"Error fetching model versions: {e}")
             return None
