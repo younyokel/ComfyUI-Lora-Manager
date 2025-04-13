@@ -43,27 +43,33 @@
   font-size: 1rem;
 }
 
-/* Progress Bar Styles */
+/* Progress Bar Styles specific to initialization */
 .initialization-progress {
   margin-bottom: var(--space-3);
 }
 
-.progress-bar-container {
-  width: 100%;
-  height: 8px;
-  background-color: var(--lora-border);
+/* Renamed container class */
+.init-progress-container {
+  width: 100%; /* Use full width within its container */
+  height: 8px; /* Match height from previous .progress-bar-container */
+  background-color: var(--lora-border); /* Consistent background */
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: var(--space-1);
+  margin: 0 auto var(--space-1); /* Center horizontally, add bottom margin */
 }
 
-.progress-bar {
+/* Renamed progress bar class */
+.init-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--lora-accent) 0%, rgba(var(--lora-accent), 0.8) 100%);
-  border-radius: 4px;
+  /* Use a gradient consistent with the theme accent */
+  background: linear-gradient(90deg, var(--lora-accent) 0%, color-mix(in oklch, var(--lora-accent) 80%, transparent) 100%);
+  border-radius: 4px; /* Match container radius */
   transition: width 0.3s ease;
-  width: 0%;
+  width: 0%; /* Start at 0% */
 }
+
+/* Remove the old .progress-bar rule specific to initialization to avoid conflicts */
+/* .progress-bar { ... } */
 
 /* Progress Details */
 .progress-details {
