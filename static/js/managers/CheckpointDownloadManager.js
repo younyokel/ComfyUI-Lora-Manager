@@ -292,9 +292,9 @@ export class CheckpointDownloadManager {
             const updateProgress = this.loadingManager.showDownloadProgress(1);
             updateProgress(0, 0, this.currentVersion.name);
 
-            // Setup WebSocket for progress updates
+            // Setup WebSocket for progress updates using checkpoint-specific endpoint
             const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/checkpoint-progress`);
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);

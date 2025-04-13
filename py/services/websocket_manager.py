@@ -10,6 +10,7 @@ class WebSocketManager:
     def __init__(self):
         self._websockets: Set[web.WebSocketResponse] = set()
         self._init_websockets: Set[web.WebSocketResponse] = set()  # New set for initialization progress clients
+        self._checkpoint_websockets: Set[web.WebSocketResponse] = set()  # New set for checkpoint download progress
         
     async def handle_connection(self, request: web.Request) -> web.WebSocketResponse:
         """Handle new WebSocket connection"""
@@ -37,6 +38,20 @@ class WebSocketManager:
                     logger.error(f'Init WebSocket error: {ws.exception()}')
         finally:
             self._init_websockets.discard(ws)
+        return ws
+        
+    async def handle_checkpoint_connection(self, request: web.Request) -> web.WebSocketResponse:
+        """Handle new WebSocket connection for checkpoint download progress"""
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        self._checkpoint_websockets.add(ws)
+        
+        try:
+            async for msg in ws:
+                if msg.type == web.WSMsgType.ERROR:
+                    logger.error(f'Checkpoint WebSocket error: {ws.exception()}')
+        finally:
+            self._checkpoint_websockets.discard(ws)
         return ws
         
     async def broadcast(self, data: Dict):
@@ -68,6 +83,17 @@ class WebSocketManager:
                 await ws.send_json(data)
             except Exception as e:
                 logger.error(f"Error sending initialization progress: {e}")
+    
+    async def broadcast_checkpoint_progress(self, data: Dict):
+        """Broadcast checkpoint download progress to connected clients"""
+        if not self._checkpoint_websockets:
+            return
+            
+        for ws in self._checkpoint_websockets:
+            try:
+                await ws.send_json(data)
+            except Exception as e:
+                logger.error(f"Error sending checkpoint progress: {e}")
                 
     def get_connected_clients_count(self) -> int:
         """Get number of connected clients"""
@@ -76,6 +102,10 @@ class WebSocketManager:
     def get_init_clients_count(self) -> int:
         """Get number of initialization progress clients"""
         return len(self._init_websockets)
+
+    def get_checkpoint_clients_count(self) -> int:
+        """Get number of checkpoint progress clients"""
+        return len(self._checkpoint_websockets)
 
 # Global instance
 ws_manager = WebSocketManager()
