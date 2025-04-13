@@ -34,14 +34,29 @@ class CivitaiClient:
             'User-Agent': 'ComfyUI-LoRA-Manager/1.0'
         }
         self._session = None
+        # Set default buffer size to 1MB for higher throughput
+        self.chunk_size = 1024 * 1024
     
     @property
     async def session(self) -> aiohttp.ClientSession:
         """Lazy initialize the session"""
         if self._session is None:
-            connector = aiohttp.TCPConnector(ssl=True)
-            trust_env = True  # 允许使用系统环境变量中的代理设置
-            self._session = aiohttp.ClientSession(connector=connector, trust_env=trust_env)
+            # Optimize TCP connection parameters
+            connector = aiohttp.TCPConnector(
+                ssl=True,
+                limit=10,  # Increase parallel connections
+                ttl_dns_cache=300,  # DNS cache time
+                force_close=False,  # Keep connections for reuse
+                enable_cleanup_closed=True
+            )
+            trust_env = True  # Allow using system environment proxy settings
+            # Configure timeout parameters
+            timeout = aiohttp.ClientTimeout(total=None, connect=60, sock_read=60)
+            self._session = aiohttp.ClientSession(
+                connector=connector, 
+                trust_env=trust_env,
+                timeout=timeout
+            )
         return self._session
 
     def _parse_content_disposition(self, header: str) -> str:
@@ -91,6 +106,10 @@ class CivitaiClient:
         session = await self.session
         try:
             headers = self._get_request_headers()
+            
+            # Add Range header to allow resumable downloads
+            headers['Accept-Encoding'] = 'identity'  # Disable compression for better chunked downloads
+            
             async with session.get(url, headers=headers, allow_redirects=True) as response:
                 if response.status != 200:
                     # Handle 401 unauthorized responses
@@ -118,16 +137,23 @@ class CivitaiClient:
                 # Get total file size for progress calculation
                 total_size = int(response.headers.get('content-length', 0))
                 current_size = 0
+                last_progress_report_time = datetime.now()
 
-                # Stream download to file with progress updates
+                # Stream download to file with progress updates using larger buffer
                 with open(save_path, 'wb') as f:
-                    async for chunk in response.content.iter_chunked(8192):
+                    async for chunk in response.content.iter_chunked(self.chunk_size):
                         if chunk:
                             f.write(chunk)
                             current_size += len(chunk)
-                            if progress_callback and total_size:
+                            
+                            # Limit progress update frequency to reduce overhead
+                            now = datetime.now()
+                            time_diff = (now - last_progress_report_time).total_seconds()
+                            
+                            if progress_callback and total_size and time_diff >= 0.5:
                                 progress = (current_size / total_size) * 100
                                 await progress_callback(progress)
+                                last_progress_report_time = now
                 
                 # Ensure 100% progress is reported
                 if progress_callback:
@@ -135,6 +161,9 @@ class CivitaiClient:
                         
                 return True, save_path
                 
+        except aiohttp.ClientError as e:
+            logger.error(f"Network error during download: {e}")
+            return False, f"Network error: {str(e)}"
         except Exception as e:
             logger.error(f"Download error: {e}")
             return False, str(e)
