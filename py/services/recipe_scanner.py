@@ -2,6 +2,7 @@ import os
 import logging
 import asyncio
 import json
+import time
 from typing import List, Dict, Optional, Any, Tuple
 from ..config import config
 from .recipe_cache import RecipeCache
@@ -68,13 +69,20 @@ class RecipeScanner:
             self._is_initializing = True
             
             try:
+                # Start timer
+                start_time = time.time()
+                
                 # Use thread pool to execute CPU-intensive operations
                 loop = asyncio.get_event_loop()
-                await loop.run_in_executor(
+                cache = await loop.run_in_executor(
                     None,  # Use default thread pool
                     self._initialize_recipe_cache_sync  # Run synchronous version in thread
                 )
-                logger.info("Recipe cache initialization completed in background thread")
+                
+                # Calculate elapsed time and log it
+                elapsed_time = time.time() - start_time
+                recipe_count = len(cache.raw_data) if cache and hasattr(cache, 'raw_data') else 0
+                logger.info(f"Recipe cache initialized in {elapsed_time:.2f} seconds. Found {recipe_count} recipes")
             finally:
                 # Mark initialization as complete regardless of outcome
                 self._is_initializing = False
@@ -90,12 +98,85 @@ class RecipeScanner:
             
             # Create a synchronous method to bypass the async lock
             def sync_initialize_cache():
-                # Directly call the internal scan method to avoid lock issues
-                raw_data = loop.run_until_complete(self.scan_all_recipes())
+                # We need to implement scan_all_recipes logic synchronously here
+                # instead of calling the async method to avoid event loop issues
+                recipes = []
+                recipes_dir = self.recipes_dir
                 
-                # Update cache
-                self._cache.raw_data = raw_data
-                loop.run_until_complete(self._cache.resort())
+                if not recipes_dir or not os.path.exists(recipes_dir):
+                    logger.warning(f"Recipes directory not found: {recipes_dir}")
+                    return recipes
+                
+                # Get all recipe JSON files in the recipes directory
+                recipe_files = []
+                for root, _, files in os.walk(recipes_dir):
+                    recipe_count = sum(1 for f in files if f.lower().endswith('.recipe.json'))
+                    if recipe_count > 0:
+                        for file in files:
+                            if file.lower().endswith('.recipe.json'):
+                                recipe_files.append(os.path.join(root, file))
+                
+                # Process each recipe file
+                for recipe_path in recipe_files:
+                    try:
+                        with open(recipe_path, 'r', encoding='utf-8') as f:
+                            recipe_data = json.load(f)
+                        
+                        # Validate recipe data
+                        if not recipe_data or not isinstance(recipe_data, dict):
+                            logger.warning(f"Invalid recipe data in {recipe_path}")
+                            continue
+                        
+                        # Ensure required fields exist
+                        required_fields = ['id', 'file_path', 'title']
+                        if not all(field in recipe_data for field in required_fields):
+                            logger.warning(f"Missing required fields in {recipe_path}")
+                            continue
+                        
+                        # Ensure the image file exists
+                        image_path = recipe_data.get('file_path')
+                        if not os.path.exists(image_path):
+                            recipe_dir = os.path.dirname(recipe_path)
+                            image_filename = os.path.basename(image_path)
+                            alternative_path = os.path.join(recipe_dir, image_filename)
+                            if os.path.exists(alternative_path):
+                                recipe_data['file_path'] = alternative_path
+                        
+                        # Ensure loras array exists
+                        if 'loras' not in recipe_data:
+                            recipe_data['loras'] = []
+                        
+                        # Ensure gen_params exists
+                        if 'gen_params' not in recipe_data:
+                            recipe_data['gen_params'] = {}
+                        
+                        # Add to list without async operations
+                        recipes.append(recipe_data)
+                    except Exception as e:
+                        logger.error(f"Error loading recipe file {recipe_path}: {e}")
+                        import traceback
+                        traceback.print_exc(file=sys.stderr)
+                
+                # Update cache with the collected data
+                self._cache.raw_data = recipes
+                
+                # Create a simplified resort function that doesn't use await
+                if hasattr(self._cache, "resort"):
+                    try:
+                        # Sort by name
+                        self._cache.sorted_by_name = sorted(
+                            self._cache.raw_data,
+                            key=lambda x: x.get('title', '').lower()
+                        )
+                        
+                        # Sort by date (modified or created)
+                        self._cache.sorted_by_date = sorted(
+                            self._cache.raw_data,
+                            key=lambda x: x.get('modified', x.get('created_date', 0)),
+                            reverse=True
+                        )
+                    except Exception as e:
+                        logger.error(f"Error sorting recipe cache: {e}")
                 
                 return self._cache
             
@@ -103,6 +184,7 @@ class RecipeScanner:
             return sync_initialize_cache()
         except Exception as e:
             logger.error(f"Error in thread-based recipe cache initialization: {e}")
+            return self._cache if hasattr(self, '_cache') else None
         finally:
             # Clean up the event loop
             loop.close()

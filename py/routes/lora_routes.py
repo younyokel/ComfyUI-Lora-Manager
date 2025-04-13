@@ -125,44 +125,27 @@ class LoraRoutes:
             # Ensure services are initialized
             await self.init_services()
             
-            # Check if the RecipeScanner is initializing
-            is_initializing = (
-                self.recipe_scanner._cache is None or 
-                len(self.recipe_scanner._cache.raw_data) == 0 or
-                hasattr(self.recipe_scanner, '_is_initializing') and self.recipe_scanner._is_initializing
-            )
-
-            if is_initializing:
-                # 如果正在初始化，返回一个只包含加载提示的页面
+            # Skip initialization check and directly try to get cached data
+            try:
+                # Recipe scanner will initialize cache if needed
+                await self.recipe_scanner.get_cached_data(force_refresh=False)
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    recipes=[],  # Frontend will load recipes via API
+                    is_initializing=False,
+                    settings=settings,
+                    request=request
+                )
+            except Exception as cache_error:
+                logger.error(f"Error loading recipe cache data: {cache_error}")
+                # Still keep error handling - show initializing page on error
                 template = self.template_env.get_template('recipes.html')
                 rendered = template.render(
                     is_initializing=True,
                     settings=settings,
-                    request=request  # Pass the request object to the template
+                    request=request
                 )
-                
-                logger.info("Recipes page is initializing, returning loading page")
-            else:
-                # 正常流程 - 获取已经初始化好的缓存数据
-                try:
-                    cache = await self.recipe_scanner.get_cached_data(force_refresh=False)
-                    template = self.template_env.get_template('recipes.html')
-                    rendered = template.render(
-                        recipes=[],  # Frontend will load recipes via API
-                        is_initializing=False,
-                        settings=settings,
-                        request=request  # Pass the request object to the template
-                    )
-                except Exception as cache_error:
-                    logger.error(f"Error loading recipe cache data: {cache_error}")
-                    # 如果获取缓存失败，也显示初始化页面
-                    template = self.template_env.get_template('recipes.html')
-                    rendered = template.render(
-                        is_initializing=True,
-                        settings=settings,
-                        request=request
-                    )
-                    logger.info("Recipe cache error, returning initialization page")
+                logger.info("Recipe cache error, returning initialization page")
             
             return web.Response(
                 text=rendered,
