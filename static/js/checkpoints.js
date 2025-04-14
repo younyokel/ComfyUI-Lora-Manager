@@ -4,6 +4,7 @@ import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
 import { loadMoreCheckpoints } from './api/checkpointApi.js';
 import { CheckpointDownloadManager } from './managers/CheckpointDownloadManager.js';
+import { CheckpointContextMenu } from './components/ContextMenu/index.js';
 
 // Initialize the Checkpoints page
 class CheckpointsPageManager {
@@ -33,6 +34,9 @@ class CheckpointsPageManager {
         // Initialize page-specific components
         this.pageControls.restoreFolderFilter();
         this.pageControls.initFolderTagsVisibility();
+        
+        // Initialize context menu
+        new CheckpointContextMenu();
         
         // Initialize infinite scroll
         initializeInfiniteScroll('checkpoints');

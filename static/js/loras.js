@@ -6,7 +6,7 @@ import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { moveManager } from './managers/MoveManager.js';
-import { LoraContextMenu } from './components/ContextMenu.js';
+import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
 import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
 

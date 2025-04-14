@@ -4,6 +4,7 @@ import { loadMoreCheckpoints } from '../api/checkpointApi.js';
 import { debounce } from './debounce.js';
 
 export function initializeInfiniteScroll(pageType = 'loras') {
+    // Clean up any existing observer
     if (state.observer) {
         state.observer.disconnect();
     }
@@ -47,53 +48,53 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     }
 
     const debouncedLoadMore = debounce(loadMoreFunction, 100);
-
-    // Create a more robust observer with lower threshold and root margin
-    state.observer = new IntersectionObserver(
-        (entries) => {
-            const target = entries[0];
-            if (target.isIntersecting && !pageState.isLoading && pageState.hasMore) {
-                debouncedLoadMore();
-            }
-        },
-        { 
-            threshold: 0.01,  // Lower threshold to detect even minimal visibility
-            rootMargin: '0px 0px 300px 0px' // Increase bottom margin to trigger earlier
-        }
-    );
-
+    
     const grid = document.getElementById(gridId);
     if (!grid) {
         console.warn(`Grid with ID "${gridId}" not found for infinite scroll`);
         return;
     }
-
+    
+    // Remove any existing sentinel
     const existingSentinel = document.getElementById('scroll-sentinel');
     if (existingSentinel) {
-        state.observer.observe(existingSentinel);
-    } else {
-        // Create a wrapper div that will be placed after the grid
-        const sentinelWrapper = document.createElement('div');
-        sentinelWrapper.style.width = '100%';
-        sentinelWrapper.style.height = '30px'; // Increased height for better visibility
-        sentinelWrapper.style.margin = '0';
-        sentinelWrapper.style.padding = '0';
-        
-        // Create the actual sentinel element
-        const sentinel = document.createElement('div');
-        sentinel.id = 'scroll-sentinel';
-        sentinel.style.height = '30px'; // Match wrapper height
-        
-        // Add the sentinel to the wrapper
-        sentinelWrapper.appendChild(sentinel);
-        
-        // Insert the wrapper after the grid instead of inside it
-        grid.parentNode.insertBefore(sentinelWrapper, grid.nextSibling);
-        
-        state.observer.observe(sentinel);
+        existingSentinel.remove();
     }
     
-    // Add a scroll event backup to handle edge cases
+    // Create a sentinel element after the grid (not inside it)
+    const sentinel = document.createElement('div');
+    sentinel.id = 'scroll-sentinel';
+    sentinel.style.width = '100%';
+    sentinel.style.height = '20px';
+    sentinel.style.visibility = 'hidden'; // Make it invisible but still affect layout
+    
+    // Insert after grid instead of inside
+    grid.parentNode.insertBefore(sentinel, grid.nextSibling);
+    
+    // Create observer with appropriate settings, slightly different for checkpoints page
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: pageType === 'checkpoints' ? '0px 0px 200px 0px' : '0px 0px 100px 0px'
+    };
+    
+    // Initialize the observer
+    state.observer = new IntersectionObserver((entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && !pageState.isLoading && pageState.hasMore) {
+            debouncedLoadMore();
+        }
+    }, observerOptions);
+    
+    // Start observing
+    state.observer.observe(sentinel);
+    
+    // Clean up any existing scroll event listener
+    if (state.scrollHandler) {
+        window.removeEventListener('scroll', state.scrollHandler);
+        state.scrollHandler = null;
+    }
+    
+    // Add a simple backup scroll handler
     const handleScroll = debounce(() => {
         if (pageState.isLoading || !pageState.hasMore) return;
         
@@ -103,26 +104,17 @@ export function initializeInfiniteScroll(pageType = 'loras') {
         const rect = sentinel.getBoundingClientRect();
         const windowHeight = window.innerHeight;
         
-        // If sentinel is within 500px of viewport bottom, load more
-        if (rect.top < windowHeight + 500) {
+        if (rect.top < windowHeight + 200) {
             debouncedLoadMore();
         }
     }, 200);
     
-    // Clean up existing scroll listener if any
-    if (state.scrollHandler) {
-        window.removeEventListener('scroll', state.scrollHandler);
-    }
-    
-    // Save reference to the handler for cleanup
     state.scrollHandler = handleScroll;
     window.addEventListener('scroll', state.scrollHandler);
     
-    // Check position immediately in case content is already visible
-    setTimeout(() => {
-        const sentinel = document.getElementById('scroll-sentinel');
-        if (sentinel && sentinel.getBoundingClientRect().top < window.innerHeight) {
-            debouncedLoadMore();
-        }
-    }, 100);
+    // Clear any existing interval
+    if (state.scrollCheckInterval) {
+        clearInterval(state.scrollCheckInterval);
+        state.scrollCheckInterval = null;
+    }
 }

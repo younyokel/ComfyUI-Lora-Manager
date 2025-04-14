@@ -13,6 +13,18 @@
 
 {% block additional_components %}
 {% include 'components/checkpoint_modals.html' %}
+
+<div id="checkpointContextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" data-action="details"><i class="fas fa-info-circle"></i> View Details</div>
+    <div class="context-menu-item" data-action="civitai"><i class="fas fa-external-link-alt"></i> View on CivitAI</div>
+    <div class="context-menu-item" data-action="refresh-metadata"><i class="fas fa-sync"></i> Refresh Civitai Data</div>
+    <div class="context-menu-item" data-action="copyname"><i class="fas fa-copy"></i> Copy Model Filename</div>
+    <div class="context-menu-item" data-action="preview"><i class="fas fa-image"></i> Replace Preview</div>
+    <div class="context-menu-item" data-action="set-nsfw"><i class="fas fa-exclamation-triangle"></i> Set Content Rating</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" data-action="move"><i class="fas fa-folder-open"></i> Move to Folder</div>
+    <div class="context-menu-item delete-item" data-action="delete"><i class="fas fa-trash"></i> Delete Model</div>
+</div>
 {% endblock %}
 
 {% block content %}

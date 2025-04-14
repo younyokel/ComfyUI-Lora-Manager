@@ -1,79 +1,60 @@
-import { refreshSingleLoraMetadata } from '../api/loraApi.js';
-import { showToast, getNSFWLevelName } from '../utils/uiHelpers.js';
-import { NSFW_LEVELS } from '../utils/constants.js';
-import { getStorageItem } from '../utils/storageHelpers.js';
+import { BaseContextMenu } from './BaseContextMenu.js';
+import { refreshSingleLoraMetadata } from '../../api/loraApi.js';
+import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
+import { NSFW_LEVELS } from '../../utils/constants.js';
+import { getStorageItem } from '../../utils/storageHelpers.js';
 
-export class LoraContextMenu {
+export class LoraContextMenu extends BaseContextMenu {
     constructor() {
-        this.menu = document.getElementById('loraContextMenu');
-        this.currentCard = null;
+        super('loraContextMenu', '.lora-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
-        this.init();
-    }
-
-    init() {
-        document.addEventListener('click', () => this.hideMenu());
-        document.addEventListener('contextmenu', (e) => {
-            const card = e.target.closest('.lora-card');
-            if (!card) {
-                this.hideMenu();
-                return;
-            }
-            e.preventDefault();
-            this.showMenu(e.clientX, e.clientY, card);
-        });
-
-        this.menu.addEventListener('click', (e) => {
-            const menuItem = e.target.closest('.context-menu-item');
-            if (!menuItem || !this.currentCard) return;
-
-            const action = menuItem.dataset.action;
-            if (!action) return;
-            
-            switch(action) {
-                case 'detail':
-                    // Trigger the main card click which shows the modal
-                    this.currentCard.click();
-                    break;
-                case 'civitai':
-                    // Only trigger if the card is from civitai
-                    if (this.currentCard.dataset.from_civitai === 'true') {
-                        if (this.currentCard.dataset.meta === '{}') {
-                            showToast('Please fetch metadata from CivitAI first', 'info');
-                        } else {
-                            this.currentCard.querySelector('.fa-globe')?.click();
-                        }
-                    } else {
-                        showToast('No CivitAI information available', 'info');
-                    }
-                    break;
-                case 'copyname':
-                    this.currentCard.querySelector('.fa-copy')?.click();
-                    break;
-                case 'preview':
-                    this.currentCard.querySelector('.fa-image')?.click();
-                    break;
-                case 'delete':
-                    this.currentCard.querySelector('.fa-trash')?.click();
-                    break;
-                case 'move':
-                    moveManager.showMoveModal(this.currentCard.dataset.filepath);
-                    break;
-                case 'refresh-metadata':
-                    refreshSingleLoraMetadata(this.currentCard.dataset.filepath);
-                    break;
-                case 'set-nsfw':
-                    this.showNSFWLevelSelector(null, null, this.currentCard);
-                    break;
-            }
-            
-            this.hideMenu();
-        });
-
+        
         // Initialize NSFW Level Selector events
-        this.initNSFWSelector();
+        if (this.nsfwSelector) {
+            this.initNSFWSelector();
+        }
     }
 
+    handleMenuAction(action, menuItem) {
+        switch(action) {
+            case 'detail':
+                // Trigger the main card click which shows the modal
+                this.currentCard.click();
+                break;
+            case 'civitai':
+                // Only trigger if the card is from civitai
+                if (this.currentCard.dataset.from_civitai === 'true') {
+                    if (this.currentCard.dataset.meta === '{}') {
+                        showToast('Please fetch metadata from CivitAI first', 'info');
+                    } else {
+                        this.currentCard.querySelector('.fa-globe')?.click();
+                    }
+                } else {
+                    showToast('No CivitAI information available', 'info');
+                }
+                break;
+            case 'copyname':
+                this.currentCard.querySelector('.fa-copy')?.click();
+                break;
+            case 'preview':
+                this.currentCard.querySelector('.fa-image')?.click();
+                break;
+            case 'delete':
+                this.currentCard.querySelector('.fa-trash')?.click();
+                break;
+            case 'move':
+                moveManager.showMoveModal(this.currentCard.dataset.filepath);
+                break;
+            case 'refresh-metadata':
+                refreshSingleLoraMetadata(this.currentCard.dataset.filepath);
+                break;
+            case 'set-nsfw':
+                this.showNSFWLevelSelector(null, null, this.currentCard);
+                break;
+        }
+    }
+
+    // NSFW Selector methods from the original context menu
     initNSFWSelector() {
         // Close button
         const closeBtn = this.nsfwSelector.querySelector('.close-nsfw-selector');
@@ -273,11 +254,20 @@ export class LoraContextMenu {
             const overlay = previewContainer.querySelector('.nsfw-overlay');
             if (overlay) overlay.style.display = 'none';
             
-            // Update or remove toggle button
-            const toggleBtn = card.querySelector('.toggle-blur-btn');
-            if (toggleBtn) {
-                // We'll leave the button but update the icon
-                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+            // Remove toggle button when content is set to PG or PG13
+            const cardHeader = previewContainer.querySelector('.card-header');
+            if (cardHeader) {
+                const toggleBtn = cardHeader.querySelector('.toggle-blur-btn');
+                if (toggleBtn) {
+                    // Remove the toggle button completely
+                    toggleBtn.remove();
+                    
+                    // Update base model label class if it exists
+                    const baseModelLabel = cardHeader.querySelector('.base-model-label');
+                    if (baseModelLabel && baseModelLabel.classList.contains('with-toggle')) {
+                        baseModelLabel.classList.remove('with-toggle');
+                    }
+                }
             }
         }
     }
@@ -331,42 +321,4 @@ export class LoraContextMenu {
         // Show selector
         selector.style.display = 'block';
     }
-
-    showMenu(x, y, card) {
-        this.currentCard = card;
-        this.menu.style.display = 'block';
-
-        // 获取菜单尺寸
-        const menuRect = this.menu.getBoundingClientRect();
-        
-        // 获取视口尺寸
-        const viewportWidth = document.documentElement.clientWidth;
-        const viewportHeight = document.documentElement.clientHeight;
-        
-        // 计算最终位置 - 使用 clientX/Y，不需要考虑滚动偏移
-        let finalX = x;
-        let finalY = y;
-        
-        // 确保菜单不会超出右侧边界
-        if (x + menuRect.width > viewportWidth) {
-            finalX = x - menuRect.width;
-        }
-        
-        // 确保菜单不会超出底部边界
-        if (y + menuRect.height > viewportHeight) {
-            finalY = y - menuRect.height;
-        }
-        
-        // 直接设置位置，因为 position: fixed 是相对于视口定位的
-        this.menu.style.left = `${finalX}px`;
-        this.menu.style.top = `${finalY}px`;
-    }
-
-    hideMenu() {
-        this.menu.style.display = 'none';
-        this.currentCard = null;
-    }
 }
-
-// For backward compatibility, re-export the LoraContextMenu class
-// export { LoraContextMenu } from './ContextMenu/LoraContextMenu.js';

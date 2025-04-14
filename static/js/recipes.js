@@ -5,6 +5,7 @@ import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
 import { getCurrentPageState } from './state/index.js';
 import { getSessionItem, removeSessionItem } from './utils/storageHelpers.js';
+import { RecipeContextMenu } from './components/ContextMenu/index.js';
 
 class RecipeManager {
     constructor() {
@@ -36,6 +37,9 @@ class RecipeManager {
         
         // Set default search options if not already defined
         this._initSearchOptions();
+        
+        // Initialize context menu
+        new RecipeContextMenu();
         
         // Check for custom filter parameters in session storage
         this._checkCustomFilter();

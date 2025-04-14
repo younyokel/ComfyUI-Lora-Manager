@@ -5,7 +5,8 @@ import {
     refreshModels as baseRefreshModels,
     deleteModel as baseDeleteModel,
     replaceModelPreview,
-    fetchCivitaiMetadata
+    fetchCivitaiMetadata,
+    refreshSingleModelMetadata
 } from './baseModelApi.js';
 
 // Load more checkpoints with pagination
@@ -54,4 +55,29 @@ export async function fetchCivitai() {
         fetchEndpoint: '/api/checkpoints/fetch-all-civitai',
         resetAndReloadFunction: resetAndReload
     });
+}
+
+// Refresh single checkpoint metadata
+export async function refreshSingleCheckpointMetadata(filePath) {
+    return refreshSingleModelMetadata(filePath, 'checkpoint');
+}
+
+// Save checkpoint metadata (similar to the Lora version)
+export async function saveCheckpointMetadata(filePath, data) {
+    const response = await fetch('/api/checkpoints/save-metadata', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            file_path: filePath,
+            ...data
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to save metadata');
+    }
+    
+    return await response.json();
 }
