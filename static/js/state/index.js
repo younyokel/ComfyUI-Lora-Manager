@@ -1,11 +1,15 @@
 // Create the new hierarchical state structure
-import { getStorageItem } from '../utils/storageHelpers.js';
+import { getStorageItem, getMapFromStorage } from '../utils/storageHelpers.js';
 
 // Load settings from localStorage or use defaults
 const savedSettings = getStorageItem('settings', {
     blurMatureContent: true,
     show_only_sfw: false
 });
+
+// Load preview versions from localStorage
+const loraPreviewVersions = getMapFromStorage('lora_preview_versions');
+const checkpointPreviewVersions = getMapFromStorage('checkpoint_preview_versions');
 
 export const state = {
     // Global state
@@ -23,7 +27,7 @@ export const state = {
             hasMore: true,
             sortBy: 'name',
             activeFolder: null,
-            previewVersions: new Map(),
+            previewVersions: loraPreviewVersions,
             searchManager: null,
             searchOptions: {
                 filename: true,
@@ -66,6 +70,7 @@ export const state = {
             hasMore: true,
             sortBy: 'name',
             activeFolder: null,
+            previewVersions: checkpointPreviewVersions,
             searchManager: null,
             searchOptions: {
                 filename: true,

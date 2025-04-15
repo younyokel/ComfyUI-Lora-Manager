@@ -2,7 +2,7 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { showDeleteModal, confirmDelete } from '../utils/modalUtils.js';
-import { getSessionItem } from '../utils/storageHelpers.js';
+import { getSessionItem, saveMapToStorage } from '../utils/storageHelpers.js';
 
 /**
  * Shared functionality for handling models (loras and checkpoints)
@@ -424,12 +424,20 @@ async function uploadPreview(filePath, file, modelType = 'lora') {
             const previewContainer = card.querySelector('.card-preview');
             const oldPreview = previewContainer.querySelector('img, video');
             
-            // For LoRA models, use timestamp to prevent caching
-            if (modelType === 'lora') {
-                state.previewVersions?.set(filePath, Date.now());
+            // Get the current page's previewVersions Map based on model type
+            const pageType = modelType === 'checkpoint' ? 'checkpoints' : 'loras';
+            const previewVersions = state.pages[pageType].previewVersions;
+            
+            // Update the version timestamp
+            const timestamp = Date.now();
+            if (previewVersions) {
+                previewVersions.set(filePath, timestamp);
+                
+                // Save the updated Map to localStorage
+                const storageKey = modelType === 'checkpoint' ? 'checkpoint_preview_versions' : 'lora_preview_versions';
+                saveMapToStorage(storageKey, previewVersions);
             }
             
-            const timestamp = Date.now();
             const previewUrl = data.preview_url ? 
                 `${data.preview_url}?t=${timestamp}` : 
                 `/api/model/preview_image?path=${encodeURIComponent(filePath)}&t=${timestamp}`;

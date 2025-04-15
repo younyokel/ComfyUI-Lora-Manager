@@ -44,7 +44,10 @@ export function createCheckpointCard(checkpoint) {
 
     // Determine preview URL
     const previewUrl = checkpoint.preview_url || '/loras_static/images/no-preview.png';
-    const version = state.previewVersions ? state.previewVersions.get(checkpoint.file_path) : null;
+    
+    // Get the page-specific previewVersions map
+    const previewVersions = state.pages.checkpoints.previewVersions || new Map();
+    const version = previewVersions.get(checkpoint.file_path);
     const versionedPreviewUrl = version ? `${previewUrl}?t=${version}` : previewUrl;
 
     // Determine NSFW warning text based on level
