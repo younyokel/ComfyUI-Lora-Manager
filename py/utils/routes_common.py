@@ -95,7 +95,7 @@ class ModelRouteUtils:
                                 target_width=CARD_PREVIEW_WIDTH,
                                 format='webp',
                                 quality=85,
-                                preserve_metadata=True
+                                preserve_metadata=False
                             )
                             
                             # Save the optimized WebP image
@@ -387,7 +387,7 @@ class ModelRouteUtils:
                     target_width=CARD_PREVIEW_WIDTH,
                     format='webp',
                     quality=85,
-                    preserve_metadata=True
+                    preserve_metadata=False
                 )
                 extension = '.webp'  # Use .webp without .preview part
             

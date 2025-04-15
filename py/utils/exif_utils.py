@@ -203,7 +203,7 @@ class ExifUtils:
             return user_comment[:recipe_marker_index] + user_comment[next_line_index:]
             
     @staticmethod
-    def optimize_image(image_data, target_width=250, format='webp', quality=85, preserve_metadata=True):
+    def optimize_image(image_data, target_width=250, format='webp', quality=85, preserve_metadata=False):
         """
         Optimize an image by resizing and converting to WebP format
         
@@ -218,98 +218,144 @@ class ExifUtils:
             Tuple of (optimized_image_data, extension)
         """
         try:
-            # Extract metadata if needed
+            # First validate the image data is usable
+            img = None
+            if isinstance(image_data, str) and os.path.exists(image_data):
+                # It's a file path - validate file
+                try:
+                    with Image.open(image_data) as test_img:
+                        # Verify the image can be fully loaded by accessing its size
+                        width, height = test_img.size
+                    # If we got here, the image is valid
+                    img = Image.open(image_data)
+                except (IOError, OSError) as e:
+                    logger.error(f"Invalid or corrupt image file: {image_data}: {e}")
+                    raise ValueError(f"Cannot process corrupt image: {e}")
+            else:
+                # It's binary data - validate data
+                try:
+                    with BytesIO(image_data) as temp_buf:
+                        test_img = Image.open(temp_buf)
+                        # Verify the image can be fully loaded
+                        width, height = test_img.size
+                    # If successful, reopen for processing
+                    img = Image.open(BytesIO(image_data))
+                except Exception as e:
+                    logger.error(f"Invalid binary image data: {e}")
+                    raise ValueError(f"Cannot process corrupt image data: {e}")
+
+            # Extract metadata if needed and valid
             metadata = None
             if preserve_metadata:
-                if isinstance(image_data, str) and os.path.exists(image_data):
-                    # It's a file path
-                    metadata = ExifUtils.extract_image_metadata(image_data)
-                    img = Image.open(image_data)
-                else:
-                    # It's binary data
-                    temp_img = BytesIO(image_data)
-                    img = Image.open(temp_img)
-                    # Save to a temporary file to extract metadata
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
-                        temp_path = temp_file.name
-                        temp_file.write(image_data)
-                    metadata = ExifUtils.extract_image_metadata(temp_path)
-                    os.unlink(temp_path)
-            else:
-                # Just open the image without extracting metadata
-                if isinstance(image_data, str) and os.path.exists(image_data):
-                    img = Image.open(image_data)
-                else:
-                    img = Image.open(BytesIO(image_data))
-            
+                try:
+                    if isinstance(image_data, str) and os.path.exists(image_data):
+                        # For file path, extract directly
+                        metadata = ExifUtils.extract_image_metadata(image_data)
+                    else:
+                        # For binary data, save to temp file first
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                            temp_path = temp_file.name
+                            temp_file.write(image_data)
+                        try:
+                            metadata = ExifUtils.extract_image_metadata(temp_path)
+                        except Exception as e:
+                            logger.warning(f"Failed to extract metadata from temp file: {e}")
+                        finally:
+                            # Clean up temp file
+                            try:
+                                os.unlink(temp_path)
+                            except Exception:
+                                pass
+                except Exception as e:
+                    logger.warning(f"Failed to extract metadata, continuing without it: {e}")
+                    # Continue without metadata
+
             # Calculate new height to maintain aspect ratio
             width, height = img.size
             new_height = int(height * (target_width / width))
             
-            # Resize the image
-            resized_img = img.resize((target_width, new_height), Image.LANCZOS)
+            # Resize the image with error handling
+            try:
+                resized_img = img.resize((target_width, new_height), Image.LANCZOS)
+            except Exception as e:
+                logger.error(f"Failed to resize image: {e}")
+                # Return original image if resize fails
+                return image_data, '.jpg' if not isinstance(image_data, str) else os.path.splitext(image_data)[1]
             
             # Save to BytesIO in the specified format
             output = BytesIO()
             
-            # WebP format
+            # Set format and extension
             if format.lower() == 'webp':
-                resized_img.save(output, format='WEBP', quality=quality)
-                extension = '.webp'
-            # JPEG format
+                save_format, extension = 'WEBP', '.webp'
             elif format.lower() in ('jpg', 'jpeg'):
-                resized_img.save(output, format='JPEG', quality=quality)
-                extension = '.jpg'
-            # PNG format
+                save_format, extension = 'JPEG', '.jpg'
             elif format.lower() == 'png':
-                resized_img.save(output, format='PNG', optimize=True)
-                extension = '.png'
+                save_format, extension = 'PNG', '.png'
             else:
-                # Default to WebP
-                resized_img.save(output, format='WEBP', quality=quality)
-                extension = '.webp'
+                save_format, extension = 'WEBP', '.webp'
+            
+            # Save with error handling
+            try:
+                if save_format == 'PNG':
+                    resized_img.save(output, format=save_format, optimize=True)
+                else:
+                    resized_img.save(output, format=save_format, quality=quality)
+            except Exception as e:
+                logger.error(f"Failed to save optimized image: {e}")
+                # Return original image if save fails
+                return image_data, '.jpg' if not isinstance(image_data, str) else os.path.splitext(image_data)[1]
             
             # Get the optimized image data
             optimized_data = output.getvalue()
             
-            # If we need to preserve metadata, write it to a temporary file
+            # Handle metadata preservation if requested and available
             if preserve_metadata and metadata:
-                # For WebP format, we'll directly save with metadata
-                if format.lower() == 'webp':
-                    # Create a new BytesIO with metadata
-                    output_with_metadata = BytesIO()
-                    
-                    # Create EXIF data with user comment
-                    exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + metadata.encode('utf-16be')}}
-                    exif_bytes = piexif.dump(exif_dict)
-                    
-                    # Save with metadata
-                    resized_img.save(output_with_metadata, format='WEBP', exif=exif_bytes, quality=quality)
-                    optimized_data = output_with_metadata.getvalue()
-                else:
-                    # For other formats, use the temporary file approach
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as temp_file:
-                        temp_path = temp_file.name
-                        temp_file.write(optimized_data)
-                    
-                    # Add the metadata back
-                    ExifUtils.update_image_metadata(temp_path, metadata)
-                    
-                    # Read the file with metadata
-                    with open(temp_path, 'rb') as f:
-                        optimized_data = f.read()
-                    
-                    # Clean up
-                    os.unlink(temp_path)
+                try:
+                    if save_format == 'WEBP':
+                        # For WebP format, directly save with metadata
+                        try:
+                            output_with_metadata = BytesIO()
+                            exif_dict = {'Exif': {piexif.ExifIFD.UserComment: b'UNICODE\0' + metadata.encode('utf-16be')}}
+                            exif_bytes = piexif.dump(exif_dict)
+                            resized_img.save(output_with_metadata, format='WEBP', exif=exif_bytes, quality=quality)
+                            optimized_data = output_with_metadata.getvalue()
+                        except Exception as e:
+                            logger.warning(f"Failed to add metadata to WebP, continuing without it: {e}")
+                    else:
+                        # For other formats, use temporary file
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as temp_file:
+                            temp_path = temp_file.name
+                            temp_file.write(optimized_data)
+                        
+                        try:
+                            # Add metadata
+                            ExifUtils.update_image_metadata(temp_path, metadata)
+                            # Read back the file
+                            with open(temp_path, 'rb') as f:
+                                optimized_data = f.read()
+                        except Exception as e:
+                            logger.warning(f"Failed to add metadata to image, continuing without it: {e}")
+                        finally:
+                            # Clean up temp file
+                            try:
+                                os.unlink(temp_path)
+                            except Exception:
+                                pass
+                except Exception as e:
+                    logger.warning(f"Failed to preserve metadata: {e}, continuing with unmodified output")
             
             return optimized_data, extension
             
         except Exception as e:
             logger.error(f"Error optimizing image: {e}", exc_info=True)
-            # Return original data if optimization fails
+            # Return original data if optimization completely fails
             if isinstance(image_data, str) and os.path.exists(image_data):
-                with open(image_data, 'rb') as f:
-                    return f.read(), os.path.splitext(image_data)[1]
+                try:
+                    with open(image_data, 'rb') as f:
+                        return f.read(), os.path.splitext(image_data)[1]
+                except Exception:
+                    return image_data, '.jpg'  # Last resort fallback
             return image_data, '.jpg'

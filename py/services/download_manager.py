@@ -229,7 +229,7 @@ class DownloadManager:
                             target_width=CARD_PREVIEW_WIDTH,
                             format='webp',
                             quality=85,
-                            preserve_metadata=True
+                            preserve_metadata=False
                         )
                         
                         # Save the optimized image

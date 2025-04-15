@@ -42,7 +42,7 @@ def find_preview_file(base_name: str, dir_path: str) -> str:
                         target_width=CARD_PREVIEW_WIDTH,
                         format='webp',
                         quality=85,
-                        preserve_metadata=True
+                        preserve_metadata=False  # Changed from True to False
                     )
                     
                     # Save the optimized webp file
