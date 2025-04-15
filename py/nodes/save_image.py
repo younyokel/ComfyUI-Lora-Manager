@@ -224,12 +224,13 @@ class SaveImage:
                 from datetime import datetime
                 now = datetime.now()
                 date_table = {
-                    "yyyy": str(now.year),
-                    "MM": str(now.month).zfill(2),
-                    "dd": str(now.day).zfill(2),
-                    "hh": str(now.hour).zfill(2),
-                    "mm": str(now.minute).zfill(2),
-                    "ss": str(now.second).zfill(2),
+                    "yyyy": f"{now.year:04d}",
+                    "yy": f"{now.year % 100:02d}",
+                    "MM": f"{now.month:02d}",
+                    "dd": f"{now.day:02d}",
+                    "hh": f"{now.hour:02d}",
+                    "mm": f"{now.minute:02d}",
+                    "ss": f"{now.second:02d}",
                 }
                 if len(parts) >= 2:
                     date_format = parts[1]
