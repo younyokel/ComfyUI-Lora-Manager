@@ -104,8 +104,6 @@ class LoraManager:
     async def _initialize_services(cls):
         """Initialize all services using the ServiceRegistry"""
         try:
-            logger.info("LoRA Manager: Initializing services via ServiceRegistry")
-            
             # Initialize CivitaiClient first to ensure it's ready for other services
             civitai_client = await ServiceRegistry.get_civitai_client()
             
@@ -115,12 +113,12 @@ class LoraManager:
             
             # Start monitors
             lora_monitor.start()
-            logger.info("Lora monitor started")
+            logger.debug("Lora monitor started")
             
             # Make sure checkpoint monitor has paths before starting
             await checkpoint_monitor.initialize_paths()
             checkpoint_monitor.start()
-            logger.info("Checkpoint monitor started")
+            logger.debug("Checkpoint monitor started")
 
             # Register DownloadManager with ServiceRegistry
             download_manager = await ServiceRegistry.get_download_manager()

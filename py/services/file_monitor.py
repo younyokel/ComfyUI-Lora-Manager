@@ -408,7 +408,7 @@ class BaseFileMonitor:
     def start(self):
         """Start file monitoring"""
         if not ENABLE_FILE_MONITORING:
-            logger.info("File monitoring is disabled via ENABLE_FILE_MONITORING setting")
+            logger.debug("File monitoring is disabled via ENABLE_FILE_MONITORING setting")
             return
             
         for path in self.monitor_paths:
@@ -525,18 +525,18 @@ class CheckpointFileMonitor(BaseFileMonitor):
     def start(self):
         """Override start to check global enable flag"""
         if not ENABLE_FILE_MONITORING:
-            logger.info("Checkpoint file monitoring is disabled via ENABLE_FILE_MONITORING setting")
+            logger.debug("Checkpoint file monitoring is disabled via ENABLE_FILE_MONITORING setting")
             return
             
-        logger.info("Checkpoint file monitoring is temporarily disabled")
+        logger.debug("Checkpoint file monitoring is temporarily disabled")
         # Skip the actual monitoring setup
         pass
     
     async def initialize_paths(self):
         """Initialize monitor paths from scanner - currently disabled"""
         if not ENABLE_FILE_MONITORING:
-            logger.info("Checkpoint path initialization skipped (monitoring disabled)")
+            logger.debug("Checkpoint path initialization skipped (monitoring disabled)")
             return
             
-        logger.info("Checkpoint file path initialization skipped (monitoring disabled)")
+        logger.debug("Checkpoint file path initialization skipped (monitoring disabled)")
         pass
