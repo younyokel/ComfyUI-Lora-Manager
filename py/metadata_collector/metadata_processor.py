@@ -157,7 +157,7 @@ class MetadataProcessor:
         return params
     
     @staticmethod
-    def to_comfyui_format(metadata):
+    def to_dict(metadata):
         """Convert extracted metadata to the ComfyUI output.json format"""           
         params = MetadataProcessor.extract_generation_params(metadata)
         
@@ -171,5 +171,5 @@ class MetadataProcessor:
     @staticmethod
     def to_json(metadata):
         """Convert metadata to JSON string"""
-        params = MetadataProcessor.to_comfyui_format(metadata)
+        params = MetadataProcessor.to_dict(metadata)
         return json.dumps(params, indent=4)

@@ -167,8 +167,6 @@ class LoraLoaderManagerExtractor(NodeMetadataExtractor):
                 "node_id": node_id
             }
         
-        print(f"Active LoRAs for node {node_id}: {active_loras}")
-        
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
     "CheckpointLoaderSimple": CheckpointLoaderExtractor,
