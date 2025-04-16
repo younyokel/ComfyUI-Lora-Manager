@@ -1,5 +1,7 @@
 import os
 
+from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE
+
 
 class NodeMetadataExtractor:
     """Base class for node-specific metadata extraction"""
@@ -28,7 +30,7 @@ class CheckpointLoaderExtractor(NodeMetadataExtractor):
             
         model_name = inputs.get("ckpt_name")
         if model_name:
-            metadata["models"][node_id] = {
+            metadata[MODELS][node_id] = {
                 "name": model_name,
                 "type": "checkpoint",
                 "node_id": node_id
@@ -41,7 +43,7 @@ class CLIPTextEncodeExtractor(NodeMetadataExtractor):
             return
             
         text = inputs.get("text", "")
-        metadata["prompts"][node_id] = {
+        metadata[PROMPTS][node_id] = {
             "text": text,
             "node_id": node_id
         }
@@ -57,7 +59,7 @@ class SamplerExtractor(NodeMetadataExtractor):
             if key in inputs:
                 sampling_params[key] = inputs[key]
                 
-        metadata["sampling"][node_id] = {
+        metadata[SAMPLING][node_id] = {
             "parameters": sampling_params,
             "node_id": node_id
         }
@@ -74,10 +76,10 @@ class SamplerExtractor(NodeMetadataExtractor):
                     height = int(samples.shape[2] * 8)
                     width = int(samples.shape[3] * 8)
                     
-                    if "size" not in metadata:
-                        metadata["size"] = {}
+                    if SIZE not in metadata:
+                        metadata[SIZE] = {}
                         
-                    metadata["size"][node_id] = {
+                    metadata[SIZE][node_id] = {
                         "width": width,
                         "height": height,
                         "node_id": node_id
@@ -95,7 +97,7 @@ class LoraLoaderExtractor(NodeMetadataExtractor):
         strength_model = round(float(inputs.get("strength_model", 1.0)), 2)
         
         # Use the standardized format with lora_list
-        metadata["loras"][node_id] = {
+        metadata[LORAS][node_id] = {
             "lora_list": [
                 {
                     "name": lora_name,
@@ -114,10 +116,10 @@ class ImageSizeExtractor(NodeMetadataExtractor):
         width = inputs.get("width", 512)
         height = inputs.get("height", 512)
         
-        if "size" not in metadata:
-            metadata["size"] = {}
+        if SIZE not in metadata:
+            metadata[SIZE] = {}
             
-        metadata["size"][node_id] = {
+        metadata[SIZE][node_id] = {
             "width": width,
             "height": height,
             "node_id": node_id
@@ -164,7 +166,7 @@ class LoraLoaderManagerExtractor(NodeMetadataExtractor):
                     })
         
         if active_loras:
-            metadata["loras"][node_id] = {
+            metadata[LORAS][node_id] = {
                 "lora_list": active_loras,
                 "node_id": node_id
             }

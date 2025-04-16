@@ -1,5 +1,6 @@
 import time
 from .node_extractors import NODE_EXTRACTORS, GenericNodeExtractor
+from .constants import METADATA_CATEGORIES
 
 class MetadataRegistry:
     """A singleton registry to store and retrieve workflow metadata"""
@@ -22,22 +23,21 @@ class MetadataRegistry:
         self.node_cache = {}
         
         # Categories we want to track and retrieve from cache
-        self.metadata_categories = ["models", "prompts", "sampling", "loras", "size"]
+        self.metadata_categories = METADATA_CATEGORIES
     
     def start_collection(self, prompt_id):
         """Begin metadata collection for a new prompt"""
         self.current_prompt_id = prompt_id
         self.executed_nodes = set()
         self.prompt_metadata[prompt_id] = {
-            "models": {},
-            "prompts": {},
-            "sampling": {},
-            "loras": {},
-            "size": {},
+            category: {} for category in METADATA_CATEGORIES
+        }
+        # Add additional metadata fields
+        self.prompt_metadata[prompt_id].update({
             "execution_order": [],
             "current_prompt": None,  # Will store the prompt object
             "timestamp": time.time()
-        }
+        })
     
     def set_current_prompt(self, prompt):
         """Set the current prompt object reference"""

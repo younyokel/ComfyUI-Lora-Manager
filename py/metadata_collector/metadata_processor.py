@@ -1,5 +1,7 @@
 import json
 
+from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE
+
 class MetadataProcessor:
     """Process and format collected metadata"""
     
@@ -9,7 +11,7 @@ class MetadataProcessor:
         primary_sampler = None
         primary_sampler_id = None
         
-        for node_id, sampler_info in metadata.get("sampling", {}).items():
+        for node_id, sampler_info in metadata.get(SAMPLING, {}).items():
             parameters = sampler_info.get("parameters", {})
             denoise = parameters.get("denoise")
             
@@ -41,11 +43,11 @@ class MetadataProcessor:
     @staticmethod
     def find_primary_checkpoint(metadata):
         """Find the primary checkpoint model in the workflow"""
-        if not metadata.get("models"):
+        if not metadata.get(MODELS):
             return None
             
         # In most workflows, there's only one checkpoint, so we can just take the first one
-        for node_id, model_info in metadata.get("models", {}).items():
+        for node_id, model_info in metadata.get(MODELS, {}).items():
             if model_info.get("type") == "checkpoint":
                 return model_info.get("name")
                 
@@ -90,18 +92,18 @@ class MetadataProcessor:
             if prompt and primary_sampler_id:
                 # Trace positive prompt
                 positive_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "positive")
-                if positive_node_id and positive_node_id in metadata.get("prompts", {}):
-                    params["prompt"] = metadata["prompts"][positive_node_id].get("text", "")
+                if positive_node_id and positive_node_id in metadata.get(PROMPTS, {}):
+                    params["prompt"] = metadata[PROMPTS][positive_node_id].get("text", "")
                 
                 # Trace negative prompt
                 negative_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "negative")
-                if negative_node_id and negative_node_id in metadata.get("prompts", {}):
-                    params["negative_prompt"] = metadata["prompts"][negative_node_id].get("text", "")
+                if negative_node_id and negative_node_id in metadata.get(PROMPTS, {}):
+                    params["negative_prompt"] = metadata[PROMPTS][negative_node_id].get("text", "")
                 
                 # Check if the sampler itself has size information (from latent_image)
-                if primary_sampler_id in metadata.get("size", {}):
-                    width = metadata["size"][primary_sampler_id].get("width")
-                    height = metadata["size"][primary_sampler_id].get("height")
+                if primary_sampler_id in metadata.get(SIZE, {}):
+                    width = metadata[SIZE][primary_sampler_id].get("width")
+                    height = metadata[SIZE][primary_sampler_id].get("height")
                     if width and height:
                         params["size"] = f"{width}x{height}"
                 else:
@@ -115,9 +117,9 @@ class MetadataProcessor:
                         # Limit depth to avoid infinite loops in complex workflows
                         max_depth = 10
                         for _ in range(max_depth):
-                            if current_node_id in metadata.get("size", {}):
-                                width = metadata["size"][current_node_id].get("width")
-                                height = metadata["size"][current_node_id].get("height")
+                            if current_node_id in metadata.get(SIZE, {}):
+                                width = metadata[SIZE][current_node_id].get("width")
+                                height = metadata[SIZE][current_node_id].get("height")
                                 if width and height:
                                     params["size"] = f"{width}x{height}"
                                     size_found = True
@@ -141,7 +143,7 @@ class MetadataProcessor:
         
         # Extract LoRAs using the standardized format
         lora_parts = []
-        for node_id, lora_info in metadata.get("loras", {}).items():
+        for node_id, lora_info in metadata.get(LORAS, {}).items():
             # Access the lora_list from the standardized format
             lora_list = lora_info.get("lora_list", [])
             for lora in lora_list:
