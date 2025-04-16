@@ -90,6 +90,8 @@ class LoraLoaderExtractor(NodeMetadataExtractor):
             return
             
         lora_name = inputs.get("lora_name")
+        # Extract base filename without extension from path
+        lora_name = os.path.splitext(os.path.basename(lora_name))[0]
         strength_model = round(float(inputs.get("strength_model", 1.0)), 2)
         
         # Use the standardized format with lora_list
