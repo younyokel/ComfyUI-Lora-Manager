@@ -966,9 +966,6 @@ export function addLorasWidget(node, name, opts, callback) {
 // Function to directly save the recipe without dialog
 async function saveRecipeDirectly(widget) {
   try {
-    // Get the workflow data from the ComfyUI app
-    const prompt = await app.graphToPrompt();
-    
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {
       app.extensionManager.toast.add({
@@ -979,14 +976,9 @@ async function saveRecipeDirectly(widget) {
       });
     }
     
-    // Prepare the data - only send workflow JSON
-    const formData = new FormData();
-    formData.append('workflow_json', JSON.stringify(prompt.output));
-    
-    // Send the request
+    // Send the request to the backend API without workflow data
     const response = await fetch('/api/recipes/save-from-widget', {
-      method: 'POST',
-      body: formData
+      method: 'POST'
     });
     
     const result = await response.json();

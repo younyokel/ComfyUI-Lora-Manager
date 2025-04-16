@@ -11,7 +11,8 @@ from ..utils.recipe_parsers import RecipeParserFactory
 from ..utils.constants import CARD_PREVIEW_WIDTH
 
 from ..config import config
-from ..workflow.parser import WorkflowParser
+from ..metadata_collector import get_metadata  # Add MetadataCollector import
+from ..metadata_collector.metadata_processor import MetadataProcessor  # Add MetadataProcessor import
 from ..utils.utils import download_civitai_image
 from ..services.service_registry import ServiceRegistry  # Add ServiceRegistry import
 
@@ -24,7 +25,7 @@ class RecipeRoutes:
         # Initialize service references as None, will be set during async init
         self.recipe_scanner = None
         self.civitai_client = None
-        self.parser = WorkflowParser()
+        # Remove WorkflowParser instance
         
         # Pre-warm the cache
         self._init_cache_task = None
@@ -786,25 +787,13 @@ class RecipeRoutes:
             # Ensure services are initialized
             await self.init_services()
             
-            reader = await request.multipart()
+            # Get metadata using the metadata collector instead of workflow parsing
+            raw_metadata = get_metadata()
+            metadata_dict = MetadataProcessor.to_dict(raw_metadata)
             
-            # Process form data
-            workflow_json = None
-            
-            while True:
-                field = await reader.next()
-                if field is None:
-                    break
-                
-                if field.name == 'workflow_json':
-                    workflow_text = await field.text()
-                    try:
-                        workflow_json = json.loads(workflow_text)
-                    except:
-                        return web.json_response({"error": "Invalid workflow JSON"}, status=400)
-            
-            if not workflow_json:
-                return web.json_response({"error": "Missing workflow JSON"}, status=400)
+            # Check if we have valid metadata
+            if not metadata_dict:
+                return web.json_response({"error": "No generation metadata found"}, status=400)
             
             # Find the latest image in the temp directory
             temp_dir = config.temp_directory
@@ -822,14 +811,8 @@ class RecipeRoutes:
             image_files.sort(key=lambda x: x[1], reverse=True)
             latest_image_path = image_files[0][0]
             
-            # Parse the workflow to extract generation parameters and loras
-            parsed_workflow = self.parser.parse_workflow(workflow_json)
-
-            if not parsed_workflow:
-                return web.json_response({"error": "Could not extract parameters from workflow"}, status=400)
-            
-            # Get the lora stack from the parsed workflow
-            lora_stack = parsed_workflow.get("loras", "")
+            # Get the lora stack from the metadata
+            lora_stack = metadata_dict.get("loras", "")
             
             # Parse the lora stack format: "<lora:name:strength> <lora:name2:strength2> ..."
             import re
@@ -837,7 +820,7 @@ class RecipeRoutes:
             
             # Check if any loras were found
             if not lora_matches:
-                return web.json_response({"error": "No LoRAs found in the workflow"}, status=400)
+                return web.json_response({"error": "No LoRAs found in the generation metadata"}, status=400)
             
             # Generate recipe name from the first 3 loras (or less if fewer are available)
             loras_for_name = lora_matches[:3]  # Take at most 3 loras for the name
@@ -922,8 +905,8 @@ class RecipeRoutes:
                 "created_date": time.time(),
                 "base_model": most_common_base_model,
                 "loras": loras_data,
-                "checkpoint": parsed_workflow.get("checkpoint", ""),
-                "gen_params": {key: value for key, value in parsed_workflow.items() 
+                "checkpoint": metadata_dict.get("checkpoint", ""),
+                "gen_params": {key: value for key, value in metadata_dict.items() 
                                if key not in ['checkpoint', 'loras']},
                 "loras_stack": lora_stack  # Include the original lora stack string
             }
