@@ -1,3 +1,6 @@
+import os
+
+
 class NodeMetadataExtractor:
     """Base class for node-specific metadata extraction"""
     
@@ -87,13 +90,16 @@ class LoraLoaderExtractor(NodeMetadataExtractor):
             return
             
         lora_name = inputs.get("lora_name")
-        strength_model = inputs.get("strength_model", 1.0)
-        strength_clip = inputs.get("strength_clip", 1.0)
+        strength_model = round(float(inputs.get("strength_model", 1.0)), 2)
         
+        # Use the standardized format with lora_list
         metadata["loras"][node_id] = {
-            "name": lora_name,
-            "strength_model": strength_model,
-            "strength_clip": strength_clip,
+            "lora_list": [
+                {
+                    "name": lora_name,
+                    "strength": strength_model
+                }
+            ],
             "node_id": node_id
         }
 
@@ -120,34 +126,48 @@ class LoraLoaderManagerExtractor(NodeMetadataExtractor):
     def extract(node_id, inputs, outputs, metadata):
         if not inputs:
             return
-            
-        # Handle LoraManager nodes which might store loras differently
-        if "loras" in inputs:
-            loras = inputs.get("loras", [])
-            if isinstance(loras, list):
-                active_loras = []
-                # Filter for active loras (may be a list of dicts with 'active' flag)
-                for lora in loras:
-                    if isinstance(lora, dict) and lora.get("active", True) and not lora.get("_isDummy", False):
-                        active_loras.append({
-                            "name": lora.get("name", ""),
-                            "strength": lora.get("strength", 1.0)
-                        })
-                
-                if active_loras:
-                    metadata["loras"][node_id] = {
-                        "lora_list": active_loras,
-                        "node_id": node_id
-                    }
         
-        # If there's a direct text field with lora definitions
-        if "text" in inputs:
-            text = inputs.get("text", "")
-            if text and "<lora:" in text:
-                metadata["loras"][node_id] = {
-                    "raw_text": text,
-                    "node_id": node_id
-                }
+        active_loras = []
+        
+        # Process lora_stack if available
+        if "lora_stack" in inputs:
+            lora_stack = inputs.get("lora_stack", [])
+            for lora_path, model_strength, clip_strength in lora_stack:
+                # Extract lora name from path (following the format in lora_loader.py)
+                lora_name = os.path.splitext(os.path.basename(lora_path))[0]
+                active_loras.append({
+                    "name": lora_name,
+                    "strength": model_strength
+                })
+        
+        # Process loras from inputs
+        if "loras" in inputs:
+            loras_data = inputs.get("loras", [])
+            
+            # Handle new format: {'loras': {'__value__': [...]}} 
+            if isinstance(loras_data, dict) and '__value__' in loras_data:
+                loras_list = loras_data['__value__']
+            # Handle old format: {'loras': [...]}
+            elif isinstance(loras_data, list):
+                loras_list = loras_data
+            else:
+                loras_list = []
+                
+            # Filter for active loras
+            for lora in loras_list:
+                if isinstance(lora, dict) and lora.get("active", True) and not lora.get("_isDummy", False):
+                    active_loras.append({
+                        "name": lora.get("name", ""),
+                        "strength": float(lora.get("strength", 1.0))
+                    })
+        
+        if active_loras:
+            metadata["loras"][node_id] = {
+                "lora_list": active_loras,
+                "node_id": node_id
+            }
+        
+        print(f"Active LoRAs for node {node_id}: {active_loras}")
         
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
@@ -156,7 +176,7 @@ NODE_EXTRACTORS = {
     "KSampler": SamplerExtractor,
     "LoraLoader": LoraLoaderExtractor,
     "EmptyLatentImage": ImageSizeExtractor,
-    "Lora Loader (LoraManager)": LoraLoaderManagerExtractor,
+    "LoraManagerLoader": LoraLoaderManagerExtractor,
     "SamplerCustomAdvanced": SamplerExtractor,  # Add SamplerCustomAdvanced
     "UNETLoader": CheckpointLoaderExtractor,    # Add UNETLoader
     # Add other nodes as needed

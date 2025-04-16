@@ -139,12 +139,16 @@ class MetadataProcessor:
                             else:
                                 break  # Can't follow further
         
-        # Extract LoRAs
+        # Extract LoRAs using the standardized format
         lora_parts = []
         for node_id, lora_info in metadata.get("loras", {}).items():
-            name = lora_info.get("name", "unknown")
-            strength = lora_info.get("strength_model", 1.0)
-            lora_parts.append(f"<lora:{name}:{strength}>")
+            # Access the lora_list from the standardized format
+            lora_list = lora_info.get("lora_list", [])
+            for lora in lora_list:
+                name = lora.get("name", "unknown")
+                strength = lora.get("strength", 1.0)
+                lora_parts.append(f"<lora:{name}:{strength}>")
+        
         params["loras"] = " ".join(lora_parts)
         
         # Set default clip_skip value
