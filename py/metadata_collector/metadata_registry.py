@@ -1,4 +1,5 @@
 import time
+from nodes import NODE_CLASS_MAPPINGS
 from .node_extractors import NODE_EXTRACTORS, GenericNodeExtractor
 from .constants import METADATA_CATEGORIES
 
@@ -78,11 +79,18 @@ class MetadataRegistry:
             if node_id in executed_nodes:
                 continue
                 
-            class_type = node_data.get("class_type")
-            if not class_type:
+            # Get the node type from the prompt (this is the key in NODE_CLASS_MAPPINGS)
+            prompt_class_type = node_data.get("class_type")
+            if not prompt_class_type:
                 continue
                 
-            # Create cache key
+            # Convert to actual class name (which is what we use in our cache)
+            class_type = prompt_class_type
+            if prompt_class_type in NODE_CLASS_MAPPINGS:
+                class_obj = NODE_CLASS_MAPPINGS[prompt_class_type]
+                class_type = class_obj.__name__
+            
+            # Create cache key using the actual class name
             cache_key = f"{node_id}:{class_type}"
             
             # Check if this node type is relevant for metadata collection

@@ -184,6 +184,20 @@ class FluxGuidanceExtractor(NodeMetadataExtractor):
             metadata[SAMPLING][node_id] = {"parameters": {}, "node_id": node_id}
             
         metadata[SAMPLING][node_id]["parameters"]["guidance"] = guidance_value
+
+class UNETLoaderExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs or "unet_name" not in inputs:
+            return
+            
+        model_name = inputs.get("unet_name")
+        if model_name:
+            metadata[MODELS][node_id] = {
+                "name": model_name,
+                "type": "checkpoint",
+                "node_id": node_id
+            }
         
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
@@ -194,7 +208,7 @@ NODE_EXTRACTORS = {
     "EmptyLatentImage": ImageSizeExtractor,
     "LoraManagerLoader": LoraLoaderManagerExtractor,
     "SamplerCustomAdvanced": SamplerExtractor,  # Add SamplerCustomAdvanced
-    "UNETLoader": CheckpointLoaderExtractor,    # Add UNETLoader
+    "UNETLoader": UNETLoaderExtractor,          # Updated to use dedicated extractor
     "FluxGuidance": FluxGuidanceExtractor,      # Add FluxGuidance
     # Add other nodes as needed
 }
