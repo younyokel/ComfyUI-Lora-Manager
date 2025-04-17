@@ -11,15 +11,28 @@ class MetadataProcessor:
         primary_sampler = None
         primary_sampler_id = None
         
+        # First, check for KSamplerAdvanced with add_noise="enable"
         for node_id, sampler_info in metadata.get(SAMPLING, {}).items():
             parameters = sampler_info.get("parameters", {})
-            denoise = parameters.get("denoise")
+            add_noise = parameters.get("add_noise")
             
-            # If denoise is 1.0, this is likely the primary sampler
-            if denoise == 1.0 or denoise == 1:
+            # If add_noise is "enable", this is likely the primary sampler for KSamplerAdvanced
+            if add_noise == "enable":
                 primary_sampler = sampler_info
                 primary_sampler_id = node_id
                 break
+        
+        # If no KSamplerAdvanced found, fall back to traditional KSampler with denoise=1
+        if primary_sampler is None:
+            for node_id, sampler_info in metadata.get(SAMPLING, {}).items():
+                parameters = sampler_info.get("parameters", {})
+                denoise = parameters.get("denoise")
+                
+                # If denoise is 1.0, this is likely the primary sampler
+                if denoise == 1.0 or denoise == 1:
+                    primary_sampler = sampler_info
+                    primary_sampler_id = node_id
+                    break
                 
         return primary_sampler_id, primary_sampler
     
@@ -109,6 +122,7 @@ class MetadataProcessor:
             "cfg_scale": None,
             "guidance": None,  # Add guidance parameter
             "sampler": None,
+            "scheduler": None,
             "checkpoint": None,
             "loras": "",
             "size": None,
@@ -129,10 +143,12 @@ class MetadataProcessor:
         if primary_sampler:
             # Extract sampling parameters
             sampling_params = primary_sampler.get("parameters", {})
-            params["seed"] = sampling_params.get("seed")
+            # Handle both seed and noise_seed
+            params["seed"] = sampling_params.get("seed") if sampling_params.get("seed") is not None else sampling_params.get("noise_seed")
             params["steps"] = sampling_params.get("steps")
             params["cfg_scale"] = sampling_params.get("cfg")
             params["sampler"] = sampling_params.get("sampler_name")
+            params["scheduler"] = sampling_params.get("scheduler")
             
             # Trace connections from the primary sampler
             if prompt and primary_sampler_id:
