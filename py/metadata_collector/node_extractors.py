@@ -170,6 +170,20 @@ class LoraLoaderManagerExtractor(NodeMetadataExtractor):
                 "lora_list": active_loras,
                 "node_id": node_id
             }
+
+class FluxGuidanceExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs or "guidance" not in inputs:
+            return
+            
+        guidance_value = inputs.get("guidance")
+        
+        # Store the guidance value in SAMPLING category
+        if node_id not in metadata[SAMPLING]:
+            metadata[SAMPLING][node_id] = {"parameters": {}, "node_id": node_id}
+            
+        metadata[SAMPLING][node_id]["parameters"]["guidance"] = guidance_value
         
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
@@ -181,5 +195,6 @@ NODE_EXTRACTORS = {
     "LoraManagerLoader": LoraLoaderManagerExtractor,
     "SamplerCustomAdvanced": SamplerExtractor,  # Add SamplerCustomAdvanced
     "UNETLoader": CheckpointLoaderExtractor,    # Add UNETLoader
+    "FluxGuidance": FluxGuidanceExtractor,      # Add FluxGuidance
     # Add other nodes as needed
 }
