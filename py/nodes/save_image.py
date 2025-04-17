@@ -159,11 +159,20 @@ class SaveImage:
         
         # Model info
         if 'checkpoint' in metadata_dict:
-            # Extract basename without path
-            checkpoint = os.path.basename(metadata_dict.get('checkpoint', ''))
-            # Remove extension if present
-            checkpoint = os.path.splitext(checkpoint)[0]
-            params.append(f"Model: {checkpoint}")
+            # Ensure checkpoint is a string before processing
+            checkpoint = metadata_dict.get('checkpoint')
+            if checkpoint is not None:
+                # Handle both string and other types safely
+                if isinstance(checkpoint, str):
+                    # Extract basename without path
+                    checkpoint = os.path.basename(checkpoint)
+                    # Remove extension if present
+                    checkpoint = os.path.splitext(checkpoint)[0]
+                else:
+                    # Convert non-string to string
+                    checkpoint = str(checkpoint)
+                
+                params.append(f"Model: {checkpoint}")
         
         # Add LoRA hashes if available
         if lora_hashes:
