@@ -1,6 +1,6 @@
 import os
 
-from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE
+from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE, IMAGES
 
 
 class NodeMetadataExtractor:
@@ -235,7 +235,28 @@ class UNETLoaderExtractor(NodeMetadataExtractor):
                 "type": "checkpoint",
                 "node_id": node_id
             }
+
+class VAEDecodeExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        pass
         
+    @staticmethod
+    def update(node_id, outputs, metadata):
+        # Check if we already have a first VAEDecode result
+        if IMAGES in metadata and "first_decode" in metadata[IMAGES]:
+            return
+            
+        # Ensure IMAGES category exists
+        if IMAGES not in metadata:
+            metadata[IMAGES] = {}
+            
+        # Save reference to the first VAEDecode result
+        metadata[IMAGES]["first_decode"] = {
+            "node_id": node_id,
+            "image": outputs
+        }
+
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
     # Sampling
@@ -253,5 +274,7 @@ NODE_EXTRACTORS = {
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux
     "FluxGuidance": FluxGuidanceExtractor,      # Add FluxGuidance
+    # Image
+    "VAEDecode": VAEDecodeExtractor,  # Added VAEDecode extractor
     # Add other nodes as needed
 }
