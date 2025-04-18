@@ -243,19 +243,19 @@ class VAEDecodeExtractor(NodeMetadataExtractor):
         
     @staticmethod
     def update(node_id, outputs, metadata):
-        # Check if we already have a first VAEDecode result
-        if IMAGES in metadata and "first_decode" in metadata[IMAGES]:
-            return
-            
         # Ensure IMAGES category exists
         if IMAGES not in metadata:
             metadata[IMAGES] = {}
             
-        # Save reference to the first VAEDecode result
-        metadata[IMAGES]["first_decode"] = {
+        # Save image data under node ID index to be captured by caching mechanism
+        metadata[IMAGES][node_id] = {
             "node_id": node_id,
             "image": outputs
         }
+        
+        # Only set first_decode if it hasn't been recorded yet
+        if "first_decode" not in metadata[IMAGES]:
+            metadata[IMAGES]["first_decode"] = metadata[IMAGES][node_id]
 
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {

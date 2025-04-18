@@ -249,4 +249,27 @@ class MetadataRegistry:
             # If it's a tensor, return as is for processing in the route handler
             return image_data
         
+        # If no image is found in the current metadata, try to find it in the cache
+        # This handles the case where VAEDecode was cached by ComfyUI and not executed
+        prompt_obj = metadata.get("current_prompt")
+        if prompt_obj and hasattr(prompt_obj, "original_prompt"):
+            original_prompt = prompt_obj.original_prompt
+            for node_id, node_data in original_prompt.items():
+                class_type = node_data.get("class_type")
+                if class_type and class_type in NODE_CLASS_MAPPINGS:
+                    class_obj = NODE_CLASS_MAPPINGS[class_type]
+                    class_name = class_obj.__name__
+                    # Check if this is a VAEDecode node
+                    if class_name == "VAEDecode":
+                        # Try to find this node in the cache
+                        cache_key = f"{node_id}:{class_name}"
+                        if cache_key in self.node_cache:
+                            cached_data = self.node_cache[cache_key]
+                            if IMAGES in cached_data and node_id in cached_data[IMAGES]:
+                                image_data = cached_data[IMAGES][node_id]["image"]
+                                # Handle different image formats
+                                if isinstance(image_data, (list, tuple)) and len(image_data) > 0:
+                                    return image_data[0]
+                                return image_data
+        
         return None
