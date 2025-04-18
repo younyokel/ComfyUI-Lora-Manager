@@ -1,5 +1,9 @@
 import os
 import time
+import numpy as np
+from PIL import Image
+import torch
+import io
 import logging
 from aiohttp import web
 from typing import Dict
@@ -11,9 +15,11 @@ from ..utils.recipe_parsers import RecipeParserFactory
 from ..utils.constants import CARD_PREVIEW_WIDTH
 
 from ..config import config
-from ..workflow.parser import WorkflowParser
+from ..metadata_collector import get_metadata  # Add MetadataCollector import
+from ..metadata_collector.metadata_processor import MetadataProcessor  # Add MetadataProcessor import
 from ..utils.utils import download_civitai_image
 from ..services.service_registry import ServiceRegistry  # Add ServiceRegistry import
+from ..metadata_collector.metadata_registry import MetadataRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +30,7 @@ class RecipeRoutes:
         # Initialize service references as None, will be set during async init
         self.recipe_scanner = None
         self.civitai_client = None
-        self.parser = WorkflowParser()
+        # Remove WorkflowParser instance
         
         # Pre-warm the cache
         self._init_cache_task = None
@@ -656,8 +662,8 @@ class RecipeRoutes:
             logger.error(f"Error retrieving base models: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
-                'error': str(e)
-            }, status=500) 
+                'error': str(e)}
+            , status=500) 
 
     async def share_recipe(self, request: web.Request) -> web.Response:
         """Process a recipe image for sharing by adding metadata to EXIF"""
@@ -786,50 +792,72 @@ class RecipeRoutes:
             # Ensure services are initialized
             await self.init_services()
             
-            reader = await request.multipart()
+            # Get metadata using the metadata collector instead of workflow parsing
+            raw_metadata = get_metadata()
+            metadata_dict = MetadataProcessor.to_dict(raw_metadata)
             
-            # Process form data
-            workflow_json = None
+            # Check if we have valid metadata
+            if not metadata_dict:
+                return web.json_response({"error": "No generation metadata found"}, status=400)
             
-            while True:
-                field = await reader.next()
-                if field is None:
-                    break
+            # Get the most recent image from metadata registry instead of temp directory
+            metadata_registry = MetadataRegistry()
+            latest_image = metadata_registry.get_first_decoded_image()
+            
+            if not latest_image:
+                return web.json_response({"error": "No recent images found to use for recipe. Try generating an image first."}, status=400)
+            
+            # Convert the image data to bytes - handle tuple and tensor cases
+            logger.debug(f"Image type: {type(latest_image)}")
+            
+            try:
+                # Handle the tuple case first
+                if isinstance(latest_image, tuple):
+                    # Extract the tensor from the tuple
+                    if len(latest_image) > 0:
+                        tensor_image = latest_image[0]
+                    else:
+                        return web.json_response({"error": "Empty image tuple received"}, status=400)
+                else:
+                    tensor_image = latest_image
                 
-                if field.name == 'workflow_json':
-                    workflow_text = await field.text()
-                    try:
-                        workflow_json = json.loads(workflow_text)
-                    except:
-                        return web.json_response({"error": "Invalid workflow JSON"}, status=400)
+                # Get the shape info for debugging
+                if hasattr(tensor_image, 'shape'):
+                    shape_info = tensor_image.shape
+                    logger.debug(f"Tensor shape: {shape_info}, dtype: {tensor_image.dtype}")
+                
+                # Convert tensor to numpy array
+                if isinstance(tensor_image, torch.Tensor):
+                    image_np = tensor_image.cpu().numpy()
+                else:
+                    image_np = np.array(tensor_image)
+                
+                # Handle different tensor shapes
+                # Case: (1, 1, H, W, 3) or (1, H, W, 3) - batch or multi-batch
+                if len(image_np.shape) > 3:
+                    # Remove batch dimensions until we get to (H, W, 3)
+                    while len(image_np.shape) > 3:
+                        image_np = image_np[0]
+                
+                # If values are in [0, 1] range, convert to [0, 255]
+                if image_np.dtype == np.float32 or image_np.dtype == np.float64:
+                    if image_np.max() <= 1.0:
+                        image_np = (image_np * 255).astype(np.uint8)
+                
+                # Ensure image is in the right format (HWC with RGB channels)
+                if len(image_np.shape) == 3 and image_np.shape[2] == 3:
+                    pil_image = Image.fromarray(image_np)
+                    img_byte_arr = io.BytesIO()
+                    pil_image.save(img_byte_arr, format='PNG')
+                    image = img_byte_arr.getvalue()
+                else:
+                    return web.json_response({"error": f"Cannot handle this data shape: {image_np.shape}, {image_np.dtype}"}, status=400)
+            except Exception as e:
+                logger.error(f"Error processing image data: {str(e)}", exc_info=True)
+                return web.json_response({"error": f"Error processing image: {str(e)}"}, status=400)
             
-            if not workflow_json:
-                return web.json_response({"error": "Missing workflow JSON"}, status=400)
-            
-            # Find the latest image in the temp directory
-            temp_dir = config.temp_directory
-            image_files = []
-            
-            for file in os.listdir(temp_dir):
-                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                    file_path = os.path.join(temp_dir, file)
-                    image_files.append((file_path, os.path.getmtime(file_path)))
-            
-            if not image_files:
-                return web.json_response({"error": "No recent images found to use for recipe"}, status=400)
-            
-            # Sort by modification time (newest first)
-            image_files.sort(key=lambda x: x[1], reverse=True)
-            latest_image_path = image_files[0][0]
-            
-            # Parse the workflow to extract generation parameters and loras
-            parsed_workflow = self.parser.parse_workflow(workflow_json)
-
-            if not parsed_workflow:
-                return web.json_response({"error": "Could not extract parameters from workflow"}, status=400)
-            
-            # Get the lora stack from the parsed workflow
-            lora_stack = parsed_workflow.get("loras", "")
+            # Get the lora stack from the metadata
+            lora_stack = metadata_dict.get("loras", "")
             
             # Parse the lora stack format: "<lora:name:strength> <lora:name2:strength2> ..."
             import re
@@ -837,7 +865,7 @@ class RecipeRoutes:
             
             # Check if any loras were found
             if not lora_matches:
-                return web.json_response({"error": "No LoRAs found in the workflow"}, status=400)
+                return web.json_response({"error": "No LoRAs found in the generation metadata"}, status=400)
             
             # Generate recipe name from the first 3 loras (or less if fewer are available)
             loras_for_name = lora_matches[:3]  # Take at most 3 loras for the name
@@ -850,10 +878,6 @@ class RecipeRoutes:
                 recipe_name_parts.append(f"{basename}:{lora_strength}")
             
             recipe_name = " ".join(recipe_name_parts)
-            
-            # Read the image
-            with open(latest_image_path, 'rb') as f:
-                image = f.read()
             
             # Create recipes directory if it doesn't exist
             recipes_dir = self.recipe_scanner.recipes_dir
@@ -922,8 +946,8 @@ class RecipeRoutes:
                 "created_date": time.time(),
                 "base_model": most_common_base_model,
                 "loras": loras_data,
-                "checkpoint": parsed_workflow.get("checkpoint", ""),
-                "gen_params": {key: value for key, value in parsed_workflow.items() 
+                "checkpoint": metadata_dict.get("checkpoint", ""),
+                "gen_params": {key: value for key, value in metadata_dict.items() 
                                if key not in ['checkpoint', 'loras']},
                 "loras_stack": lora_stack  # Include the original lora stack string
             }

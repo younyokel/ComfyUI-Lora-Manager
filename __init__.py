@@ -3,15 +3,22 @@ from .py.nodes.lora_loader import LoraManagerLoader
 from .py.nodes.trigger_word_toggle import TriggerWordToggle
 from .py.nodes.lora_stacker import LoraStacker
 from .py.nodes.save_image import SaveImage
+from .py.nodes.debug_metadata import DebugMetadata
+# Import metadata collector to install hooks on startup
+from .py.metadata_collector import init as init_metadata_collector
 
 NODE_CLASS_MAPPINGS = {
     LoraManagerLoader.NAME: LoraManagerLoader,
     TriggerWordToggle.NAME: TriggerWordToggle,
     LoraStacker.NAME: LoraStacker,
-    SaveImage.NAME: SaveImage
+    SaveImage.NAME: SaveImage,
+    DebugMetadata.NAME: DebugMetadata
 }
 
 WEB_DIRECTORY = "./web/comfyui"
+
+# Initialize metadata collector
+init_metadata_collector()
 
 # Register routes on import
 LoraManager.add_routes()
