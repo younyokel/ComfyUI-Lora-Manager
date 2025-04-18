@@ -235,8 +235,8 @@ function addNewTriggerWord(word) {
     
     // Validation: Check total number
     const currentTags = tagsContainer.querySelectorAll('.trigger-word-tag');
-    if (currentTags.length >= 10) {
-        showToast('Maximum 10 trigger words allowed', 'error');
+    if (currentTags.length >= 30) {
+        showToast('Maximum 30 trigger words allowed', 'error');
         return;
     }
     
