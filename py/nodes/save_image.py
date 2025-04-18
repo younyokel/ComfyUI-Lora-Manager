@@ -34,7 +34,7 @@ class SaveImage:
                 "file_format": (["png", "jpeg", "webp"],),
             },
             "optional": {
-                "lossless_webp": ("BOOLEAN", {"default": True}),
+                "lossless_webp": ("BOOLEAN", {"default": False}),
                 "quality": ("INT", {"default": 100, "min": 1, "max": 100}),
                 "embed_workflow": ("BOOLEAN", {"default": False}),
                 "add_counter_to_filename": ("BOOLEAN", {"default": True}),
@@ -290,7 +290,8 @@ class SaveImage:
             if file_format == "png":
                 file = base_filename + ".png"
                 file_extension = ".png"
-                save_kwargs = {"optimize": True, "compress_level": self.compress_level}
+                # Remove "optimize": True to match built-in node behavior
+                save_kwargs = {"compress_level": self.compress_level}
                 pnginfo = PngImagePlugin.PngInfo()
             elif file_format == "jpeg":
                 file = base_filename + ".jpg"
@@ -299,7 +300,8 @@ class SaveImage:
             elif file_format == "webp":
                 file = base_filename + ".webp" 
                 file_extension = ".webp"
-                save_kwargs = {"quality": quality, "lossless": lossless_webp}
+                # Add optimization param to control performance
+                save_kwargs = {"quality": quality, "lossless": lossless_webp, "method": 0}
             
             # Full save path
             file_path = os.path.join(full_output_folder, file)
