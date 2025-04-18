@@ -409,7 +409,12 @@ class ApiRoutes:
                 return web.json_response(model)
             
             # Get model details from Civitai API    
-            model = await self.civitai_client.get_model_version_info(model_version_id)
+            model, error_msg = await self.civitai_client.get_model_version_info(model_version_id)
+            
+            if not model:
+                status_code = 404 if error_msg and "model not found" in error_msg.lower() else 500
+                return web.Response(status=status_code, text=error_msg or "Failed to fetch model information")
+                
             return web.json_response(model)
         except Exception as e:
             logger.error(f"Error fetching model details: {e}")
@@ -773,7 +778,7 @@ class ApiRoutes:
                 logger.info(f"Fetching model metadata for model ID: {model_id}")
                 model_metadata, _ = await self.civitai_client.get_model_metadata(model_id)
                 
-                if model_metadata:
+                if (model_metadata):
                     description = model_metadata.get('description')
                     tags = model_metadata.get('tags', [])
                 

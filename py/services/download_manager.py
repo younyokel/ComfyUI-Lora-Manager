@@ -86,21 +86,24 @@ class DownloadManager:
 
             # Get version info based on the provided identifier
             version_info = None
+            error_msg = None
             
             if download_url:
                 # Extract version ID from download URL
                 version_id = download_url.split('/')[-1]
-                version_info = await civitai_client.get_model_version_info(version_id)
+                version_info, error_msg = await civitai_client.get_model_version_info(version_id)
             elif model_version_id:
                 # Use model version ID directly
-                version_info = await civitai_client.get_model_version_info(model_version_id)
+                version_info, error_msg = await civitai_client.get_model_version_info(model_version_id)
             elif model_hash:
                 # Get model by hash
                 version_info = await civitai_client.get_model_by_hash(model_hash)
 
             
             if not version_info:
-                return {'success': False, 'error': 'Failed to fetch model metadata'}
+                if error_msg and "model not found" in error_msg.lower():
+                    return {'success': False, 'error': f'Model not found on Civitai: {error_msg}'}
+                return {'success': False, 'error': error_msg or 'Failed to fetch model metadata'}
 
             # Check if this is an early access model
             if version_info.get('earlyAccessEndsAt'):
@@ -202,7 +205,7 @@ class DownloadManager:
                 # Check if it's a video or an image
                 is_video = images[0].get('type') == 'video'
                 
-                if is_video:
+                if (is_video):
                     # For videos, use .mp4 extension
                     preview_ext = '.mp4'
                     preview_path = os.path.splitext(save_path)[0] + preview_ext

@@ -341,6 +341,10 @@ class RecipeScanner:
         metadata_updated = False
         
         for lora in recipe_data['loras']:
+            # Skip deleted loras that were already marked
+            if lora.get('isDeleted', False):
+                continue
+                
             # Skip if already has complete information
             if 'hash' in lora and 'file_name' in lora and lora['file_name']:
                 continue
@@ -356,10 +360,17 @@ class RecipeScanner:
                     metadata_updated = True
                 else:
                     # If not in cache, fetch from Civitai
-                    hash_from_civitai = await self._get_hash_from_civitai(model_version_id)
-                    if hash_from_civitai:
-                        lora['hash'] = hash_from_civitai
-                        metadata_updated = True
+                    result = await self._get_hash_from_civitai(model_version_id)
+                    if isinstance(result, tuple):
+                        hash_from_civitai, is_deleted = result
+                        if hash_from_civitai:
+                            lora['hash'] = hash_from_civitai
+                            metadata_updated = True
+                        elif is_deleted:
+                            # Mark the lora as deleted if it was not found on Civitai
+                            lora['isDeleted'] = True
+                            logger.warning(f"Marked lora with modelVersionId {model_version_id} as deleted")
+                            metadata_updated = True
                     else:
                         logger.debug(f"Could not get hash for modelVersionId {model_version_id}")
             
@@ -411,41 +422,26 @@ class RecipeScanner:
                 logger.error("Failed to get CivitaiClient from ServiceRegistry")
                 return None
                 
-            version_info = await civitai_client.get_model_version_info(model_version_id)
+            version_info, error_msg = await civitai_client.get_model_version_info(model_version_id)
             
-            if not version_info or not version_info.get('files'):
-                logger.debug(f"No files found in version info for ID: {model_version_id}")
-                return None
-                
+            if not version_info:
+                if error_msg and "model not found" in error_msg.lower():
+                    logger.warning(f"Model with version ID {model_version_id} was not found on Civitai - marking as deleted")
+                    return None, True  # Return None hash and True for isDeleted flag
+                else:
+                    logger.debug(f"Could not get hash for modelVersionId {model_version_id}: {error_msg}")
+                    return None, False  # Return None hash but not marked as deleted
+                    
             # Get hash from the first file
             for file_info in version_info.get('files', []):
                 if file_info.get('hashes', {}).get('SHA256'):
-                    return file_info['hashes']['SHA256']
+                    return file_info['hashes']['SHA256'], False  # Return hash with False for isDeleted flag
                     
             logger.debug(f"No SHA256 hash found in version info for ID: {model_version_id}")
-            return None
+            return None, False
         except Exception as e:
             logger.error(f"Error getting hash from Civitai: {e}")
-            return None
-
-    async def _get_model_version_name(self, model_version_id: str) -> Optional[str]:
-        """Get model version name from Civitai API"""
-        try:
-            # Get CivitaiClient from ServiceRegistry
-            civitai_client = await self._get_civitai_client()
-            if not civitai_client:
-                return None
-                
-            version_info = await civitai_client.get_model_version_info(model_version_id)
-            
-            if version_info and 'name' in version_info:
-                return version_info['name']
-                    
-            logger.debug(f"No version name found for modelVersionId {model_version_id}")
-            return None
-        except Exception as e:
-            logger.error(f"Error getting model version name from Civitai: {e}")
-            return None
+            return None, False
 
     async def _determine_base_model(self, loras: List[Dict]) -> Optional[str]:
         """Determine the most common base model among LoRAs"""

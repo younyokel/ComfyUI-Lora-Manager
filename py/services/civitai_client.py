@@ -210,8 +210,17 @@ class CivitaiClient:
             logger.error(f"Error fetching model versions: {e}")
             return None
 
-    async def get_model_version_info(self, version_id: str) -> Optional[Dict]:
-        """Fetch model version metadata from Civitai"""
+    async def get_model_version_info(self, version_id: str) -> Tuple[Optional[Dict], Optional[str]]:
+        """Fetch model version metadata from Civitai
+        
+        Args:
+            version_id: The Civitai model version ID
+            
+        Returns:
+            Tuple[Optional[Dict], Optional[str]]: A tuple containing:
+                - The model version data or None if not found
+                - An error message if there was an error, or None on success
+        """
         try:
             session = await self.session
             url = f"{self.base_url}/model-versions/{version_id}"
@@ -219,11 +228,25 @@ class CivitaiClient:
             
             async with session.get(url, headers=headers) as response:
                 if response.status == 200:
-                    return await response.json()
-                return None
+                    return await response.json(), None
+                
+                # Handle specific error cases
+                if response.status == 404:
+                    # Try to parse the error message
+                    try:
+                        error_data = await response.json()
+                        error_msg = error_data.get('error', f"Model not found (status 404)")
+                        logger.warning(f"Model version not found: {version_id} - {error_msg}")
+                        return None, error_msg
+                    except:
+                        return None, "Model not found (status 404)"
+                
+                # Other error cases
+                return None, f"Failed to fetch model info (status {response.status})"
         except Exception as e:
-            logger.error(f"Error fetching model version info: {e}")
-            return None
+            error_msg = f"Error fetching model version info: {e}"
+            logger.error(error_msg)
+            return None, error_msg
 
     async def get_model_metadata(self, model_id: str) -> Tuple[Optional[Dict], int]:
         """Fetch model metadata (description and tags) from Civitai API
