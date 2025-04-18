@@ -50,8 +50,8 @@ class ApiRoutes:
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
         app.router.add_get('/api/folders', routes.get_folders)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
-        app.router.add_get('/api/civitai/model/{modelVersionId}', routes.get_civitai_model)
-        app.router.add_get('/api/civitai/model/{hash}', routes.get_civitai_model)
+        app.router.add_get('/api/civitai/model/version/{modelVersionId}', routes.get_civitai_model_by_version)
+        app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
@@ -396,30 +396,52 @@ class ApiRoutes:
             logger.error(f"Error fetching model versions: {e}")
             return web.Response(status=500, text=str(e))
         
-    async def get_civitai_model(self, request: web.Request) -> web.Response:
-        """Get CivitAI model details by model version ID or hash"""
+    async def get_civitai_model_by_version(self, request: web.Request) -> web.Response:
+        """Get CivitAI model details by model version ID"""
         try:
             if self.civitai_client is None:
                 self.civitai_client = await ServiceRegistry.get_civitai_client()
                 
             model_version_id = request.match_info.get('modelVersionId')
-            if not model_version_id:
-                hash = request.match_info.get('hash')
-                model = await self.civitai_client.get_model_by_hash(hash)
-                return web.json_response(model)
             
             # Get model details from Civitai API    
             model, error_msg = await self.civitai_client.get_model_version_info(model_version_id)
             
             if not model:
-                status_code = 404 if error_msg and "model not found" in error_msg.lower() else 500
-                return web.Response(status=status_code, text=error_msg or "Failed to fetch model information")
+                # Log warning for failed model retrieval
+                logger.warning(f"Failed to fetch model version {model_version_id}: {error_msg}")
+                
+                # Determine status code based on error message
+                status_code = 404 if error_msg and "not found" in error_msg.lower() else 500
+                
+                return web.json_response({
+                    "success": False,
+                    "error": error_msg or "Failed to fetch model information"
+                }, status=status_code)
                 
             return web.json_response(model)
         except Exception as e:
             logger.error(f"Error fetching model details: {e}")
-            return web.Response(status=500, text=str(e))
-    
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
+    async def get_civitai_model_by_hash(self, request: web.Request) -> web.Response:
+        """Get CivitAI model details by hash"""
+        try:
+            if self.civitai_client is None:
+                self.civitai_client = await ServiceRegistry.get_civitai_client()
+                
+            hash = request.match_info.get('hash')
+            model = await self.civitai_client.get_model_by_hash(hash)
+            return web.json_response(model)
+        except Exception as e:
+            logger.error(f"Error fetching model details by hash: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
 
     async def download_lora(self, request: web.Request) -> web.Response:
         async with self._download_lock:
