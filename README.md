@@ -20,6 +20,14 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.7
+* **Enhanced Context Menu** - Added comprehensive context menu functionality to Recipes and Checkpoints pages for improved workflow
+* **Interactive LoRA Strength Control** - Implemented drag functionality in LoRA Loader for intuitive strength adjustment
+* **Metadata Collector Overhaul** - Rebuilt metadata collection system with optimized architecture for better performance
+* **Improved Save Image Node** - Enhanced metadata capture and image saving performance with the new metadata collector
+* **Streamlined Recipe Saving** - Optimized Save Recipe functionality to work independently without requiring Preview Image nodes
+* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
+
 ### v0.8.6 Major Update
 * **Checkpoint Management** - Added comprehensive management for model checkpoints including scanning, searching, filtering, and deletion
 * **Enhanced Metadata Support** - New capabilities for retrieving and managing checkpoint metadata with improved operations
