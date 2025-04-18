@@ -239,6 +239,14 @@ class MetadataRegistry:
             
         metadata = self.prompt_metadata[key]
         if IMAGES in metadata and "first_decode" in metadata[IMAGES]:
-            return metadata[IMAGES]["first_decode"]["image"]
+            image_data = metadata[IMAGES]["first_decode"]["image"]
+            
+            # If it's an image batch or tuple, handle various formats
+            if isinstance(image_data, (list, tuple)) and len(image_data) > 0:
+                # Return first element of list/tuple
+                return image_data[0]
+            
+            # If it's a tensor, return as is for processing in the route handler
+            return image_data
         
         return None
