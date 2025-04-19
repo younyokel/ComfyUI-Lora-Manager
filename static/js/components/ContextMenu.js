@@ -130,7 +130,7 @@ export class LoraContextMenu {
     }
 
     async saveModelMetadata(filePath, data) {
-        const response = await fetch('/loras/api/save-metadata', {
+        const response = await fetch('/api/loras/save-metadata', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -367,3 +367,6 @@ export class LoraContextMenu {
         this.currentCard = null;
     }
 }
+
+// For backward compatibility, re-export the LoraContextMenu class
+// export { LoraContextMenu } from './ContextMenu/LoraContextMenu.js';

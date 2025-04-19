@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/willmiao/ComfyUI-Lora-Manager?include_prereleases&color=blue&logo=github)](https://github.com/willmiao/ComfyUI-Lora-Manager/releases)
 [![Release Date](https://img.shields.io/github/release-date/willmiao/ComfyUI-Lora-Manager?color=green&logo=github)](https://github.com/willmiao/ComfyUI-Lora-Manager/releases)
 
-A comprehensive toolset that streamlines organizing, downloading, and applying LoRA models in ComfyUI. With powerful features like recipe management and one-click workflow integration, working with LoRAs becomes faster, smoother, and significantly easier. Access the interface at: `http://localhost:8188/loras`
+A comprehensive toolset that streamlines organizing, downloading, and applying LoRA models in ComfyUI. With powerful features like recipe management, checkpoint organization, and one-click workflow integration, working with models becomes faster, smoother, and significantly easier. Access the interface at: `http://localhost:8188/loras`
 
 ![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/screenshot.png)
 
@@ -19,6 +19,19 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 ---
 
 ## Release Notes
+
+### v0.8.7
+* **Enhanced Context Menu** - Added comprehensive context menu functionality to Recipes and Checkpoints pages for improved workflow
+* **Interactive LoRA Strength Control** - Implemented drag functionality in LoRA Loader for intuitive strength adjustment
+* **Metadata Collector Overhaul** - Rebuilt metadata collection system with optimized architecture for better performance
+* **Improved Save Image Node** - Enhanced metadata capture and image saving performance with the new metadata collector
+* **Streamlined Recipe Saving** - Optimized Save Recipe functionality to work independently without requiring Preview Image nodes
+* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
+
+### v0.8.6 Major Update
+* **Checkpoint Management** - Added comprehensive management for model checkpoints including scanning, searching, filtering, and deletion
+* **Enhanced Metadata Support** - New capabilities for retrieving and managing checkpoint metadata with improved operations
+* **Improved Initial Loading** - Optimized cache initialization with visual progress indicators for better user experience
 
 ### v0.8.5
 * **Enhanced LoRA & Recipe Connectivity** - Added Recipes tab in LoRA details to see all recipes using a specific LoRA
@@ -92,6 +105,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
   - Trigger words at a glance
   - One-click workflow integration with preset values
   
+- 🔄 **Checkpoint Management**
+  - Scan and organize checkpoint models
+  - Filter and search your collection
+  - View and edit metadata
+  - Clean up and manage disk space
+  
 - 🧩 **LoRA Recipes**
   - Save and share favorite LoRA combinations
   - Preserve generation parameters for future reference
@@ -103,6 +122,7 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
   - Context menu for quick actions
   - Custom notes and usage tips
   - Multi-folder support
+  - Visual progress indicators during initialization
 
 ---
 

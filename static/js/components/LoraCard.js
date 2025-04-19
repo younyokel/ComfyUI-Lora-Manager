@@ -1,8 +1,9 @@
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, openCivitai } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
+import { replacePreview, deleteModel } from '../api/loraApi.js'
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');
@@ -43,7 +44,9 @@ export function createLoraCard(lora) {
         card.classList.add('selected');
     }
 
-    const version = state.previewVersions.get(lora.file_path);
+    // Get the page-specific previewVersions map
+    const previewVersions = state.pages.loras.previewVersions || new Map();
+    const version = previewVersions.get(lora.file_path);
     const previewUrl = lora.preview_url || '/loras_static/images/no-preview.png';
     const versionedPreviewUrl = version ? `${previewUrl}?t=${version}` : previewUrl;
 

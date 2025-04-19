@@ -235,8 +235,8 @@ function addNewTriggerWord(word) {
     
     // Validation: Check total number
     const currentTags = tagsContainer.querySelectorAll('.trigger-word-tag');
-    if (currentTags.length >= 10) {
-        showToast('Maximum 10 trigger words allowed', 'error');
+    if (currentTags.length >= 30) {
+        showToast('Maximum 30 trigger words allowed', 'error');
         return;
     }
     
@@ -336,7 +336,22 @@ async function saveTriggerWords() {
  */
 window.copyTriggerWord = async function(word) {
     try {
-        await navigator.clipboard.writeText(word);
+        // Modern clipboard API - with fallback for non-secure contexts
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(word);
+        } else {
+            // Fallback for older browsers or non-secure contexts
+            const textarea = document.createElement('textarea');
+            textarea.value = word;
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-99999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            if (!success) throw new Error('Copy command failed');
+        }
         showToast('Trigger word copied', 'success');
     } catch (err) {
         console.error('Copy failed:', err);

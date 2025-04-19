@@ -1,7 +1,8 @@
-import { BASE_MODELS, BASE_MODEL_CLASSES } from '../utils/constants.js';
-import { state, getCurrentPageState } from '../state/index.js';
+import { BASE_MODEL_CLASSES } from '../utils/constants.js';
+import { getCurrentPageState } from '../state/index.js';
 import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
 import { loadMoreLoras } from '../api/loraApi.js';
+import { loadMoreCheckpoints } from '../api/checkpointApi.js';
 import { removeStorageItem, setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 
 export class FilterManager {
@@ -70,8 +71,10 @@ export class FilterManager {
             let tagsEndpoint = '/api/loras/top-tags?limit=20';
             if (this.currentPage === 'recipes') {
                 tagsEndpoint = '/api/recipes/top-tags?limit=20';
+            } else if (this.currentPage === 'checkpoints') {
+                tagsEndpoint = '/api/checkpoints/top-tags?limit=20';
             }
-            
+
             const response = await fetch(tagsEndpoint);
             if (!response.ok) throw new Error('Failed to fetch tags');
             
@@ -143,8 +146,8 @@ export class FilterManager {
             apiEndpoint = '/api/loras/base-models';
         } else if (this.currentPage === 'recipes') {
             apiEndpoint = '/api/recipes/base-models';
-        } else {
-            return; // No API endpoint for other pages
+        } else if (this.currentPage === 'checkpoints') {
+            apiEndpoint = '/api/checkpoints/base-models';
         }
         
         // Fetch base models
@@ -280,7 +283,7 @@ export class FilterManager {
             // For loras page, reset the page and reload
             await loadMoreLoras(true, true);
         } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
-            await window.checkpointManager.loadCheckpoints(true);
+            await loadMoreCheckpoints(true);
         }
         
         // Update filter button to show active state
@@ -336,8 +339,8 @@ export class FilterManager {
             await window.recipeManager.loadRecipes(true);
         } else if (this.currentPage === 'loras') {
             await loadMoreLoras(true, true);
-        } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
-            await window.checkpointManager.loadCheckpoints(true);
+        } else if (this.currentPage === 'checkpoints') {
+            await loadMoreCheckpoints(true);
         }
         
         showToast(`Filters cleared`, 'info');

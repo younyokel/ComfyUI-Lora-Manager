@@ -4,6 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
+import { updateLoraCard } from '../../utils/cardUpdater.js';
 
 /**
  * 保存模型元数据到服务器
@@ -12,7 +13,7 @@ import { BASE_MODELS } from '../../utils/constants.js';
  * @returns {Promise} 保存操作的Promise
  */
 export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/loras/api/save-metadata', {
+    const response = await fetch('/api/loras/save-metadata', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -32,12 +33,16 @@ export async function saveModelMetadata(filePath, data) {
 
 /**
  * 设置模型名称编辑功能
+ * @param {string} filePath - 文件路径
  */
-export function setupModelNameEditing() {
+export function setupModelNameEditing(filePath) {
     const modelNameContent = document.querySelector('.model-name-content');
     const editBtn = document.querySelector('.edit-model-name-btn');
     
     if (!modelNameContent || !editBtn) return;
+    
+    // Store the file path in a data attribute for later use
+    modelNameContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const modelNameHeader = document.querySelector('.model-name-header');
@@ -76,10 +81,7 @@ export function setupModelNameEditing() {
         
         if (this.textContent.trim() === '') {
             // Restore original model name if empty
-            const filePath = document.querySelector('#loraModal .modal-content')
-                .querySelector('.file-path').textContent + 
-                document.querySelector('#loraModal .modal-content')
-                .querySelector('#file-name').textContent + '.safetensors';
+            const filePath = this.dataset.filePath;
             const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
             if (loraCard) {
                 this.textContent = loraCard.dataset.model_name;
@@ -91,10 +93,7 @@ export function setupModelNameEditing() {
     modelNameContent.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const filePath = document.querySelector('#loraModal .modal-content')
-                .querySelector('.file-path').textContent + 
-                document.querySelector('#loraModal .modal-content')
-                .querySelector('#file-name').textContent + '.safetensors';
+            const filePath = this.dataset.filePath;
             saveModelName(filePath);
             this.blur();
         }
@@ -144,21 +143,9 @@ async function saveModelName(filePath) {
         await saveModelMetadata(filePath, { model_name: newModelName });
         
         // Update the corresponding lora card's dataset and display
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard) {
-            loraCard.dataset.model_name = newModelName;
-            const titleElement = loraCard.querySelector('.card-title');
-            if (titleElement) {
-                titleElement.textContent = newModelName;
-            }
-        }
+        updateLoraCard(filePath, { model_name: newModelName });
         
         showToast('Model name updated successfully', 'success');
-        
-        // Reload the page to reflect the sorted order
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
     } catch (error) {
         showToast('Failed to update model name', 'error');
     }
@@ -166,12 +153,16 @@ async function saveModelName(filePath) {
 
 /**
  * 设置基础模型编辑功能
+ * @param {string} filePath - 文件路径
  */
-export function setupBaseModelEditing() {
+export function setupBaseModelEditing(filePath) {
     const baseModelContent = document.querySelector('.base-model-content');
     const editBtn = document.querySelector('.edit-base-model-btn');
     
     if (!baseModelContent || !editBtn) return;
+    
+    // Store the file path in a data attribute for later use
+    baseModelContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const baseModelDisplay = document.querySelector('.base-model-display');
@@ -270,11 +261,8 @@ export function setupBaseModelEditing() {
             
             // Only save if the value has actually changed
             if (valueChanged || baseModelContent.textContent.trim() !== originalValue) {
-                // Get file path for saving
-                const filePath = document.querySelector('#loraModal .modal-content')
-                    .querySelector('.file-path').textContent + 
-                    document.querySelector('#loraModal .modal-content')
-                    .querySelector('#file-name').textContent + '.safetensors';
+                // Get file path from the dataset
+                const filePath = baseModelContent.dataset.filePath;
                 
                 // Save the changes, passing the original value for comparison
                 saveBaseModel(filePath, originalValue);
@@ -325,10 +313,7 @@ async function saveBaseModel(filePath, originalValue) {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
         
         // Update the corresponding lora card's dataset
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard) {
-            loraCard.dataset.base_model = newBaseModel;
-        }
+        updateLoraCard(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -338,12 +323,16 @@ async function saveBaseModel(filePath, originalValue) {
 
 /**
  * 设置文件名编辑功能
+ * @param {string} filePath - 文件路径
  */
-export function setupFileNameEditing() {
+export function setupFileNameEditing(filePath) {
     const fileNameContent = document.querySelector('.file-name-content');
     const editBtn = document.querySelector('.edit-file-name-btn');
     
     if (!fileNameContent || !editBtn) return;
+    
+    // Store the original file path
+    fileNameContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const fileNameWrapper = document.querySelector('.file-name-wrapper');
@@ -441,9 +430,8 @@ export function setupFileNameEditing() {
         }
         
         try {
-            // Get the full file path
-            const filePath = document.querySelector('#loraModal .modal-content')
-                .querySelector('.file-path').textContent + originalValue + '.safetensors';
+            // Get the file path from the dataset
+            const filePath = this.dataset.filePath;
                 
             // Call API to rename the file
             const response = await fetch('/api/rename_lora', {
@@ -462,17 +450,10 @@ export function setupFileNameEditing() {
             if (result.success) {
                 showToast('File name updated successfully', 'success');
                 
-                // Update the LoRA card with new file path
-                const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-                if (loraCard) {
-                    const newFilePath = filePath.replace(originalValue, newFileName);
-                    loraCard.dataset.filepath = newFilePath;
-                }
-                
-                // Reload the page after a short delay to reflect changes
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                // Get the new file path and update the card
+                const newFilePath = filePath.replace(originalValue, newFileName);
+                // Pass the new file_name in the updates object for proper card update
+                updateLoraCard(filePath, { file_name: newFileName }, newFilePath);
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

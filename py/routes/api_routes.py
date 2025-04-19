@@ -2,132 +2,105 @@ import os
 import json
 import logging
 from aiohttp import web
-from typing import Dict, List
+from typing import Dict
 
-from ..utils.model_utils import determine_base_model
+from ..utils.routes_common import ModelRouteUtils
 
-from ..services.file_monitor import LoraFileMonitor
-from ..services.download_manager import DownloadManager
-from ..services.civitai_client import CivitaiClient
 from ..config import config
-from ..services.lora_scanner import LoraScanner
-from operator import itemgetter
 from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
-from ..services.recipe_scanner import RecipeScanner
+from ..utils.constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
+from ..utils.exif_utils import ExifUtils
+from ..services.service_registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
 
 class ApiRoutes:
     """API route handlers for LoRA management"""
 
-    def __init__(self, file_monitor: LoraFileMonitor):
-        self.scanner = LoraScanner()
-        self.civitai_client = CivitaiClient()
-        self.download_manager = DownloadManager(file_monitor)
+    def __init__(self):
+        self.scanner = None  # Will be initialized in setup_routes
+        self.civitai_client = None  # Will be initialized in setup_routes
+        self.download_manager = None  # Will be initialized in setup_routes
         self._download_lock = asyncio.Lock()
 
+    async def initialize_services(self):
+        """Initialize services from ServiceRegistry"""
+        self.scanner = await ServiceRegistry.get_lora_scanner()
+        self.civitai_client = await ServiceRegistry.get_civitai_client()
+        self.download_manager = await ServiceRegistry.get_download_manager()
+
     @classmethod
-    def setup_routes(cls, app: web.Application, monitor: LoraFileMonitor):
+    def setup_routes(cls, app: web.Application):
         """Register API routes"""
-        routes = cls(monitor)
+        routes = cls()
+        
+        # Schedule service initialization on app startup
+        app.on_startup.append(lambda _: routes.initialize_services())
+        
         app.router.add_post('/api/delete_model', routes.delete_model)
         app.router.add_post('/api/fetch-civitai', routes.fetch_civitai)
         app.router.add_post('/api/replace_preview', routes.replace_preview)
         app.router.add_get('/api/loras', routes.get_loras)
         app.router.add_post('/api/fetch-all-civitai', routes.fetch_all_civitai)
         app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
+        app.router.add_get('/ws/init-progress', ws_manager.handle_init_connection)  # Add new WebSocket route
         app.router.add_get('/api/lora-roots', routes.get_lora_roots)
         app.router.add_get('/api/folders', routes.get_folders)
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
-        app.router.add_get('/api/civitai/model/{modelVersionId}', routes.get_civitai_model)
-        app.router.add_get('/api/civitai/model/{hash}', routes.get_civitai_model)
+        app.router.add_get('/api/civitai/model/version/{modelVersionId}', routes.get_civitai_model_by_version)
+        app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
         app.router.add_post('/api/download-lora', routes.download_lora)
         app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
-        app.router.add_post('/loras/api/save-metadata', routes.save_metadata)
+        app.router.add_post('/api/loras/save-metadata', routes.save_metadata)
         app.router.add_get('/api/lora-preview-url', routes.get_lora_preview_url)  # Add new route
         app.router.add_post('/api/move_models_bulk', routes.move_models_bulk)
         app.router.add_get('/api/loras/top-tags', routes.get_top_tags)  # Add new route for top tags
         app.router.add_get('/api/loras/base-models', routes.get_base_models)  # Add new route for base models
         app.router.add_get('/api/lora-civitai-url', routes.get_lora_civitai_url)  # Add new route for Civitai URL
         app.router.add_post('/api/rename_lora', routes.rename_lora)  # Add new route for renaming LoRA files
+        app.router.add_get('/api/loras/scan', routes.scan_loras)  # Add new route for scanning LoRA files
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
 
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
-        try:
-            data = await request.json()
-            file_path = data.get('file_path')
-            if not file_path:
-                return web.Response(text='Model path is required', status=400)
-
-            target_dir = os.path.dirname(file_path)
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            
-            deleted_files = await self._delete_model_files(target_dir, file_name)
-            
-            return web.json_response({
-                'success': True,
-                'deleted_files': deleted_files
-            })
-            
-        except Exception as e:
-            logger.error(f"Error deleting model: {e}", exc_info=True)
-            return web.Response(text=str(e), status=500)
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+        return await ModelRouteUtils.handle_delete_model(request, self.scanner)
 
     async def fetch_civitai(self, request: web.Request) -> web.Response:
         """Handle CivitAI metadata fetch request"""
-        try:
-            data = await request.json()
-            metadata_path = os.path.splitext(data['file_path'])[0] + '.metadata.json'
-            
-            # Check if model is from CivitAI
-            local_metadata = await self._load_local_metadata(metadata_path)
-
-            # Fetch and update metadata
-            civitai_metadata = await self.civitai_client.get_model_by_hash(local_metadata["sha256"])
-            if not civitai_metadata:
-                return await self._handle_not_found_on_civitai(metadata_path, local_metadata)
-
-            await self._update_model_metadata(metadata_path, local_metadata, civitai_metadata, self.civitai_client)
-            
-            return web.json_response({"success": True})
-
-        except Exception as e:
-            logger.error(f"Error fetching from CivitAI: {e}", exc_info=True)
-            return web.json_response({"success": False, "error": str(e)}, status=500)
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+        return await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
 
     async def replace_preview(self, request: web.Request) -> web.Response:
         """Handle preview image replacement request"""
-        try:
-            reader = await request.multipart()
-            preview_data, content_type = await self._read_preview_file(reader)
-            model_path = await self._read_model_path(reader)
-            
-            preview_path = await self._save_preview_file(model_path, preview_data, content_type)
-            await self._update_preview_metadata(model_path, preview_path)
-            
-            # Update preview URL in scanner cache
-            await self.scanner.update_preview_in_cache(model_path, preview_path)
-            
-            return web.json_response({
-                "success": True,
-                "preview_url": config.get_preview_static_url(preview_path)
-            })
-            
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+        return await ModelRouteUtils.handle_replace_preview(request, self.scanner)
+    
+    async def scan_loras(self, request: web.Request) -> web.Response:
+        """Force a rescan of LoRA files"""
+        try:                
+            await self.scanner.get_cached_data(force_refresh=True)
+            return web.json_response({"status": "success", "message": "LoRA scan completed"})
         except Exception as e:
-            logger.error(f"Error replacing preview: {e}", exc_info=True)
-            return web.Response(text=str(e), status=500)
+            logger.error(f"Error in scan_loras: {e}", exc_info=True)
+            return web.json_response({"error": str(e)}, status=500)
 
     async def get_loras(self, request: web.Request) -> web.Response:
         """Handle paginated LoRA data request"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             # Parse query parameters
             page = int(request.query.get('page', '1'))
             page_size = int(request.query.get('page_size', '20'))
@@ -137,10 +110,12 @@ class ApiRoutes:
             fuzzy_search = request.query.get('fuzzy', 'false').lower() == 'true'
             
             # Parse search options
-            search_filename = request.query.get('search_filename', 'true').lower() == 'true'
-            search_modelname = request.query.get('search_modelname', 'true').lower() == 'true'
-            search_tags = request.query.get('search_tags', 'false').lower() == 'true'
-            recursive = request.query.get('recursive', 'false').lower() == 'true'
+            search_options = {
+                'filename': request.query.get('search_filename', 'true').lower() == 'true',
+                'modelname': request.query.get('search_modelname', 'true').lower() == 'true',
+                'tags': request.query.get('search_tags', 'false').lower() == 'true',
+                'recursive': request.query.get('recursive', 'false').lower() == 'true'
+            }
             
             # Get filter parameters
             base_models = request.query.get('base_models', None)
@@ -156,14 +131,6 @@ class ApiRoutes:
                 filters['base_model'] = base_models.split(',')
             if tags:
                 filters['tags'] = tags.split(',')
-            
-            # Add search options to filters
-            search_options = {
-                'filename': search_filename,
-                'modelname': search_modelname,
-                'tags': search_tags,
-                'recursive': recursive
-            }
             
             # Add lora hash filtering options
             hash_filters = {}
@@ -223,73 +190,10 @@ class ApiRoutes:
             "from_civitai": lora.get("from_civitai", True),
             "usage_tips": lora.get("usage_tips", ""),
             "notes": lora.get("notes", ""),
-            "civitai": self._filter_civitai_data(lora.get("civitai", {}))
+            "civitai": ModelRouteUtils.filter_civitai_data(lora.get("civitai", {}))
         }
 
-    def _filter_civitai_data(self, data: Dict) -> Dict:
-        """Filter relevant fields from CivitAI data"""
-        if not data:
-            return {}
-            
-        fields = [
-            "id", "modelId", "name", "createdAt", "updatedAt", 
-            "publishedAt", "trainedWords", "baseModel", "description",
-            "model", "images"
-        ]
-        return {k: data[k] for k in fields if k in data}
-
     # Private helper methods
-    async def _delete_model_files(self, target_dir: str, file_name: str) -> List[str]:
-        """Delete model and associated files"""
-        patterns = [
-            f"{file_name}.safetensors",  # Required
-            f"{file_name}.metadata.json",
-            f"{file_name}.preview.png",
-            f"{file_name}.preview.jpg",
-            f"{file_name}.preview.jpeg",
-            f"{file_name}.preview.webp",
-            f"{file_name}.preview.mp4",
-            f"{file_name}.png",
-            f"{file_name}.jpg",
-            f"{file_name}.jpeg",
-            f"{file_name}.webp",
-            f"{file_name}.mp4"
-        ]
-        
-        deleted = []
-        main_file = patterns[0]
-        main_path = os.path.join(target_dir, main_file).replace(os.sep, '/')
-        
-        if os.path.exists(main_path):
-            # Notify file monitor to ignore delete event
-            self.download_manager.file_monitor.handler.add_ignore_path(main_path, 0)
-            
-            # Delete file
-            os.remove(main_path)
-            deleted.append(main_path)
-        else:
-            logger.warning(f"Model file not found: {main_file}")
-
-        # Remove from cache
-        cache = await self.scanner.get_cached_data()
-        cache.raw_data = [item for item in cache.raw_data if item['file_path'] != main_path]
-        await cache.resort()
-
-        # update hash index
-        self.scanner._hash_index.remove_by_path(main_path)
-        
-        # Delete optional files
-        for pattern in patterns[1:]:
-            path = os.path.join(target_dir, pattern)
-            if os.path.exists(path):
-                try:
-                    os.remove(path)
-                    deleted.append(pattern)
-                except Exception as e:
-                    logger.warning(f"Failed to delete {pattern}: {e}")
-                    
-        return deleted
-
     async def _read_preview_file(self, reader) -> tuple[bytes, str]:
         """Read preview file and content type from multipart request"""
         field = await reader.next()
@@ -307,18 +211,29 @@ class ApiRoutes:
 
     async def _save_preview_file(self, model_path: str, preview_data: bytes, content_type: str) -> str:
         """Save preview file and return its path"""
-        # Determine file extension based on content type
-        if content_type.startswith('video/'):
-            extension = '.preview.mp4'
-        else:
-            extension = '.preview.png'
-        
         base_name = os.path.splitext(os.path.basename(model_path))[0]
         folder = os.path.dirname(model_path)
+        
+        # Determine if content is video or image
+        if content_type.startswith('video/'):
+            # For videos, keep original format and use .mp4 extension
+            extension = '.mp4'
+            optimized_data = preview_data
+        else:
+            # For images, optimize and convert to WebP
+            optimized_data, _ = ExifUtils.optimize_image(
+                image_data=preview_data,
+                target_width=CARD_PREVIEW_WIDTH,
+                format='webp',
+                quality=85,
+                preserve_metadata=False
+            )
+            extension = '.webp'  # Use .webp without .preview part
+        
         preview_path = os.path.join(folder, base_name + extension).replace(os.sep, '/')
         
         with open(preview_path, 'wb') as f:
-            f.write(preview_data)
+            f.write(optimized_data)
             
         return preview_path
 
@@ -338,83 +253,26 @@ class ApiRoutes:
             except Exception as e:
                 logger.error(f"Error updating metadata: {e}")
 
-    async def _load_local_metadata(self, metadata_path: str) -> Dict:
-        """Load local metadata file"""
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Error loading metadata from {metadata_path}: {e}")
-        return {}
-
-    async def _handle_not_found_on_civitai(self, metadata_path: str, local_metadata: Dict) -> web.Response:
-        """Handle case when model is not found on CivitAI"""
-        local_metadata['from_civitai'] = False
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
-        return web.json_response(
-            {"success": False, "error": "Not found on CivitAI"}, 
-            status=404
-        )
-
-    async def _update_model_metadata(self, metadata_path: str, local_metadata: Dict, 
-                                   civitai_metadata: Dict, client: CivitaiClient) -> None:
-        """Update local metadata with CivitAI data"""
-        local_metadata['civitai'] = civitai_metadata
-        
-        # Update model name if available
-        if 'model' in civitai_metadata:
-            if civitai_metadata.get('model', {}).get('name'):
-                local_metadata['model_name'] = civitai_metadata['model']['name']
-        
-            # Fetch additional model metadata (description and tags) if we have model ID
-            model_id = civitai_metadata['modelId']
-            if model_id:
-                model_metadata, _ = await client.get_model_metadata(str(model_id))
-                if model_metadata:
-                    local_metadata['modelDescription'] = model_metadata.get('description', '')
-                    local_metadata['tags'] = model_metadata.get('tags', [])
-        
-        # Update base model
-        local_metadata['base_model'] = determine_base_model(civitai_metadata.get('baseModel'))
-        
-        # Update preview if needed
-        if not local_metadata.get('preview_url') or not os.path.exists(local_metadata['preview_url']):
-            first_preview = next((img for img in civitai_metadata.get('images', [])), None)
-            if first_preview:
-                preview_ext = '.mp4' if first_preview['type'] == 'video' else os.path.splitext(first_preview['url'])[-1]
-                base_name = os.path.splitext(os.path.splitext(os.path.basename(metadata_path))[0])[0]
-                preview_filename = base_name + preview_ext
-                preview_path = os.path.join(os.path.dirname(metadata_path), preview_filename)
-                
-                if await client.download_preview_image(first_preview['url'], preview_path):
-                    local_metadata['preview_url'] = preview_path.replace(os.sep, '/')
-                    local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
-
-        # Save updated metadata
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
-
-        await self.scanner.update_single_lora_cache(local_metadata['file_path'], local_metadata['file_path'], local_metadata)
-
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:
         """Fetch CivitAI metadata for all loras in the background"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             cache = await self.scanner.get_cached_data()
             total = len(cache.raw_data)
             processed = 0
             success = 0
             needs_resort = False
             
-            # 准备要处理的 loras
+            # Prepare loras to process
             to_process = [
                 lora for lora in cache.raw_data 
-                if lora.get('sha256') and (not lora.get('civitai') or 'id' not in lora.get('civitai')) and lora.get('from_civitai')  # TODO: for lora not from CivitAI but added traineWords
+                if lora.get('sha256') and (not lora.get('civitai') or 'id' not in lora.get('civitai')) and lora.get('from_civitai', True)  # TODO: for lora not from CivitAI but added traineWords
             ]
             total_to_process = len(to_process)
             
-            # 发送初始进度
+            # Send initial progress
             await ws_manager.broadcast({
                 'status': 'started',
                 'total': total_to_process,
@@ -425,10 +283,11 @@ class ApiRoutes:
             for lora in to_process:
                 try:
                     original_name = lora.get('model_name')
-                    if await self._fetch_and_update_single_lora(
+                    if await ModelRouteUtils.fetch_and_update_model(
                         sha256=lora['sha256'],
                         file_path=lora['file_path'],
-                        lora=lora
+                        model_data=lora,
+                        update_cache_func=self.scanner.update_single_model_cache
                     ):
                         success += 1
                         if original_name != lora.get('model_name'):
@@ -436,7 +295,7 @@ class ApiRoutes:
                     
                     processed += 1
                     
-                    # 每处理一个就发送进度更新
+                    # Send progress update
                     await ws_manager.broadcast({
                         'status': 'processing',
                         'total': total_to_process,
@@ -451,7 +310,7 @@ class ApiRoutes:
             if needs_resort:
                 await cache.resort(name_only=True)
             
-            # 发送完成消息
+            # Send completion message
             await ws_manager.broadcast({
                 'status': 'completed',
                 'total': total_to_process,
@@ -465,65 +324,13 @@ class ApiRoutes:
             })
             
         except Exception as e:
-            # 发送错误消息
+            # Send error message
             await ws_manager.broadcast({
                 'status': 'error',
                 'error': str(e)
             })
             logger.error(f"Error in fetch_all_civitai: {e}")
             return web.Response(text=str(e), status=500)
-
-    async def _fetch_and_update_single_lora(self, sha256: str, file_path: str, lora: dict) -> bool:
-        """Fetch and update metadata for a single lora without sorting
-        
-        Args:
-            sha256: SHA256 hash of the lora file
-            file_path: Path to the lora file
-            lora: The lora object in cache to update
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        client = CivitaiClient()
-        try:
-            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
-            
-            # Check if model is from CivitAI
-            local_metadata = await self._load_local_metadata(metadata_path)
-
-            # Fetch metadata
-            civitai_metadata = await client.get_model_by_hash(sha256)
-            if not civitai_metadata:
-                # Mark as not from CivitAI if not found
-                local_metadata['from_civitai'] = False
-                lora['from_civitai'] = False
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(local_metadata, f, indent=2, ensure_ascii=False)
-                return False
-
-            # Update metadata
-            await self._update_model_metadata(
-                metadata_path, 
-                local_metadata, 
-                civitai_metadata, 
-                client
-            )
-            
-            # Update cache object directly
-            lora.update({
-                'model_name': local_metadata.get('model_name'),
-                'preview_url': local_metadata.get('preview_url'),
-                'from_civitai': True,
-                'civitai': civitai_metadata
-            })
-                
-            return True
-
-        except Exception as e:
-            logger.error(f"Error fetching CivitAI data: {e}")
-            return False
-        finally:
-            await client.close()
 
     async def get_lora_roots(self, request: web.Request) -> web.Response:
         """Get all configured LoRA root directories"""
@@ -533,6 +340,9 @@ class ApiRoutes:
     
     async def get_folders(self, request: web.Request) -> web.Response:
         """Get all folders in the cache"""
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+            
         cache = await self.scanner.get_cached_data()
         return web.json_response({
             'folders': cache.folders
@@ -541,10 +351,25 @@ class ApiRoutes:
     async def get_civitai_versions(self, request: web.Request) -> web.Response:
         """Get available versions for a Civitai model with local availability info"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            if self.civitai_client is None:
+                self.civitai_client = await ServiceRegistry.get_civitai_client()
+                
             model_id = request.match_info['model_id']
-            versions = await self.civitai_client.get_model_versions(model_id)
-            if not versions:
+            response = await self.civitai_client.get_model_versions(model_id)
+            if not response or not response.get('modelVersions'):
                 return web.Response(status=404, text="Model not found")
+            
+            versions = response.get('modelVersions', [])
+            model_type = response.get('type', '')
+            
+            # Check model type - should be LORA
+            if model_type.lower() != 'lora':
+                return web.json_response({
+                    'error': f"Model type mismatch. Expected LORA, got {model_type}"
+                }, status=400)
             
             # Check local availability for each version
             for version in versions:
@@ -556,9 +381,9 @@ class ApiRoutes:
                     sha256 = model_file.get('hashes', {}).get('SHA256')
                     if sha256:
                         # Set existsLocally and localPath at the version level
-                        version['existsLocally'] = self.scanner.has_lora_hash(sha256)
+                        version['existsLocally'] = self.scanner.has_hash(sha256)
                         if version['existsLocally']:
-                            version['localPath'] = self.scanner.get_lora_path_by_hash(sha256)
+                            version['localPath'] = self.scanner.get_path_by_hash(sha256)
                         
                         # Also set the model file size at the version level for easier access
                         version['modelSizeKB'] = model_file.get('sizeKB')
@@ -571,26 +396,59 @@ class ApiRoutes:
             logger.error(f"Error fetching model versions: {e}")
             return web.Response(status=500, text=str(e))
         
-    async def get_civitai_model(self, request: web.Request) -> web.Response:
-        """Get CivitAI model details by model version ID or hash"""
+    async def get_civitai_model_by_version(self, request: web.Request) -> web.Response:
+        """Get CivitAI model details by model version ID"""
         try:
-            model_version_id = request.match_info['modelVersionId']
-            if not model_version_id:
-                hash = request.match_info['hash']
-                model = await self.civitai_client.get_model_by_hash(hash)
-                return web.json_response(model)
+            if self.civitai_client is None:
+                self.civitai_client = await ServiceRegistry.get_civitai_client()
+                
+            model_version_id = request.match_info.get('modelVersionId')
             
             # Get model details from Civitai API    
-            model = await self.civitai_client.get_model_version_info(model_version_id)
+            model, error_msg = await self.civitai_client.get_model_version_info(model_version_id)
+            
+            if not model:
+                # Log warning for failed model retrieval
+                logger.warning(f"Failed to fetch model version {model_version_id}: {error_msg}")
+                
+                # Determine status code based on error message
+                status_code = 404 if error_msg and "not found" in error_msg.lower() else 500
+                
+                return web.json_response({
+                    "success": False,
+                    "error": error_msg or "Failed to fetch model information"
+                }, status=status_code)
+                
             return web.json_response(model)
         except Exception as e:
             logger.error(f"Error fetching model details: {e}")
-            return web.Response(status=500, text=str(e))
-    
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
+    async def get_civitai_model_by_hash(self, request: web.Request) -> web.Response:
+        """Get CivitAI model details by hash"""
+        try:
+            if self.civitai_client is None:
+                self.civitai_client = await ServiceRegistry.get_civitai_client()
+                
+            hash = request.match_info.get('hash')
+            model = await self.civitai_client.get_model_by_hash(hash)
+            return web.json_response(model)
+        except Exception as e:
+            logger.error(f"Error fetching model details by hash: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
 
     async def download_lora(self, request: web.Request) -> web.Response:
         async with self._download_lock:
             try:
+                if self.download_manager is None:
+                    self.download_manager = await ServiceRegistry.get_download_manager()
+                
                 data = await request.json()
                 
                 # Create progress callback
@@ -662,12 +520,15 @@ class ApiRoutes:
             
             return web.json_response({'success': True})
         except Exception as e:
-            logger.error(f"Error updating settings: {e}", exc_info=True)  # 添加 exc_info=True 以获取完整堆栈
+            logger.error(f"Error updating settings: {e}", exc_info=True)
             return web.Response(status=500, text=str(e))
 
     async def move_model(self, request: web.Request) -> web.Response:
         """Handle model move request"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             data = await request.json()
             file_path = data.get('file_path') # full path of the model file, e.g. /path/to/model.safetensors
             target_path = data.get('target_path') # folder path to move the model to, e.g. /path/to/target_folder
@@ -706,12 +567,17 @@ class ApiRoutes:
     @classmethod
     async def cleanup(cls):
         """Add cleanup method for application shutdown"""
-        if hasattr(cls, '_instance'):
-            await cls._instance.civitai_client.close()
+        # Now we don't need to store an instance, as services are managed by ServiceRegistry
+        civitai_client = await ServiceRegistry.get_civitai_client()
+        if civitai_client:
+            await civitai_client.close()
 
     async def save_metadata(self, request: web.Request) -> web.Response:
         """Handle saving metadata updates"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             data = await request.json()
             file_path = data.get('file_path')
             if not file_path:
@@ -724,11 +590,7 @@ class ApiRoutes:
             metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
             
             # Load existing metadata
-            if os.path.exists(metadata_path):
-                with open(metadata_path, 'r', encoding='utf-8') as f:
-                    metadata = json.load(f)
-            else:
-                metadata = {}
+            metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
 
             # Handle nested updates (for civitai.trainedWords)
             for key, value in metadata_updates.items():
@@ -745,7 +607,7 @@ class ApiRoutes:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
 
             # Update cache
-            await self.scanner.update_single_lora_cache(file_path, file_path, metadata)
+            await self.scanner.update_single_model_cache(file_path, file_path, metadata)
 
             # If model_name was updated, resort the cache
             if 'model_name' in metadata_updates:
@@ -761,6 +623,9 @@ class ApiRoutes:
     async def get_lora_preview_url(self, request: web.Request) -> web.Response:
         """Get the static preview URL for a LoRA file"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             # Get lora file name from query parameters
             lora_name = request.query.get('name')
             if not lora_name:
@@ -791,11 +656,17 @@ class ApiRoutes:
 
         except Exception as e:
             logger.error(f"Error getting lora preview URL: {e}", exc_info=True)
-            return web.Response(text=str(e), status=500)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
 
     async def get_lora_civitai_url(self, request: web.Request) -> web.Response:
         """Get the Civitai URL for a LoRA file"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             # Get lora file name from query parameters
             lora_name = request.query.get('name')
             if not lora_name:
@@ -841,6 +712,9 @@ class ApiRoutes:
     async def move_models_bulk(self, request: web.Request) -> web.Response:
         """Handle bulk model move request"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             data = await request.json()
             file_paths = data.get('file_paths', []) # list of full paths of the model files, e.g. ["/path/to/model1.safetensors", "/path/to/model2.safetensors"]
             target_path = data.get('target_path') # folder path to move the models to, e.g. "/path/to/target_folder"
@@ -899,6 +773,9 @@ class ApiRoutes:
     async def get_lora_model_description(self, request: web.Request) -> web.Response:
         """Get model description for a Lora model"""
         try:
+            if self.civitai_client is None:
+                self.civitai_client = await ServiceRegistry.get_civitai_client()
+                
             # Get parameters
             model_id = request.query.get('model_id')
             file_path = request.query.get('file_path')
@@ -914,21 +791,16 @@ class ApiRoutes:
             tags = []
             if file_path:
                 metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
-                if os.path.exists(metadata_path):
-                    try:
-                        with open(metadata_path, 'r', encoding='utf-8') as f:
-                            metadata = json.load(f)
-                            description = metadata.get('modelDescription')
-                            tags = metadata.get('tags', [])
-                    except Exception as e:
-                        logger.error(f"Error loading metadata from {metadata_path}: {e}")
+                metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+                description = metadata.get('modelDescription')
+                tags = metadata.get('tags', [])
             
             # If description is not in metadata, fetch from CivitAI
             if not description:
                 logger.info(f"Fetching model metadata for model ID: {model_id}")
                 model_metadata, _ = await self.civitai_client.get_model_metadata(model_id)
                 
-                if model_metadata:
+                if (model_metadata):
                     description = model_metadata.get('description')
                     tags = model_metadata.get('tags', [])
                 
@@ -936,16 +808,14 @@ class ApiRoutes:
                     if file_path:
                         try:
                             metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
-                            if os.path.exists(metadata_path):
-                                with open(metadata_path, 'r', encoding='utf-8') as f:
-                                    metadata = json.load(f)
-                                
-                                metadata['modelDescription'] = description
-                                metadata['tags'] = tags
-                                
-                                with open(metadata_path, 'w', encoding='utf-8') as f:
-                                    json.dump(metadata, f, indent=2, ensure_ascii=False)
-                                    logger.info(f"Saved model metadata to file for {file_path}")
+                            metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+                            
+                            metadata['modelDescription'] = description
+                            metadata['tags'] = tags
+                            
+                            with open(metadata_path, 'w', encoding='utf-8') as f:
+                                json.dump(metadata, f, indent=2, ensure_ascii=False)
+                                logger.info(f"Saved model metadata to file for {file_path}")
                         except Exception as e:
                             logger.error(f"Error saving model metadata: {e}")
             
@@ -956,7 +826,7 @@ class ApiRoutes:
             })
             
         except Exception as e:
-            logger.error(f"Error getting model metadata: {e}", exc_info=True)
+            logger.error(f"Error getting model metadata: {e}")
             return web.json_response({
                 'success': False,
                 'error': str(e)
@@ -965,6 +835,9 @@ class ApiRoutes:
     async def get_top_tags(self, request: web.Request) -> web.Response:
         """Handle request for top tags sorted by frequency"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             # Parse query parameters
             limit = int(request.query.get('limit', '20'))
             
@@ -990,6 +863,9 @@ class ApiRoutes:
     async def get_base_models(self, request: web.Request) -> web.Response:
         """Get base models used in loras"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
             # Parse query parameters
             limit = int(request.query.get('limit', '20'))
             
@@ -1011,15 +887,15 @@ class ApiRoutes:
                 'error': str(e)
             }, status=500)
 
-    def get_multipart_ext(self, filename):
-        parts = filename.split(".")
-        if len(parts) > 2:  # 如果包含多级扩展名
-            return "." + ".".join(parts[-2:])  # 取最后两部分，如 ".metadata.json"
-        return os.path.splitext(filename)[1]  # 否则取普通扩展名，如 ".safetensors"
-
     async def rename_lora(self, request: web.Request) -> web.Response:
         """Handle renaming a LoRA file and its associated files"""
         try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            if self.download_manager is None:
+                self.download_manager = await ServiceRegistry.get_download_manager()
+                
             data = await request.json()
             file_path = data.get('file_path')
             new_file_name = data.get('new_file_name')
@@ -1054,17 +930,11 @@ class ApiRoutes:
             patterns = [
                 f"{old_file_name}.safetensors",  # Required
                 f"{old_file_name}.metadata.json",
-                f"{old_file_name}.preview.png",
-                f"{old_file_name}.preview.jpg",
-                f"{old_file_name}.preview.jpeg",
-                f"{old_file_name}.preview.webp",
-                f"{old_file_name}.preview.mp4",
-                f"{old_file_name}.png",
-                f"{old_file_name}.jpg",
-                f"{old_file_name}.jpeg",
-                f"{old_file_name}.webp",
-                f"{old_file_name}.mp4"
             ]
+            
+            # Add all preview file extensions
+            for ext in PREVIEW_EXTENSIONS:
+                patterns.append(f"{old_file_name}{ext}")
             
             # Find all matching files
             existing_files = []
@@ -1079,12 +949,8 @@ class ApiRoutes:
             metadata_path = os.path.join(target_dir, f"{old_file_name}.metadata.json")
             
             if os.path.exists(metadata_path):
-                try:
-                    with open(metadata_path, 'r', encoding='utf-8') as f:
-                        metadata = json.load(f)
-                        hash_value = metadata.get('sha256')
-                except Exception as e:
-                    logger.error(f"Error loading metadata for rename: {e}")
+                metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+                hash_value = metadata.get('sha256')
             
             # Rename all files
             renamed_files = []
@@ -1092,15 +958,18 @@ class ApiRoutes:
             
             # Notify file monitor to ignore these events
             main_file_path = os.path.join(target_dir, f"{old_file_name}.safetensors")
-            if os.path.exists(main_file_path) and self.download_manager.file_monitor:
-                # Add old and new paths to ignore list
-                file_size = os.path.getsize(main_file_path)
-                self.download_manager.file_monitor.handler.add_ignore_path(main_file_path, file_size)
-                self.download_manager.file_monitor.handler.add_ignore_path(new_file_path, file_size)
+            if os.path.exists(main_file_path):
+                # Get lora monitor through ServiceRegistry instead of download_manager
+                lora_monitor = await ServiceRegistry.get_lora_monitor()
+                if lora_monitor:
+                    # Add old and new paths to ignore list
+                    file_size = os.path.getsize(main_file_path)
+                    lora_monitor.handler.add_ignore_path(main_file_path, file_size)
+                    lora_monitor.handler.add_ignore_path(new_file_path, file_size)
             
             for old_path, pattern in existing_files:
                 # Get the file extension like .safetensors or .metadata.json
-                ext = self.get_multipart_ext(pattern)
+                ext = ModelRouteUtils.get_multipart_ext(pattern)
 
                 # Create the new path
                 new_path = os.path.join(target_dir, f"{new_file_name}{ext}").replace(os.sep, '/')
@@ -1122,7 +991,7 @@ class ApiRoutes:
                 # Update preview_url if it exists
                 if 'preview_url' in metadata and metadata['preview_url']:
                     old_preview = metadata['preview_url']
-                    ext = self.get_multipart_ext(old_preview)
+                    ext = ModelRouteUtils.get_multipart_ext(old_preview)
                     new_preview = os.path.join(target_dir, f"{new_file_name}{ext}").replace(os.sep, '/')
                     metadata['preview_url'] = new_preview
                 
@@ -1132,11 +1001,11 @@ class ApiRoutes:
             
             # Update the scanner cache
             if metadata:
-                await self.scanner.update_single_lora_cache(file_path, new_file_path, metadata)
+                await self.scanner.update_single_model_cache(file_path, new_file_path, metadata)
                 
                 # Update recipe files and cache if hash is available
                 if hash_value:
-                    recipe_scanner = RecipeScanner(self.scanner)
+                    recipe_scanner = await ServiceRegistry.get_recipe_scanner()
                     recipes_updated, cache_updated = await recipe_scanner.update_lora_filename_by_hash(hash_value, new_file_name)
                     logger.info(f"Updated {recipes_updated} recipe files and {cache_updated} cache entries for renamed LoRA")
             

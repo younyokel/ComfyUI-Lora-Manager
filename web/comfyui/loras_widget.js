@@ -366,6 +366,108 @@ export function addLorasWidget(node, name, opts, callback) {
     return menuItem;
   };
 
+  // Function to handle strength adjustment via dragging
+  const handleStrengthDrag = (name, initialStrength, initialX, event, widget) => {
+    // Calculate drag sensitivity (how much the strength changes per pixel)
+    // Using 0.01 per 10 pixels of movement
+    const sensitivity = 0.001;
+    
+    // Get the current mouse position
+    const currentX = event.clientX;
+    
+    // Calculate the distance moved
+    const deltaX = currentX - initialX;
+    
+    // Calculate the new strength value based on movement
+    // Moving right increases, moving left decreases
+    let newStrength = Number(initialStrength) + (deltaX * sensitivity);
+    
+    // Limit the strength to reasonable bounds (now between -10 and 10)
+    newStrength = Math.max(-10, Math.min(10, newStrength));
+    newStrength = Number(newStrength.toFixed(2));
+    
+    // Update the lora data
+    const lorasData = parseLoraValue(widget.value);
+    const loraIndex = lorasData.findIndex(l => l.name === name);
+    
+    if (loraIndex >= 0) {
+      lorasData[loraIndex].strength = newStrength;
+      
+      // Update the widget value
+      widget.value = formatLoraValue(lorasData);
+      
+      // Force re-render to show updated strength value
+      renderLoras(widget.value, widget);
+    }
+  };
+  
+  // Function to initialize drag operation
+  const initDrag = (loraEl, nameEl, name, widget) => {
+    let isDragging = false;
+    let initialX = 0;
+    let initialStrength = 0;
+    
+    // Create a style element for drag cursor override if it doesn't exist
+    if (!document.getElementById('comfy-lora-drag-style')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'comfy-lora-drag-style';
+      styleEl.textContent = `
+        body.comfy-lora-dragging,
+        body.comfy-lora-dragging * {
+          cursor: ew-resize !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+    
+    // Create a drag handler that's applied to the entire lora entry
+    // except toggle and strength controls
+    loraEl.addEventListener('mousedown', (e) => {
+      // Skip if clicking on toggle or strength control areas
+      if (e.target.closest('.comfy-lora-toggle') || 
+          e.target.closest('input') || 
+          e.target.closest('.comfy-lora-arrow')) {
+        return;
+      }
+      
+      // Store initial values
+      const lorasData = parseLoraValue(widget.value);
+      const loraData = lorasData.find(l => l.name === name);
+      
+      if (!loraData) return;
+      
+      initialX = e.clientX;
+      initialStrength = loraData.strength;
+      isDragging = true;
+      
+      // Add class to body to enforce cursor style globally
+      document.body.classList.add('comfy-lora-dragging');
+      
+      // Prevent text selection during drag
+      e.preventDefault();
+    });
+    
+    // Use the document for move and up events to ensure drag continues
+    // even if mouse leaves the element
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      // Call the strength adjustment function
+      handleStrengthDrag(name, initialStrength, initialX, e, widget);
+      
+      // Prevent showing the preview tooltip during drag
+      previewTooltip.hide();
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        // Remove the class to restore normal cursor behavior
+        document.body.classList.remove('comfy-lora-dragging');
+      }
+    });
+  };
+
   // Function to create context menu
   const createContextMenu = (x, y, loraName, widget) => {
     // Hide preview tooltip first
@@ -649,6 +751,9 @@ export function addLorasWidget(node, name, opts, callback) {
         e.stopPropagation();
         previewTooltip.hide();
       });
+      
+      // Initialize drag functionality for strength adjustment
+      initDrag(loraEl, nameEl, name, widget);
 
       // Remove the preview tooltip events from loraEl
       loraEl.onmouseenter = () => {
@@ -861,9 +966,6 @@ export function addLorasWidget(node, name, opts, callback) {
 // Function to directly save the recipe without dialog
 async function saveRecipeDirectly(widget) {
   try {
-    // Get the workflow data from the ComfyUI app
-    const prompt = await app.graphToPrompt();
-    
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {
       app.extensionManager.toast.add({
@@ -874,14 +976,9 @@ async function saveRecipeDirectly(widget) {
       });
     }
     
-    // Prepare the data - only send workflow JSON
-    const formData = new FormData();
-    formData.append('workflow_json', JSON.stringify(prompt.output));
-    
-    // Send the request
+    // Send the request to the backend API without workflow data
     const response = await fetch('/api/recipes/save-from-widget', {
-      method: 'POST',
-      body: formData
+      method: 'POST'
     });
     
     const result = await response.json();
@@ -917,4 +1014,4 @@ async function saveRecipeDirectly(widget) {
       });
     }
   }
-} 
+}

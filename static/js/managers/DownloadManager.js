@@ -80,6 +80,10 @@ export class DownloadManager {
 
             const response = await fetch(`/api/civitai/versions/${modelId}`);
             if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
+                    throw new Error('This model is not a LoRA. Please switch to the Checkpoints page to download checkpoint models.');
+                }
                 throw new Error('Failed to fetch model versions');
             }
             

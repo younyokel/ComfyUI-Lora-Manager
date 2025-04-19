@@ -30,7 +30,7 @@
                                 value="{{ settings.get('civitai_api_key', '') }}"
                                 onblur="settingsManager.saveInputSetting('civitaiApiKey', 'civitai_api_key')"
                                 onkeydown="if(event.key === 'Enter') { this.blur(); }" />
-                            <button class="toggle-visibility" onclick="toggleApiKeyVisibility(this)">
+                            <button class="toggle-visibility">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>

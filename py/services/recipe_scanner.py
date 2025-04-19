@@ -2,11 +2,12 @@ import os
 import logging
 import asyncio
 import json
+import time
 from typing import List, Dict, Optional, Any, Tuple
 from ..config import config
 from .recipe_cache import RecipeCache
+from .service_registry import ServiceRegistry
 from .lora_scanner import LoraScanner
-from .civitai_client import CivitaiClient
 from ..utils.utils import fuzzy_match
 import sys
 
@@ -18,11 +19,22 @@ class RecipeScanner:
     _instance = None
     _lock = asyncio.Lock()
     
+    @classmethod
+    async def get_instance(cls, lora_scanner: Optional[LoraScanner] = None):
+        """Get singleton instance of RecipeScanner"""
+        async with cls._lock:
+            if cls._instance is None:
+                if not lora_scanner:
+                    # Get lora scanner from service registry if not provided
+                    lora_scanner = await ServiceRegistry.get_lora_scanner()
+                cls._instance = cls(lora_scanner)
+            return cls._instance
+    
     def __new__(cls, lora_scanner: Optional[LoraScanner] = None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._lora_scanner = lora_scanner
-            cls._instance._civitai_client = CivitaiClient()
+            cls._instance._civitai_client = None  # Will be lazily initialized
         return cls._instance
     
     def __init__(self, lora_scanner: Optional[LoraScanner] = None):
@@ -35,9 +47,148 @@ class RecipeScanner:
             if lora_scanner:
                 self._lora_scanner = lora_scanner
             self._initialized = True
-            
-            # Initialization will be scheduled by LoraManager
     
+    async def _get_civitai_client(self):
+        """Lazily initialize CivitaiClient from registry"""
+        if self._civitai_client is None:
+            self._civitai_client = await ServiceRegistry.get_civitai_client()
+        return self._civitai_client
+    
+    async def initialize_in_background(self) -> None:
+        """Initialize cache in background using thread pool"""
+        try:
+            # Set initial empty cache to avoid None reference errors
+            if self._cache is None:
+                self._cache = RecipeCache(
+                    raw_data=[],
+                    sorted_by_name=[],
+                    sorted_by_date=[]
+                )
+            
+            # Mark as initializing to prevent concurrent initializations
+            self._is_initializing = True
+            
+            try:
+                # Start timer
+                start_time = time.time()
+                
+                # Use thread pool to execute CPU-intensive operations
+                loop = asyncio.get_event_loop()
+                cache = await loop.run_in_executor(
+                    None,  # Use default thread pool
+                    self._initialize_recipe_cache_sync  # Run synchronous version in thread
+                )
+                
+                # Calculate elapsed time and log it
+                elapsed_time = time.time() - start_time
+                recipe_count = len(cache.raw_data) if cache and hasattr(cache, 'raw_data') else 0
+                logger.info(f"Recipe cache initialized in {elapsed_time:.2f} seconds. Found {recipe_count} recipes")
+            finally:
+                # Mark initialization as complete regardless of outcome
+                self._is_initializing = False
+        except Exception as e:
+            logger.error(f"Recipe Scanner: Error initializing cache in background: {e}")
+    
+    def _initialize_recipe_cache_sync(self):
+        """Synchronous version of recipe cache initialization for thread pool execution"""
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Create a synchronous method to bypass the async lock
+            def sync_initialize_cache():
+                # We need to implement scan_all_recipes logic synchronously here
+                # instead of calling the async method to avoid event loop issues
+                recipes = []
+                recipes_dir = self.recipes_dir
+                
+                if not recipes_dir or not os.path.exists(recipes_dir):
+                    logger.warning(f"Recipes directory not found: {recipes_dir}")
+                    return recipes
+                
+                # Get all recipe JSON files in the recipes directory
+                recipe_files = []
+                for root, _, files in os.walk(recipes_dir):
+                    recipe_count = sum(1 for f in files if f.lower().endswith('.recipe.json'))
+                    if recipe_count > 0:
+                        for file in files:
+                            if file.lower().endswith('.recipe.json'):
+                                recipe_files.append(os.path.join(root, file))
+                
+                # Process each recipe file
+                for recipe_path in recipe_files:
+                    try:
+                        with open(recipe_path, 'r', encoding='utf-8') as f:
+                            recipe_data = json.load(f)
+                        
+                        # Validate recipe data
+                        if not recipe_data or not isinstance(recipe_data, dict):
+                            logger.warning(f"Invalid recipe data in {recipe_path}")
+                            continue
+                        
+                        # Ensure required fields exist
+                        required_fields = ['id', 'file_path', 'title']
+                        if not all(field in recipe_data for field in required_fields):
+                            logger.warning(f"Missing required fields in {recipe_path}")
+                            continue
+                        
+                        # Ensure the image file exists
+                        image_path = recipe_data.get('file_path')
+                        if not os.path.exists(image_path):
+                            recipe_dir = os.path.dirname(recipe_path)
+                            image_filename = os.path.basename(image_path)
+                            alternative_path = os.path.join(recipe_dir, image_filename)
+                            if os.path.exists(alternative_path):
+                                recipe_data['file_path'] = alternative_path
+                        
+                        # Ensure loras array exists
+                        if 'loras' not in recipe_data:
+                            recipe_data['loras'] = []
+                        
+                        # Ensure gen_params exists
+                        if 'gen_params' not in recipe_data:
+                            recipe_data['gen_params'] = {}
+                        
+                        # Add to list without async operations
+                        recipes.append(recipe_data)
+                    except Exception as e:
+                        logger.error(f"Error loading recipe file {recipe_path}: {e}")
+                        import traceback
+                        traceback.print_exc(file=sys.stderr)
+                
+                # Update cache with the collected data
+                self._cache.raw_data = recipes
+                
+                # Create a simplified resort function that doesn't use await
+                if hasattr(self._cache, "resort"):
+                    try:
+                        # Sort by name
+                        self._cache.sorted_by_name = sorted(
+                            self._cache.raw_data,
+                            key=lambda x: x.get('title', '').lower()
+                        )
+                        
+                        # Sort by date (modified or created)
+                        self._cache.sorted_by_date = sorted(
+                            self._cache.raw_data,
+                            key=lambda x: x.get('modified', x.get('created_date', 0)),
+                            reverse=True
+                        )
+                    except Exception as e:
+                        logger.error(f"Error sorting recipe cache: {e}")
+                
+                return self._cache
+            
+            # Run our sync initialization that avoids lock conflicts
+            return sync_initialize_cache()
+        except Exception as e:
+            logger.error(f"Error in thread-based recipe cache initialization: {e}")
+            return self._cache if hasattr(self, '_cache') else None
+        finally:
+            # Clean up the event loop
+            loop.close()
+
     @property
     def recipes_dir(self) -> str:
         """Get path to recipes directory"""
@@ -60,49 +211,48 @@ class RecipeScanner:
         if self._is_initializing and not force_refresh:
             return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
 
-        # Try to acquire the lock with a timeout to prevent deadlocks
-        try:
-            async with self._initialization_lock:
-                # Check again after acquiring the lock
-                if self._cache is not None and not force_refresh:
-                    return self._cache
-                
-                # Mark as initializing to prevent concurrent initializations
-                self._is_initializing = True
-                
-                try:
-                    # Remove dependency on lora scanner initialization
-                    # Scan for recipe data directly
-                    raw_data = await self.scan_all_recipes()
+        # If force refresh is requested, initialize the cache directly
+        if force_refresh:
+            # Try to acquire the lock with a timeout to prevent deadlocks
+            try:
+                async with self._initialization_lock:
+                    # Mark as initializing to prevent concurrent initializations
+                    self._is_initializing = True
                     
-                    # Update cache
-                    self._cache = RecipeCache(
-                        raw_data=raw_data,
-                        sorted_by_name=[],
-                        sorted_by_date=[]
-                    )
+                    try:
+                        # Scan for recipe data directly
+                        raw_data = await self.scan_all_recipes()
+                        
+                        # Update cache
+                        self._cache = RecipeCache(
+                            raw_data=raw_data,
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        
+                        # Resort cache
+                        await self._cache.resort()
+                        
+                        return self._cache
                     
-                    # Resort cache
-                    await self._cache.resort()
-                    
-                    return self._cache
-                
-                except Exception as e:
-                    logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
-                    # Create empty cache on error
-                    self._cache = RecipeCache(
-                        raw_data=[],
-                        sorted_by_name=[],
-                        sorted_by_date=[]
-                    )
-                    return self._cache
-                finally:
-                    # Mark initialization as complete
-                    self._is_initializing = False
+                    except Exception as e:
+                        logger.error(f"Recipe Manager: Error initializing cache: {e}", exc_info=True)
+                        # Create empty cache on error
+                        self._cache = RecipeCache(
+                            raw_data=[],
+                            sorted_by_name=[],
+                            sorted_by_date=[]
+                        )
+                        return self._cache
+                    finally:
+                        # Mark initialization as complete
+                        self._is_initializing = False
+            
+            except Exception as e:
+                logger.error(f"Unexpected error in get_cached_data: {e}")
         
-        except Exception as e:
-            logger.error(f"Unexpected error in get_cached_data: {e}")
-            return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
+        # Return the cache (may be empty or partially initialized)
+        return self._cache or RecipeCache(raw_data=[], sorted_by_name=[], sorted_by_date=[])
     
     async def scan_all_recipes(self) -> List[Dict]:
         """Scan all recipe JSON files and return metadata"""
@@ -191,6 +341,10 @@ class RecipeScanner:
         metadata_updated = False
         
         for lora in recipe_data['loras']:
+            # Skip deleted loras that were already marked
+            if lora.get('isDeleted', False):
+                continue
+                
             # Skip if already has complete information
             if 'hash' in lora and 'file_name' in lora and lora['file_name']:
                 continue
@@ -206,10 +360,17 @@ class RecipeScanner:
                     metadata_updated = True
                 else:
                     # If not in cache, fetch from Civitai
-                    hash_from_civitai = await self._get_hash_from_civitai(model_version_id)
-                    if hash_from_civitai:
-                        lora['hash'] = hash_from_civitai
-                        metadata_updated = True
+                    result = await self._get_hash_from_civitai(model_version_id)
+                    if isinstance(result, tuple):
+                        hash_from_civitai, is_deleted = result
+                        if hash_from_civitai:
+                            lora['hash'] = hash_from_civitai
+                            metadata_updated = True
+                        elif is_deleted:
+                            # Mark the lora as deleted if it was not found on Civitai
+                            lora['isDeleted'] = True
+                            logger.warning(f"Marked lora with modelVersionId {model_version_id} as deleted")
+                            metadata_updated = True
                     else:
                         logger.debug(f"Could not get hash for modelVersionId {model_version_id}")
             
@@ -255,42 +416,32 @@ class RecipeScanner:
     async def _get_hash_from_civitai(self, model_version_id: str) -> Optional[str]:
         """Get hash from Civitai API"""
         try:
-            if not self._civitai_client:
+            # Get CivitaiClient from ServiceRegistry
+            civitai_client = await self._get_civitai_client()
+            if not civitai_client:
+                logger.error("Failed to get CivitaiClient from ServiceRegistry")
                 return None
                 
-            version_info = await self._civitai_client.get_model_version_info(model_version_id)
+            version_info, error_msg = await civitai_client.get_model_version_info(model_version_id)
             
-            if not version_info or not version_info.get('files'):
-                logger.debug(f"No files found in version info for ID: {model_version_id}")
-                return None
-                
+            if not version_info:
+                if error_msg and "model not found" in error_msg.lower():
+                    logger.warning(f"Model with version ID {model_version_id} was not found on Civitai - marking as deleted")
+                    return None, True  # Return None hash and True for isDeleted flag
+                else:
+                    logger.debug(f"Could not get hash for modelVersionId {model_version_id}: {error_msg}")
+                    return None, False  # Return None hash but not marked as deleted
+                    
             # Get hash from the first file
             for file_info in version_info.get('files', []):
                 if file_info.get('hashes', {}).get('SHA256'):
-                    return file_info['hashes']['SHA256']
+                    return file_info['hashes']['SHA256'], False  # Return hash with False for isDeleted flag
                     
             logger.debug(f"No SHA256 hash found in version info for ID: {model_version_id}")
-            return None
+            return None, False
         except Exception as e:
             logger.error(f"Error getting hash from Civitai: {e}")
-            return None
-
-    async def _get_model_version_name(self, model_version_id: str) -> Optional[str]:
-        """Get model version name from Civitai API"""
-        try:
-            if not self._civitai_client:
-                return None
-                
-            version_info = await self._civitai_client.get_model_version_info(model_version_id)
-            
-            if version_info and 'name' in version_info:
-                return version_info['name']
-                    
-            logger.debug(f"No version name found for modelVersionId {model_version_id}")
-            return None
-        except Exception as e:
-            logger.error(f"Error getting model version name from Civitai: {e}")
-            return None
+            return None, False
 
     async def _determine_base_model(self, loras: List[Dict]) -> Optional[str]:
         """Determine the most common base model among LoRAs"""

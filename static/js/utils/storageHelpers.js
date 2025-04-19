@@ -172,3 +172,44 @@ export function migrateStorageItems() {
     
     console.log('Lora Manager: Storage migration completed');
 }
+
+/**
+ * Save a Map to localStorage
+ * @param {string} key - The localStorage key
+ * @param {Map} map - The Map to save
+ */
+export function saveMapToStorage(key, map) {
+    if (!(map instanceof Map)) {
+        console.error('Cannot save non-Map object:', map);
+        return;
+    }
+
+    try {
+        const prefixedKey = STORAGE_PREFIX + key;
+        // Convert Map to array of entries and save as JSON
+        const entries = Array.from(map.entries());
+        localStorage.setItem(prefixedKey, JSON.stringify(entries));
+    } catch (error) {
+        console.error(`Error saving Map to localStorage (${key}):`, error);
+    }
+}
+
+/**
+ * Load a Map from localStorage
+ * @param {string} key - The localStorage key
+ * @returns {Map} - The loaded Map or a new empty Map
+ */
+export function getMapFromStorage(key) {
+    try {
+        const prefixedKey = STORAGE_PREFIX + key;
+        const data = localStorage.getItem(prefixedKey);
+        if (!data) return new Map();
+        
+        // Parse JSON and convert back to Map
+        const entries = JSON.parse(data);
+        return new Map(entries);
+    } catch (error) {
+        console.error(`Error loading Map from localStorage (${key}):`, error);
+        return new Map();
+    }
+}

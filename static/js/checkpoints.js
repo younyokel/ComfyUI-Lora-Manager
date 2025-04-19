@@ -1,36 +1,59 @@
 import { appCore } from './core.js';
-import { state, initPageState } from './state/index.js';
+import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
+import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
+import { createPageControls } from './components/controls/index.js';
+import { loadMoreCheckpoints } from './api/checkpointApi.js';
+import { CheckpointDownloadManager } from './managers/CheckpointDownloadManager.js';
+import { CheckpointContextMenu } from './components/ContextMenu/index.js';
 
 // Initialize the Checkpoints page
 class CheckpointsPageManager {
     constructor() {
-        // Initialize any necessary state
-        this.initialized = false;
+        // Initialize page controls
+        this.pageControls = createPageControls('checkpoints');
+        
+        // Initialize checkpoint download manager
+        window.checkpointDownloadManager = new CheckpointDownloadManager();
+        
+        // Expose only necessary functions to global scope
+        this._exposeRequiredGlobalFunctions();
+    }
+    
+    _exposeRequiredGlobalFunctions() {
+        // Minimal set of functions that need to remain global
+        window.confirmDelete = confirmDelete;
+        window.closeDeleteModal = closeDeleteModal;
+        
+        // Add loadCheckpoints function to window for FilterManager compatibility
+        window.checkpointManager = {
+            loadCheckpoints: (reset) => loadMoreCheckpoints(reset)
+        };
     }
     
     async initialize() {
-        if (this.initialized) return;
-        
-        // Initialize page state
-        initPageState('checkpoints');
-        
-        // Initialize core application
-        await appCore.initialize();
-        
         // Initialize page-specific components
-        this._initializeWorkInProgress();
+        this.pageControls.restoreFolderFilter();
+        this.pageControls.initFolderTagsVisibility();
         
-        this.initialized = true;
-    }
-    
-    _initializeWorkInProgress() {
-        // Add any work-in-progress specific initialization here
-        console.log('Checkpoints Manager is under development');
+        // Initialize context menu
+        new CheckpointContextMenu();
+        
+        // Initialize infinite scroll
+        initializeInfiniteScroll('checkpoints');
+        
+        // Initialize common page features
+        appCore.initializePageFeatures();
+        
+        console.log('Checkpoints Manager initialized');
     }
 }
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize core application
+    await appCore.initialize();
+    
+    // Initialize checkpoints page
     const checkpointsPage = new CheckpointsPageManager();
     await checkpointsPage.initialize();
 });

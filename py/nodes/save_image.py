@@ -5,10 +5,11 @@ import re
 import numpy as np
 import folder_paths # type: ignore
 from ..services.lora_scanner import LoraScanner
-from ..workflow.parser import WorkflowParser
+from ..services.checkpoint_scanner import CheckpointScanner
+from ..metadata_collector.metadata_processor import MetadataProcessor
+from ..metadata_collector import get_metadata
 from PIL import Image, PngImagePlugin
 import piexif
-from io import BytesIO
 
 class SaveImage:
     NAME = "Save Image (LoraManager)"
@@ -34,8 +35,7 @@ class SaveImage:
                 "file_format": (["png", "jpeg", "webp"],),
             },
             "optional": {
-                "custom_prompt": ("STRING", {"default": "", "forceInput": True}),
-                "lossless_webp": ("BOOLEAN", {"default": True}),
+                "lossless_webp": ("BOOLEAN", {"default": False}),
                 "quality": ("INT", {"default": 100, "min": 1, "max": 100}),
                 "embed_workflow": ("BOOLEAN", {"default": False}),
                 "add_counter_to_filename": ("BOOLEAN", {"default": True}),
@@ -54,28 +54,61 @@ class SaveImage:
     async def get_lora_hash(self, lora_name):
         """Get the lora hash from cache"""
         scanner = await LoraScanner.get_instance()
-        cache = await scanner.get_cached_data()
         
+        # Use the new direct filename lookup method
+        hash_value = scanner.get_hash_by_filename(lora_name)
+        if hash_value:
+            return hash_value
+            
+        # Fallback to old method for compatibility
+        cache = await scanner.get_cached_data()
         for item in cache.raw_data:
             if item.get('file_name') == lora_name:
                 return item.get('sha256')
         return None
 
-    async def format_metadata(self, parsed_workflow, custom_prompt=None):
+    async def get_checkpoint_hash(self, checkpoint_path):
+        """Get the checkpoint hash from cache"""
+        scanner = await CheckpointScanner.get_instance()
+        
+        if not checkpoint_path:
+            return None
+            
+        # Extract basename without extension
+        checkpoint_name = os.path.basename(checkpoint_path)
+        checkpoint_name = os.path.splitext(checkpoint_name)[0]
+        
+        # Try direct filename lookup first
+        hash_value = scanner.get_hash_by_filename(checkpoint_name)
+        if hash_value:
+            return hash_value
+            
+        # Fallback to old method for compatibility
+        cache = await scanner.get_cached_data()
+        normalized_path = checkpoint_path.replace('\\', '/')
+        
+        for item in cache.raw_data:
+            if item.get('file_name') == checkpoint_name and item.get('file_path').endswith(normalized_path):
+                return item.get('sha256')
+                
+        return None
+
+    async def format_metadata(self, metadata_dict):
         """Format metadata in the requested format similar to userComment example"""
-        if not parsed_workflow:
+        if not metadata_dict:
             return ""
         
-        # Extract the prompt and negative prompt
-        prompt = parsed_workflow.get('prompt', '')
-        negative_prompt = parsed_workflow.get('negative_prompt', '')
+        # Helper function to only add parameter if value is not None
+        def add_param_if_not_none(param_list, label, value):
+            if value is not None:
+                param_list.append(f"{label}: {value}")
         
-        # Override prompt with custom_prompt if provided
-        if custom_prompt:
-            prompt = custom_prompt
+        # Extract the prompt and negative prompt
+        prompt = metadata_dict.get('prompt', '')
+        negative_prompt = metadata_dict.get('negative_prompt', '')
         
         # Extract loras from the prompt if present
-        loras_text = parsed_workflow.get('loras', '')
+        loras_text = metadata_dict.get('loras', '')
         lora_hashes = {}
         
         # If loras are found, add them on a new line after the prompt
@@ -104,11 +137,15 @@ class SaveImage:
         params = []
         
         # Add standard parameters in the correct order
-        if 'steps' in parsed_workflow:
-            params.append(f"Steps: {parsed_workflow.get('steps')}")
+        if 'steps' in metadata_dict:
+            add_param_if_not_none(params, "Steps", metadata_dict.get('steps'))
         
-        if 'sampler' in parsed_workflow:
-            sampler = parsed_workflow.get('sampler')
+        # Combine sampler and scheduler information
+        sampler_name = None
+        scheduler_name = None
+        
+        if 'sampler' in metadata_dict:
+            sampler = metadata_dict.get('sampler')
             # Convert ComfyUI sampler names to user-friendly names
             sampler_mapping = {
                 'euler': 'Euler',
@@ -128,10 +165,9 @@ class SaveImage:
                 'ddim': 'DDIM'
             }
             sampler_name = sampler_mapping.get(sampler, sampler)
-            params.append(f"Sampler: {sampler_name}")
         
-        if 'scheduler' in parsed_workflow:
-            scheduler = parsed_workflow.get('scheduler')
+        if 'scheduler' in metadata_dict:
+            scheduler = metadata_dict.get('scheduler')
             scheduler_mapping = {
                 'normal': 'Simple',
                 'karras': 'Karras',
@@ -140,29 +176,48 @@ class SaveImage:
                 'sgm_quadratic': 'SGM Quadratic'
             }
             scheduler_name = scheduler_mapping.get(scheduler, scheduler)
-            params.append(f"Schedule type: {scheduler_name}")
         
-        # CFG scale (cfg in parsed_workflow)
-        if 'cfg_scale' in parsed_workflow:
-            params.append(f"CFG scale: {parsed_workflow.get('cfg_scale')}")
-        elif 'cfg' in parsed_workflow:
-            params.append(f"CFG scale: {parsed_workflow.get('cfg')}")
+        # Add combined sampler and scheduler information
+        if sampler_name:
+            if scheduler_name:
+                params.append(f"Sampler: {sampler_name} {scheduler_name}")
+            else:
+                params.append(f"Sampler: {sampler_name}")
+        
+        # CFG scale (Use guidance if available, otherwise fall back to cfg_scale or cfg)
+        if 'guidance' in metadata_dict:
+            add_param_if_not_none(params, "CFG scale", metadata_dict.get('guidance'))
+        elif 'cfg_scale' in metadata_dict:
+            add_param_if_not_none(params, "CFG scale", metadata_dict.get('cfg_scale'))
+        elif 'cfg' in metadata_dict:
+            add_param_if_not_none(params, "CFG scale", metadata_dict.get('cfg'))
         
         # Seed
-        if 'seed' in parsed_workflow:
-            params.append(f"Seed: {parsed_workflow.get('seed')}")
+        if 'seed' in metadata_dict:
+            add_param_if_not_none(params, "Seed", metadata_dict.get('seed'))
         
         # Size
-        if 'size' in parsed_workflow:
-            params.append(f"Size: {parsed_workflow.get('size')}")
+        if 'size' in metadata_dict:
+            add_param_if_not_none(params, "Size", metadata_dict.get('size'))
         
         # Model info
-        if 'checkpoint' in parsed_workflow:
-            # Extract basename without path
-            checkpoint = os.path.basename(parsed_workflow.get('checkpoint', ''))
-            # Remove extension if present
-            checkpoint = os.path.splitext(checkpoint)[0]
-            params.append(f"Model: {checkpoint}")
+        if 'checkpoint' in metadata_dict:
+            # Ensure checkpoint is a string before processing
+            checkpoint = metadata_dict.get('checkpoint')
+            if checkpoint is not None:
+                # Get model hash
+                model_hash = await self.get_checkpoint_hash(checkpoint)
+                
+                # Extract basename without path
+                checkpoint_name = os.path.basename(checkpoint)
+                # Remove extension if present
+                checkpoint_name = os.path.splitext(checkpoint_name)[0]
+                
+                # Add model hash if available
+                if model_hash:
+                    params.append(f"Model hash: {model_hash[:10]}, Model: {checkpoint_name}")
+                else:
+                    params.append(f"Model: {checkpoint_name}")
         
         # Add LoRA hashes if available
         if lora_hashes:
@@ -181,9 +236,9 @@ class SaveImage:
 
     # credit to nkchocoai
     # Add format_filename method to handle pattern substitution
-    def format_filename(self, filename, parsed_workflow):
+    def format_filename(self, filename, metadata_dict):
         """Format filename with metadata values"""
-        if not parsed_workflow:
+        if not metadata_dict:
             return filename
             
         result = re.findall(self.pattern_format, filename)
@@ -191,30 +246,30 @@ class SaveImage:
             parts = segment.replace("%", "").split(":")
             key = parts[0]
             
-            if key == "seed" and 'seed' in parsed_workflow:
-                filename = filename.replace(segment, str(parsed_workflow.get('seed', '')))
-            elif key == "width" and 'size' in parsed_workflow:
-                size = parsed_workflow.get('size', 'x')
+            if key == "seed" and 'seed' in metadata_dict:
+                filename = filename.replace(segment, str(metadata_dict.get('seed', '')))
+            elif key == "width" and 'size' in metadata_dict:
+                size = metadata_dict.get('size', 'x')
                 w = size.split('x')[0] if isinstance(size, str) else size[0]
                 filename = filename.replace(segment, str(w))
-            elif key == "height" and 'size' in parsed_workflow:
-                size = parsed_workflow.get('size', 'x')
+            elif key == "height" and 'size' in metadata_dict:
+                size = metadata_dict.get('size', 'x')
                 h = size.split('x')[1] if isinstance(size, str) else size[1]
                 filename = filename.replace(segment, str(h))
-            elif key == "pprompt" and 'prompt' in parsed_workflow:
-                prompt = parsed_workflow.get('prompt', '').replace("\n", " ")
+            elif key == "pprompt" and 'prompt' in metadata_dict:
+                prompt = metadata_dict.get('prompt', '').replace("\n", " ")
                 if len(parts) >= 2:
                     length = int(parts[1])
                     prompt = prompt[:length]
                 filename = filename.replace(segment, prompt.strip())
-            elif key == "nprompt" and 'negative_prompt' in parsed_workflow:
-                prompt = parsed_workflow.get('negative_prompt', '').replace("\n", " ")
+            elif key == "nprompt" and 'negative_prompt' in metadata_dict:
+                prompt = metadata_dict.get('negative_prompt', '').replace("\n", " ")
                 if len(parts) >= 2:
                     length = int(parts[1])
                     prompt = prompt[:length]
                 filename = filename.replace(segment, prompt.strip())
-            elif key == "model" and 'checkpoint' in parsed_workflow:
-                model = parsed_workflow.get('checkpoint', '')
+            elif key == "model" and 'checkpoint' in metadata_dict:
+                model = metadata_dict.get('checkpoint', '')
                 model = os.path.splitext(os.path.basename(model))[0]
                 if len(parts) >= 2:
                     length = int(parts[1])
@@ -224,12 +279,13 @@ class SaveImage:
                 from datetime import datetime
                 now = datetime.now()
                 date_table = {
-                    "yyyy": str(now.year),
-                    "MM": str(now.month).zfill(2),
-                    "dd": str(now.day).zfill(2),
-                    "hh": str(now.hour).zfill(2),
-                    "mm": str(now.minute).zfill(2),
-                    "ss": str(now.second).zfill(2),
+                    "yyyy": f"{now.year:04d}",
+                    "yy": f"{now.year % 100:02d}",
+                    "MM": f"{now.month:02d}",
+                    "dd": f"{now.day:02d}",
+                    "hh": f"{now.hour:02d}",
+                    "mm": f"{now.minute:02d}",
+                    "ss": f"{now.second:02d}",
                 }
                 if len(parts) >= 2:
                     date_format = parts[1]
@@ -245,23 +301,19 @@ class SaveImage:
         return filename
 
     def save_images(self, images, filename_prefix, file_format, prompt=None, extra_pnginfo=None, 
-                   lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True,
-                   custom_prompt=None):
+                   lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True):
         """Save images with metadata"""
         results = []
         
-        # Parse the workflow using the WorkflowParser
-        parser = WorkflowParser()
-        if prompt:
-            parsed_workflow = parser.parse_workflow(prompt)
-        else:
-            parsed_workflow = {}
+        # Get metadata using the metadata collector
+        raw_metadata = get_metadata()
+        metadata_dict = MetadataProcessor.to_dict(raw_metadata)
             
         # Get or create metadata asynchronously
-        metadata = asyncio.run(self.format_metadata(parsed_workflow, custom_prompt))
+        metadata = asyncio.run(self.format_metadata(metadata_dict))
         
         # Process filename_prefix with pattern substitution
-        filename_prefix = self.format_filename(filename_prefix, parsed_workflow)
+        filename_prefix = self.format_filename(filename_prefix, metadata_dict)
         
         # Get initial save path info once for the batch
         full_output_folder, filename, counter, subfolder, processed_prefix = folder_paths.get_save_image_path(
@@ -289,7 +341,8 @@ class SaveImage:
             if file_format == "png":
                 file = base_filename + ".png"
                 file_extension = ".png"
-                save_kwargs = {"optimize": True, "compress_level": self.compress_level}
+                # Remove "optimize": True to match built-in node behavior
+                save_kwargs = {"compress_level": self.compress_level}
                 pnginfo = PngImagePlugin.PngInfo()
             elif file_format == "jpeg":
                 file = base_filename + ".jpg"
@@ -298,7 +351,8 @@ class SaveImage:
             elif file_format == "webp":
                 file = base_filename + ".webp" 
                 file_extension = ".webp"
-                save_kwargs = {"quality": quality, "lossless": lossless_webp}
+                # Add optimization param to control performance
+                save_kwargs = {"quality": quality, "lossless": lossless_webp, "method": 0}
             
             # Full save path
             file_path = os.path.join(full_output_folder, file)
@@ -346,8 +400,7 @@ class SaveImage:
         return results
 
     def process_image(self, images, filename_prefix="ComfyUI", file_format="png", prompt=None, extra_pnginfo=None,
-                     lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True,
-                     custom_prompt=""):
+                     lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True):
         """Process and save image with metadata"""
         # Make sure the output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
@@ -368,8 +421,7 @@ class SaveImage:
             lossless_webp,
             quality,
             embed_workflow,
-            add_counter_to_filename,
-            custom_prompt if custom_prompt.strip() else None
+            add_counter_to_filename
         )
         
         return (images,)
