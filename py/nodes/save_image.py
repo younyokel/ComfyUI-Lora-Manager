@@ -98,6 +98,11 @@ class SaveImage:
         if not metadata_dict:
             return ""
         
+        # Helper function to only add parameter if value is not None
+        def add_param_if_not_none(param_list, label, value):
+            if value is not None:
+                param_list.append(f"{label}: {value}")
+        
         # Extract the prompt and negative prompt
         prompt = metadata_dict.get('prompt', '')
         negative_prompt = metadata_dict.get('negative_prompt', '')
@@ -133,7 +138,7 @@ class SaveImage:
         
         # Add standard parameters in the correct order
         if 'steps' in metadata_dict:
-            params.append(f"Steps: {metadata_dict.get('steps')}")
+            add_param_if_not_none(params, "Steps", metadata_dict.get('steps'))
         
         # Combine sampler and scheduler information
         sampler_name = None
@@ -181,19 +186,19 @@ class SaveImage:
         
         # CFG scale (Use guidance if available, otherwise fall back to cfg_scale or cfg)
         if 'guidance' in metadata_dict:
-            params.append(f"CFG scale: {metadata_dict.get('guidance')}")
+            add_param_if_not_none(params, "CFG scale", metadata_dict.get('guidance'))
         elif 'cfg_scale' in metadata_dict:
-            params.append(f"CFG scale: {metadata_dict.get('cfg_scale')}")
+            add_param_if_not_none(params, "CFG scale", metadata_dict.get('cfg_scale'))
         elif 'cfg' in metadata_dict:
-            params.append(f"CFG scale: {metadata_dict.get('cfg')}")
+            add_param_if_not_none(params, "CFG scale", metadata_dict.get('cfg'))
         
         # Seed
         if 'seed' in metadata_dict:
-            params.append(f"Seed: {metadata_dict.get('seed')}")
+            add_param_if_not_none(params, "Seed", metadata_dict.get('seed'))
         
         # Size
         if 'size' in metadata_dict:
-            params.append(f"Size: {metadata_dict.get('size')}")
+            add_param_if_not_none(params, "Size", metadata_dict.get('size'))
         
         # Model info
         if 'checkpoint' in metadata_dict:
