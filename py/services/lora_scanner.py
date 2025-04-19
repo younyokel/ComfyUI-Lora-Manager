@@ -9,7 +9,7 @@ from typing import List, Dict, Optional, Set
 from ..utils.models import LoraMetadata
 from ..config import config
 from .model_scanner import ModelScanner
-from .lora_hash_index import LoraHashIndex
+from .model_hash_index import ModelHashIndex  # Changed from LoraHashIndex to ModelHashIndex
 from .settings_manager import settings
 from ..utils.constants import NSFW_LEVELS
 from ..utils.utils import fuzzy_match
@@ -35,12 +35,12 @@ class LoraScanner(ModelScanner):
             # Define supported file extensions
             file_extensions = {'.safetensors'}
             
-            # Initialize parent class
+            # Initialize parent class with ModelHashIndex
             super().__init__(
                 model_type="lora",
                 model_class=LoraMetadata, 
                 file_extensions=file_extensions,
-                hash_index=LoraHashIndex()
+                hash_index=ModelHashIndex()  # Changed from LoraHashIndex to ModelHashIndex
             )
             self._initialized = True
     

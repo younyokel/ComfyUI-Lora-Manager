@@ -54,8 +54,14 @@ class SaveImage:
     async def get_lora_hash(self, lora_name):
         """Get the lora hash from cache"""
         scanner = await LoraScanner.get_instance()
-        cache = await scanner.get_cached_data()
         
+        # Use the new direct filename lookup method
+        hash_value = scanner.get_hash_by_filename(lora_name)
+        if hash_value:
+            return hash_value
+            
+        # Fallback to old method for compatibility
+        cache = await scanner.get_cached_data()
         for item in cache.raw_data:
             if item.get('file_name') == lora_name:
                 return item.get('sha256')
@@ -64,7 +70,6 @@ class SaveImage:
     async def get_checkpoint_hash(self, checkpoint_path):
         """Get the checkpoint hash from cache"""
         scanner = await CheckpointScanner.get_instance()
-        cache = await scanner.get_cached_data()
         
         if not checkpoint_path:
             return None
@@ -73,7 +78,13 @@ class SaveImage:
         checkpoint_name = os.path.basename(checkpoint_path)
         checkpoint_name = os.path.splitext(checkpoint_name)[0]
         
-        # Normalize path separators for comparison
+        # Try direct filename lookup first
+        hash_value = scanner.get_hash_by_filename(checkpoint_name)
+        if hash_value:
+            return hash_value
+            
+        # Fallback to old method for compatibility
+        cache = await scanner.get_cached_data()
         normalized_path = checkpoint_path.replace('\\', '/')
         
         for item in cache.raw_data:
