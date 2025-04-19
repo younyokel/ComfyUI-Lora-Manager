@@ -65,6 +65,15 @@ class LoraMetadata(BaseModelMetadata):
         file_name = file_info['name']
         base_model = determine_base_model(version_info.get('baseModel', ''))
         
+        # Extract tags and description if available
+        tags = []
+        description = ""
+        if 'model' in version_info:
+            if 'tags' in version_info['model']:
+                tags = version_info['model']['tags']
+            if 'description' in version_info['model']:
+                description = version_info['model']['description']
+        
         return cls(
             file_name=os.path.splitext(file_name)[0],
             model_name=version_info.get('model').get('name', os.path.splitext(file_name)[0]),
@@ -76,7 +85,9 @@ class LoraMetadata(BaseModelMetadata):
             preview_url=None,  # Will be updated after preview download
             preview_nsfw_level=0, # Will be updated after preview download
             from_civitai=True,
-            civitai=version_info
+            civitai=version_info,
+            tags=tags,
+            modelDescription=description
         )
 
 @dataclass
@@ -91,6 +102,15 @@ class CheckpointMetadata(BaseModelMetadata):
         base_model = determine_base_model(version_info.get('baseModel', ''))
         model_type = version_info.get('type', 'checkpoint')
         
+        # Extract tags and description if available
+        tags = []
+        description = ""
+        if 'model' in version_info:
+            if 'tags' in version_info['model']:
+                tags = version_info['model']['tags']
+            if 'description' in version_info['model']:
+                description = version_info['model']['description']
+        
         return cls(
             file_name=os.path.splitext(file_name)[0],
             model_name=version_info.get('model').get('name', os.path.splitext(file_name)[0]),
@@ -103,6 +123,8 @@ class CheckpointMetadata(BaseModelMetadata):
             preview_nsfw_level=0,
             from_civitai=True,
             civitai=version_info,
-            model_type=model_type
+            model_type=model_type,
+            tags=tags,
+            modelDescription=description
         )
 

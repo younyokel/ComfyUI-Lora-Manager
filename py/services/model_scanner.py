@@ -292,7 +292,7 @@ class ModelScanner:
             )
 
         # If force refresh is requested, initialize the cache directly
-        if force_refresh:
+        if (force_refresh):
             if self._cache is None:
                 # For initial creation, do a full initialization
                 await self._initialize_cache()
@@ -553,6 +553,33 @@ class ModelScanner:
                         logger.debug(f"Created metadata from .civitai.info for {file_path}")
                 except Exception as e:
                     logger.error(f"Error creating metadata from .civitai.info for {file_path}: {e}")
+        else:
+            # Check if metadata exists but civitai field is empty - try to restore from civitai.info
+            if metadata.civitai is None or metadata.civitai == {}:
+                civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
+                if os.path.exists(civitai_info_path):
+                    try:
+                        with open(civitai_info_path, 'r', encoding='utf-8') as f:
+                            version_info = json.load(f)
+                        
+                        logger.debug(f"Restoring missing civitai data from .civitai.info for {file_path}")
+                        metadata.civitai = version_info
+                        
+                        # Ensure tags are also updated if they're missing
+                        if (not metadata.tags or len(metadata.tags) == 0) and 'model' in version_info:
+                            if 'tags' in version_info['model']:
+                                metadata.tags = version_info['model']['tags']
+                        
+                        # Also restore description if missing
+                        if (not metadata.modelDescription or metadata.modelDescription == "") and 'model' in version_info:
+                            if 'description' in version_info['model']:
+                                metadata.modelDescription = version_info['model']['description']
+                        
+                        # Save the updated metadata
+                        await save_metadata(file_path, metadata)
+                        logger.debug(f"Updated metadata with civitai info for {file_path}")
+                    except Exception as e:
+                        logger.error(f"Error restoring civitai data from .civitai.info for {file_path}: {e}")
             
             if metadata is None:
                 metadata = await self._get_file_info(file_path)
