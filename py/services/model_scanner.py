@@ -581,8 +581,8 @@ class ModelScanner:
                     except Exception as e:
                         logger.error(f"Error restoring civitai data from .civitai.info for {file_path}: {e}")
             
-            if metadata is None:
-                metadata = await self._get_file_info(file_path)
+        if metadata is None:
+            metadata = await self._get_file_info(file_path)
         
         model_data = metadata.to_dict()
         
