@@ -39,21 +39,18 @@ function getConnectedTriggerToggleNodes(node) {
 function updateConnectedTriggerWords(node, text) {
     const connectedNodeIds = getConnectedTriggerToggleNodes(node);
     if (connectedNodeIds.length > 0) {
-        // Extract lora names from the text
-        const loraNames = [];
+        const loraNames = new Set();
         let match;
-        // Reset the RegExp object's lastIndex to start from the beginning
         LORA_PATTERN.lastIndex = 0;
         while ((match = LORA_PATTERN.exec(text)) !== null) {
-            loraNames.push(match[1]); // match[1] contains the lora name
+            loraNames.add(match[1]);
         }
         
-        // Call API to get trigger words
         fetch("/loramanager/get_trigger_words", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                lora_names: loraNames,
+                lora_names: Array.from(loraNames),
                 node_ids: connectedNodeIds
             })
         }).catch(err => console.error("Error fetching trigger words:", err));
