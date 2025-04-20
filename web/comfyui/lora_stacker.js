@@ -1,8 +1,57 @@
 import { app } from "../../scripts/app.js";
-import { addLorasWidget } from "./loras_widget.js";
+import { dynamicImportByVersion } from "./utils.js";
 
 // Extract pattern into a constant for consistent use
 const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)>/g;
+
+// Function to get the appropriate loras widget based on ComfyUI version
+async function getLorasWidgetModule() {
+    return await dynamicImportByVersion("./loras_widget.js", "./legacy_loras_widget.js");
+}
+
+// Function to get connected trigger toggle nodes
+function getConnectedTriggerToggleNodes(node) {
+    const connectedNodes = [];
+    
+    if (node.outputs && node.outputs.length > 0) {
+        for (const output of node.outputs) {
+            if (output.links && output.links.length > 0) {
+                for (const linkId of output.links) {
+                    const link = app.graph.links[linkId];
+                    if (link) {
+                        const targetNode = app.graph.getNodeById(link.target_id);
+                        if (targetNode && targetNode.comfyClass === "TriggerWord Toggle (LoraManager)") {
+                            connectedNodes.push(targetNode.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return connectedNodes;
+}
+
+// Function to update trigger words for connected toggle nodes
+function updateConnectedTriggerWords(node, text) {
+    const connectedNodeIds = getConnectedTriggerToggleNodes(node);
+    if (connectedNodeIds.length > 0) {
+        const loraNames = new Set();
+        let match;
+        LORA_PATTERN.lastIndex = 0;
+        while ((match = LORA_PATTERN.exec(text)) !== null) {
+            loraNames.add(match[1]);
+        }
+        
+        fetch("/loramanager/get_trigger_words", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                lora_names: Array.from(loraNames),
+                node_ids: connectedNodeIds
+            })
+        }).catch(err => console.error("Error fetching trigger words:", err));
+    }
+}
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -40,7 +89,7 @@ app.registerExtension({
             });
 
             // Wait for node to be properly initialized
-            requestAnimationFrame(() => {               
+            requestAnimationFrame(async () => {               
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
@@ -64,7 +113,10 @@ app.registerExtension({
                 // Add flag to prevent callback loops
                 let isUpdating = false;
                  
-                // Get the widget object directly from the returned object
+                // Dynamically load the appropriate widget module
+                const lorasModule = await getLorasWidgetModule();
+                const { addLorasWidget } = lorasModule;
+                
                 const result = addLorasWidget(node, "loras", {
                     defaultVal: mergedLoras  // Pass object directly
                 }, (value) => {
@@ -86,6 +138,9 @@ app.registerExtension({
                         newText = newText.replace(/\s+/g, ' ').trim();
                         
                         inputWidget.value = newText;
+                        
+                        // Update trigger words when lorasWidget changes
+                        updateConnectedTriggerWords(node, newText);
                     } finally {
                         isUpdating = false;
                     }
@@ -104,6 +159,9 @@ app.registerExtension({
                         const mergedLoras = mergeLoras(value, currentLoras);
                         
                         node.lorasWidget.value = mergedLoras;
+                        
+                        // Update trigger words when input changes
+                        updateConnectedTriggerWords(node, value);
                     } finally {
                         isUpdating = false;
                     }
