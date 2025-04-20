@@ -45,14 +45,14 @@ class RecipeMetadataParser(ABC):
         """
         pass
     
-    async def populate_lora_from_civitai(self, lora_entry: Dict[str, Any], civitai_info: Dict[str, Any], 
+    async def populate_lora_from_civitai(self, lora_entry: Dict[str, Any], civitai_info_tuple: Tuple[Dict[str, Any], Optional[str]], 
                                          recipe_scanner=None, base_model_counts=None, hash_value=None) -> Dict[str, Any]:
         """
         Populate a lora entry with information from Civitai API response
         
         Args:
             lora_entry: The lora entry to populate
-            civitai_info: The response from Civitai API
+            civitai_info_tuple: The response tuple from Civitai API (data, error_msg)
             recipe_scanner: Optional recipe scanner for local file lookup
             base_model_counts: Optional dict to track base model counts
             hash_value: Optional hash value to use if not available in civitai_info
@@ -61,6 +61,9 @@ class RecipeMetadataParser(ABC):
             The populated lora_entry dict
         """
         try:
+            # Unpack the tuple to get the actual data
+            civitai_info, error_msg = civitai_info_tuple if isinstance(civitai_info_tuple, tuple) else (civitai_info_tuple, None)
+            
             if civitai_info and civitai_info.get("error") != "Model not found":
                 # Check if this is an early access lora
                 if civitai_info.get('earlyAccessEndsAt'):
@@ -241,11 +244,11 @@ class RecipeFormatParser(RecipeMetadataParser):
                         # Try to get additional info from Civitai if we have a model version ID
                         if lora.get('modelVersionId') and civitai_client:
                             try:
-                                civitai_info = await civitai_client.get_model_version_info(lora['modelVersionId'])
+                                civitai_info_tuple = await civitai_client.get_model_version_info(lora['modelVersionId'])
                                 # Populate lora entry with Civitai info
                                 lora_entry = await self.populate_lora_from_civitai(
                                     lora_entry, 
-                                    civitai_info, 
+                                    civitai_info_tuple, 
                                     recipe_scanner,
                                     None,  # No need to track base model counts
                                     lora['hash']
@@ -336,12 +339,13 @@ class StandardMetadataParser(RecipeMetadataParser):
                 # Get additional info from Civitai if client is available
                 if civitai_client:
                     try:
-                        civitai_info = await civitai_client.get_model_version_info(model_version_id)
+                        civitai_info_tuple = await civitai_client.get_model_version_info(model_version_id)
                         # Populate lora entry with Civitai info
                         lora_entry = await self.populate_lora_from_civitai(
                             lora_entry, 
-                            civitai_info, 
-                            recipe_scanner
+                            civitai_info_tuple, 
+                            recipe_scanner,
+                            base_model_counts
                         )
                     except Exception as e:
                         logger.error(f"Error fetching Civitai info for LoRA: {e}")
@@ -621,11 +625,11 @@ class ComfyMetadataParser(RecipeMetadataParser):
                 # Get additional info from Civitai if client is available
                 if civitai_client:
                     try:
-                        civitai_info = await civitai_client.get_model_version_info(model_version_id)
+                        civitai_info_tuple = await civitai_client.get_model_version_info(model_version_id)
                         # Populate lora entry with Civitai info
                         lora_entry = await self.populate_lora_from_civitai(
                             lora_entry, 
-                            civitai_info, 
+                            civitai_info_tuple, 
                             recipe_scanner
                         )
                     except Exception as e:
@@ -660,7 +664,8 @@ class ComfyMetadataParser(RecipeMetadataParser):
                         # Get additional checkpoint info from Civitai
                         if civitai_client:
                             try:
-                                civitai_info = await civitai_client.get_model_version_info(checkpoint_version_id)
+                                civitai_info_tuple = await civitai_client.get_model_version_info(checkpoint_version_id)
+                                civitai_info, _ = civitai_info_tuple if isinstance(civitai_info_tuple, tuple) else (civitai_info_tuple, None)
                                 # Populate checkpoint with Civitai info
                                 checkpoint = await self.populate_checkpoint_from_civitai(checkpoint, civitai_info)
                             except Exception as e:
