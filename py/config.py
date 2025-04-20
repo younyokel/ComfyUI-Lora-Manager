@@ -103,21 +103,29 @@ class Config:
 
     def _init_lora_paths(self) -> List[str]:
         """Initialize and validate LoRA paths from ComfyUI settings"""
-        paths = sorted(set(path.replace(os.sep, "/") 
-                for path in folder_paths.get_folder_paths("loras") 
-                if os.path.exists(path)), key=lambda p: p.lower())
-        print("Found LoRA roots:", "\n - " + "\n - ".join(paths))
+        raw_paths = folder_paths.get_folder_paths("loras")
         
-        if not paths:
+        # Normalize and resolve symlinks, store mapping from resolved -> original
+        path_map = {}
+        for path in raw_paths:
+            if os.path.exists(path):
+                real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                path_map[real_path] = path_map.get(real_path, path)  # preserve first seen
+        
+        # Now sort and use only the deduplicated real paths
+        unique_paths = sorted(path_map.values(), key=lambda p: p.lower())
+        print("Found LoRA roots:", "\n - " + "\n - ".join(unique_paths))
+        
+        if not unique_paths:
             raise ValueError("No valid loras folders found in ComfyUI configuration")
         
-        # 初始化路径映射
-        for path in paths:
-            real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
-            if real_path != path:
-                self.add_path_mapping(path, real_path)
+        for original_path in unique_paths:
+            real_path = os.path.normpath(os.path.realpath(original_path)).replace(os.sep, '/')
+            if real_path != original_path:
+                self.add_path_mapping(original_path, real_path)
         
-        return paths
+        return unique_paths
+
 
     def _init_checkpoint_paths(self) -> List[str]:
         """Initialize and validate checkpoint paths from ComfyUI settings"""

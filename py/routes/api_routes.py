@@ -3,8 +3,10 @@ import json
 import logging
 from aiohttp import web
 from typing import Dict
+from server import PromptServer # type: ignore
 
 from ..utils.routes_common import ModelRouteUtils
+from ..nodes.utils import get_lora_info
 
 from ..config import config
 from ..services.websocket_manager import ws_manager
@@ -64,6 +66,9 @@ class ApiRoutes:
         app.router.add_get('/api/lora-civitai-url', routes.get_lora_civitai_url)  # Add new route for Civitai URL
         app.router.add_post('/api/rename_lora', routes.rename_lora)  # Add new route for renaming LoRA files
         app.router.add_get('/api/loras/scan', routes.scan_loras)  # Add new route for scanning LoRA files
+        
+        # Add the new trigger words route
+        app.router.add_post('/loramanager/get_trigger_words', routes.get_trigger_words)
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -1021,4 +1026,35 @@ class ApiRoutes:
             return web.json_response({
                 'success': False,
                 'error': str(e)
+            }, status=500)
+
+    async def get_trigger_words(self, request: web.Request) -> web.Response:
+        """Get trigger words for specified LoRA models"""
+        try:
+            json_data = await request.json()
+            lora_names = json_data.get("lora_names", [])
+            node_ids = json_data.get("node_ids", [])
+            
+            all_trigger_words = []
+            for lora_name in lora_names:
+                _, trigger_words = await get_lora_info(lora_name)
+                all_trigger_words.extend(trigger_words)
+            
+            # Format the trigger words
+            trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
+            
+            # Send update to all connected trigger word toggle nodes
+            for node_id in node_ids:
+                PromptServer.instance.send_sync("trigger_word_update", {
+                    "id": node_id,
+                    "message": trigger_words_text
+                })
+            
+            return web.json_response({"success": True})
+
+        except Exception as e:
+            logger.error(f"Error getting trigger words: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
             }, status=500)

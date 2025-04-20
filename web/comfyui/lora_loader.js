@@ -9,6 +9,57 @@ async function getLorasWidgetModule() {
     return await dynamicImportByVersion("./loras_widget.js", "./legacy_loras_widget.js");
 }
 
+// Function to get connected trigger toggle nodes
+function getConnectedTriggerToggleNodes(node) {
+    const connectedNodes = [];
+    
+    // Check if node has outputs
+    if (node.outputs && node.outputs.length > 0) {
+        // For each output slot
+        for (const output of node.outputs) {
+            // Check if this output has any links
+            if (output.links && output.links.length > 0) {
+                // For each link, get the target node
+                for (const linkId of output.links) {
+                    const link = app.graph.links[linkId];
+                    if (link) {
+                        const targetNode = app.graph.getNodeById(link.target_id);
+                        if (targetNode && targetNode.comfyClass === "TriggerWord Toggle (LoraManager)") {
+                            connectedNodes.push(targetNode.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return connectedNodes;
+}
+
+// Function to update trigger words for connected toggle nodes
+function updateConnectedTriggerWords(node, text) {
+    const connectedNodeIds = getConnectedTriggerToggleNodes(node);
+    if (connectedNodeIds.length > 0) {
+        // Extract lora names from the text
+        const loraNames = [];
+        let match;
+        // Reset the RegExp object's lastIndex to start from the beginning
+        LORA_PATTERN.lastIndex = 0;
+        while ((match = LORA_PATTERN.exec(text)) !== null) {
+            loraNames.push(match[1]); // match[1] contains the lora name
+        }
+        
+        // Call API to get trigger words
+        fetch("/loramanager/get_trigger_words", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                lora_names: loraNames,
+                node_ids: connectedNodeIds
+            })
+        }).catch(err => console.error("Error fetching trigger words:", err));
+    }
+}
+
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
     let match;
@@ -99,6 +150,9 @@ app.registerExtension({
                         newText = newText.replace(/\s+/g, ' ').trim();
                         
                         inputWidget.value = newText;
+                        
+                        // Add this line to update trigger words when lorasWidget changes cause inputWidget value to change
+                        updateConnectedTriggerWords(node, newText);
                     } finally {
                         isUpdating = false;
                     }
@@ -117,6 +171,9 @@ app.registerExtension({
                         const mergedLoras = mergeLoras(value, currentLoras);
                         
                         node.lorasWidget.value = mergedLoras;
+                        
+                        // Replace the existing trigger word update code with the new function
+                        updateConnectedTriggerWords(node, value);
                     } finally {
                         isUpdating = false;
                     }
