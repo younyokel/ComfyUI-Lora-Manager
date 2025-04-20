@@ -47,10 +47,10 @@ class TriggerWordToggle:
         trigger_words = trigger_words_data if isinstance(trigger_words_data, str) else ""
         
         # Send trigger words to frontend
-        PromptServer.instance.send_sync("trigger_word_update", {
-            "id": id,
-            "message": trigger_words
-        })
+        # PromptServer.instance.send_sync("trigger_word_update", {
+        #     "id": id,
+        #     "message": trigger_words
+        # })
         
         filtered_triggers = trigger_words
         
