@@ -335,7 +335,7 @@ class SaveImage:
             if add_counter_to_filename:
                 # Use counter + i to ensure unique filenames for all images in batch
                 current_counter = counter + i
-                base_filename += f"_{current_counter:05}"
+                base_filename += f"_{current_counter:05}_"
                 
             # Set file extension and prepare saving parameters
             if file_format == "png":
