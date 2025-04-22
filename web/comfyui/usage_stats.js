@@ -17,7 +17,6 @@ app.registerExtension({
     
     async updateUsageStats(promptId) {
         try {
-            console.log("Updating usage statistics for prompt ID:", promptId);
             // Call backend endpoint with the prompt_id
             const response = await fetch(`/loras/api/update-usage-stats`, {
                 method: 'POST',
