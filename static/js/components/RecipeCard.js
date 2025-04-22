@@ -1,5 +1,5 @@
 // Recipe Card Component
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
 
 class RecipeCard {
@@ -109,13 +109,10 @@ class RecipeCard {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.syntax) {
-                        return navigator.clipboard.writeText(data.syntax);
+                        return copyToClipboard(data.syntax, 'Recipe syntax copied to clipboard');
                     } else {
                         throw new Error(data.error || 'No syntax returned');
                     }
-                })
-                .then(() => {
-                    showToast('Recipe syntax copied to clipboard', 'success');
                 })
                 .catch(err => {
                     console.error('Failed to copy: ', err);
@@ -279,4 +276,4 @@ class RecipeCard {
     }
 }
 
-export { RecipeCard }; 
+export { RecipeCard };

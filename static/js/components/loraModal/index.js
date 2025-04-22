@@ -3,8 +3,7 @@
  * 
  * 将原始的LoraModal.js拆分成多个功能模块后的主入口文件
  */
-import { showToast } from '../../utils/uiHelpers.js';
-import { state } from '../../state/index.js';
+import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop } from './ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
@@ -174,8 +173,7 @@ export function showLoraModal(lora) {
 // Copy file name function
 window.copyFileName = async function(fileName) {
     try {
-        await navigator.clipboard.writeText(fileName);
-        showToast('File name copied', 'success');
+        await copyToClipboard(fileName, 'File name copied');
     } catch (err) {
         console.error('Copy failed:', err);
         showToast('Copy failed', 'error');

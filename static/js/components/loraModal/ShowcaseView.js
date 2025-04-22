@@ -2,7 +2,7 @@
  * ShowcaseView.js
  * 处理LoRA模型展示内容（图片、视频）的功能模块
  */
-import { showToast } from '../../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { state } from '../../state/index.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 
@@ -311,8 +311,7 @@ function initMetadataPanelHandlers(container) {
                 if (!promptElement) return;
                 
                 try {
-                    await navigator.clipboard.writeText(promptElement.textContent);
-                    showToast('Prompt copied to clipboard', 'success');
+                    await copyToClipboard(promptElement.textContent, 'Prompt copied to clipboard');
                 } catch (err) {
                     console.error('Copy failed:', err);
                     showToast('Copy failed', 'error');

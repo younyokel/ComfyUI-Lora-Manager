@@ -1,7 +1,7 @@
 /**
  * RecipeTab - Handles the recipes tab in the Lora Modal
  */
-import { showToast } from '../../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { setSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
 
 /**
@@ -172,13 +172,10 @@ function copyRecipeSyntax(recipeId) {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.syntax) {
-                return navigator.clipboard.writeText(data.syntax);
+                return copyToClipboard(data.syntax, 'Recipe syntax copied to clipboard');
             } else {
                 throw new Error(data.error || 'No syntax returned');
             }
-        })
-        .then(() => {
-            showToast('Recipe syntax copied to clipboard', 'success');
         })
         .catch(err => {
             console.error('Failed to copy: ', err);

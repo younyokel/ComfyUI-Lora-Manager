@@ -1,4 +1,4 @@
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
@@ -204,21 +204,7 @@ export function createCheckpointCard(checkpoint) {
         const checkpointName = card.dataset.file_name;
         
         try {
-            // Modern clipboard API
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(checkpointName);
-            } else {
-                // Fallback for older browsers
-                const textarea = document.createElement('textarea');
-                textarea.value = checkpointName;
-                textarea.style.position = 'absolute';
-                textarea.style.left = '-99999px';
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-            }
-            showToast('Checkpoint name copied', 'success');
+            await copyToClipboard(checkpointName, 'Checkpoint name copied');
         } catch (err) {
             console.error('Copy failed:', err);
             showToast('Copy failed', 'error');

@@ -1,12 +1,14 @@
 """Constants used by the metadata collector"""
 
-# Individual category constants
+# Metadata collection constants
+
+# Metadata categories
 MODELS = "models"
 PROMPTS = "prompts"
 SAMPLING = "sampling"
 LORAS = "loras"
 SIZE = "size"
-IMAGES = "images"  # Added new category for image results
+IMAGES = "images"
 
-# Collection of categories for iteration
-METADATA_CATEGORIES = [MODELS, PROMPTS, SAMPLING, LORAS, SIZE, IMAGES]  # Added IMAGES to categories
+# Complete list of categories to track
+METADATA_CATEGORIES = [MODELS, PROMPTS, SAMPLING, LORAS, SIZE, IMAGES]

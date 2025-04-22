@@ -2,6 +2,40 @@ import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
 import { getStorageItem, setStorageItem } from './storageHelpers.js';
 
+/**
+ * Utility function to copy text to clipboard with fallback for older browsers
+ * @param {string} text - The text to copy to clipboard
+ * @param {string} successMessage - Optional success message to show in toast
+ * @returns {Promise<boolean>} - Promise that resolves to true if copy was successful
+ */
+export async function copyToClipboard(text, successMessage = 'Copied to clipboard') {
+    try {
+        // Modern clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-99999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+        
+        if (successMessage) {
+            showToast(successMessage, 'success');
+        }
+        return true;
+    } catch (err) {
+        console.error('Copy failed:', err);
+        showToast('Copy failed', 'error');
+        return false;
+    }
+}
+
 export function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -106,12 +140,6 @@ export function toggleFolder(tag) {
     }
     
     resetAndReload();
-}
-
-export function copyTriggerWord(word) {
-    navigator.clipboard.writeText(word).then(() => {
-        showToast('Trigger word copied', 'success');
-    });
 }
 
 function filterByFolder(folderPath) {

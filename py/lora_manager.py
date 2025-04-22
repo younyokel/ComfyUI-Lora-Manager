@@ -5,6 +5,8 @@ from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
 from .routes.recipe_routes import RecipeRoutes
 from .routes.checkpoints_routes import CheckpointsRoutes
+from .routes.update_routes import UpdateRoutes
+from .routes.usage_stats_routes import UsageStatsRoutes
 from .services.service_registry import ServiceRegistry
 import logging
 
@@ -92,6 +94,8 @@ class LoraManager:
         checkpoints_routes.setup_routes(app)
         ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
+        UpdateRoutes.setup_routes(app)  
+        UsageStatsRoutes.setup_routes(app)  # Register usage stats routes
         
         # Schedule service initialization 
         app.on_startup.append(lambda app: cls._initialize_services())
