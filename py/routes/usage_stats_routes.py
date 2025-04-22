@@ -11,6 +11,7 @@ class UsageStatsRoutes:
     def setup_routes(app):
         """Register usage stats routes"""
         app.router.add_post('/loras/api/update-usage-stats', UsageStatsRoutes.update_usage_stats)
+        app.router.add_get('/loras/api/get-usage-stats', UsageStatsRoutes.get_usage_stats)
     
     @staticmethod
     async def update_usage_stats(request):
@@ -43,6 +44,25 @@ class UsageStatsRoutes:
             
         except Exception as e:
             logger.error(f"Failed to update usage stats: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    @staticmethod
+    async def get_usage_stats(request):
+        """Get current usage statistics"""
+        try:
+            usage_stats = UsageStats()
+            stats = await usage_stats.get_stats()
+            
+            return web.json_response({
+                'success': True,
+                'data': stats
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to get usage stats: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)
