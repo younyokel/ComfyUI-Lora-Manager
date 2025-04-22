@@ -44,8 +44,8 @@ class CivitaiClient:
             # Optimize TCP connection parameters
             connector = aiohttp.TCPConnector(
                 ssl=True,
-                limit=10,  # Increase parallel connections
-                ttl_dns_cache=300,  # DNS cache time
+                limit=5,  # Reduced parallel connections from 10 to 5
+                ttl_dns_cache=60,  # Reduced DNS cache time from 300 to 60 seconds
                 force_close=False,  # Keep connections for reuse
                 enable_cleanup_closed=True
             )
@@ -103,6 +103,7 @@ class CivitaiClient:
         Returns:
             Tuple[bool, str]: (success, save_path or error message)
         """
+        logger.debug(f"Resolving DNS for: {url}")
         session = await self.session
         try:
             headers = self._get_request_headers()
@@ -110,6 +111,7 @@ class CivitaiClient:
             # Add Range header to allow resumable downloads
             headers['Accept-Encoding'] = 'identity'  # Disable compression for better chunked downloads
             
+            logger.debug(f"Starting download from: {url}")
             async with session.get(url, headers=headers, allow_redirects=True) as response:
                 if response.status != 200:
                     # Handle 401 unauthorized responses
@@ -124,6 +126,7 @@ class CivitaiClient:
                         return False, "Access forbidden: You don't have permission to download this file."
                     
                     # Generic error response for other status codes
+                    logger.error(f"Download failed for {url} with status {response.status}")
                     return False, f"Download failed with status {response.status}"
 
                 # Get filename from content-disposition header
@@ -226,8 +229,10 @@ class CivitaiClient:
             url = f"{self.base_url}/model-versions/{version_id}"
             headers = self._get_request_headers()
             
+            logger.debug(f"Resolving DNS for model version info: {url}")
             async with session.get(url, headers=headers) as response:
                 if response.status == 200:
+                    logger.debug(f"Successfully fetched model version info for: {version_id}")
                     return await response.json(), None
                 
                 # Handle specific error cases
@@ -242,6 +247,7 @@ class CivitaiClient:
                         return None, "Model not found (status 404)"
                 
                 # Other error cases
+                logger.error(f"Failed to fetch model info for {version_id} (status {response.status})")
                 return None, f"Failed to fetch model info (status {response.status})"
         except Exception as e:
             error_msg = f"Error fetching model version info: {e}"
