@@ -1,4 +1,4 @@
-import { showToast, openCivitai } from '../utils/uiHelpers.js';
+import { showToast, openCivitai, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
@@ -205,26 +205,7 @@ export function createLoraCard(lora) {
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
         
-        try {
-            // Modern clipboard API
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(loraSyntax);
-            } else {
-                // Fallback for older browsers
-                const textarea = document.createElement('textarea');
-                textarea.value = loraSyntax;
-                textarea.style.position = 'absolute';
-                textarea.style.left = '-99999px';
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-            }
-            showToast('LoRA syntax copied', 'success');
-        } catch (err) {
-            console.error('Copy failed:', err);
-            showToast('Copy failed', 'error');
-        }
+        await copyToClipboard(loraSyntax, 'LoRA syntax copied');
     });
 
     // Civitai button click event

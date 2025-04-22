@@ -1,5 +1,5 @@
 import { state } from '../state/index.js';
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { updateCardsForBulkMode } from '../components/LoraCard.js';
 
 export class BulkManager {
@@ -205,13 +205,7 @@ export class BulkManager {
             return;
         }
         
-        try {
-            await navigator.clipboard.writeText(loraSyntaxes.join(', '));
-            showToast(`Copied ${loraSyntaxes.length} LoRA syntaxes to clipboard`, 'success');
-        } catch (err) {
-            console.error('Copy failed:', err);
-            showToast('Copy failed', 'error');
-        }
+        await copyToClipboard(loraSyntaxes.join(', '), `Copied ${loraSyntaxes.length} LoRA syntaxes to clipboard`);
     }
     
     // Create and show the thumbnail strip of selected LoRAs

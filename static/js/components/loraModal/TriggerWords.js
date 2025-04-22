@@ -2,7 +2,7 @@
  * TriggerWords.js
  * 处理LoRA模型触发词相关的功能模块
  */
-import { showToast } from '../../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { saveModelMetadata } from './ModelMetadata.js';
 
 /**
@@ -336,23 +336,7 @@ async function saveTriggerWords() {
  */
 window.copyTriggerWord = async function(word) {
     try {
-        // Modern clipboard API - with fallback for non-secure contexts
-        if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(word);
-        } else {
-            // Fallback for older browsers or non-secure contexts
-            const textarea = document.createElement('textarea');
-            textarea.value = word;
-            textarea.style.position = 'absolute';
-            textarea.style.left = '-99999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            const success = document.execCommand('copy');
-            document.body.removeChild(textarea);
-            
-            if (!success) throw new Error('Copy command failed');
-        }
-        showToast('Trigger word copied', 'success');
+        await copyToClipboard(word, 'Trigger word copied');
     } catch (err) {
         console.error('Copy failed:', err);
         showToast('Copy failed', 'error');

@@ -1,5 +1,5 @@
 // Recipe Modal Component
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { setSessionItem, removeSessionItem } from '../utils/storageHelpers.js';
 
@@ -747,9 +747,8 @@ class RecipeModal {
             const data = await response.json();
             
             if (data.success && data.syntax) {
-                // Copy to clipboard
-                await navigator.clipboard.writeText(data.syntax);
-                showToast('Recipe syntax copied to clipboard', 'success');
+                // Use the centralized copyToClipboard utility function
+                await copyToClipboard(data.syntax, 'Recipe syntax copied to clipboard');
             } else {
                 throw new Error(data.error || 'No syntax returned from server');
             }
@@ -761,12 +760,7 @@ class RecipeModal {
     
     // Helper method to copy text to clipboard
     copyToClipboard(text, successMessage) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast(successMessage, 'success');
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            showToast('Failed to copy text', 'error');
-        });
+        copyToClipboard(text, successMessage);
     }
 
     // Add new method to handle downloading missing LoRAs
