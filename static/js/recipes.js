@@ -268,6 +268,32 @@ class RecipeManager {
         }
     }
     
+    /**
+     * Refreshes the recipe list by first rebuilding the cache and then loading recipes
+     */
+    async refreshRecipes() {
+        try {           
+            // Call the new endpoint to rebuild the recipe cache
+            const response = await fetch('/api/recipes/scan');
+            
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to refresh recipe cache');
+            }
+            
+            // After successful cache rebuild, load the recipes
+            await this.loadRecipes(true);
+            
+            appCore.showToast('Refresh complete', 'success');
+        } catch (error) {
+            console.error('Error refreshing recipes:', error);
+            appCore.showToast(error.message || 'Failed to refresh recipes', 'error');
+            
+            // Still try to load recipes even if scan failed
+            await this.loadRecipes(true);
+        }
+    }
+    
     async _loadSpecificRecipe(recipeId) {
         try {
             // Fetch specific recipe by ID

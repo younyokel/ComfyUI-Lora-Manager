@@ -74,6 +74,9 @@ class RecipeRoutes:
         
         # Add route to get recipes for a specific Lora
         app.router.add_get('/api/recipes/for-lora', routes.get_recipes_for_lora)
+        
+        # Add new endpoint for scanning and rebuilding the recipe cache
+        app.router.add_get('/api/recipes/scan', routes.scan_recipes)
     
     async def _init_cache(self, app):
         """Initialize cache on startup"""
@@ -1255,3 +1258,24 @@ class RecipeRoutes:
         except Exception as e:
             logger.error(f"Error getting recipes for Lora: {str(e)}")
             return web.json_response({'success': False, 'error': str(e)}, status=500)
+
+    async def scan_recipes(self, request: web.Request) -> web.Response:
+        """API endpoint for scanning and rebuilding the recipe cache"""
+        try:
+            # Ensure services are initialized
+            await self.init_services()
+            
+            # Force refresh the recipe cache
+            logger.info("Manually triggering recipe cache rebuild")
+            await self.recipe_scanner.get_cached_data(force_refresh=True)
+            
+            return web.json_response({
+                'success': True,
+                'message': 'Recipe cache refreshed successfully'
+            })
+        except Exception as e:
+            logger.error(f"Error refreshing recipe cache: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
