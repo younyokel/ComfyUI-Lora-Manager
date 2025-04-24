@@ -97,8 +97,9 @@ class RecipeMetadataParser(ABC):
                 
                 # Process file information if available
                 if 'files' in civitai_info:
+                    # Find the primary model file (type="Model" and primary=true) in the files list
                     model_file = next((file for file in civitai_info.get('files', []) 
-                                    if file.get('type') == 'Model'), None)
+                                      if file.get('type') == 'Model' and file.get('primary') == True), None)
                     
                     if model_file:
                         # Get size

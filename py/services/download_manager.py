@@ -88,16 +88,16 @@ class DownloadManager:
             version_info = None
             error_msg = None
             
-            if download_url:
-                # Extract version ID from download URL
-                version_id = download_url.split('/')[-1]
-                version_info, error_msg = await civitai_client.get_model_version_info(version_id)
+            if model_hash:
+                # Get model by hash
+                version_info = await civitai_client.get_model_by_hash(model_hash)
             elif model_version_id:
                 # Use model version ID directly
                 version_info, error_msg = await civitai_client.get_model_version_info(model_version_id)
-            elif model_hash:
-                # Get model by hash
-                version_info = await civitai_client.get_model_by_hash(model_hash)
+            elif download_url:
+                # Extract version ID from download URL
+                version_id = download_url.split('/')[-1]
+                version_info, error_msg = await civitai_client.get_model_version_info(version_id)
 
             
             if not version_info:
