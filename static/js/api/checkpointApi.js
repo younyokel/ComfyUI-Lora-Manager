@@ -62,8 +62,13 @@ export async function refreshSingleCheckpointMetadata(filePath) {
     return refreshSingleModelMetadata(filePath, 'checkpoint');
 }
 
-// Save checkpoint metadata (similar to the Lora version)
-export async function saveCheckpointMetadata(filePath, data) {
+/**
+ * Save model metadata to the server
+ * @param {string} filePath - Path to the model file
+ * @param {Object} data - Metadata to save
+ * @returns {Promise} - Promise that resolves with the server response
+ */
+export async function saveModelMetadata(filePath, data) {
     const response = await fetch('/api/checkpoints/save-metadata', {
         method: 'POST',
         headers: {
@@ -79,5 +84,5 @@ export async function saveCheckpointMetadata(filePath, data) {
         throw new Error('Failed to save metadata');
     }
     
-    return await response.json();
+    return response.json();
 }

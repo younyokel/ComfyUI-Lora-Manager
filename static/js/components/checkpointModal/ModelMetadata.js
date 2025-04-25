@@ -5,31 +5,7 @@
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
 import { updateCheckpointCard } from '../../utils/cardUpdater.js';
-
-/**
- * Save model metadata to the server
- * @param {string} filePath - Path to the model file
- * @param {Object} data - Metadata to save
- * @returns {Promise} - Promise that resolves with the server response
- */
-export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/api/checkpoints/save-metadata', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            file_path: filePath,
-            ...data
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to save metadata');
-    }
-    
-    return response.json();
-}
+import { saveModelMetadata } from '../../api/checkpointApi.js';
 
 /**
  * Set up model name editing functionality

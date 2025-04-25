@@ -1,5 +1,5 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
-import { refreshSingleLoraMetadata } from '../../api/loraApi.js';
+import { refreshSingleLoraMetadata, saveModelMetadata } from '../../api/loraApi.js';
 import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
@@ -111,22 +111,7 @@ export class LoraContextMenu extends BaseContextMenu {
     }
 
     async saveModelMetadata(filePath, data) {
-        const response = await fetch('/api/loras/save-metadata', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                file_path: filePath,
-                ...data
-            })
-        });
-    
-        if (!response.ok) {
-            throw new Error('Failed to save metadata');
-        }
-        
-        return await response.json();
+        return saveModelMetadata(filePath, data);
     }
 
     updateCardBlurEffect(card, level) {

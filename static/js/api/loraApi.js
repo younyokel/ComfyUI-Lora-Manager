@@ -9,6 +9,31 @@ import {
     refreshSingleModelMetadata
 } from './baseModelApi.js';
 
+/**
+ * Save model metadata to the server
+ * @param {string} filePath - File path
+ * @param {Object} data - Data to save
+ * @returns {Promise} Promise of the save operation
+ */
+export async function saveModelMetadata(filePath, data) {
+    const response = await fetch('/api/loras/save-metadata', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            file_path: filePath,
+            ...data
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to save metadata');
+    }
+    
+    return response.json();
+}
+
 export async function loadMoreLoras(resetPage = false, updateFolders = false) {
     return loadMoreModels({
         resetPage,

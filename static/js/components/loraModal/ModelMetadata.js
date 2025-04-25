@@ -5,31 +5,7 @@
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
 import { updateLoraCard } from '../../utils/cardUpdater.js';
-
-/**
- * 保存模型元数据到服务器
- * @param {string} filePath - 文件路径
- * @param {Object} data - 要保存的数据
- * @returns {Promise} 保存操作的Promise
- */
-export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/api/loras/save-metadata', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            file_path: filePath,
-            ...data
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to save metadata');
-    }
-    
-    return response.json();
-}
+import { saveModelMetadata } from '../../api/loraApi.js';
 
 /**
  * 设置模型名称编辑功能

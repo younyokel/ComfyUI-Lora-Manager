@@ -1,5 +1,5 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
-import { refreshSingleCheckpointMetadata, saveCheckpointMetadata } from '../../api/checkpointApi.js';
+import { refreshSingleCheckpointMetadata, saveModelMetadata } from '../../api/checkpointApi.js';
 import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
@@ -82,7 +82,7 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 if (!filePath) return;
                 
                 try {
-                    await saveCheckpointMetadata(filePath, { preview_nsfw_level: level });
+                    await saveModelMetadata(filePath, { preview_nsfw_level: level });
                     
                     // Update card data
                     const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);

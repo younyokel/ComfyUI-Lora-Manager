@@ -2,8 +2,7 @@
  * PresetTags.js
  * 处理LoRA模型预设参数标签相关的功能模块
  */
-import { saveModelMetadata } from './ModelMetadata.js';
-import { showToast } from '../../utils/uiHelpers.js';
+import { saveModelMetadata } from '../../api/loraApi.js';
 
 /**
  * 解析预设参数
