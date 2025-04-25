@@ -34,6 +34,7 @@ class CivitaiClient:
             'User-Agent': 'ComfyUI-LoRA-Manager/1.0'
         }
         self._session = None
+        self._session_created_at = None
         # Set default buffer size to 1MB for higher throughput
         self.chunk_size = 1024 * 1024
     
@@ -44,8 +45,8 @@ class CivitaiClient:
             # Optimize TCP connection parameters
             connector = aiohttp.TCPConnector(
                 ssl=True,
-                limit=5,  # Reduced parallel connections from 10 to 5
-                ttl_dns_cache=60,  # Reduced DNS cache time from 300 to 60 seconds
+                limit=3,  # Further reduced from 5 to 3
+                ttl_dns_cache=0,  # Disabled DNS caching completely
                 force_close=False,  # Keep connections for reuse
                 enable_cleanup_closed=True
             )
@@ -57,7 +58,18 @@ class CivitaiClient:
                 trust_env=trust_env,
                 timeout=timeout
             )
+            self._session_created_at = datetime.now()
         return self._session
+    
+    async def _ensure_fresh_session(self):
+        """Refresh session if it's been open too long"""
+        if self._session is not None:
+            if not hasattr(self, '_session_created_at') or \
+               (datetime.now() - self._session_created_at).total_seconds() > 300:  # 5 minutes
+                await self.close()
+                self._session = None
+        
+        return await self.session
 
     def _parse_content_disposition(self, header: str) -> str:
         """Parse filename from content-disposition header"""
@@ -104,7 +116,7 @@ class CivitaiClient:
             Tuple[bool, str]: (success, save_path or error message)
         """
         logger.debug(f"Resolving DNS for: {url}")
-        session = await self.session
+        session = await self._ensure_fresh_session()
         try:
             headers = self._get_request_headers()
             
@@ -173,7 +185,7 @@ class CivitaiClient:
 
     async def get_model_by_hash(self, model_hash: str) -> Optional[Dict]:
         try:
-            session = await self.session
+            session = await self._ensure_fresh_session()
             async with session.get(f"{self.base_url}/model-versions/by-hash/{model_hash}") as response:
                 if response.status == 200:
                     return await response.json()
@@ -184,7 +196,7 @@ class CivitaiClient:
 
     async def download_preview_image(self, image_url: str, save_path: str):
         try:
-            session = await self.session
+            session = await self._ensure_fresh_session()
             async with session.get(image_url) as response:
                 if response.status == 200:
                     content = await response.read()
@@ -199,7 +211,7 @@ class CivitaiClient:
     async def get_model_versions(self, model_id: str) -> List[Dict]:
         """Get all versions of a model with local availability info"""
         try:
-            session = await self.session  # 等待获取 session
+            session = await self._ensure_fresh_session()  # Use fresh session
             async with session.get(f"{self.base_url}/models/{model_id}") as response:
                 if response.status != 200:
                     return None
@@ -225,7 +237,7 @@ class CivitaiClient:
                 - An error message if there was an error, or None on success
         """
         try:
-            session = await self.session
+            session = await self._ensure_fresh_session()
             url = f"{self.base_url}/model-versions/{version_id}"
             headers = self._get_request_headers()
             
@@ -266,7 +278,7 @@ class CivitaiClient:
                 - The HTTP status code from the request
         """
         try:
-            session = await self.session
+            session = await self._ensure_fresh_session()
             headers = self._get_request_headers()
             url = f"{self.base_url}/models/{model_id}"
             
@@ -310,10 +322,11 @@ class CivitaiClient:
     async def _get_hash_from_civitai(self, model_version_id: str) -> Optional[str]:
         """Get hash from Civitai API"""
         try:
-            if not self._session:
+            session = await self._ensure_fresh_session()
+            if not session:
                 return None
             
-            version_info = await self._session.get(f"{self.base_url}/model-versions/{model_version_id}")
+            version_info = await session.get(f"{self.base_url}/model-versions/{model_version_id}")
             
             if not version_info or not version_info.json().get('files'):
                 return None
