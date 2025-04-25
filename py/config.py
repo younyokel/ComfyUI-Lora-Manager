@@ -110,7 +110,7 @@ class Config:
         for path in raw_paths:
             if os.path.exists(path):
                 real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
-                path_map[real_path] = path_map.get(real_path, path)  # preserve first seen
+                path_map[real_path] = path_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
         
         # Now sort and use only the deduplicated real paths
         unique_paths = sorted(path_map.values(), key=lambda p: p.lower())
