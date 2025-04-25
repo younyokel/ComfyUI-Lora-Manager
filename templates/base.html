@@ -48,6 +48,20 @@
             document.documentElement.style.setProperty('--scrollbar-width', scrollbarWidth + 'px');
         });
     </script>
+    <script>
+      (function() {
+        // Apply theme immediately based on stored preference
+        const STORAGE_PREFIX = 'lora_manager_';
+        const savedTheme = localStorage.getItem(STORAGE_PREFIX + 'theme') || 'auto';
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme === 'dark' || (savedTheme === 'auto' && prefersDark)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     {% block head_scripts %}{% endblock %}
 </head>
 

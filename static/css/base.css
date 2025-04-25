@@ -59,6 +59,16 @@ html, body {
     --scrollbar-width: 8px; /* 添加滚动条宽度变量 */
 }
 
+html[data-theme="dark"] {
+    background-color: #1a1a1a !important;
+    color-scheme: dark;
+}
+
+html[data-theme="light"] {
+    background-color: #ffffff !important;
+    color-scheme: light;
+}
+
 [data-theme="dark"] {
     --bg-color: #1a1a1a;
     --text-color: #e0e0e0;
