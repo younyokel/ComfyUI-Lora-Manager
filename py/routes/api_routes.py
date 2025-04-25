@@ -125,6 +125,7 @@ class ApiRoutes:
             # Get filter parameters
             base_models = request.query.get('base_models', None)
             tags = request.query.get('tags', None)
+            favorites_only = request.query.get('favorites_only', 'false').lower() == 'true'  # New parameter
             
             # New parameters for recipe filtering
             lora_hash = request.query.get('lora_hash', None)
@@ -155,7 +156,8 @@ class ApiRoutes:
                 base_models=filters.get('base_model', None),
                 tags=filters.get('tags', None),
                 search_options=search_options,
-                hash_filters=hash_filters
+                hash_filters=hash_filters,
+                favorites_only=favorites_only  # Pass favorites_only parameter
             )
 
             # Get all available folders from cache
@@ -195,6 +197,7 @@ class ApiRoutes:
             "from_civitai": lora.get("from_civitai", True),
             "usage_tips": lora.get("usage_tips", ""),
             "notes": lora.get("notes", ""),
+            "favorite": lora.get("favorite", False),  # Include favorite status in response
             "civitai": ModelRouteUtils.filter_civitai_data(lora.get("civitai", {}))
         }
 

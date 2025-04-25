@@ -11,9 +11,9 @@ import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { 
     setupModelNameEditing, 
     setupBaseModelEditing, 
-    setupFileNameEditing,
-    saveModelMetadata
+    setupFileNameEditing
 } from './ModelMetadata.js';
+import { saveModelMetadata } from '../../api/checkpointApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { updateCheckpointCard } from '../../utils/cardUpdater.js';
 

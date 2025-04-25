@@ -3,7 +3,7 @@
  * 处理LoRA模型触发词相关的功能模块
  */
 import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
-import { saveModelMetadata } from './ModelMetadata.js';
+import { saveModelMetadata } from '../../api/loraApi.js';
 
 /**
  * 渲染触发词

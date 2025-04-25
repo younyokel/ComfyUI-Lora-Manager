@@ -45,6 +45,11 @@ export async function loadMoreModels(options = {}) {
             params.append('folder', pageState.activeFolder);
         }
 
+        // Add favorites filter parameter if enabled
+        if (pageState.showFavoritesOnly) {
+            params.append('favorites_only', 'true');
+        }
+
         // Add search parameters if there's a search term
         if (pageState.filters?.search) {
             params.append('search', pageState.filters.search);

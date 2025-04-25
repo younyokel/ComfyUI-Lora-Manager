@@ -81,6 +81,22 @@
     opacity: 1;
 }
 
+/* Controls */
+.control-group button.favorite-filter {
+    position: relative;
+    overflow: hidden;
+}
+
+.control-group button.favorite-filter.active {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.control-group button.favorite-filter i {
+    margin-right: 4px;
+    color: #ffc107;
+}
+
 /* Active state for buttons that can be toggled */
 .control-group button.active {
     background: var(--lora-accent);

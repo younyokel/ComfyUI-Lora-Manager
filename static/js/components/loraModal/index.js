@@ -13,9 +13,9 @@ import { loadRecipesForLora } from './RecipeTab.js'; // Add import for recipe ta
 import { 
     setupModelNameEditing, 
     setupBaseModelEditing, 
-    setupFileNameEditing,
-    saveModelMetadata
+    setupFileNameEditing
 } from './ModelMetadata.js';
+import { saveModelMetadata } from '../../api/loraApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { updateLoraCard } from '../../utils/cardUpdater.js';
 

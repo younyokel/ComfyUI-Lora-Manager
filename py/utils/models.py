@@ -22,6 +22,7 @@ class BaseModelMetadata:
     tags: List[str] = None      # Model tags
     modelDescription: str = ""  # Full model description
     civitai_deleted: bool = False  # Whether deleted from Civitai
+    favorite: bool = False      # Whether the model is a favorite
 
     def __post_init__(self):
         # Initialize empty lists to avoid mutable default parameter issue
