@@ -114,13 +114,55 @@ export function restoreFolderFilter() {
 }
 
 export function initTheme() {
-    document.body.dataset.theme = getStorageItem('theme') || 'dark';
+    const savedTheme = getStorageItem('theme') || 'auto';
+    applyTheme(savedTheme);
+    
+    // Update theme when system preference changes (for 'auto' mode)
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        const currentTheme = getStorageItem('theme') || 'auto';
+        if (currentTheme === 'auto') {
+            applyTheme('auto');
+        }
+    });
 }
 
 export function toggleTheme() {
-    const theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
-    document.body.dataset.theme = theme;
-    setStorageItem('theme', theme);
+    const currentTheme = getStorageItem('theme') || 'auto';
+    let newTheme;
+    
+    if (currentTheme === 'dark') {
+        newTheme = 'light';
+    } else {
+        newTheme = 'dark';
+    }
+    
+    setStorageItem('theme', newTheme);
+    applyTheme(newTheme);
+    
+    // Force a repaint to ensure theme changes are applied immediately
+    document.body.style.display = 'none';
+    document.body.offsetHeight; // Trigger a reflow
+    document.body.style.display = '';
+    
+    return newTheme;
+}
+
+// Add a new helper function to apply the theme
+function applyTheme(theme) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const htmlElement = document.documentElement;
+    
+    // Remove any existing theme attributes
+    htmlElement.removeAttribute('data-theme');
+    
+    // Apply the appropriate theme
+    if (theme === 'dark' || (theme === 'auto' && prefersDark)) {
+        htmlElement.setAttribute('data-theme', 'dark');
+        document.body.dataset.theme = 'dark';
+    } else {
+        htmlElement.setAttribute('data-theme', 'light');
+        document.body.dataset.theme = 'light';
+    }
 }
 
 export function toggleFolder(tag) {
