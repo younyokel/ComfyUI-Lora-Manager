@@ -12,7 +12,8 @@ dependencies = [
     "piexif",
     "Pillow",
     "olefile", # for getting rid of warning message
-    "requests"
+    "requests",
+    "toml"
 ]
 
 [project.urls]

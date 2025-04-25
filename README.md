@@ -146,7 +146,7 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 ```bash
 git clone https://github.com/willmiao/ComfyUI-Lora-Manager.git
 cd ComfyUI-Lora-Manager
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Usage

@@ -7,3 +7,4 @@ piexif
 Pillow
 olefile
 requests
+toml
