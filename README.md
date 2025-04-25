@@ -20,6 +20,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.9
+* **Favorites System** - New functionality to bookmark your favorite LoRAs and checkpoints for quick access and better organization
+* **Enhanced UI Controls** - Increased model card button sizes for improved usability and easier interaction
+* **Smoother Page Transitions** - Optimized interface switching between pages, eliminating flash issues particularly noticeable in dark theme
+* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
+
 ### v0.8.8
 * **Real-time TriggerWord Updates** - Enhanced TriggerWord Toggle node to instantly update when connected Lora Loader or Lora Stacker nodes change, without requiring workflow execution
 * **Optimized Metadata Recovery** - Improved utilization of existing .civitai.info files for faster initialization and preservation of metadata from models deleted from CivitAI
