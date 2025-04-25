@@ -736,6 +736,12 @@ class ModelScanner:
                 shutil.move(source_metadata, target_metadata)
                 metadata = await self._update_metadata_paths(target_metadata, target_file)
             
+            # Move civitai.info file if exists
+            source_civitai = os.path.join(source_dir, f"{base_name}.civitai.info")
+            if os.path.exists(source_civitai):
+                target_civitai = os.path.join(target_path, f"{base_name}.civitai.info")
+                shutil.move(source_civitai, target_civitai)
+            
             for ext in PREVIEW_EXTENSIONS:
                 source_preview = os.path.join(source_dir, f"{base_name}{ext}")
                 if os.path.exists(source_preview):
