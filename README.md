@@ -169,18 +169,25 @@ pip install requirements.txt
 
 ---
 
+## Contributing
+
+Thank you for your interest in contributing to ComfyUI LoRA Manager! As this project is currently in its early stages and undergoing rapid development and refactoring, we are temporarily not accepting pull requests.
+
+However, your feedback and ideas are extremely valuable to us:
+- Please feel free to open issues for any bugs you encounter
+- Submit feature requests through GitHub issues
+- Share your suggestions for improvements
+
+We appreciate your understanding and look forward to potentially accepting code contributions once the project architecture stabilizes.
+
+---
+
 ## Credits
 
 This project has been inspired by and benefited from other excellent ComfyUI extensions:
 
-- [ComfyUI-SaveImageWithMetaData](https://github.com/Comfy-Community/ComfyUI-SaveImageWithMetaData) - For the image metadata functionality
+- [ComfyUI-SaveImageWithMetaData](https://github.com/nkchocoai/ComfyUI-SaveImageWithMetaData) - For the image metadata functionality
 - [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) - For the lora loader functionality
-
----
-
-## Contributing
-
-If you have suggestions, bug reports, or improvements, feel free to open an issue or contribute directly to the codebase. Pull requests are always welcome!
 
 ---
 
