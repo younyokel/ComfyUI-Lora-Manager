@@ -42,6 +42,7 @@ export const state = {
             bulkMode: false,
             selectedLoras: new Set(),
             loraMetadataCache: new Map(),
+            showFavoritesOnly: false,
         },
         
         recipes: {
@@ -61,7 +62,8 @@ export const state = {
                 tags: [],
                 search: ''
             },
-            pageSize: 20
+            pageSize: 20,
+            showFavoritesOnly: false,
         },
         
         checkpoints: {
@@ -80,7 +82,8 @@ export const state = {
             filters: {
                 baseModel: [],
                 tags: []
-            }
+            },
+            showFavoritesOnly: false,
         }
     },
     

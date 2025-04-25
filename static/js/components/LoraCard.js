@@ -3,7 +3,7 @@ import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
-import { replacePreview, deleteModel } from '../api/loraApi.js'
+import { replacePreview, deleteModel, saveModelMetadata } from '../api/loraApi.js'
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');
@@ -20,6 +20,7 @@ export function createLoraCard(lora) {
     card.dataset.usage_tips = lora.usage_tips;
     card.dataset.notes = lora.notes;
     card.dataset.meta = JSON.stringify(lora.civitai || {});
+    card.dataset.favorite = lora.favorite ? 'true' : 'false';
     
     // Store tags and model description
     if (lora.tags && Array.isArray(lora.tags)) {
@@ -65,6 +66,9 @@ export function createLoraCard(lora) {
     const isVideo = previewUrl.endsWith('.mp4');
     const videoAttrs = autoplayOnHover ? 'controls muted loop' : 'controls autoplay muted loop';
 
+    // Get favorite status from the lora data
+    const isFavorite = lora.favorite === true;
+
     card.innerHTML = `
         <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
             ${isVideo ? 
@@ -82,6 +86,9 @@ export function createLoraCard(lora) {
                     ${lora.base_model}
                 </span>
                 <div class="card-actions">
+                    <i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
+                       title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                    </i>
                     <i class="fas fa-globe" 
                        title="${lora.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
                        ${!lora.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
@@ -135,6 +142,7 @@ export function createLoraCard(lora) {
                 base_model: card.dataset.base_model,
                 usage_tips: card.dataset.usage_tips,
                 notes: card.dataset.notes,
+                favorite: card.dataset.favorite === 'true',
                 // Parse civitai metadata from the card's dataset
                 civitai: (() => {
                     try {
@@ -197,6 +205,39 @@ export function createLoraCard(lora) {
             }
         });
     }
+
+    // Favorite button click event
+    card.querySelector('.fa-star')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const starIcon = e.currentTarget;
+        const isFavorite = starIcon.classList.contains('fas');
+        const newFavoriteState = !isFavorite;
+        
+        try {
+            // Save the new favorite state to the server
+            await saveModelMetadata(card.dataset.filepath, { 
+                favorite: newFavoriteState 
+            });
+
+            // Update the UI
+            if (newFavoriteState) {
+                starIcon.classList.remove('far');
+                starIcon.classList.add('fas', 'favorite-active');
+                starIcon.title = 'Remove from favorites';
+                card.dataset.favorite = 'true';
+                showToast('Added to favorites', 'success');
+            } else {
+                starIcon.classList.remove('fas', 'favorite-active');
+                starIcon.classList.add('far');
+                starIcon.title = 'Add to favorites';
+                card.dataset.favorite = 'false';
+                showToast('Removed from favorites', 'success');
+            }
+        } catch (error) {
+            console.error('Failed to update favorite status:', error);
+            showToast('Failed to update favorite status', 'error');
+        }
+    });
 
     // Copy button click event
     card.querySelector('.fa-copy')?.addEventListener('click', async e => {

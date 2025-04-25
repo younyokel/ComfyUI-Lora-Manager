@@ -69,6 +69,7 @@ class CheckpointsRoutes:
             fuzzy_search = request.query.get('fuzzy_search', 'false').lower() == 'true'
             base_models = request.query.getall('base_model', [])
             tags = request.query.getall('tag', [])
+            favorites_only = request.query.get('favorites_only', 'false').lower() == 'true'  # Add favorites_only parameter
             
             # Process search options
             search_options = {
@@ -101,7 +102,8 @@ class CheckpointsRoutes:
                 base_models=base_models,
                 tags=tags,
                 search_options=search_options,
-                hash_filters=hash_filters
+                hash_filters=hash_filters,
+                favorites_only=favorites_only  # Pass favorites_only parameter
             )
             
             # Format response items
@@ -123,7 +125,8 @@ class CheckpointsRoutes:
     async def get_paginated_data(self, page, page_size, sort_by='name', 
                                folder=None, search=None, fuzzy_search=False,
                                base_models=None, tags=None,
-                               search_options=None, hash_filters=None):
+                               search_options=None, hash_filters=None,
+                               favorites_only=False):  # Add favorites_only parameter with default False
         """Get paginated and filtered checkpoint data"""
         cache = await self.scanner.get_cached_data()
 
@@ -179,6 +182,13 @@ class CheckpointsRoutes:
             filtered_data = [
                 cp for cp in filtered_data
                 if not cp.get('preview_nsfw_level') or cp.get('preview_nsfw_level') < NSFW_LEVELS['R']
+            ]
+        
+        # Apply favorites filtering if enabled
+        if favorites_only:
+            filtered_data = [
+                cp for cp in filtered_data
+                if cp.get('favorite', False) is True
             ]
         
         # Apply folder filtering
@@ -276,6 +286,7 @@ class CheckpointsRoutes:
             "from_civitai": checkpoint.get("from_civitai", True),
             "notes": checkpoint.get("notes", ""),
             "model_type": checkpoint.get("model_type", "checkpoint"),
+            "favorite": checkpoint.get("favorite", False),
             "civitai": ModelRouteUtils.filter_civitai_data(checkpoint.get("civitai", {}))
         }
     

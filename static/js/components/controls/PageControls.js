@@ -1,6 +1,6 @@
 // PageControls.js - Manages controls for both LoRAs and Checkpoints pages
 import { state, getCurrentPageState, setCurrentPageType } from '../../state/index.js';
-import { getStorageItem, setStorageItem } from '../../utils/storageHelpers.js';
+import { getStorageItem, setStorageItem, getSessionItem, setSessionItem } from '../../utils/storageHelpers.js';
 import { showToast } from '../../utils/uiHelpers.js';
 
 /**
@@ -25,6 +25,9 @@ export class PageControls {
         
         // Initialize event listeners
         this.initEventListeners();
+        
+        // Initialize favorites filter button state
+        this.initFavoritesFilter();
         
         console.log(`PageControls initialized for ${pageType} page`);
     }
@@ -120,6 +123,12 @@ export class PageControls {
             if (bulkButton) {
                 bulkButton.addEventListener('click', () => this.toggleBulkMode());
             }
+        }
+        
+        // Favorites filter button handler
+        const favoriteFilterBtn = document.getElementById('favoriteFilterBtn');
+        if (favoriteFilterBtn) {
+            favoriteFilterBtn.addEventListener('click', () => this.toggleFavoritesOnly());
         }
     }
     
@@ -384,5 +393,51 @@ export class PageControls {
             console.error('Error clearing custom filter:', error);
             showToast('Failed to clear custom filter: ' + error.message, 'error');
         }
+    }
+    
+    /**
+     * Initialize the favorites filter button state
+     */
+    initFavoritesFilter() {
+        const favoriteFilterBtn = document.getElementById('favoriteFilterBtn');
+        if (favoriteFilterBtn) {
+            // Get current state from session storage with page-specific key
+            const storageKey = `show_favorites_only_${this.pageType}`;
+            const showFavoritesOnly = getSessionItem(storageKey, false);
+            
+            // Update button state
+            if (showFavoritesOnly) {
+                favoriteFilterBtn.classList.add('active');
+            }
+            
+            // Update app state
+            this.pageState.showFavoritesOnly = showFavoritesOnly;
+        }
+    }
+    
+    /**
+     * Toggle favorites-only filter and reload models
+     */
+    async toggleFavoritesOnly() {
+        const favoriteFilterBtn = document.getElementById('favoriteFilterBtn');
+        
+        // Toggle the filter state in storage
+        const storageKey = `show_favorites_only_${this.pageType}`;
+        const currentState = this.pageState.showFavoritesOnly;
+        const newState = !currentState;
+        
+        // Update session storage
+        setSessionItem(storageKey, newState);
+        
+        // Update state
+        this.pageState.showFavoritesOnly = newState;
+        
+        // Update button appearance
+        if (favoriteFilterBtn) {
+            favoriteFilterBtn.classList.toggle('active', newState);
+        }
+        
+        // Reload models with new filter
+        await this.resetAndReload(true);
     }
 }

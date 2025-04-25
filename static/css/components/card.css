@@ -192,12 +192,43 @@
     margin-left: var(--space-1);
     cursor: pointer;
     color: white;
-    transition: opacity 0.2s;
-    font-size: 0.9em;
+    transition: opacity 0.2s, transform 0.15s ease;
+    font-size: 1.0em; /* Increased from 0.9em for better visibility */
+    width: 16px; /* Fixed width for consistent spacing */
+    height: 16px; /* Fixed height for larger touch target */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 4px; /* Add padding to increase clickable area */
+    box-sizing: content-box; /* Ensure padding adds to dimensions */
+    position: relative; /* For proper positioning */
+    margin: 0; /* Reset margin */
+}
+
+.card-actions i::before {
+    position: absolute; /* Position the icon glyph */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the icon */
+}
+
+.card-actions {
+    display: flex;
+    gap: var(--space-1); /* Use gap instead of margin for spacing between icons */
+    align-items: center;
 }
 
 .card-actions i:hover {
-    opacity: 0.8;
+    opacity: 0.9;
+    transform: scale(1.1);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Style for active favorites */
+.favorite-active {
+    color: #ffc107 !important; /* Gold color for favorites */
+    text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
 }
 
 /* 响应式设计 */

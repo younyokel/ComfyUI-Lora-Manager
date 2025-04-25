@@ -2,7 +2,7 @@ import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
-import { replaceCheckpointPreview as apiReplaceCheckpointPreview } from '../api/checkpointApi.js';
+import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata } from '../api/checkpointApi.js';
 
 export function createCheckpointCard(checkpoint) {
     const card = document.createElement('div');
@@ -17,6 +17,7 @@ export function createCheckpointCard(checkpoint) {
     card.dataset.from_civitai = checkpoint.from_civitai;
     card.dataset.notes = checkpoint.notes || '';
     card.dataset.base_model = checkpoint.base_model || 'Unknown';
+    card.dataset.favorite = checkpoint.favorite ? 'true' : 'false';
 
     // Store metadata if available
     if (checkpoint.civitai) {
@@ -65,6 +66,9 @@ export function createCheckpointCard(checkpoint) {
     const isVideo = previewUrl.endsWith('.mp4');
     const videoAttrs = autoplayOnHover ? 'controls muted loop' : 'controls autoplay muted loop';
 
+    // Get favorite status from checkpoint data
+    const isFavorite = checkpoint.favorite === true;
+
     card.innerHTML = `
         <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
             ${isVideo ? 
@@ -82,6 +86,9 @@ export function createCheckpointCard(checkpoint) {
                     ${checkpoint.base_model}
                 </span>
                 <div class="card-actions">
+                    <i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
+                       title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                    </i>
                     <i class="fas fa-globe" 
                        title="${checkpoint.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
                        ${!checkpoint.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
@@ -197,6 +204,39 @@ export function createCheckpointCard(checkpoint) {
             }
         });
     }
+
+    // Favorite button click event
+    card.querySelector('.fa-star')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const starIcon = e.currentTarget;
+        const isFavorite = starIcon.classList.contains('fas');
+        const newFavoriteState = !isFavorite;
+        
+        try {
+            // Save the new favorite state to the server
+            await saveModelMetadata(card.dataset.filepath, { 
+                favorite: newFavoriteState 
+            });
+
+            // Update the UI
+            if (newFavoriteState) {
+                starIcon.classList.remove('far');
+                starIcon.classList.add('fas', 'favorite-active');
+                starIcon.title = 'Remove from favorites';
+                card.dataset.favorite = 'true';
+                showToast('Added to favorites', 'success');
+            } else {
+                starIcon.classList.remove('fas', 'favorite-active');
+                starIcon.classList.add('far');
+                starIcon.title = 'Add to favorites';
+                card.dataset.favorite = 'false';
+                showToast('Removed from favorites', 'success');
+            }
+        } catch (error) {
+            console.error('Failed to update favorite status:', error);
+            showToast('Failed to update favorite status', 'error');
+        }
+    });
 
     // Copy button click event
     card.querySelector('.fa-copy')?.addEventListener('click', async e => {

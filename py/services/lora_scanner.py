@@ -122,7 +122,8 @@ class LoraScanner(ModelScanner):
     async def get_paginated_data(self, page: int, page_size: int, sort_by: str = 'name', 
                                folder: str = None, search: str = None, fuzzy_search: bool = False,
                                base_models: list = None, tags: list = None,
-                               search_options: dict = None, hash_filters: dict = None) -> Dict:
+                               search_options: dict = None, hash_filters: dict = None,
+                               favorites_only: bool = False) -> Dict:
         """Get paginated and filtered lora data
         
         Args:
@@ -136,6 +137,7 @@ class LoraScanner(ModelScanner):
             tags: List of tags to filter by
             search_options: Dictionary with search options (filename, modelname, tags, recursive)
             hash_filters: Dictionary with hash filtering options (single_hash or multiple_hashes)
+            favorites_only: Filter for favorite models only
         """
         cache = await self.get_cached_data()
 
@@ -192,6 +194,13 @@ class LoraScanner(ModelScanner):
             filtered_data = [
                 lora for lora in filtered_data
                 if not lora.get('preview_nsfw_level') or lora.get('preview_nsfw_level') < NSFW_LEVELS['R']
+            ]
+        
+        # Apply favorites filtering if enabled
+        if favorites_only:
+            filtered_data = [
+                lora for lora in filtered_data
+                if lora.get('favorite', False) is True
             ]
         
         # Apply folder filtering

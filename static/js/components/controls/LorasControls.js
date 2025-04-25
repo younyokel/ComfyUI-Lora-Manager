@@ -2,7 +2,6 @@
 import { PageControls } from './PageControls.js';
 import { loadMoreLoras, fetchCivitai, resetAndReload, refreshLoras } from '../../api/loraApi.js';
 import { getSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
-import { showToast } from '../../utils/uiHelpers.js';
 
 /**
  * LorasControls class - Extends PageControls for LoRA-specific functionality
