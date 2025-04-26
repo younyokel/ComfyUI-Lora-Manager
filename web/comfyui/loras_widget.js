@@ -900,7 +900,7 @@ export function addLorasWidget(node, name, opts, callback) {
     });
     
     // Calculate height based on number of loras and fixed sizes
-    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (lorasData.length * LORA_ENTRY_HEIGHT);
+    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (Math.min(lorasData.length, 5) * LORA_ENTRY_HEIGHT);
     updateWidgetHeight(calculatedHeight);
   };
 
