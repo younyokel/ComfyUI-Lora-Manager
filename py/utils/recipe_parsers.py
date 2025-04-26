@@ -403,27 +403,43 @@ class StandardMetadataParser(RecipeMetadataParser):
             
             # Extract Civitai resources
             if 'Civitai resources:' in user_comment:
-                resources_part = user_comment.split('Civitai resources:', 1)[1]
-                if '],' in resources_part:
-                    resources_json = resources_part.split('],', 1)[0] + ']'
-                    try:
-                        resources = json.loads(resources_json)
-                        # Filter loras and checkpoints
-                        for resource in resources:
-                            if resource.get('type') == 'lora':
-                                # 确保 weight 字段被正确保留
-                                lora_entry = resource.copy()
-                                # 如果找不到 weight，默认为 1.0
-                                if 'weight' not in lora_entry:
-                                    lora_entry['weight'] = 1.0
-                                # Ensure modelVersionName is included
-                                if 'modelVersionName' not in lora_entry:
-                                    lora_entry['modelVersionName'] = ''
-                                metadata['loras'].append(lora_entry)
-                            elif resource.get('type') == 'checkpoint':
-                                metadata['checkpoint'] = resource
-                    except json.JSONDecodeError:
-                        pass
+                resources_part = user_comment.split('Civitai resources:', 1)[1].strip()
+                
+                # Look for the opening and closing brackets to extract the JSON array
+                if resources_part.startswith('['):
+                    # Find the position of the closing bracket
+                    bracket_count = 0
+                    end_pos = -1
+                    
+                    for i, char in enumerate(resources_part):
+                        if char == '[':
+                            bracket_count += 1
+                        elif char == ']':
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                end_pos = i
+                                break
+                    
+                    if end_pos != -1:
+                        resources_json = resources_part[:end_pos+1]
+                        try:
+                            resources = json.loads(resources_json)
+                            # Filter loras and checkpoints
+                            for resource in resources:
+                                if resource.get('type') == 'lora':
+                                    # 确保 weight 字段被正确保留
+                                    lora_entry = resource.copy()
+                                    # 如果找不到 weight，默认为 1.0
+                                    if 'weight' not in lora_entry:
+                                        lora_entry['weight'] = 1.0
+                                    # Ensure modelVersionName is included
+                                    if 'modelVersionName' not in lora_entry:
+                                        lora_entry['modelVersionName'] = ''
+                                    metadata['loras'].append(lora_entry)
+                                elif resource.get('type') == 'checkpoint':
+                                    metadata['checkpoint'] = resource
+                        except json.JSONDecodeError:
+                            pass
             
             return metadata
         except Exception as e:
