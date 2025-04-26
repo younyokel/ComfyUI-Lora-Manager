@@ -10,16 +10,25 @@ from typing import Dict
 import tempfile
 import json
 import asyncio
+import sys
 from ..utils.exif_utils import ExifUtils
 from ..utils.recipe_parsers import RecipeParserFactory
 from ..utils.constants import CARD_PREVIEW_WIDTH
 
 from ..config import config
-from ..metadata_collector import get_metadata  # Add MetadataCollector import
-from ..metadata_collector.metadata_processor import MetadataProcessor  # Add MetadataProcessor import
+
+# Check if running in standalone mode
+standalone_mode = 'nodes' not in sys.modules
+
 from ..utils.utils import download_civitai_image
 from ..services.service_registry import ServiceRegistry  # Add ServiceRegistry import
-from ..metadata_collector.metadata_registry import MetadataRegistry
+
+# Only import MetadataRegistry in non-standalone mode
+if not standalone_mode:
+    # Import metadata_collector functions and classes conditionally
+    from ..metadata_collector import get_metadata  # Add MetadataCollector import
+    from ..metadata_collector.metadata_processor import MetadataProcessor  # Add MetadataProcessor import
+    from ..metadata_collector.metadata_registry import MetadataRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -804,8 +813,11 @@ class RecipeRoutes:
                 return web.json_response({"error": "No generation metadata found"}, status=400)
             
             # Get the most recent image from metadata registry instead of temp directory
-            metadata_registry = MetadataRegistry()
-            latest_image = metadata_registry.get_first_decoded_image()
+            if not standalone_mode:
+                metadata_registry = MetadataRegistry()
+                latest_image = metadata_registry.get_first_decoded_image()
+            else:
+                latest_image = None
             
             if not latest_image:
                 return web.json_response({"error": "No recent images found to use for recipe. Try generating an image first."}, status=400)

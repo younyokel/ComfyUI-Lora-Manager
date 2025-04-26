@@ -3,6 +3,11 @@ import platform
 import folder_paths # type: ignore
 from typing import List
 import logging
+import sys
+import json
+
+# Check if running in standalone mode
+standalone_mode = 'nodes' not in sys.modules
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +23,46 @@ class Config:
         self._route_mappings = {}
         self.loras_roots = self._init_lora_paths()
         self.checkpoints_roots = self._init_checkpoint_paths()
-        self.temp_directory = folder_paths.get_temp_directory()
         # 在初始化时扫描符号链接
         self._scan_symbolic_links()
+        
+        if not standalone_mode:
+            # Save the paths to settings.json when running in ComfyUI mode
+            self.save_folder_paths_to_settings()
+
+    def save_folder_paths_to_settings(self):
+        """Save folder paths to settings.json for standalone mode to use later"""
+        try:
+            # Check if we're running in ComfyUI mode (not standalone)
+            if hasattr(folder_paths, "get_folder_paths") and not isinstance(folder_paths, type):
+                # Get all relevant paths
+                lora_paths = folder_paths.get_folder_paths("loras")
+                checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
+                diffuser_paths = folder_paths.get_folder_paths("diffusers")
+                unet_paths = folder_paths.get_folder_paths("unet")
+                
+                # Load existing settings
+                settings_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings.json')
+                settings = {}
+                if os.path.exists(settings_path):
+                    with open(settings_path, 'r', encoding='utf-8') as f:
+                        settings = json.load(f)
+                
+                # Update settings with paths
+                settings['folder_paths'] = {
+                    'loras': lora_paths,
+                    'checkpoints': checkpoint_paths,
+                    'diffusers': diffuser_paths,
+                    'unet': unet_paths
+                }
+                
+                # Save settings
+                with open(settings_path, 'w', encoding='utf-8') as f:
+                    json.dump(settings, f, indent=2)
+                
+                logger.info("Saved folder paths to settings.json")
+        except Exception as e:
+            logger.warning(f"Failed to save folder paths: {e}")
 
     def _is_link(self, path: str) -> bool:
         try:
@@ -103,58 +145,66 @@ class Config:
 
     def _init_lora_paths(self) -> List[str]:
         """Initialize and validate LoRA paths from ComfyUI settings"""
-        raw_paths = folder_paths.get_folder_paths("loras")
-        
-        # Normalize and resolve symlinks, store mapping from resolved -> original
-        path_map = {}
-        for path in raw_paths:
-            if os.path.exists(path):
-                real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
-                path_map[real_path] = path_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
-        
-        # Now sort and use only the deduplicated real paths
-        unique_paths = sorted(path_map.values(), key=lambda p: p.lower())
-        print("Found LoRA roots:", "\n - " + "\n - ".join(unique_paths))
-        
-        if not unique_paths:
-            raise ValueError("No valid loras folders found in ComfyUI configuration")
-        
-        for original_path in unique_paths:
-            real_path = os.path.normpath(os.path.realpath(original_path)).replace(os.sep, '/')
-            if real_path != original_path:
-                self.add_path_mapping(original_path, real_path)
-        
-        return unique_paths
-
+        try:
+            raw_paths = folder_paths.get_folder_paths("loras")
+            
+            # Normalize and resolve symlinks, store mapping from resolved -> original
+            path_map = {}
+            for path in raw_paths:
+                if os.path.exists(path):
+                    real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                    path_map[real_path] = path_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
+            
+            # Now sort and use only the deduplicated real paths
+            unique_paths = sorted(path_map.values(), key=lambda p: p.lower())
+            logger.info("Found LoRA roots:" + ("\n - " + "\n - ".join(unique_paths) if unique_paths else "[]"))
+            
+            if not unique_paths:
+                logger.warning("No valid loras folders found in ComfyUI configuration")
+                return []
+            
+            for original_path in unique_paths:
+                real_path = os.path.normpath(os.path.realpath(original_path)).replace(os.sep, '/')
+                if real_path != original_path:
+                    self.add_path_mapping(original_path, real_path)
+            
+            return unique_paths
+        except Exception as e:
+            logger.warning(f"Error initializing LoRA paths: {e}")
+            return []
 
     def _init_checkpoint_paths(self) -> List[str]:
         """Initialize and validate checkpoint paths from ComfyUI settings"""
-        # Get checkpoint paths from folder_paths
-        checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
-        diffusion_paths = folder_paths.get_folder_paths("diffusers")
-        unet_paths = folder_paths.get_folder_paths("unet")
-        
-        # Combine all checkpoint-related paths
-        all_paths = checkpoint_paths + diffusion_paths + unet_paths
-        
-        # Filter and normalize paths
-        paths = sorted(set(path.replace(os.sep, "/") 
-                for path in all_paths 
-                if os.path.exists(path)), key=lambda p: p.lower())
-        
-        print("Found checkpoint roots:", paths)
-        
-        if not paths:
-            logger.warning("No valid checkpoint folders found in ComfyUI configuration")
+        try:
+            # Get checkpoint paths from folder_paths
+            checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
+            diffusion_paths = folder_paths.get_folder_paths("diffusers")
+            unet_paths = folder_paths.get_folder_paths("unet")
+            
+            # Combine all checkpoint-related paths
+            all_paths = checkpoint_paths + diffusion_paths + unet_paths
+            
+            # Filter and normalize paths
+            paths = sorted(set(path.replace(os.sep, "/") 
+                    for path in all_paths 
+                    if os.path.exists(path)), key=lambda p: p.lower())
+            
+            logger.info("Found checkpoint roots:" + ("\n - " + "\n - ".join(paths) if paths else "[]"))
+            
+            if not paths:
+                logger.warning("No valid checkpoint folders found in ComfyUI configuration")
+                return []
+            
+            # 初始化路径映射，与 LoRA 路径处理方式相同
+            for path in paths:
+                real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                if real_path != path:
+                    self.add_path_mapping(path, real_path)
+            
+            return paths
+        except Exception as e:
+            logger.warning(f"Error initializing checkpoint paths: {e}")
             return []
-        
-        # 初始化路径映射，与 LoRA 路径处理方式相同
-        for path in paths:
-            real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
-            if real_path != path:
-                self.add_path_mapping(path, real_path)
-        
-        return paths
 
     def get_preview_static_url(self, preview_path: str) -> str:
         """Convert local preview path to static URL"""
