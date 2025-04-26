@@ -257,12 +257,85 @@ class VAEDecodeExtractor(NodeMetadataExtractor):
         if "first_decode" not in metadata[IMAGES]:
             metadata[IMAGES]["first_decode"] = metadata[IMAGES][node_id]
 
+class KSamplerSelectExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs or "sampler_name" not in inputs:
+            return
+            
+        sampling_params = {}
+        if "sampler_name" in inputs:
+            sampling_params["sampler_name"] = inputs["sampler_name"]
+                
+        metadata[SAMPLING][node_id] = {
+            "parameters": sampling_params,
+            "node_id": node_id
+        }
+
+class BasicSchedulerExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs:
+            return
+            
+        sampling_params = {}
+        for key in ["scheduler", "steps", "denoise"]:
+            if key in inputs:
+                sampling_params[key] = inputs[key]
+                
+        metadata[SAMPLING][node_id] = {
+            "parameters": sampling_params,
+            "node_id": node_id
+        }
+
+class SamplerCustomAdvancedExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs:
+            return
+            
+        sampling_params = {}
+
+        # Handle noise.seed as seed
+        if "noise" in inputs and inputs["noise"] is not None and hasattr(inputs["noise"], "seed"):
+            noise = inputs["noise"]
+            sampling_params["seed"] = noise.seed
+                
+        metadata[SAMPLING][node_id] = {
+            "parameters": sampling_params,
+            "node_id": node_id
+        }
+        
+        # Extract latent image dimensions if available
+        if "latent_image" in inputs and inputs["latent_image"] is not None:
+            latent = inputs["latent_image"]
+            if isinstance(latent, dict) and "samples" in latent:
+                # Extract dimensions from latent tensor
+                samples = latent["samples"]
+                if hasattr(samples, "shape") and len(samples.shape) >= 3:
+                    # Correct shape interpretation: [batch_size, channels, height/8, width/8]
+                    # Multiply by 8 to get actual pixel dimensions
+                    height = int(samples.shape[2] * 8)
+                    width = int(samples.shape[3] * 8)
+                    
+                    if SIZE not in metadata:
+                        metadata[SIZE] = {}
+                        
+                    metadata[SIZE][node_id] = {
+                        "width": width,
+                        "height": height,
+                        "node_id": node_id
+                    }
+
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
     # Sampling
     "KSampler": SamplerExtractor,
-    "KSamplerAdvanced": KSamplerAdvancedExtractor,  # Add KSamplerAdvanced
-    "SamplerCustomAdvanced": SamplerExtractor,  # Add SamplerCustomAdvanced
+    "KSamplerAdvanced": KSamplerAdvancedExtractor,
+    "SamplerCustomAdvanced": SamplerCustomAdvancedExtractor,  # Updated to use dedicated extractor
+    # Sampling Selectors
+    "KSamplerSelect": KSamplerSelectExtractor,  # Add KSamplerSelect
+    "BasicScheduler": BasicSchedulerExtractor,  # Add BasicScheduler
     # Loaders
     "CheckpointLoaderSimple": CheckpointLoaderExtractor,
     "UNETLoader": UNETLoaderExtractor,          # Updated to use dedicated extractor
