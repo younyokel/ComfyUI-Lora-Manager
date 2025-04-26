@@ -173,6 +173,19 @@ pip install -r requirements.txt
    - Paste into the Lora Loader node's text input
    - The node will automatically apply preset strength and trigger words
 
+### Standalone Mode
+
+You can now run LoRA Manager independently from ComfyUI:
+
+1. **First-time setup**: Launch ComfyUI with LoRA Manager at least once to initialize the necessary path information in the `settings.json` file.
+2. **Launch standalone mode**: From your ComfyUI root directory, run:
+   ```bash
+   python custom_nodes\comfyui-lora-manager\standalone.py
+   ```
+3. Access the interface through your browser as usual.
+
+This standalone mode provides a lighter-weight option for managing your model and recipe collection without needing to run the full ComfyUI environment.
+
 ---
 
 ## Contributing
