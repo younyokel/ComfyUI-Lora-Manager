@@ -13,10 +13,23 @@ class MockFolderPaths:
                 with open(settings_path, 'r', encoding='utf-8') as f:
                     settings = json.load(f)
                 
-                # Return paths if they exist in settings
-                if 'folder_paths' in settings and folder_name in settings['folder_paths']:
-                    paths = settings['folder_paths'][folder_name]
+                # For diffusion_models, combine unet and diffusers paths
+                if folder_name == "diffusion_models":
+                    paths = []
+                    if 'folder_paths' in settings:
+                        if 'unet' in settings['folder_paths']:
+                            paths.extend(settings['folder_paths']['unet'])
+                        if 'diffusers' in settings['folder_paths']:
+                            paths.extend(settings['folder_paths']['diffusers'])
                     # Filter out paths that don't exist
+                    valid_paths = [p for p in paths if os.path.exists(p)]
+                    if valid_paths:
+                        return valid_paths
+                    else:
+                        print(f"Warning: No valid paths found for {folder_name}")
+                # For other folder names, return their paths directly
+                elif 'folder_paths' in settings and folder_name in settings['folder_paths']:
+                    paths = settings['folder_paths'][folder_name]
                     valid_paths = [p for p in paths if os.path.exists(p)]
                     if valid_paths:
                         return valid_paths
