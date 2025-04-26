@@ -9,8 +9,12 @@ from .routes.update_routes import UpdateRoutes
 from .routes.usage_stats_routes import UsageStatsRoutes
 from .services.service_registry import ServiceRegistry
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
+
+# Check if we're in standalone mode
+STANDALONE_MODE = 'nodes' not in sys.modules
 
 class LoraManager:
     """Main entry point for LoRA Manager plugin"""
@@ -19,6 +23,9 @@ class LoraManager:
     def add_routes(cls):
         """Initialize and register all routes"""
         app = PromptServer.instance.app
+
+        # Configure aiohttp access logger to be less verbose
+        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 
         added_targets = set()  # Track already added target paths
         
@@ -108,6 +115,9 @@ class LoraManager:
     async def _initialize_services(cls):
         """Initialize all services using the ServiceRegistry"""
         try:
+            # Ensure aiohttp access logger is configured with reduced verbosity
+            logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
+            
             # Initialize CivitaiClient first to ensure it's ready for other services
             civitai_client = await ServiceRegistry.get_civitai_client()
             
@@ -136,6 +146,12 @@ class LoraManager:
             
             # Initialize recipe scanner if needed
             recipe_scanner = await ServiceRegistry.get_recipe_scanner()
+            
+            # Initialize metadata collector if not in standalone mode
+            if not STANDALONE_MODE:
+                from .metadata_collector import init as init_metadata
+                init_metadata()
+                logger.debug("Metadata collector initialized")
             
             # Create low-priority initialization tasks
             asyncio.create_task(lora_scanner.initialize_in_background(), name='lora_cache_init')

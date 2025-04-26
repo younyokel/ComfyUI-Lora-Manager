@@ -146,6 +146,18 @@ export class ImportManager {
         if (totalSizeDisplay) {
             totalSizeDisplay.textContent = 'Calculating...';
         }
+        
+        // Remove any existing deleted LoRAs warning
+        const deletedLorasWarning = document.getElementById('deletedLorasWarning');
+        if (deletedLorasWarning) {
+            deletedLorasWarning.remove();
+        }
+        
+        // Remove any existing early access warning
+        const earlyAccessWarning = document.getElementById('earlyAccessWarning');
+        if (earlyAccessWarning) {
+            earlyAccessWarning.remove();
+        }
     }
 
     toggleImportMode(mode) {
@@ -532,17 +544,17 @@ export class ImportManager {
         const nextButton = document.querySelector('#detailsStep .primary-btn');
         if (!nextButton) return;
         
+        // Always clean up previous warnings first
+        const existingWarning = document.getElementById('deletedLorasWarning');
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+        
         // Count deleted LoRAs
         const deletedLoras = this.recipeData.loras.filter(lora => lora.isDeleted).length;
         
         // If we have deleted LoRAs, show a warning and update button text
         if (deletedLoras > 0) {
-            // Remove any existing warning
-            const existingWarning = document.getElementById('deletedLorasWarning');
-            if (existingWarning) {
-                existingWarning.remove();
-            }
-            
             // Create a new warning container above the buttons
             const buttonsContainer = document.querySelector('#detailsStep .modal-actions') || nextButton.parentNode;
             const warningContainer = document.createElement('div');

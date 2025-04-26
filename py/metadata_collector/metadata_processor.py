@@ -1,4 +1,8 @@
 import json
+import sys
+
+# Check if running in standalone mode
+standalone_mode = 'nodes' not in sys.modules
 
 from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE
 
@@ -276,6 +280,10 @@ class MetadataProcessor:
     @staticmethod
     def to_dict(metadata):
         """Convert extracted metadata to the ComfyUI output.json format"""           
+        if standalone_mode:
+            # Return empty dictionary in standalone mode
+            return {}
+        
         params = MetadataProcessor.extract_generation_params(metadata)
         
         # Convert all values to strings to match output.json format

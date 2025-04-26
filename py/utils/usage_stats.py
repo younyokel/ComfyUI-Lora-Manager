@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 import time
 import asyncio
 import logging
@@ -7,8 +8,13 @@ from typing import Dict, Set
 
 from ..config import config
 from ..services.service_registry import ServiceRegistry
-from ..metadata_collector.metadata_registry import MetadataRegistry
-from ..metadata_collector.constants import MODELS, LORAS
+
+# Check if running in standalone mode
+standalone_mode = 'nodes' not in sys.modules
+
+if not standalone_mode:
+    from ..metadata_collector.metadata_registry import MetadataRegistry
+    from ..metadata_collector.constants import MODELS, LORAS
 
 logger = logging.getLogger(__name__)
 
