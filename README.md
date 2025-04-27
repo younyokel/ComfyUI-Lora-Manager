@@ -173,6 +173,39 @@ pip install -r requirements.txt
    - Paste into the Lora Loader node's text input
    - The node will automatically apply preset strength and trigger words
 
+### Filename Format Patterns for Save Image Node
+
+The Save Image Node supports dynamic filename generation using pattern codes. You can customize how your images are named using the following format patterns:
+
+#### Available Pattern Codes
+
+- `%seed%` - Inserts the generation seed number
+- `%width%` - Inserts the image width
+- `%height%` - Inserts the image height
+- `%pprompt:N%` - Inserts the positive prompt (limited to N characters)
+- `%nprompt:N%` - Inserts the negative prompt (limited to N characters)
+- `%model:N%` - Inserts the model/checkpoint name (limited to N characters)
+- `%date%` - Inserts current date/time as "yyyyMMddhhmmss"
+- `%date:FORMAT%` - Inserts date using custom format with:
+  - `yyyy` - 4-digit year
+  - `yy` - 2-digit year
+  - `MM` - 2-digit month
+  - `dd` - 2-digit day
+  - `hh` - 2-digit hour
+  - `mm` - 2-digit minute
+  - `ss` - 2-digit second
+
+#### Examples
+
+- `image_%seed%` → `image_1234567890`
+- `gen_%width%x%height%` → `gen_512x768`
+- `%model:10%_%seed%` → `dreamshape_1234567890`
+- `%date:yyyy-MM-dd%` → `2025-04-28`
+- `%pprompt:20%_%seed%` → `beautiful landscape_1234567890`
+- `%model%_%date:yyMMdd%_%seed%` → `dreamshaper_v8_250428_1234567890`
+
+You can combine multiple patterns to create detailed, organized filenames for your generated images.
+
 ### Standalone Mode
 
 You can now run LoRA Manager independently from ComfyUI:
