@@ -129,13 +129,17 @@ class StandaloneServer:
         self.app.router.add_get('/', self.handle_status)
     
     async def handle_status(self, request):
-        """Handle status request"""
-        return web.json_response({
-            "status": "running",
-            "mode": "standalone",
-            "loras_roots": config.loras_roots,
-            "checkpoints_roots": config.checkpoints_roots
-        })
+        """Handle status request by redirecting to loras page"""
+        # Redirect to loras page instead of showing status
+        raise web.HTTPFound('/loras')
+        
+        # Original JSON response (commented out)
+        # return web.json_response({
+        #     "status": "running",
+        #     "mode": "standalone",
+        #     "loras_roots": config.loras_roots,
+        #     "checkpoints_roots": config.checkpoints_roots
+        # })
     
     async def on_startup(self, app):
         """Startup handler"""
@@ -150,13 +154,15 @@ class StandaloneServer:
         # In standalone mode, we don't have the same websocket system
         pass
     
-    async def start(self, host='0.0.0.0', port=8188):
+    async def start(self, host='127.0.0.1', port=8188):
         """Start the server"""
         runner = web.AppRunner(self.app)
         await runner.setup()
         site = web.TCPSite(runner, host, port)
         await site.start()
-        logger.info(f"Server started at http://{host}:{port}")
+
+        # Log the server address with a clickable localhost URL regardless of the actual binding
+        logger.info(f"Server started at http://127.0.0.1:{port}")
         
         # Keep the server running
         while True:
@@ -301,13 +307,13 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description="LoRA Manager Standalone Server")
     parser.add_argument("--host", type=str, default="0.0.0.0", 
-                        help="Host to bind the server to")
+                        help="Host address to bind the server to (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8188,
-                        help="Port to bind the server to")
-    parser.add_argument("--loras", type=str, nargs="+", 
-                        help="Additional paths to LoRA model directories (optional if settings.json has paths)")
-    parser.add_argument("--checkpoints", type=str, nargs="+",
-                        help="Additional paths to checkpoint model directories (optional if settings.json has paths)")
+                        help="Port to bind the server to (default: 8188, access via http://localhost:8188/loras)")
+    # parser.add_argument("--loras", type=str, nargs="+", 
+    #                     help="Additional paths to LoRA model directories (optional if settings.json has paths)")
+    # parser.add_argument("--checkpoints", type=str, nargs="+",
+    #                     help="Additional paths to checkpoint model directories (optional if settings.json has paths)")
     parser.add_argument("--log-level", type=str, default="INFO",
                         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                         help="Logging level")

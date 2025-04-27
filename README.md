@@ -179,20 +179,26 @@ You can now run LoRA Manager independently from ComfyUI:
 
 1. **For ComfyUI users**:
    - Launch ComfyUI with LoRA Manager at least once to initialize the necessary path information in the `settings.json` file.
+   - Make sure dependencies are installed: `pip install -r requirements.txt`
    - From your ComfyUI root directory, run:
      ```bash
      python custom_nodes\comfyui-lora-manager\standalone.py
+     ```
+   - Access the interface at: `http://localhost:8188/loras`
+   - You can specify a different host or port with arguments:
+     ```bash
+     python custom_nodes\comfyui-lora-manager\standalone.py --host 127.0.0.1 --port 9000
      ```
 
 2. **For non-ComfyUI users**:
    - Copy the provided `settings.json.example` file to create a new file named `settings.json`
    - Edit `settings.json` to include your correct model folder paths and CivitAI API key
+   - Install required dependencies: `pip install -r requirements.txt`
    - Run standalone mode:
      ```bash
      python standalone.py
      ```
-
-3. Access the interface through your browser as usual.
+   - Access the interface through your browser at: `http://localhost:8188/loras`
 
 This standalone mode provides a lightweight option for managing your model and recipe collection without needing to run the full ComfyUI environment, making it useful even for users who primarily use other stable diffusion interfaces.
 

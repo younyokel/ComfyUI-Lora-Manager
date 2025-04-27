@@ -9,13 +9,6 @@
     "checkpoints": [
       "C:/path/to/your/checkpoints_folder",
       "C:/path/to/another/checkpoints_folder"
-    ],
-    "diffusers": [
-      "C:/path/to/your/diffusers_folder"
-    ],
-    "unet": [
-      "C:/path/to/your/unet_folder",
-      "C:/path/to/your/diffusion_models_folder"
     ]
   }
 }
