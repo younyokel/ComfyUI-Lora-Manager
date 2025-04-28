@@ -11,9 +11,10 @@ class MetadataProcessor:
     
     @staticmethod
     def find_primary_sampler(metadata):
-        """Find the primary KSampler node (with denoise=1)"""
+        """Find the primary KSampler node (with highest denoise value)"""
         primary_sampler = None
         primary_sampler_id = None
+        max_denoise = -1  # Track the highest denoise value
         
         # First, check for SamplerCustomAdvanced
         prompt = metadata.get("current_prompt")
@@ -35,17 +36,17 @@ class MetadataProcessor:
                 primary_sampler_id = node_id
                 break
         
-        # If no specialized sampler found, fall back to traditional KSampler with denoise=1
+        # If no specialized sampler found, find the sampler with highest denoise value
         if primary_sampler is None:
             for node_id, sampler_info in metadata.get(SAMPLING, {}).items():
                 parameters = sampler_info.get("parameters", {})
                 denoise = parameters.get("denoise")
                 
-                # If denoise is 1.0, this is likely the primary sampler
-                if denoise == 1.0 or denoise == 1:
+                # If denoise exists and is higher than current max, use this sampler
+                if denoise is not None and denoise > max_denoise:
+                    max_denoise = denoise
                     primary_sampler = sampler_info
                     primary_sampler_id = node_id
-                    break
                 
         return primary_sampler_id, primary_sampler
     
@@ -206,6 +207,17 @@ class MetadataProcessor:
                     positive_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "positive", "CLIPTextEncode", max_depth=10)
                     if positive_node_id and positive_node_id in metadata.get(PROMPTS, {}):
                         params["prompt"] = metadata[PROMPTS][positive_node_id].get("text", "")
+                    else:
+                        # If CLIPTextEncode is not found, try to find CLIPTextEncodeFlux
+                        positive_flux_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "positive", "CLIPTextEncodeFlux", max_depth=10)
+                        if positive_flux_node_id and positive_flux_node_id in metadata.get(PROMPTS, {}):
+                            params["prompt"] = metadata[PROMPTS][positive_flux_node_id].get("text", "")
+                            
+                            # Also extract guidance value if present in the sampling data
+                            if positive_flux_node_id in metadata.get(SAMPLING, {}):
+                                flux_params = metadata[SAMPLING][positive_flux_node_id].get("parameters", {})
+                                if "guidance" in flux_params:
+                                    params["guidance"] = flux_params.get("guidance")
                     
                     # Find any FluxGuidance nodes in the positive conditioning path
                     flux_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "positive", "FluxGuidance", max_depth=5)
@@ -225,40 +237,6 @@ class MetadataProcessor:
                     height = metadata[SIZE][primary_sampler_id].get("height")
                     if width and height:
                         params["size"] = f"{width}x{height}"
-                else:
-                    # Fallback to the previous trace method if needed
-                    latent_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "latent_image")
-                    if latent_node_id:
-                        # Follow chain to find EmptyLatentImage node
-                        size_found = False
-                        current_node_id = latent_node_id
-                        
-                        # Limit depth to avoid infinite loops in complex workflows
-                        max_depth = 10
-                        for _ in range(max_depth):
-                            if current_node_id in metadata.get(SIZE, {}):
-                                width = metadata[SIZE][current_node_id].get("width")
-                                height = metadata[SIZE][current_node_id].get("height")
-                                if width and height:
-                                    params["size"] = f"{width}x{height}"
-                                    size_found = True
-                                    break
-                            
-                            # Try to follow the chain
-                            if prompt and prompt.original_prompt and current_node_id in prompt.original_prompt:
-                                node_info = prompt.original_prompt[current_node_id]
-                                if "inputs" in node_info:
-                                    # Look for a connection that might lead to size information
-                                    for input_name, input_value in node_info["inputs"].items():
-                                        if isinstance(input_value, list) and len(input_value) >= 2:
-                                            current_node_id = input_value[0]
-                                            break
-                                    else:
-                                        break  # No connections to follow
-                                else:
-                                    break  # No inputs to follow
-                            else:
-                                break  # Can't follow further
         
         # Extract LoRAs using the standardized format
         lora_parts = []

@@ -327,6 +327,41 @@ class SamplerCustomAdvancedExtractor(NodeMetadataExtractor):
                         "node_id": node_id
                     }
 
+import json
+
+class CLIPTextEncodeFluxExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs or "clip_l" not in inputs or "t5xxl" not in inputs:
+            return
+            
+        clip_l_text = inputs.get("clip_l", "")
+        t5xxl_text = inputs.get("t5xxl", "")
+        
+        # Create JSON string with T5 content first, then CLIP-L
+        combined_text = json.dumps({
+            "T5": t5xxl_text,
+            "CLIP-L": clip_l_text
+        })
+        
+        metadata[PROMPTS][node_id] = {
+            "text": combined_text,
+            "node_id": node_id
+        }
+        
+        # Extract guidance value if available
+        if "guidance" in inputs:
+            guidance_value = inputs.get("guidance")
+            
+            # Store the guidance value in SAMPLING category
+            if SAMPLING not in metadata:
+                metadata[SAMPLING] = {}
+                
+            if node_id not in metadata[SAMPLING]:
+                metadata[SAMPLING][node_id] = {"parameters": {}, "node_id": node_id}
+                
+            metadata[SAMPLING][node_id]["parameters"]["guidance"] = guidance_value
+
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
     # Sampling
@@ -343,6 +378,7 @@ NODE_EXTRACTORS = {
     "LoraManagerLoader": LoraLoaderManagerExtractor,
     # Conditioning
     "CLIPTextEncode": CLIPTextEncodeExtractor,
+    "CLIPTextEncodeFlux": CLIPTextEncodeFluxExtractor,  # Add CLIPTextEncodeFlux
     # Latent
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux
