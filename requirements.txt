@@ -8,3 +8,5 @@ Pillow
 olefile
 requests
 toml
+numpy
+torch
