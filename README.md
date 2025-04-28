@@ -14,7 +14,7 @@ A comprehensive toolset that streamlines organizing, downloading, and applying L
 Watch this quick tutorial to learn how to use the new one-click LoRA integration feature:
 
 [![One-Click LoRA Integration Tutorial](https://img.youtube.com/vi/qS95OjX3e70/0.jpg)](https://youtu.be/qS95OjX3e70)
-[![LoRA Manager v0.8.0 - New Recipe Feature & Bulk Operations](https://img.youtube.com/vi/noN7f_ER7yo/0.jpg)](https://youtu.be/noN7f_ER7yo)
+[![LoRA Manager v0.8.10 - Checkpoint Management, Standalone Mode, and New Features!](https://img.youtube.com/vi/VKvTlCB78h4/0.jpg)](https://youtu.be/VKvTlCB78h4)
 
 ---
 
