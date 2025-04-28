@@ -20,6 +20,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.10
+* **Standalone Mode** - Run LoRA Manager independently from ComfyUI for a lightweight experience that works even with other stable diffusion interfaces
+* **Portable Edition** - New one-click portable version for easy startup and updates in standalone mode
+* **Enhanced Metadata Collection** - Added support for SamplerCustomAdvanced node in the metadata collector module
+* **Improved UI Organization** - Optimized Lora Loader node height to display up to 5 LoRAs at once with scrolling capability for larger collections
+
 ### v0.8.9
 * **Favorites System** - New functionality to bookmark your favorite LoRAs and checkpoints for quick access and better organization
 * **Enhanced UI Controls** - Increased model card button sizes for improved usability and easier interaction
@@ -271,3 +277,4 @@ Join our Discord community for support, discussions, and updates:
 [Discord Server](https://discord.gg/vcqNrWVFvM)
 
 ---
+````
