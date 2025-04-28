@@ -146,14 +146,21 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Installation
 
-### Option 1: **ComfyUI Manager** (Recommended)
+### Option 1: **ComfyUI Manager** (Recommended for ComfyUI users)
 
 1. Open **ComfyUI**.
 2. Go to **Manager > Custom Node Manager**.
 3. Search for `lora-manager`.
 4. Click **Install**.
 
-### Option 2: **Manual Installation**
+### Option 2: **Portable Standalone Edition** (No ComfyUI required)
+
+1. Download the [Portable Package](https://github.com/willmiao/ComfyUI-Lora-Manager/releases/download/v0.8.10/lora_manager_portable.7z)
+2. Copy the provided `settings.json.example` file to create a new file named `settings.json` in `comfyui-lora-manager` folder
+3. Edit `settings.json` to include your correct model folder paths and CivitAI API key
+4. Run run.bat
+
+### Option 3: **Manual Installation**
 
 ```bash
 git clone https://github.com/willmiao/ComfyUI-Lora-Manager.git
@@ -277,4 +284,3 @@ Join our Discord community for support, discussions, and updates:
 [Discord Server](https://discord.gg/vcqNrWVFvM)
 
 ---
-````
