@@ -496,6 +496,57 @@ input:checked + .toggle-slider:before {
     filter: blur(8px);
 }
 
+/* Example Images Settings Styles */
+.download-buttons {
+    justify-content: flex-start;
+    gap: var(--space-2);
+}
+
+.download-buttons .primary-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--lora-accent);
+    color: var(--lora-text);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.95em;
+}
+
+.download-buttons .primary-btn:hover {
+    background-color: oklch(var(--lora-accent) / 0.9);
+}
+
+.path-browser-control {
+    display: flex;
+    gap: 8px;
+}
+
+.path-browser-control input[type="text"] {
+    flex: 1;
+}
+
+.browse-btn {
+    white-space: nowrap;
+    padding: 6px 12px;
+    background-color: var(--button-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.browse-btn:hover {
+    background-color: var(--button-hover-bg);
+}
+
+.primary-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Add styles for delete preview image */
 .delete-preview {
     max-width: 150px;

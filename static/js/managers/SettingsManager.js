@@ -147,6 +147,8 @@ export class SettingsManager {
             state.global.settings.show_only_sfw = value;
         } else if (settingKey === 'autoplay_on_hover') {
             state.global.settings.autoplayOnHover = value;
+        } else if (settingKey === 'optimize_example_images') {
+            state.global.settings.optimizeExampleImages = value;
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;

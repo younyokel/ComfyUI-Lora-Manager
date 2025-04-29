@@ -7,11 +7,39 @@ import { state } from '../../state/index.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 
 /**
+ * Get the local URL for an example image if available
+ * @param {Object} img - Image object
+ * @param {number} index - Image index
+ * @param {string} modelHash - Model hash
+ * @returns {string|null} - Local URL or null if not available
+ */
+function getLocalExampleImageUrl(img, index, modelHash) {
+    if (!modelHash) return null;
+    
+    // Get remote extension
+    const remoteExt = (img.url || '').split('?')[0].split('.').pop().toLowerCase();
+    
+    // If it's a video (mp4), use that extension
+    if (remoteExt === 'mp4') {
+        return `/example_images_static/${modelHash}/image_${index + 1}.mp4`;
+    }
+    
+    // For images, check if optimization is enabled (defaults to true) 
+    const optimizeImages = state.settings.optimizeExampleImages !== false;
+    
+    // Use .webp for images if optimization enabled, otherwise use original extension
+    const extension = optimizeImages ? 'webp' : remoteExt;
+    
+    return `/example_images_static/${modelHash}/image_${index + 1}.${extension}`;
+}
+
+/**
  * 渲染展示内容
  * @param {Array} images - 要展示的图片/视频数组
+ * @param {string} modelHash - Model hash for identifying local files
  * @returns {string} HTML内容
  */
-export function renderShowcaseContent(images) {
+export function renderShowcaseContent(images, modelHash) {
     if (!images?.length) return '<div class="no-examples">No example images available</div>';
     
     // Filter images based on SFW setting
@@ -53,7 +81,15 @@ export function renderShowcaseContent(images) {
         <div class="carousel collapsed">
             ${hiddenNotification}
             <div class="carousel-container">
-                ${filteredImages.map(img => {
+                ${filteredImages.map((img, index) => {
+                    // Try to get local URL for the example image
+                    const localUrl = getLocalExampleImageUrl(img, index, modelHash);
+                    
+                    // Create data attributes for both remote and local URLs
+                    const remoteUrl = img.url;
+                    const dataRemoteSrc = remoteUrl;
+                    const dataLocalSrc = localUrl;
+                    
                     // 计算适当的展示高度：
                     // 1. 保持原始宽高比
                     // 2. 限制最大高度为视窗高度的60%
@@ -111,9 +147,9 @@ export function renderShowcaseContent(images) {
                         `;
                         
                         if (img.type === 'video') {
-                            return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                            return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, dataLocalSrc, dataRemoteSrc);
                         }
-                        return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                        return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, dataLocalSrc, dataRemoteSrc);
                     }
                     
                     // Create a data attribute with the prompt for copying instead of trying to handle it in the onclick
@@ -174,9 +210,9 @@ export function renderShowcaseContent(images) {
                     `;
                     
                     if (img.type === 'video') {
-                        return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                        return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, dataLocalSrc, dataRemoteSrc);
                     }
-                    return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel);
+                    return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, dataLocalSrc, dataRemoteSrc);
                 }).join('')}
             </div>
         </div>
@@ -186,7 +222,7 @@ export function renderShowcaseContent(images) {
 /**
  * 生成视频包装HTML
  */
-function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel) {
+function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -195,9 +231,11 @@ function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadata
                 </button>
             ` : ''}
             <video controls autoplay muted loop crossorigin="anonymous" 
-                referrerpolicy="no-referrer" data-src="${img.url}"
+                referrerpolicy="no-referrer" 
+                data-local-src="${localUrl || ''}"
+                data-remote-src="${remoteUrl}"
                 class="lazy ${shouldBlur ? 'blurred' : ''}">
-                <source data-src="${img.url}" type="video/mp4">
+                <source data-local-src="${localUrl || ''}" data-remote-src="${remoteUrl}" type="video/mp4">
                 Your browser does not support video playback
             </video>
             ${shouldBlur ? `
@@ -216,7 +254,7 @@ function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadata
 /**
  * 生成图片包装HTML
  */
-function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel) {
+function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -224,7 +262,8 @@ function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadata
                     <i class="fas fa-eye"></i>
                 </button>
             ` : ''}
-            <img data-src="${img.url}" 
+            <img data-local-src="${localUrl || ''}" 
+                data-remote-src="${remoteUrl}"
                 alt="Preview" 
                 crossorigin="anonymous" 
                 referrerpolicy="no-referrer"
@@ -392,14 +431,72 @@ function initLazyLoading(container) {
     const lazyElements = container.querySelectorAll('.lazy');
     
     const lazyLoad = (element) => {
+        const localSrc = element.dataset.localSrc;
+        const remoteSrc = element.dataset.remoteSrc;
+        
+        // Check if element is an image or video
         if (element.tagName.toLowerCase() === 'video') {
-            element.src = element.dataset.src;
-            element.querySelector('source').src = element.dataset.src;
-            element.load();
+            // Try local first, then remote
+            tryLocalOrFallbackToRemote(element, localSrc, remoteSrc);
         } else {
-            element.src = element.dataset.src;
+            // For images, we'll use an Image object to test if local file exists
+            tryLocalImageOrFallbackToRemote(element, localSrc, remoteSrc);
         }
+        
         element.classList.remove('lazy');
+    };
+    
+    // Try to load local image first, fall back to remote if local fails
+    const tryLocalImageOrFallbackToRemote = (imgElement, localSrc, remoteSrc) => {
+        // Only try local if we have a local path
+        if (localSrc) {
+            const testImg = new Image();
+            testImg.onload = () => {
+                // Local image loaded successfully
+                imgElement.src = localSrc;
+            };
+            testImg.onerror = () => {
+                // Local image failed, use remote
+                imgElement.src = remoteSrc;
+            };
+            // Start loading test image
+            testImg.src = localSrc;
+        } else {
+            // No local path, use remote directly
+            imgElement.src = remoteSrc;
+        }
+    };
+    
+    // Try to load local video first, fall back to remote if local fails
+    const tryLocalOrFallbackToRemote = (videoElement, localSrc, remoteSrc) => {
+        // Only try local if we have a local path
+        if (localSrc) {
+            // Try to fetch local file headers to see if it exists
+            fetch(localSrc, { method: 'HEAD' })
+                .then(response => {
+                    if (response.ok) {
+                        // Local video exists, use it
+                        videoElement.src = localSrc;
+                        videoElement.querySelector('source').src = localSrc;
+                    } else {
+                        // Local video doesn't exist, use remote
+                        videoElement.src = remoteSrc;
+                        videoElement.querySelector('source').src = remoteSrc;
+                    }
+                    videoElement.load();
+                })
+                .catch(() => {
+                    // Error fetching, use remote
+                    videoElement.src = remoteSrc;
+                    videoElement.querySelector('source').src = remoteSrc;
+                    videoElement.load();
+                });
+        } else {
+            // No local path, use remote directly
+            videoElement.src = remoteSrc;
+            videoElement.querySelector('source').src = remoteSrc;
+            videoElement.load();
+        }
     };
 
     const observer = new IntersectionObserver((entries) => {

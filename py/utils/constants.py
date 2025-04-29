@@ -8,18 +8,16 @@ NSFW_LEVELS = {
 }
 
 # preview extensions
-PREVIEW_EXTENSIONS = [
-    '.webp',
-    '.preview.webp',
-    '.preview.png', 
-    '.preview.jpeg', 
-    '.preview.jpg', 
-    '.preview.mp4',
-    '.png', 
-    '.jpeg', 
-    '.jpg', 
-    '.mp4'
-]
+PREVIEW_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']
 
 # Card preview image width
 CARD_PREVIEW_WIDTH = 480
+
+# Width for optimized example images
+EXAMPLE_IMAGE_WIDTH = 832
+
+# Supported media extensions for example downloads
+SUPPORTED_MEDIA_EXTENSIONS = {
+    'images': ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+    'videos': ['.mp4', '.webm']
+}

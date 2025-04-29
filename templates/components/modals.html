@@ -125,6 +125,57 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Add Example Images Settings Section -->
+            <div class="settings-section">
+                <h3>Example Images</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="exampleImagesPath">Download Location</label>
+                        </div>
+                        <div class="setting-control path-browser-control">
+                            <input type="text" id="exampleImagesPath" placeholder="Select a folder for example images" />
+                            <button id="browseExampleImagesPath" class="browse-btn">
+                                <i class="fas fa-folder-open"></i> Browse
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Choose where to save example images downloaded from Civitai
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="optimizeExampleImages">Optimize Downloaded Images</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="optimizeExampleImages" checked 
+                                       onchange="settingsManager.saveToggleSetting('optimizeExampleImages', 'optimize_example_images')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Optimize example images to reduce file size and improve loading speed
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-row download-buttons">
+                        <button id="startExampleDownloadBtn" class="primary-btn disabled">
+                            <i class="fas fa-download"></i> Download Example Images
+                        </button>
+                        <button id="resumeExampleDownloadBtn" class="primary-btn" style="display: none;">
+                            <i class="fas fa-play"></i> Resume Download
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
