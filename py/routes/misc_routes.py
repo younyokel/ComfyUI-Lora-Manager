@@ -355,6 +355,8 @@ class MiscRoutes:
                     # Update current model info
                     model_hash = model.get('sha256', '').lower()
                     model_name = model.get('model_name', 'Unknown')
+                    model_file_path = model.get('file_path', '')
+                    model_file_name = model.get('file_name', '')
                     download_progress['current_model'] = f"{model_name} ({model_hash[:8]})"
                     
                     # Skip if already processed
@@ -376,42 +378,50 @@ class MiscRoutes:
                         download_progress['completed'] += 1
                         continue
                     
-                    # Download example images
-                    for i, image in enumerate(images, 1):
-                        image_url = image.get('url')
-                        if not image_url:
-                            continue
-                        
-                        # Get image filename from URL
-                        image_filename = os.path.basename(image_url.split('?')[0])
-                        image_ext = os.path.splitext(image_filename)[1].lower()
-                        
-                        # Handle both images and videos
-                        is_image = image_ext in SUPPORTED_MEDIA_EXTENSIONS['images']
-                        is_video = image_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']
-                        
-                        if not (is_image or is_video):
-                            logger.debug(f"Skipping unsupported file type: {image_filename}")
-                            continue
-                        
-                        save_filename = f"image_{i}{image_ext}"
-                        
-                        # Check if already downloaded
-                        save_path = os.path.join(model_dir, save_filename)
-                        if os.path.exists(save_path):
-                            logger.debug(f"File already exists: {save_path}")
-                            continue
-                        
-                        # Download the file
+                    # First check if we have local example images for this model
+                    local_images_processed = False
+                    if model_file_path:
                         try:
-                            logger.debug(f"Downloading {save_filename} for {model_name}")
+                            model_dir_path = os.path.dirname(model_file_path)
+                            local_images = []
                             
-                            # Direct download using the independent session
-                            async with independent_session.get(image_url, timeout=60) as response:
-                                if response.status == 200:
+                            # Look for files with pattern: filename.example.*.ext
+                            if model_file_name:
+                                example_prefix = f"{model_file_name}.example."
+                                
+                                if os.path.exists(model_dir_path):
+                                    for file in os.listdir(model_dir_path):
+                                        file_lower = file.lower()
+                                        if file_lower.startswith(example_prefix.lower()):
+                                            file_ext = os.path.splitext(file_lower)[1]
+                                            is_supported = (file_ext in SUPPORTED_MEDIA_EXTENSIONS['images'] or 
+                                                           file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos'])
+                                            
+                                            if is_supported:
+                                                local_images.append(os.path.join(model_dir_path, file))
+                            
+                            # Process local images if found
+                            if local_images:
+                                logger.info(f"Found {len(local_images)} local example images for {model_name}")
+                                
+                                for i, local_image_path in enumerate(local_images, 1):
+                                    local_ext = os.path.splitext(local_image_path)[1].lower()
+                                    save_filename = f"image_{i}{local_ext}"
+                                    save_path = os.path.join(model_dir, save_filename)
+                                    
+                                    # Skip if already exists in output directory
+                                    if os.path.exists(save_path):
+                                        logger.debug(f"File already exists in output: {save_path}")
+                                        continue
+                                    
+                                    # Handle image processing based on file type and optimize setting
+                                    is_image = local_ext in SUPPORTED_MEDIA_EXTENSIONS['images']
+                                    
                                     if is_image and optimize:
-                                        # For images, optimize if requested
-                                        image_data = await response.read()
+                                        # Optimize the image
+                                        with open(local_image_path, 'rb') as img_file:
+                                            image_data = img_file.read()
+                                        
                                         optimized_data, ext = ExifUtils.optimize_image(
                                             image_data, 
                                             target_width=EXAMPLE_IMAGE_WIDTH, 
@@ -429,32 +439,104 @@ class MiscRoutes:
                                         with open(save_path, 'wb') as f:
                                             f.write(optimized_data)
                                     else:
-                                        # For videos or unoptimized images, save directly
-                                        with open(save_path, 'wb') as f:
-                                            async for chunk in response.content.iter_chunked(8192):
-                                                if chunk:
-                                                    f.write(chunk)
-                                else:
-                                    error_msg = f"Failed to download file: {image_url}, status code: {response.status}"
-                                    logger.warning(error_msg)
-                                    download_progress['errors'].append(error_msg)
-                                    download_progress['last_error'] = error_msg
-                                    model_success = False  # Mark model as failed
-                            
-                            # Add a delay between downloads
-                            await asyncio.sleep(delay)
+                                        # For videos or unoptimized images, copy directly
+                                        with open(local_image_path, 'rb') as src_file:
+                                            with open(save_path, 'wb') as dst_file:
+                                                dst_file.write(src_file.read())
+                                
+                                # Mark as successfully processed if all local images were processed
+                                download_progress['processed_models'].add(model_hash)
+                                local_images_processed = True
+                                logger.info(f"Successfully processed local examples for {model_name}")
+                        
                         except Exception as e:
-                            error_msg = f"Error downloading file {image_url}: {str(e)}"
+                            error_msg = f"Error processing local examples for {model_name}: {str(e)}"
                             logger.error(error_msg)
                             download_progress['errors'].append(error_msg)
                             download_progress['last_error'] = error_msg
-                            model_success = False  # Mark model as failed
+                            # Continue to remote download if local processing fails
                     
-                    # Only mark model as processed if all images downloaded successfully
-                    if model_success:
-                        download_progress['processed_models'].add(model_hash)
-                    else:
-                        logger.warning(f"Model {model_name} had download errors, will not mark as completed")
+                    # If we didn't process local images, download from remote
+                    if not local_images_processed:
+                        # Download example images
+                        for i, image in enumerate(images, 1):
+                            image_url = image.get('url')
+                            if not image_url:
+                                continue
+                            
+                            # Get image filename from URL
+                            image_filename = os.path.basename(image_url.split('?')[0])
+                            image_ext = os.path.splitext(image_filename)[1].lower()
+                            
+                            # Handle both images and videos
+                            is_image = image_ext in SUPPORTED_MEDIA_EXTENSIONS['images']
+                            is_video = image_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']
+                            
+                            if not (is_image or is_video):
+                                logger.debug(f"Skipping unsupported file type: {image_filename}")
+                                continue
+                            
+                            save_filename = f"image_{i}{image_ext}"
+                            
+                            # Check if already downloaded
+                            save_path = os.path.join(model_dir, save_filename)
+                            if os.path.exists(save_path):
+                                logger.debug(f"File already exists: {save_path}")
+                                continue
+                            
+                            # Download the file
+                            try:
+                                logger.debug(f"Downloading {save_filename} for {model_name}")
+                                
+                                # Direct download using the independent session
+                                async with independent_session.get(image_url, timeout=60) as response:
+                                    if response.status == 200:
+                                        if is_image and optimize:
+                                            # For images, optimize if requested
+                                            image_data = await response.read()
+                                            optimized_data, ext = ExifUtils.optimize_image(
+                                                image_data, 
+                                                target_width=EXAMPLE_IMAGE_WIDTH, 
+                                                format='webp', 
+                                                quality=85, 
+                                                preserve_metadata=False
+                                            )
+                                            
+                                            # Update save filename if format changed
+                                            if ext == '.webp':
+                                                save_filename = os.path.splitext(save_filename)[0] + '.webp'
+                                                save_path = os.path.join(model_dir, save_filename)
+                                            
+                                            # Save the optimized image
+                                            with open(save_path, 'wb') as f:
+                                                f.write(optimized_data)
+                                        else:
+                                            # For videos or unoptimized images, save directly
+                                            with open(save_path, 'wb') as f:
+                                                async for chunk in response.content.iter_chunked(8192):
+                                                    if chunk:
+                                                        f.write(chunk)
+                                    else:
+                                        error_msg = f"Failed to download file: {image_url}, status code: {response.status}"
+                                        logger.warning(error_msg)
+                                        download_progress['errors'].append(error_msg)
+                                        download_progress['last_error'] = error_msg
+                                        model_success = False  # Mark model as failed
+                                
+                                # Add a delay between downloads for remote files only
+                                await asyncio.sleep(delay)
+                            except Exception as e:
+                                error_msg = f"Error downloading file {image_url}: {str(e)}"
+                                logger.error(error_msg)
+                                download_progress['errors'].append(error_msg)
+                                download_progress['last_error'] = error_msg
+                                model_success = False  # Mark model as failed
+                        
+                        # Only mark model as processed if all images downloaded successfully
+                        if model_success:
+                            download_progress['processed_models'].add(model_hash)
+                        else:
+                            logger.warning(f"Model {model_name} had download errors, will not mark as completed")
                     
                     # Save progress to file periodically
                     if download_progress['completed'] % 10 == 0 or download_progress['completed'] == download_progress['total'] - 1:
