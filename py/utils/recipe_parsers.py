@@ -452,7 +452,7 @@ class A1111MetadataParser(RecipeMetadataParser):
     
     METADATA_MARKER = r'Lora hashes:'
     LORA_PATTERN = r'<lora:([^:]+):([^>]+)>'
-    LORA_HASH_PATTERN = r'([^:]+): ([a-f0-9]+)'
+    LORA_HASH_PATTERN = r'([^:]+):\s*([a-fA-F0-9]+)'
     
     def is_metadata_matching(self, user_comment: str) -> bool:
         """Check if the user comment matches the A1111 metadata format"""
@@ -461,51 +461,103 @@ class A1111MetadataParser(RecipeMetadataParser):
     async def parse_metadata(self, user_comment: str, recipe_scanner=None, civitai_client=None) -> Dict[str, Any]:
         """Parse metadata from images with A1111 metadata format"""
         try:
-            # Extract prompt and negative prompt
-            parts = user_comment.split('Negative prompt:', 1)
-            prompt = parts[0].strip()
+            # Initialize metadata with default empty values
+            metadata = {"prompt": "", "loras": []}
             
-            # Initialize metadata
-            metadata = {"prompt": prompt, "loras": []}
-            
-            # Extract negative prompt and parameters
-            if len(parts) > 1:
-                negative_and_params = parts[1]
+            # Check if the user_comment contains prompt and negative prompt
+            if 'Negative prompt:' in user_comment:
+                # Extract prompt and negative prompt
+                parts = user_comment.split('Negative prompt:', 1)
+                metadata["prompt"] = parts[0].strip()
                 
-                # Extract negative prompt
-                if "Steps:" in negative_and_params:
-                    neg_prompt = negative_and_params.split("Steps:", 1)[0].strip()
-                    metadata["negative_prompt"] = neg_prompt
-                
-                # Extract key-value parameters (Steps, Sampler, CFG scale, etc.)
-                param_pattern = r'([A-Za-z ]+): ([^,]+)'
-                params = re.findall(param_pattern, negative_and_params)
-                for key, value in params:
-                    clean_key = key.strip().lower().replace(' ', '_')
-                    metadata[clean_key] = value.strip()
+                # Extract negative prompt and parameters
+                if len(parts) > 1:
+                    negative_and_params = parts[1]
+                    
+                    # Extract negative prompt
+                    param_start = re.search(r'([A-Za-z ]+):', negative_and_params)
+                    if param_start:
+                        neg_prompt = negative_and_params[:param_start.start()].strip()
+                        metadata["negative_prompt"] = neg_prompt
+                        params_section = negative_and_params[param_start.start():]
+                    else:
+                        params_section = negative_and_params
+                    
+                    # Extract parameters from this section
+                    self._extract_parameters(params_section, metadata)
+            else:
+                # No prompt/negative prompt - extract parameters directly
+                self._extract_parameters(user_comment, metadata)
             
-            # Extract LoRA information from prompt
+            # Extract LoRA information from prompt if available
             lora_weights = {}
-            lora_matches = re.findall(self.LORA_PATTERN, prompt)
-            for lora_name, weights in lora_matches:
-                # Take only the first strength value (before the colon)
-                weight = weights.split(':')[0]
-                lora_weights[lora_name.strip()] = float(weight.strip())
-            
-            # Remove LoRA patterns from prompt
-            metadata["prompt"] = re.sub(self.LORA_PATTERN, '', prompt).strip()
+            if metadata["prompt"]:
+                lora_matches = re.findall(self.LORA_PATTERN, metadata["prompt"])
+                for lora_name, weights in lora_matches:
+                    # Take only the first strength value (before the colon)
+                    weight = weights.split(':')[0]
+                    lora_weights[lora_name.strip()] = float(weight.strip())
+                
+                # Remove LoRA patterns from prompt
+                metadata["prompt"] = re.sub(self.LORA_PATTERN, '', metadata["prompt"]).strip()
             
             # Extract LoRA hashes
             lora_hashes = {}
             if 'Lora hashes:' in user_comment:
+                # Get the LoRA hashes section
                 lora_hash_section = user_comment.split('Lora hashes:', 1)[1].strip()
+                
+                # Handle various format possibilities
                 if lora_hash_section.startswith('"'):
-                    lora_hash_section = lora_hash_section[1:].split('"', 1)[0]
-                hash_matches = re.findall(self.LORA_HASH_PATTERN, lora_hash_section)
-                for lora_name, hash_value in hash_matches:
-                    # Remove any leading comma and space from lora name
-                    clean_name = lora_name.strip().lstrip(',').strip()
-                    lora_hashes[clean_name] = hash_value.strip()
+                    # Extract content within quotes
+                    quote_match = re.match(r'"([^"]+)"', lora_hash_section)
+                    if quote_match:
+                        lora_hash_section = quote_match.group(1)
+                
+                # Split by commas and parse each LoRA entry
+                lora_entries = []
+                current_entry = ""
+                for part in lora_hash_section.split(','):
+                    # Check if this part contains a colon (indicating a complete entry)
+                    if ':' in part:
+                        if current_entry:
+                            lora_entries.append(current_entry.strip())
+                        current_entry = part.strip()
+                    else:
+                        # This is probably a continuation of the previous entry
+                        current_entry += ',' + part
+                
+                # Add the last entry if it exists
+                if current_entry:
+                    lora_entries.append(current_entry.strip())
+                
+                # Process each entry
+                for entry in lora_entries:
+                    # Split at the colon to get name and hash
+                    if ':' in entry:
+                        lora_name, hash_value = entry.split(':', 1)
+                        # Clean the values
+                        lora_name = lora_name.strip()
+                        hash_value = hash_value.strip()
+                        # Store in our dictionary
+                        lora_hashes[lora_name] = hash_value
+            
+            # Alternative backup method using regex if the above parsing fails
+            if not lora_hashes:
+                if 'Lora hashes:' in user_comment:
+                    lora_hash_section = user_comment.split('Lora hashes:', 1)[1].strip()
+                    if lora_hash_section.startswith('"'):
+                        # Extract content within quotes if present
+                        quote_match = re.match(r'"([^"]+)"', lora_hash_section)
+                        if quote_match:
+                            lora_hash_section = quote_match.group(1)
+                    
+                    # Use regex to find all name:hash pairs
+                    hash_matches = re.findall(self.LORA_HASH_PATTERN, lora_hash_section)
+                    for lora_name, hash_value in hash_matches:
+                        # Clean up name by removing any leading comma and spaces
+                        clean_name = lora_name.strip().lstrip(',').strip()
+                        lora_hashes[clean_name] = hash_value.strip()
             
             # Process LoRAs and collect base models
             base_model_counts = {}
@@ -523,7 +575,7 @@ class A1111MetadataParser(RecipeMetadataParser):
                     'existsLocally': False,
                     'localPath': None,
                     'file_name': lora_name,
-                    'hash': hash_value,
+                    'hash': hash_value.lower(),  # Ensure hash is lowercase
                     'thumbnailUrl': '/loras_static/images/no-preview.png',
                     'baseModel': '',
                     'size': 0,
@@ -573,6 +625,15 @@ class A1111MetadataParser(RecipeMetadataParser):
         except Exception as e:
             logger.error(f"Error parsing A1111 metadata: {e}", exc_info=True)
             return {"error": str(e), "loras": []}
+    
+    def _extract_parameters(self, text: str, metadata: Dict[str, Any]) -> None:
+        """Extract parameters from text section and populate metadata dict"""
+        # Extract key-value parameters (Steps, Sampler, CFG scale, etc.)
+        param_pattern = r'([A-Za-z][A-Za-z0-9 _]+): ([^,]+)(?:,|$)'
+        params = re.findall(param_pattern, text)
+        for key, value in params:
+            clean_key = key.strip().lower().replace(' ', '_')
+            metadata[clean_key] = value.strip()
 
 
 class ComfyMetadataParser(RecipeMetadataParser):
