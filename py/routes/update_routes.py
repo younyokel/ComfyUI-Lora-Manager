@@ -150,11 +150,16 @@ class UpdateRoutes:
         """
         Compare two semantic version strings
         Returns True if version2 is newer than version1
+        Ignores any suffixes after '-' (e.g., -bugfix, -alpha)
         """
         try:
+            # Clean version strings - remove any suffix after '-'
+            v1_clean = version1.split('-')[0]
+            v2_clean = version2.split('-')[0]
+            
             # Split versions into components
-            v1_parts = [int(x) for x in version1.split('.')]
-            v2_parts = [int(x) for x in version2.split('.')]
+            v1_parts = [int(x) for x in v1_clean.split('.')]
+            v2_parts = [int(x) for x in v2_clean.split('.')]
             
             # Ensure both have 3 components (major.minor.patch)
             while len(v1_parts) < 3:
