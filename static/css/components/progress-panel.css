@@ -88,7 +88,8 @@
     color: var(--text-color);
 }
 
-.progress-container {
+/* Use specific selectors to avoid conflicts with loading.css */
+.progress-panel .progress-container {
     width: 100%;
     background-color: var(--lora-border);
     border-radius: 4px;
@@ -96,7 +97,7 @@
     height: var(--space-1);
 }
 
-.progress-bar {
+.progress-panel .progress-bar {
     width: 0%;
     height: 100%;
     background-color: var(--lora-accent);

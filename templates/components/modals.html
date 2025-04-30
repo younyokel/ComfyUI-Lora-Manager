@@ -135,15 +135,15 @@
                         <div class="setting-info">
                             <label for="exampleImagesPath">Download Location</label>
                         </div>
-                        <div class="setting-control path-browser-control">
-                            <input type="text" id="exampleImagesPath" placeholder="Select a folder for example images" />
-                            <button id="browseExampleImagesPath" class="browse-btn">
-                                <i class="fas fa-folder-open"></i> Browse
+                        <div class="setting-control path-control">
+                            <input type="text" id="exampleImagesPath" placeholder="Enter folder path for example images" />
+                            <button id="exampleImagesDownloadBtn" class="primary-btn">
+                                <i class="fas fa-download"></i> <span id="exampleDownloadBtnText">Download</span>
                             </button>
                         </div>
                     </div>
                     <div class="input-help">
-                        Choose where to save example images downloaded from Civitai
+                        Enter the folder path where example images from Civitai will be saved
                     </div>
                 </div>
                 
@@ -162,17 +162,6 @@
                     </div>
                     <div class="input-help">
                         Optimize example images to reduce file size and improve loading speed
-                    </div>
-                </div>
-                
-                <div class="setting-item">
-                    <div class="setting-row download-buttons">
-                        <button id="startExampleDownloadBtn" class="primary-btn disabled">
-                            <i class="fas fa-download"></i> Download Example Images
-                        </button>
-                        <button id="resumeExampleDownloadBtn" class="primary-btn" style="display: none;">
-                            <i class="fas fa-play"></i> Resume Download
-                        </button>
                     </div>
                 </div>
             </div>

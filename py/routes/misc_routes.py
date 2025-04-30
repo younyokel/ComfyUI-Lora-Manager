@@ -48,9 +48,6 @@ class MiscRoutes:
         app.router.add_post('/api/pause-example-images', MiscRoutes.pause_example_images)
         app.router.add_post('/api/resume-example-images', MiscRoutes.resume_example_images)
         
-        # Folder browser route
-        app.router.add_post('/api/browse-folder', MiscRoutes.browse_folder)
-
     @staticmethod
     async def update_settings(request):
         """Update application settings"""
@@ -67,17 +64,10 @@ class MiscRoutes:
                             'error': f"Path does not exist: {value}"
                         })
                     
-                    # Add static route for example images path if it changed
+                    # Path changed - server restart required for new path to take effect
                     old_path = settings.get('example_images_path')
                     if old_path != value:
-                        # We need to add the new static route
-                        # Note: we can't remove old routes in aiohttp, but we can create a new one
-                        app = request.app
-                        try:
-                            app.router.add_static('/example_images_static', value)
-                            logger.info(f"Added static route for example images: /example_images_static -> {value}")
-                        except Exception as e:
-                            logger.warning(f"Could not add static route for example images: {str(e)}")
+                        logger.info(f"Example images path changed to {value} - server restart required")
                 
                 # Save to settings
                 settings.set(key, value)
@@ -174,7 +164,7 @@ class MiscRoutes:
             output_dir = data.get('output_dir')
             optimize = data.get('optimize', True)
             model_types = data.get('model_types', ['lora', 'checkpoint'])
-            delay = float(data.get('delay', 1.0))
+            delay = float(data.get('delay', 0.2))
             
             if not output_dir:
                 return web.json_response({
@@ -494,55 +484,3 @@ class MiscRoutes:
             
             # Set download status to not downloading
             is_downloading = False
-
-    @staticmethod
-    async def browse_folder(request):
-        """Open a folder browser dialog and return the selected path
-        
-        Expects a JSON body with:
-        {
-            "initial_dir": "string" // Optional initial directory
-        }
-        """
-        try:
-            # Parse the request body
-            data = await request.json()
-            initial_dir = data.get('initial_dir', '')
-            
-            # If initial_dir doesn't exist, use a default path
-            if initial_dir and not os.path.isdir(initial_dir):
-                initial_dir = ''
-            
-            # Create a hidden root window for the dialog
-            root = tk.Tk()
-            root.withdraw()  # Hide the root window
-            
-            # Show the folder selection dialog
-            folder_path = filedialog.askdirectory(
-                initialdir=initial_dir,
-                title="Select folder for example images"
-            )
-            
-            # Destroy the root window
-            root.destroy()
-            
-            if folder_path:
-                # Convert to proper path format for the OS
-                folder_path = os.path.normpath(folder_path)
-                
-                return web.json_response({
-                    'success': True,
-                    'folder': folder_path
-                })
-            else:
-                return web.json_response({
-                    'success': False,
-                    'error': 'No folder selected'
-                })
-            
-        except Exception as e:
-            logger.error(f"Failed to browse folder: {e}", exc_info=True)
-            return web.json_response({
-                'success': False,
-                'error': str(e)
-            }, status=500)

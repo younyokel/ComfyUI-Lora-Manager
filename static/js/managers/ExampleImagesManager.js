@@ -8,10 +8,14 @@ class ExampleImagesManager {
         this.isPaused = false;
         this.progressUpdateInterval = null;
         this.startTime = null;
-        this.progressPanel = document.getElementById('exampleImagesProgress');
+        this.progressPanel = null;
         
         // Wait for DOM before initializing event listeners
-        document.addEventListener('DOMContentLoaded', () => this.initEventListeners());
+        document.addEventListener('DOMContentLoaded', () => {
+            this.initEventListeners();
+            // Initialize progress panel reference
+            this.progressPanel = document.getElementById('exampleImagesProgress');
+        });
         
         // Initialize download path field
         this.initializePathOptions();
@@ -22,14 +26,9 @@ class ExampleImagesManager {
     
     // Initialize event listeners for buttons
     initEventListeners() {
-        const startBtn = document.getElementById('startExampleDownloadBtn');
-        if (startBtn) {
-            startBtn.onclick = () => this.startDownload();
-        }
-        
-        const resumeBtn = document.getElementById('resumeExampleDownloadBtn');
-        if (resumeBtn) {
-            resumeBtn.onclick = () => this.resumeDownload();
+        const downloadBtn = document.getElementById('exampleImagesDownloadBtn');
+        if (downloadBtn) {
+            downloadBtn.onclick = () => this.handleDownloadButton();
         }
     }
     
@@ -47,12 +46,6 @@ class ExampleImagesManager {
             } else {
                 // Disable download button if no path is set
                 this.updateDownloadButtonState(false);
-            }
-            
-            // Add event listener to the browse button
-            const browseButton = document.getElementById('browseExampleImagesPath');
-            if (browseButton) {
-                browseButton.addEventListener('click', () => this.browseFolderDialog());
             }
             
             // Add event listener to validate path input
@@ -98,47 +91,29 @@ class ExampleImagesManager {
     
     // Method to update download button state
     updateDownloadButtonState(enabled) {
-        const startBtn = document.getElementById('startExampleDownloadBtn');
-        if (startBtn) {
+        const downloadBtn = document.getElementById('exampleImagesDownloadBtn');
+        if (downloadBtn) {
             if (enabled) {
-                startBtn.classList.remove('disabled');
-                startBtn.disabled = false;
+                downloadBtn.classList.remove('disabled');
+                downloadBtn.disabled = false;
             } else {
-                startBtn.classList.add('disabled');
-                startBtn.disabled = true;
+                downloadBtn.classList.add('disabled');
+                downloadBtn.disabled = true;
             }
         }
     }
     
-    // Method to open folder browser dialog
-    async browseFolderDialog() {
-        try {
-            const response = await fetch('/api/browse-folder', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    initial_dir: getStorageItem('example_images_path', '')
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.success && data.folder) {
-                const pathInput = document.getElementById('exampleImagesPath');
-                pathInput.value = data.folder;
-                setStorageItem('example_images_path', data.folder);
-                this.updateDownloadButtonState(true);
-                showToast('Example images path updated successfully', 'success');
-            }
-        } catch (error) {
-            console.error('Failed to browse folder:', error);
-            showToast('Failed to browse folder. Please ensure the server supports this feature.', 'error');
+    // Method to handle download button click based on current state
+    async handleDownloadButton() {
+        if (this.isDownloading && this.isPaused) {
+            // If download is paused, resume it
+            this.resumeDownload();
+        } else if (!this.isDownloading) {
+            // If no download in progress, start a new one
+            this.startDownload();
+        } else {
+            // If download is in progress, show info toast
+            showToast('Download already in progress', 'info');
         }
     }
     
@@ -151,18 +126,44 @@ class ExampleImagesManager {
                 this.isDownloading = data.is_downloading;
                 this.isPaused = data.status.status === 'paused';
                 
+                // Update download button text based on status
+                this.updateDownloadButtonText();
+                
                 if (this.isDownloading) {
-                    this.updateUI(data.status);
-                    this.showProgressPanel();
+                    // Ensure progress panel exists before updating UI
+                    if (!this.progressPanel) {
+                        this.progressPanel = document.getElementById('exampleImagesProgress');
+                    }
                     
-                    // Start the progress update interval if downloading
-                    if (!this.progressUpdateInterval) {
-                        this.startProgressUpdates();
+                    if (this.progressPanel) {
+                        this.updateUI(data.status);
+                        this.showProgressPanel();
+                        
+                        // Start the progress update interval if downloading
+                        if (!this.progressUpdateInterval) {
+                            this.startProgressUpdates();
+                        }
+                    } else {
+                        console.warn('Progress panel not found, will retry on next update');
+                        // Set a shorter timeout to try again
+                        setTimeout(() => this.checkDownloadStatus(), 500);
                     }
                 }
             }
         } catch (error) {
             console.error('Failed to check download status:', error);
+        }
+    }
+    
+    // Update download button text based on current state
+    updateDownloadButtonText() {
+        const btnTextElement = document.getElementById('exampleDownloadBtnText');
+        if (btnTextElement) {
+            if (this.isDownloading && this.isPaused) {
+                btnTextElement.textContent = "Resume";
+            } else if (!this.isDownloading) {
+                btnTextElement.textContent = "Download";
+            }
         }
     }
     
@@ -176,7 +177,7 @@ class ExampleImagesManager {
             const outputDir = document.getElementById('exampleImagesPath').value || '';
             
             if (!outputDir) {
-                showToast('Please select a download location first', 'warning');
+                showToast('Please enter a download location first', 'warning');
                 return;
             }
             
@@ -203,10 +204,8 @@ class ExampleImagesManager {
                 this.updateUI(data.status);
                 this.showProgressPanel();
                 this.startProgressUpdates();
+                this.updateDownloadButtonText();
                 showToast('Example images download started', 'success');
-                
-                // Hide the start button, show resume button
-                document.getElementById('startExampleDownloadBtn').style.display = 'none';
                 
                 // Close settings modal
                 modalManager.closeModal('settingsModal');
@@ -236,10 +235,8 @@ class ExampleImagesManager {
                 document.getElementById('downloadStatusText').textContent = 'Paused';
                 document.getElementById('pauseExampleDownloadBtn').innerHTML = '<i class="fas fa-play"></i>';
                 document.getElementById('pauseExampleDownloadBtn').onclick = () => this.resumeDownload();
+                this.updateDownloadButtonText();
                 showToast('Download paused', 'info');
-                
-                // Show resume button in settings too
-                document.getElementById('resumeExampleDownloadBtn').style.display = 'block';
             } else {
                 showToast(data.error || 'Failed to pause download', 'error');
             }
@@ -266,10 +263,8 @@ class ExampleImagesManager {
                 document.getElementById('downloadStatusText').textContent = 'Downloading';
                 document.getElementById('pauseExampleDownloadBtn').innerHTML = '<i class="fas fa-pause"></i>';
                 document.getElementById('pauseExampleDownloadBtn').onclick = () => this.pauseDownload();
+                this.updateDownloadButtonText();
                 showToast('Download resumed', 'success');
-                
-                // Hide resume button in settings
-                document.getElementById('resumeExampleDownloadBtn').style.display = 'none';
             } else {
                 showToast(data.error || 'Failed to resume download', 'error');
             }
@@ -298,6 +293,10 @@ class ExampleImagesManager {
             
             if (data.success) {
                 this.isDownloading = data.is_downloading;
+                this.isPaused = data.status.status === 'paused';
+                
+                // Update download button text
+                this.updateDownloadButtonText();
                 
                 if (this.isDownloading) {
                     this.updateUI(data.status);
@@ -313,10 +312,6 @@ class ExampleImagesManager {
                     } else if (data.status.status === 'error') {
                         showToast('Example images download failed', 'error');
                     }
-                    
-                    // Reset UI
-                    document.getElementById('startExampleDownloadBtn').style.display = 'block';
-                    document.getElementById('resumeExampleDownloadBtn').style.display = 'none';
                 }
             }
         } catch (error) {
@@ -325,21 +320,38 @@ class ExampleImagesManager {
     }
     
     updateUI(status) {
+        // Ensure progress panel exists
+        if (!this.progressPanel) {
+            this.progressPanel = document.getElementById('exampleImagesProgress');
+            if (!this.progressPanel) {
+                console.error('Progress panel element not found in DOM');
+                return;
+            }
+        }
+        
         // Update status text
         const statusText = document.getElementById('downloadStatusText');
-        statusText.textContent = this.getStatusText(status.status);
+        if (statusText) {
+            statusText.textContent = this.getStatusText(status.status);
+        }
         
         // Update progress counts and bar
         const progressCounts = document.getElementById('downloadProgressCounts');
-        progressCounts.textContent = `${status.completed}/${status.total}`;
+        if (progressCounts) {
+            progressCounts.textContent = `${status.completed}/${status.total}`;
+        }
         
         const progressBar = document.getElementById('downloadProgressBar');
-        const progressPercent = status.total > 0 ? (status.completed / status.total) * 100 : 0;
-        progressBar.style.width = `${progressPercent}%`;
+        if (progressBar) {
+            const progressPercent = status.total > 0 ? (status.completed / status.total) * 100 : 0;
+            progressBar.style.width = `${progressPercent}%`;
+        }
         
         // Update current model
         const currentModel = document.getElementById('currentModelName');
-        currentModel.textContent = status.current_model || '-';
+        if (currentModel) {
+            currentModel.textContent = status.current_model || '-';
+        }
         
         // Update time stats
         this.updateTimeStats(status);
@@ -348,20 +360,29 @@ class ExampleImagesManager {
         this.updateErrors(status);
         
         // Update pause/resume button
-        if (status.status === 'paused') {
-            document.getElementById('pauseExampleDownloadBtn').innerHTML = '<i class="fas fa-play"></i>';
-            document.getElementById('pauseExampleDownloadBtn').onclick = () => this.resumeDownload();
-            document.getElementById('resumeExampleDownloadBtn').style.display = 'block';
-        } else {
-            document.getElementById('pauseExampleDownloadBtn').innerHTML = '<i class="fas fa-pause"></i>';
-            document.getElementById('pauseExampleDownloadBtn').onclick = () => this.pauseDownload();
-            document.getElementById('resumeExampleDownloadBtn').style.display = 'none';
+        const pauseBtn = document.getElementById('pauseExampleDownloadBtn');
+        const resumeBtn = document.getElementById('resumeExampleDownloadBtn');
+        
+        if (pauseBtn) {
+            if (status.status === 'paused') {
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                pauseBtn.onclick = () => this.resumeDownload();
+            } else {
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                pauseBtn.onclick = () => this.pauseDownload();
+            }
+        }
+        
+        if (resumeBtn) {
+            resumeBtn.style.display = status.status === 'paused' ? 'block' : 'none';
         }
     }
     
     updateTimeStats(status) {
         const elapsedTime = document.getElementById('elapsedTime');
         const remainingTime = document.getElementById('remainingTime');
+        
+        if (!elapsedTime || !remainingTime) return;
         
         // Calculate elapsed time
         let elapsed;
@@ -388,6 +409,8 @@ class ExampleImagesManager {
     updateErrors(status) {
         const errorContainer = document.getElementById('downloadErrorContainer');
         const errorList = document.getElementById('downloadErrors');
+        
+        if (!errorContainer || !errorList) return;
         
         if (status.errors && status.errors.length > 0) {
             // Show only the last 3 errors
@@ -425,22 +448,41 @@ class ExampleImagesManager {
     }
     
     showProgressPanel() {
+        // Ensure progress panel exists
+        if (!this.progressPanel) {
+            this.progressPanel = document.getElementById('exampleImagesProgress');
+            if (!this.progressPanel) {
+                console.error('Progress panel element not found in DOM');
+                return;
+            }
+        }
         this.progressPanel.classList.add('visible');
     }
     
     hideProgressPanel() {
+        if (!this.progressPanel) {
+            this.progressPanel = document.getElementById('exampleImagesProgress');
+            if (!this.progressPanel) return;
+        }
         this.progressPanel.classList.remove('visible');
     }
     
     toggleProgressPanel() {
+        if (!this.progressPanel) {
+            this.progressPanel = document.getElementById('exampleImagesProgress');
+            if (!this.progressPanel) return;
+        }
+        
         this.progressPanel.classList.toggle('collapsed');
         
         // Update icon
         const icon = document.querySelector('#collapseProgressBtn i');
-        if (this.progressPanel.classList.contains('collapsed')) {
-            icon.className = 'fas fa-chevron-up';
-        } else {
-            icon.className = 'fas fa-chevron-down';
+        if (icon) {
+            if (this.progressPanel.classList.contains('collapsed')) {
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                icon.className = 'fas fa-chevron-down';
+            }
         }
     }
 }
