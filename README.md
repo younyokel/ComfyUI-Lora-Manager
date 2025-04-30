@@ -20,6 +20,11 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.11
+* **Offline Image Support** - Added functionality to download and save all model example images locally, ensuring access even when offline or if images are removed from CivitAI or the site is down
+* **Resilient Download System** - Implemented pause/resume capability with checkpoint recovery that persists through restarts or unexpected exits
+* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
+
 ### v0.8.10
 * **Standalone Mode** - Run LoRA Manager independently from ComfyUI for a lightweight experience that works even with other stable diffusion interfaces
 * **Portable Edition** - New one-click portable version for easy startup and updates in standalone mode
