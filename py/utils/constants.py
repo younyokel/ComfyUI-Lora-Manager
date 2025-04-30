@@ -8,7 +8,18 @@ NSFW_LEVELS = {
 }
 
 # preview extensions
-PREVIEW_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']
+PREVIEW_EXTENSIONS = [
+    '.webp',
+    '.preview.webp',
+    '.preview.png',
+    '.preview.jpeg',
+    '.preview.jpg',
+    '.preview.mp4',
+    '.png',
+    '.jpeg',
+    '.jpg',
+    '.mp4'
+]
 
 # Card preview image width
 CARD_PREVIEW_WIDTH = 480
