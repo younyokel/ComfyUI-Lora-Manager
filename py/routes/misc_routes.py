@@ -3,8 +3,6 @@ import os
 import asyncio
 import json
 import time
-import tkinter as tk
-from tkinter import filedialog
 import aiohttp
 from aiohttp import web
 from ..services.settings_manager import settings
