@@ -9,6 +9,8 @@ class ExampleImagesManager {
         this.progressUpdateInterval = null;
         this.startTime = null;
         this.progressPanel = null;
+        this.isProgressPanelCollapsed = false;
+        this.pauseButton = null; // Store reference to the pause button
         
         // Initialize download path field and check download status
         this.initializePathOptions();
@@ -23,12 +25,22 @@ class ExampleImagesManager {
         // Initialize progress panel reference
         this.progressPanel = document.getElementById('exampleImagesProgress');
         
+        // Load collapse state from storage
+        this.isProgressPanelCollapsed = getStorageItem('progress_panel_collapsed', false);
+        if (this.progressPanel && this.isProgressPanelCollapsed) {
+            this.progressPanel.classList.add('collapsed');
+            const icon = document.querySelector('#collapseProgressBtn i');
+            if (icon) {
+                icon.className = 'fas fa-chevron-up';
+            }
+        }
+        
         // Initialize progress panel button handlers
-        const pauseBtn = document.getElementById('pauseExampleDownloadBtn');
+        this.pauseButton = document.getElementById('pauseExampleDownloadBtn');
         const collapseBtn = document.getElementById('collapseProgressBtn');
         
-        if (pauseBtn) {
-            pauseBtn.onclick = () => this.pauseDownload();
+        if (this.pauseButton) {
+            this.pauseButton.onclick = () => this.pauseDownload();
         }
         
         if (collapseBtn) {
@@ -245,8 +257,16 @@ class ExampleImagesManager {
             if (data.success) {
                 this.isPaused = true;
                 document.getElementById('downloadStatusText').textContent = 'Paused';
-                document.getElementById('pauseExampleDownloadBtn').innerHTML = '<i class="fas fa-play"></i>';
-                document.getElementById('pauseExampleDownloadBtn').onclick = () => this.resumeDownload();
+                
+                // Only update the icon element, not the entire innerHTML
+                if (this.pauseButton) {
+                    const iconElement = this.pauseButton.querySelector('i');
+                    if (iconElement) {
+                        iconElement.className = 'fas fa-play';
+                    }
+                    this.pauseButton.onclick = () => this.resumeDownload();
+                }
+                
                 this.updateDownloadButtonText();
                 showToast('Download paused', 'info');
             } else {
@@ -273,8 +293,16 @@ class ExampleImagesManager {
             if (data.success) {
                 this.isPaused = false;
                 document.getElementById('downloadStatusText').textContent = 'Downloading';
-                document.getElementById('pauseExampleDownloadBtn').innerHTML = '<i class="fas fa-pause"></i>';
-                document.getElementById('pauseExampleDownloadBtn').onclick = () => this.pauseDownload();
+                
+                // Only update the icon element, not the entire innerHTML
+                if (this.pauseButton) {
+                    const iconElement = this.pauseButton.querySelector('i');
+                    if (iconElement) {
+                        iconElement.className = 'fas fa-pause';
+                    }
+                    this.pauseButton.onclick = () => this.pauseDownload();
+                }
+                
                 this.updateDownloadButtonText();
                 showToast('Download resumed', 'success');
             } else {
@@ -357,6 +385,9 @@ class ExampleImagesManager {
         if (progressBar) {
             const progressPercent = status.total > 0 ? (status.completed / status.total) * 100 : 0;
             progressBar.style.width = `${progressPercent}%`;
+            
+            // Update mini progress circle
+            this.updateMiniProgress(progressPercent);
         }
         
         // Update current model
@@ -372,21 +403,76 @@ class ExampleImagesManager {
         this.updateErrors(status);
         
         // Update pause/resume button
-        const pauseBtn = document.getElementById('pauseExampleDownloadBtn');
-        const resumeBtn = document.getElementById('resumeExampleDownloadBtn');
+        if (!this.pauseButton) {
+            this.pauseButton = document.getElementById('pauseExampleDownloadBtn');
+        }
         
-        if (pauseBtn) {
-            if (status.status === 'paused') {
-                pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-                pauseBtn.onclick = () => this.resumeDownload();
+        if (this.pauseButton) {
+            // Check if the button already has the SVG elements
+            let hasProgressElements = !!this.pauseButton.querySelector('.mini-progress-circle');
+            
+            if (!hasProgressElements) {
+                // If elements don't exist, add them
+                this.pauseButton.innerHTML = `
+                    <i class="${status.status === 'paused' ? 'fas fa-play' : 'fas fa-pause'}"></i>
+                    <svg class="mini-progress-container" width="24" height="24" viewBox="0 0 24 24">
+                        <circle class="mini-progress-background" cx="12" cy="12" r="10"></circle>
+                        <circle class="mini-progress-circle" cx="12" cy="12" r="10" stroke-dasharray="62.8" stroke-dashoffset="62.8"></circle>
+                    </svg>
+                    <span class="progress-percent"></span>
+                `;
             } else {
-                pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                pauseBtn.onclick = () => this.pauseDownload();
+                // If elements exist, just update the icon
+                const iconElement = this.pauseButton.querySelector('i');
+                if (iconElement) {
+                    iconElement.className = status.status === 'paused' ? 'fas fa-play' : 'fas fa-pause';
+                }
+            }
+            
+            // Update click handler
+            this.pauseButton.onclick = status.status === 'paused' 
+                ? () => this.resumeDownload() 
+                : () => this.pauseDownload();
+            
+            // Update progress immediately
+            const progressBar = document.getElementById('downloadProgressBar');
+            if (progressBar) {
+                const progressPercent = status.total > 0 ? (status.completed / status.total) * 100 : 0;
+                this.updateMiniProgress(progressPercent);
+            }
+        }
+    }
+    
+    // Update the mini progress circle in the pause button
+    updateMiniProgress(percent) {
+        // Ensure we have the pause button reference
+        if (!this.pauseButton) {
+            this.pauseButton = document.getElementById('pauseExampleDownloadBtn');
+            if (!this.pauseButton) {
+                console.error('Pause button not found');
+                return;
             }
         }
         
-        if (resumeBtn) {
-            resumeBtn.style.display = status.status === 'paused' ? 'block' : 'none';
+        // Query elements within the context of the pause button
+        const miniProgressCircle = this.pauseButton.querySelector('.mini-progress-circle');
+        const percentText = this.pauseButton.querySelector('.progress-percent');
+        
+        if (miniProgressCircle && percentText) {
+            // Circle circumference = 2πr = 2 * π * 10 = 62.8
+            const circumference = 62.8;
+            const offset = circumference - (percent / 100) * circumference;
+            
+            miniProgressCircle.style.strokeDashoffset = offset;
+            percentText.textContent = `${Math.round(percent)}%`;
+            
+            // Only show percent text when panel is collapsed
+            percentText.style.display = this.isProgressPanelCollapsed ? 'block' : 'none';
+        } else {
+            console.warn('Mini progress elements not found within pause button', 
+                         this.pauseButton,
+                         'mini-progress-circle:', !!miniProgressCircle, 
+                         'progress-percent:', !!percentText);
         }
     }
     
@@ -485,15 +571,28 @@ class ExampleImagesManager {
             if (!this.progressPanel) return;
         }
         
+        this.isProgressPanelCollapsed = !this.isProgressPanelCollapsed;
         this.progressPanel.classList.toggle('collapsed');
+        
+        // Save collapsed state to storage
+        setStorageItem('progress_panel_collapsed', this.isProgressPanelCollapsed);
         
         // Update icon
         const icon = document.querySelector('#collapseProgressBtn i');
         if (icon) {
-            if (this.progressPanel.classList.contains('collapsed')) {
+            if (this.isProgressPanelCollapsed) {
                 icon.className = 'fas fa-chevron-up';
             } else {
                 icon.className = 'fas fa-chevron-down';
+            }
+        }
+        
+        // Force update mini progress if panel is collapsed
+        if (this.isProgressPanelCollapsed) {
+            const progressBar = document.getElementById('downloadProgressBar');
+            if (progressBar) {
+                const progressPercent = parseFloat(progressBar.style.width) || 0;
+                this.updateMiniProgress(progressPercent);
             }
         }
     }
