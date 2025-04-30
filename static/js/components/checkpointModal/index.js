@@ -96,7 +96,7 @@ export function showCheckpointModal(checkpoint) {
                     
                     <div class="tab-content">
                         <div id="showcase-tab" class="tab-pane active">
-                            ${renderShowcaseContent(checkpoint.civitai?.images || [])}
+                            ${renderShowcaseContent(checkpoint.civitai?.images || [], checkpoint.sha256)}
                         </div>
                         
                         <div id="description-tab" class="tab-pane">

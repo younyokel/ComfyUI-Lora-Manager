@@ -311,15 +311,12 @@ export function initFolderTagsVisibility() {
 }
 
 export function initBackToTop() {
-    const button = document.createElement('button');
-    button.className = 'back-to-top';
-    button.innerHTML = '<i class="fas fa-chevron-up"></i>';
-    button.title = 'Back to top';
-    document.body.appendChild(button);
+    const button = document.getElementById('backToTopBtn');
+    if (!button) return;
 
     // Get the scrollable container
     const scrollContainer = document.querySelector('.page-content');
-
+    
     // Show/hide button based on scroll position
     const toggleBackToTop = () => {
         const scrollThreshold = window.innerHeight * 0.3;

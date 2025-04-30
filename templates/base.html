@@ -73,7 +73,13 @@
         {% include 'components/modals.html' %}
         {% include 'components/loading.html' %}
         {% include 'components/context_menu.html' %}
+        {% include 'components/progress_panel.html' %}
         {% block additional_components %}{% endblock %}
+
+        <!-- Add back-to-top button here -->
+        <button id="backToTopBtn" class="back-to-top" title="Back to top">
+            <i class="fas fa-chevron-up"></i>
+        </button>
 
         <div class="container">
             {% if is_initializing %}

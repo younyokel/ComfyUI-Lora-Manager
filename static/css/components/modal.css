@@ -496,6 +496,107 @@ input:checked + .toggle-slider:before {
     filter: blur(8px);
 }
 
+/* Example Images Settings Styles */
+.download-buttons {
+    justify-content: flex-start;
+    gap: var(--space-2);
+}
+
+.primary-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--lora-accent);
+    color: var(--lora-text);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.95em;
+}
+
+.primary-btn:hover {
+    background-color: oklch(from var(--lora-accent) l c h / 85%);
+    color: var(--lora-text);
+}
+
+/* Secondary button styles */
+.secondary-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95em;
+}
+
+.secondary-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Disabled button styles */
+.primary-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--lora-accent);
+    color: var(--lora-text);
+    pointer-events: none;
+}
+
+.secondary-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Dark theme specific button adjustments */
+[data-theme="dark"] .primary-btn:hover {
+    background-color: oklch(from var(--lora-accent) l c h / 75%);
+}
+
+[data-theme="dark"] .secondary-btn {
+    background-color: var(--lora-surface);
+}
+
+[data-theme="dark"] .secondary-btn:hover {
+    background-color: oklch(35% 0.02 256 / 0.98);
+}
+
+.primary-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.path-control {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+.path-control input[type="text"] {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--border-color);
+    background-color: var(--lora-surface);
+    color: var(--text-color);
+    font-size: 0.95em;
+    height: 32px;
+}
+
+.primary-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Add styles for delete preview image */
 .delete-preview {
     max-width: 150px;

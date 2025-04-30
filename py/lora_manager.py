@@ -6,10 +6,12 @@ from .routes.api_routes import ApiRoutes
 from .routes.recipe_routes import RecipeRoutes
 from .routes.checkpoints_routes import CheckpointsRoutes
 from .routes.update_routes import UpdateRoutes
-from .routes.usage_stats_routes import UsageStatsRoutes
+from .routes.misc_routes import MiscRoutes
 from .services.service_registry import ServiceRegistry
+from .services.settings_manager import settings
 import logging
 import sys
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,13 @@ class LoraManager:
         logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 
         added_targets = set()  # Track already added target paths
+        
+        # Add static route for example images if the path exists in settings
+        example_images_path = settings.get('example_images_path')
+        logger.info(f"Example images path: {example_images_path}")
+        if example_images_path and os.path.exists(example_images_path):
+            app.router.add_static('/example_images_static', example_images_path)
+            logger.info(f"Added static route for example images: /example_images_static -> {example_images_path}")
         
         # Add static routes for each lora root
         for idx, root in enumerate(config.loras_roots, start=1):
@@ -102,7 +111,7 @@ class LoraManager:
         ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)  
-        UsageStatsRoutes.setup_routes(app)  # Register usage stats routes
+        MiscRoutes.setup_routes(app)  # Register miscellaneous routes
         
         # Schedule service initialization 
         app.on_startup.append(lambda app: cls._initialize_services())

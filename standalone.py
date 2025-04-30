@@ -127,6 +127,17 @@ class StandaloneServer:
         """Set up basic routes"""
         # Add a simple status endpoint
         self.app.router.add_get('/', self.handle_status)
+        
+        # Add static route for example images if the path exists in settings
+        settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+        if os.path.exists(settings_path):
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+            example_images_path = settings.get('example_images_path')
+            logger.info(f"Example images path: {example_images_path}")
+            if example_images_path and os.path.exists(example_images_path):
+                self.app.router.add_static('/example_images_static', example_images_path)
+                logger.info(f"Added static route for example images: /example_images_static -> {example_images_path}")
     
     async def handle_status(self, request):
         """Handle status request by redirecting to loras page"""
@@ -283,7 +294,7 @@ class StandaloneLoraManager(LoraManager):
         from py.routes.recipe_routes import RecipeRoutes
         from py.routes.checkpoints_routes import CheckpointsRoutes
         from py.routes.update_routes import UpdateRoutes
-        from py.routes.usage_stats_routes import UsageStatsRoutes
+        from py.routes.misc_routes import MiscRoutes
         
         lora_routes = LoraRoutes()
         checkpoints_routes = CheckpointsRoutes()
@@ -294,7 +305,7 @@ class StandaloneLoraManager(LoraManager):
         ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)
-        UsageStatsRoutes.setup_routes(app)
+        MiscRoutes.setup_routes(app)
         
         # Schedule service initialization
         app.on_startup.append(lambda app: cls._initialize_services())

@@ -20,6 +20,7 @@
 @import 'components/shared.css';
 @import 'components/filter-indicator.css';
 @import 'components/initialization.css';
+@import 'components/progress-panel.css';
 
 .initialization-notice {
     display: flex;

@@ -122,7 +122,7 @@ export function showLoraModal(lora) {
                     
                     <div class="tab-content">
                         <div id="showcase-tab" class="tab-pane active">
-                            ${renderShowcaseContent(lora.civitai?.images)}
+                            ${renderShowcaseContent(lora.civitai?.images, lora.sha256)}
                         </div>
                         
                         <div id="description-tab" class="tab-pane">

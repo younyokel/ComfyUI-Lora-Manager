@@ -190,14 +190,6 @@
     border-color: var(--lora-border);
 }
 
-/* Add disabled button styles */
-.primary-btn.disabled {
-    background-color: var(--border-color);
-    color: var(--text-color);
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
 /* Enhance the local badge to make it more noticeable */
 .version-item.exists-locally {
     background: oklch(var(--lora-accent) / 0.05);

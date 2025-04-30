@@ -5,6 +5,7 @@ import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
 import { HeaderManager } from './components/Header.js';
 import { settingsManager } from './managers/SettingsManager.js';
+import { exampleImagesManager } from './managers/ExampleImagesManager.js';
 import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { migrateStorageItems } from './utils/storageHelpers.js';
@@ -27,11 +28,15 @@ export class AppCore {
         updateService.initialize();
         window.modalManager = modalManager;
         window.settingsManager = settingsManager;
+        window.exampleImagesManager = exampleImagesManager;
         
         // Initialize UI components
         window.headerManager = new HeaderManager();
         initTheme();
         initBackToTop();
+        
+        // Initialize the example images manager
+        exampleImagesManager.initialize();
         
         // Mark as initialized
         this.initialized = true;

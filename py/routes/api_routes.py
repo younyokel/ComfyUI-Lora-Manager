@@ -55,7 +55,6 @@ class ApiRoutes:
         app.router.add_get('/api/civitai/model/version/{modelVersionId}', routes.get_civitai_model_by_version)
         app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
         app.router.add_post('/api/download-lora', routes.download_lora)
-        app.router.add_post('/api/settings', routes.update_settings)
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
         app.router.add_post('/api/loras/save-metadata', routes.save_metadata)
@@ -515,21 +514,6 @@ class ApiRoutes:
                 logger.error(f"Error downloading LoRA: {error_message}")
                 return web.Response(status=500, text=error_message)
 
-    async def update_settings(self, request: web.Request) -> web.Response:
-        """Update application settings"""
-        try:
-            data = await request.json()
-            
-            # Validate and update settings
-            if 'civitai_api_key' in data:
-                settings.set('civitai_api_key', data['civitai_api_key'])
-            if 'show_only_sfw' in data:
-                settings.set('show_only_sfw', data['show_only_sfw'])
-            
-            return web.json_response({'success': True})
-        except Exception as e:
-            logger.error(f"Error updating settings: {e}", exc_info=True)
-            return web.Response(status=500, text=str(e))
 
     async def move_model(self, request: web.Request) -> web.Response:
         """Handle model move request"""
