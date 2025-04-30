@@ -46,28 +46,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    // Initialize button onclick handlers when DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        const pauseBtn = document.getElementById('pauseExampleDownloadBtn');
-        const collapseBtn = document.getElementById('collapseProgressBtn');
-        
-        // Make window.exampleImagesManager globally available
-        if (window.exampleImagesManager === undefined && typeof exampleImagesManager !== 'undefined') {
-            window.exampleImagesManager = exampleImagesManager;
-        }
-        
-        if (pauseBtn && window.exampleImagesManager) {
-            pauseBtn.onclick = () => window.exampleImagesManager.pauseDownload();
-        }
-        
-        if (collapseBtn && window.exampleImagesManager) {
-            collapseBtn.onclick = () => {
-                if (window.exampleImagesManager.toggleProgressPanel) {
-                    window.exampleImagesManager.toggleProgressPanel();
-                }
-            };
-        }
-    });
-</script>

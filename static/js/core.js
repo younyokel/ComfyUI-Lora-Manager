@@ -35,6 +35,9 @@ export class AppCore {
         initTheme();
         initBackToTop();
         
+        // Initialize the example images manager
+        exampleImagesManager.initialize();
+        
         // Mark as initialized
         this.initialized = true;
         

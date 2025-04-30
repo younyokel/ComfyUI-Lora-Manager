@@ -10,18 +10,30 @@ class ExampleImagesManager {
         this.startTime = null;
         this.progressPanel = null;
         
-        // Wait for DOM before initializing event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            this.initEventListeners();
-            // Initialize progress panel reference
-            this.progressPanel = document.getElementById('exampleImagesProgress');
-        });
-        
-        // Initialize download path field
+        // Initialize download path field and check download status
         this.initializePathOptions();
-        
-        // Check download status on page load
         this.checkDownloadStatus();
+    }
+    
+    // Initialize the manager
+    initialize() {
+        // Initialize event listeners
+        this.initEventListeners();
+        
+        // Initialize progress panel reference
+        this.progressPanel = document.getElementById('exampleImagesProgress');
+        
+        // Initialize progress panel button handlers
+        const pauseBtn = document.getElementById('pauseExampleDownloadBtn');
+        const collapseBtn = document.getElementById('collapseProgressBtn');
+        
+        if (pauseBtn) {
+            pauseBtn.onclick = () => this.pauseDownload();
+        }
+        
+        if (collapseBtn) {
+            collapseBtn.onclick = () => this.toggleProgressPanel();
+        }
     }
     
     // Initialize event listeners for buttons
