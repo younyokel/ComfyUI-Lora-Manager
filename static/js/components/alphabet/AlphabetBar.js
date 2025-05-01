@@ -33,6 +33,12 @@ export class AlphabetBar {
         
         // Restore the active letter filter from storage if available
         this.restoreActiveLetterFilter();
+        
+        // Restore collapse state from storage
+        this.restoreCollapseState();
+
+        // Update the toggle button indicator if there's an active letter filter
+        this.updateToggleIndicator();
     }
     
     /**
@@ -67,20 +73,21 @@ export class AlphabetBar {
         
         letterChips.forEach(chip => {
             const letter = chip.dataset.letter;
-            const countSpan = chip.querySelector('.count');
             const count = this.letterCounts[letter] || 0;
             
-            // Update the count display
+            // Update the title attribute for tooltip display
+            if (count > 0) {
+                chip.title = `${letter}: ${count} LoRAs`;
+                chip.classList.remove('disabled');
+            } else {
+                chip.title = `${letter}: No LoRAs`;
+                chip.classList.add('disabled');
+            }
+            
+            // Keep the count span for backward compatibility
+            const countSpan = chip.querySelector('.count');
             if (countSpan) {
-                if (count > 0) {
-                    countSpan.textContent = ` (${count})`;
-                    chip.title = `${letter}: ${count} LoRAs`;
-                    chip.classList.remove('disabled');
-                } else {
-                    countSpan.textContent = '';
-                    chip.title = `${letter}: No LoRAs`;
-                    chip.classList.add('disabled');
-                }
+                countSpan.textContent = ` (${count})`;
             }
         });
     }
@@ -90,6 +97,8 @@ export class AlphabetBar {
      */
     initEventListeners() {
         const alphabetBar = document.querySelector('.alphabet-bar');
+        const toggleButton = document.querySelector('.toggle-alphabet-bar');
+        const alphabetBarContainer = document.querySelector('.alphabet-bar-container');
         
         if (alphabetBar) {
             // Use event delegation for letter chips
@@ -100,6 +109,25 @@ export class AlphabetBar {
                     this.handleLetterClick(letterChip);
                 }
             });
+            
+            // Add toggle button listener
+            if (toggleButton && alphabetBarContainer) {
+                toggleButton.addEventListener('click', () => {
+                    alphabetBarContainer.classList.toggle('collapsed');
+                    
+                    // If expanding and there's an active letter, scroll it into view
+                    if (!alphabetBarContainer.classList.contains('collapsed')) {
+                        this.scrollActiveLetterIntoView();
+                    }
+                    
+                    // Save collapse state to storage
+                    setStorageItem(`${this.pageType}_alphabetBarCollapsed`, 
+                        alphabetBarContainer.classList.contains('collapsed'));
+
+                    // Update toggle indicator
+                    this.updateToggleIndicator();
+                });
+            }
             
             // Add keyboard shortcut listeners
             document.addEventListener('keydown', (e) => {
@@ -148,6 +176,26 @@ export class AlphabetBar {
     }
     
     /**
+     * Restore the collapse state from storage
+     */
+    restoreCollapseState() {
+        const alphabetBarContainer = document.querySelector('.alphabet-bar-container');
+        
+        if (alphabetBarContainer) {
+            const isCollapsed = getStorageItem(`${this.pageType}_alphabetBarCollapsed`);
+            
+            // If there's a stored preference, apply it
+            if (isCollapsed !== null) {
+                if (isCollapsed) {
+                    alphabetBarContainer.classList.add('collapsed');
+                } else {
+                    alphabetBarContainer.classList.remove('collapsed');
+                }
+            }
+        }
+    }
+    
+    /**
      * Handle letter chip click
      * @param {HTMLElement} letterChip - The letter chip that was clicked
      */
@@ -175,6 +223,9 @@ export class AlphabetBar {
             setStorageItem(`${this.pageType}_activeLetterFilter`, null);
         }
         
+        // Update visual indicator on toggle button
+        this.updateToggleIndicator();
+        
         // Trigger a reload with the new filter
         resetAndReload(true);
     }
@@ -191,6 +242,9 @@ export class AlphabetBar {
             if (letterChip && !letterChip.classList.contains('disabled')) {
                 letterChip.classList.add('active');
                 this.pageState.activeLetterFilter = activeLetterFilter;
+                
+                // Scroll the active letter into view if the alphabet bar is expanded
+                this.scrollActiveLetterIntoView();
             }
         }
     }
@@ -209,6 +263,9 @@ export class AlphabetBar {
         
         // Remove from storage
         setStorageItem(`${this.pageType}_activeLetterFilter`, null);
+        
+        // Update the toggle button indicator
+        this.updateToggleIndicator();
     }
     
     /**
@@ -218,5 +275,45 @@ export class AlphabetBar {
     updateCounts(newCounts) {
         this.letterCounts = { ...newCounts };
         this.updateLetterCountsDisplay();
+    }
+    
+    /**
+     * Update the toggle button visual indicator based on active filter
+     */
+    updateToggleIndicator() {
+        const toggleButton = document.querySelector('.toggle-alphabet-bar');
+        const hasActiveFilter = this.pageState.activeLetterFilter !== null;
+        
+        if (toggleButton) {
+            if (hasActiveFilter) {
+                toggleButton.classList.add('has-active-letter');
+            } else {
+                toggleButton.classList.remove('has-active-letter');
+            }
+        }
+    }
+    
+    /**
+     * Scroll the active letter into view if the alphabet bar is expanded
+     */
+    scrollActiveLetterIntoView() {
+        if (!this.pageState.activeLetterFilter) return;
+
+        
+        const alphabetBarContainer = document.querySelector('.alphabet-bar-container');
+        if (alphabetBarContainer) {
+            const activeLetterChip = document.querySelector(`.letter-chip.active`);
+            
+            if (activeLetterChip) {
+                // Use a small timeout to ensure the alphabet bar is fully expanded
+                setTimeout(() => {
+                    activeLetterChip.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center'
+                    });
+                }, 300);
+            }
+        }
     }
 }

@@ -157,16 +157,4 @@ export class LorasControls extends PageControls {
         // Expose the alphabet bar to the global scope for debugging
         window.alphabetBar = this.alphabetBar;
     }
-    
-    /**
-     * Override resetAndReload to update letter counts
-     */
-    async resetAndReload(updateFolders = false) {
-        await super.resetAndReload(updateFolders);
-        
-        // Update letter counts after reload if alphabet bar exists
-        if (this.alphabetBar) {
-            this.alphabetBar.fetchLetterCounts();
-        }
-    }
 }
