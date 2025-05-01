@@ -610,7 +610,10 @@ class ModelScanner:
                     model_id = str(model_id)
                     tags_missing = not model_data.get('tags') or len(model_data.get('tags', [])) == 0
                     desc_missing = not model_data.get('modelDescription') or model_data.get('modelDescription') in (None, "")
-                    needs_metadata_update = tags_missing or desc_missing
+                    # TODO: not for now, but later we should check if the creator is missing
+                    # creator_missing = not model_data.get('civitai', {}).get('creator')
+                    creator_missing = False
+                    needs_metadata_update = tags_missing or desc_missing or creator_missing
             
             if needs_metadata_update and model_id:
                 logger.debug(f"Fetching missing metadata for {file_path} with model ID {model_id}")
@@ -636,6 +639,8 @@ class ModelScanner:
                     
                     if model_metadata.get('description') and (not model_data.get('modelDescription') or model_data.get('modelDescription') in (None, "")):
                         model_data['modelDescription'] = model_metadata['description']
+
+                    model_data['civitai']['creator'] = model_metadata['creator']
                     
                     metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
                     with open(metadata_path, 'w', encoding='utf-8') as f:

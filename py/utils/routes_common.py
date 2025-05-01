@@ -53,6 +53,7 @@ class ModelRouteUtils:
                 if model_metadata:
                     local_metadata['modelDescription'] = model_metadata.get('description', '')
                     local_metadata['tags'] = model_metadata.get('tags', [])
+                    local_metadata['civitai']['creator'] = model_metadata['creator']
         
         # Update base model
         local_metadata['base_model'] = determine_base_model(civitai_metadata.get('baseModel'))

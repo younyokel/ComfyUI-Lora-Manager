@@ -781,11 +781,13 @@ class ApiRoutes:
             # Check if we already have the description stored in metadata
             description = None
             tags = []
+            creator = {}
             if file_path:
                 metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
                 metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
                 description = metadata.get('modelDescription')
                 tags = metadata.get('tags', [])
+                creator = metadata.get('creator', {})
             
             # If description is not in metadata, fetch from CivitAI
             if not description:
@@ -795,6 +797,7 @@ class ApiRoutes:
                 if (model_metadata):
                     description = model_metadata.get('description')
                     tags = model_metadata.get('tags', [])
+                    creator = model_metadata.get('creator', {})
                 
                     # Save the metadata to file if we have a file path and got metadata
                     if file_path:
@@ -804,6 +807,7 @@ class ApiRoutes:
                             
                             metadata['modelDescription'] = description
                             metadata['tags'] = tags
+                            metadata['creator'] = creator
                             
                             with open(metadata_path, 'w', encoding='utf-8') as f:
                                 json.dump(metadata, f, indent=2, ensure_ascii=False)
@@ -814,7 +818,8 @@ class ApiRoutes:
             return web.json_response({
                 'success': True,
                 'description': description or "<p>No model description available.</p>",
-                'tags': tags
+                'tags': tags,
+                'creator': creator
             })
             
         except Exception as e:
