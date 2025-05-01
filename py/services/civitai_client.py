@@ -267,7 +267,7 @@ class CivitaiClient:
             return None, error_msg
 
     async def get_model_metadata(self, model_id: str) -> Tuple[Optional[Dict], int]:
-        """Fetch model metadata (description and tags) from Civitai API
+        """Fetch model metadata (description, tags, and creator info) from Civitai API
         
         Args:
             model_id: The Civitai model ID
@@ -294,10 +294,14 @@ class CivitaiClient:
                 # Extract relevant metadata
                 metadata = {
                     "description": data.get("description") or "No model description available",
-                    "tags": data.get("tags", [])
+                    "tags": data.get("tags", []),
+                    "creator": {
+                        "username": data.get("creator", {}).get("username"),
+                        "image": data.get("creator", {}).get("image")
+                    }
                 }
                 
-                if metadata["description"] or metadata["tags"]:
+                if metadata["description"] or metadata["tags"] or metadata["creator"]["username"]:
                     return metadata, status_code
                 else:
                     logger.warning(f"No metadata found for model {model_id}")

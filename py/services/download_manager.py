@@ -154,7 +154,7 @@ class DownloadManager:
                 metadata = LoraMetadata.from_civitai_info(version_info, file_info, save_path)
                 logger.info(f"Creating LoraMetadata for {file_name}")
             
-            # 5.1 Get and update model tags and description
+            # 5.1 Get and update model tags, description and creator info
             model_id = version_info.get('modelId')
             if model_id:
                 model_metadata, _ = await civitai_client.get_model_metadata(str(model_id))
@@ -163,6 +163,8 @@ class DownloadManager:
                         metadata.tags = model_metadata.get("tags", [])
                     if model_metadata.get("description"):
                         metadata.modelDescription = model_metadata.get("description", "")
+                    if model_metadata.get("creator"):
+                        metadata.civitai["creator"] = model_metadata.get("creator")
             
             # 6. Start download process
             result = await self._execute_download(
