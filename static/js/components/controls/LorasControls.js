@@ -2,6 +2,7 @@
 import { PageControls } from './PageControls.js';
 import { loadMoreLoras, fetchCivitai, resetAndReload, refreshLoras } from '../../api/loraApi.js';
 import { getSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
+import { createAlphabetBar } from '../alphabet/index.js';
 
 /**
  * LorasControls class - Extends PageControls for LoRA-specific functionality
@@ -16,6 +17,9 @@ export class LorasControls extends PageControls {
         
         // Check for custom filters (e.g., from recipe navigation)
         this.checkCustomFilters();
+        
+        // Initialize alphabet bar component
+        this.initAlphabetBar();
     }
     
     /**
@@ -141,5 +145,28 @@ export class LorasControls extends PageControls {
      */
     _truncateText(text, maxLength) {
         return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    }
+    
+    /**
+     * Initialize the alphabet bar component
+     */
+    initAlphabetBar() {
+        // Create the alphabet bar component
+        this.alphabetBar = createAlphabetBar('loras');
+        
+        // Expose the alphabet bar to the global scope for debugging
+        window.alphabetBar = this.alphabetBar;
+    }
+    
+    /**
+     * Override resetAndReload to update letter counts
+     */
+    async resetAndReload(updateFolders = false) {
+        await super.resetAndReload(updateFolders);
+        
+        // Update letter counts after reload if alphabet bar exists
+        if (this.alphabetBar) {
+            this.alphabetBar.fetchLetterCounts();
+        }
     }
 }

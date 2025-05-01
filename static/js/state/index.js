@@ -27,6 +27,7 @@ export const state = {
             hasMore: true,
             sortBy: 'name',
             activeFolder: null,
+            activeLetterFilter: null, // New property for letter filtering
             previewVersions: loraPreviewVersions,
             searchManager: null,
             searchOptions: {

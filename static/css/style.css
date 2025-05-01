@@ -21,6 +21,7 @@
 @import 'components/filter-indicator.css';
 @import 'components/initialization.css';
 @import 'components/progress-panel.css';
+@import 'components/alphabet-bar.css'; /* Add alphabet bar component */
 
 .initialization-notice {
     display: flex;

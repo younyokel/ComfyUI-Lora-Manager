@@ -1,0 +1,89 @@
+/* Alphabet Bar Component */
+.alphabet-bar {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    padding: 4px;
+    margin: 8px 0;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+}
+
+.letter-chip {
+    padding: 4px 6px;
+    border-radius: var(--border-radius-xs);
+    background: var(--bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+    min-width: 20px;
+    text-align: center;
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-color);
+}
+
+.letter-chip:hover {
+    background: var(--lora-accent);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.letter-chip.active {
+    background: var(--lora-accent);
+    color: white;
+    border-color: var(--lora-accent);
+}
+
+.letter-chip.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: default;
+}
+
+.letter-chip .count {
+    font-size: 0.75em;
+    margin-left: 2px;
+    opacity: 0.7;
+}
+
+.alphabet-bar-section {
+    margin: 6px 0;
+    padding: 0 2px;
+    position: relative;
+}
+
+.alphabet-bar-title {
+    font-size: 0.75em;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .alphabet-bar {
+        padding: 3px;
+        gap: 3px;
+    }
+    
+    .letter-chip {
+        padding: 3px 5px;
+        min-width: 16px;
+        font-size: 0.75em;
+    }
+}
+
+/* Keyframe animations for the active letter */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.letter-chip.active {
+    animation: pulse 1s ease-in-out 1;
+}

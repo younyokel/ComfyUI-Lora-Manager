@@ -69,6 +69,9 @@ class ApiRoutes:
         # Add the new trigger words route
         app.router.add_post('/loramanager/get_trigger_words', routes.get_trigger_words)
 
+        # Add new endpoint for letter counts
+        app.router.add_get('/api/loras/letter-counts', routes.get_letter_counts)
+
         # Add update check routes
         UpdateRoutes.setup_routes(app)
 
@@ -126,6 +129,9 @@ class ApiRoutes:
             tags = request.query.get('tags', None)
             favorites_only = request.query.get('favorites_only', 'false').lower() == 'true'  # New parameter
             
+            # New parameter for alphabet filtering
+            first_letter = request.query.get('first_letter', None)
+            
             # New parameters for recipe filtering
             lora_hash = request.query.get('lora_hash', None)
             lora_hashes = request.query.get('lora_hashes', None)
@@ -156,7 +162,8 @@ class ApiRoutes:
                 tags=filters.get('tags', None),
                 search_options=search_options,
                 hash_filters=hash_filters,
-                favorites_only=favorites_only  # Pass favorites_only parameter
+                favorites_only=favorites_only,  # Pass favorites_only parameter
+                first_letter=first_letter  # Pass the new first_letter parameter
             )
 
             # Get all available folders from cache
@@ -1049,4 +1056,24 @@ class ApiRoutes:
             return web.json_response({
                 "success": False,
                 "error": str(e)
+            }, status=500)
+
+    async def get_letter_counts(self, request: web.Request) -> web.Response:
+        """Get count of loras for each letter of the alphabet"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            # Get letter counts
+            letter_counts = await self.scanner.get_letter_counts()
+            
+            return web.json_response({
+                'success': True,
+                'letter_counts': letter_counts
+            })
+        except Exception as e:
+            logger.error(f"Error getting letter counts: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)

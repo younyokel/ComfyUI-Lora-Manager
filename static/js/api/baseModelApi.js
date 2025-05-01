@@ -49,6 +49,11 @@ export async function loadMoreModels(options = {}) {
         if (pageState.showFavoritesOnly) {
             params.append('favorites_only', 'true');
         }
+        
+        // Add active letter filter if set
+        if (pageState.activeLetterFilter) {
+            params.append('first_letter', pageState.activeLetterFilter);
+        }
 
         // Add search parameters if there's a search term
         if (pageState.filters?.search) {

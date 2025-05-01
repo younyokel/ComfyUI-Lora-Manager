@@ -4,6 +4,7 @@ import logging
 import asyncio
 import shutil
 import time
+import re
 from typing import List, Dict, Optional, Set
 
 from ..utils.models import LoraMetadata
@@ -123,7 +124,7 @@ class LoraScanner(ModelScanner):
                                folder: str = None, search: str = None, fuzzy_search: bool = False,
                                base_models: list = None, tags: list = None,
                                search_options: dict = None, hash_filters: dict = None,
-                               favorites_only: bool = False) -> Dict:
+                               favorites_only: bool = False, first_letter: str = None) -> Dict:
         """Get paginated and filtered lora data
         
         Args:
@@ -138,6 +139,7 @@ class LoraScanner(ModelScanner):
             search_options: Dictionary with search options (filename, modelname, tags, recursive)
             hash_filters: Dictionary with hash filtering options (single_hash or multiple_hashes)
             favorites_only: Filter for favorite models only
+            first_letter: Filter by first letter of model name
         """
         cache = await self.get_cached_data()
 
@@ -202,6 +204,10 @@ class LoraScanner(ModelScanner):
                 lora for lora in filtered_data
                 if lora.get('favorite', False) is True
             ]
+            
+        # Apply first letter filtering
+        if first_letter:
+            filtered_data = self._filter_by_first_letter(filtered_data, first_letter)
         
         # Apply folder filtering
         if folder is not None:
@@ -272,6 +278,101 @@ class LoraScanner(ModelScanner):
         }
         
         return result
+
+    def _filter_by_first_letter(self, data, letter):
+        """Filter data by first letter of model name
+        
+        Special handling:
+        - '#': Numbers (0-9)
+        - '@': Special characters (not alphanumeric)
+        - '漢': CJK characters
+        """
+        filtered_data = []
+        
+        for lora in data:
+            model_name = lora.get('model_name', '')
+            if not model_name:
+                continue
+                
+            first_char = model_name[0].upper()
+            
+            if letter == '#' and first_char.isdigit():
+                filtered_data.append(lora)
+            elif letter == '@' and not first_char.isalnum():
+                # Special characters (not alphanumeric)
+                filtered_data.append(lora)
+            elif letter == '漢' and self._is_cjk_character(first_char):
+                # CJK characters
+                filtered_data.append(lora)
+            elif letter.upper() == first_char:
+                # Regular alphabet matching
+                filtered_data.append(lora)
+                
+        return filtered_data
+    
+    def _is_cjk_character(self, char):
+        """Check if character is a CJK character"""
+        # Define Unicode ranges for CJK characters
+        cjk_ranges = [
+            (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+            (0x3400, 0x4DBF),   # CJK Unified Ideographs Extension A
+            (0x20000, 0x2A6DF), # CJK Unified Ideographs Extension B
+            (0x2A700, 0x2B73F), # CJK Unified Ideographs Extension C
+            (0x2B740, 0x2B81F), # CJK Unified Ideographs Extension D
+            (0x2B820, 0x2CEAF), # CJK Unified Ideographs Extension E
+            (0x2CEB0, 0x2EBEF), # CJK Unified Ideographs Extension F
+            (0x30000, 0x3134F), # CJK Unified Ideographs Extension G
+            (0xF900, 0xFAFF),   # CJK Compatibility Ideographs
+            (0x3300, 0x33FF),   # CJK Compatibility
+            (0x3200, 0x32FF),   # Enclosed CJK Letters and Months
+            (0x3100, 0x312F),   # Bopomofo
+            (0x31A0, 0x31BF),   # Bopomofo Extended
+            (0x3040, 0x309F),   # Hiragana
+            (0x30A0, 0x30FF),   # Katakana
+            (0x31F0, 0x31FF),   # Katakana Phonetic Extensions
+            (0xAC00, 0xD7AF),   # Hangul Syllables
+            (0x1100, 0x11FF),   # Hangul Jamo
+            (0xA960, 0xA97F),   # Hangul Jamo Extended-A
+            (0xD7B0, 0xD7FF),   # Hangul Jamo Extended-B
+        ]
+        
+        code_point = ord(char)
+        return any(start <= code_point <= end for start, end in cjk_ranges)
+    
+    async def get_letter_counts(self):
+        """Get count of models for each letter of the alphabet"""
+        cache = await self.get_cached_data()
+        data = cache.sorted_by_name
+        
+        # Define letter categories
+        letters = {
+            '#': 0,  # Numbers
+            'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0, 'F': 0, 'G': 0, 'H': 0,
+            'I': 0, 'J': 0, 'K': 0, 'L': 0, 'M': 0, 'N': 0, 'O': 0, 'P': 0,
+            'Q': 0, 'R': 0, 'S': 0, 'T': 0, 'U': 0, 'V': 0, 'W': 0, 'X': 0,
+            'Y': 0, 'Z': 0,
+            '@': 0,  # Special characters
+            '漢': 0   # CJK characters
+        }
+        
+        # Count models for each letter
+        for lora in data:
+            model_name = lora.get('model_name', '')
+            if not model_name:
+                continue
+                
+            first_char = model_name[0].upper()
+            
+            if first_char.isdigit():
+                letters['#'] += 1
+            elif first_char in letters:
+                letters[first_char] += 1
+            elif self._is_cjk_character(first_char):
+                letters['漢'] += 1
+            elif not first_char.isalnum():
+                letters['@'] += 1
+                
+        return letters
 
     async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
         """Update file paths in metadata file"""
