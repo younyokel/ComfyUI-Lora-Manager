@@ -33,9 +33,11 @@ export const BASE_MODELS = {
     NOOBAI: "NoobAI",
     ILLUSTRIOUS: "Illustrious",
     PONY: "Pony",
+    HIDREAM: "HiDream",
     
     // Video models
     SVD: "SVD",
+    LTXV: "LTXV",
     WAN_VIDEO: "Wan Video",
     HUNYUAN_VIDEO: "Hunyuan Video",
     
@@ -69,6 +71,7 @@ export const BASE_MODEL_CLASSES = {
     
     // Video models
     [BASE_MODELS.SVD]: "svd",
+    [BASE_MODELS.LTXV]: "ltxv",
     [BASE_MODELS.WAN_VIDEO]: "wan-video",
     [BASE_MODELS.HUNYUAN_VIDEO]: "hunyuan-video",
     
@@ -84,6 +87,7 @@ export const BASE_MODEL_CLASSES = {
     [BASE_MODELS.NOOBAI]: "noobai",
     [BASE_MODELS.ILLUSTRIOUS]: "il",
     [BASE_MODELS.PONY]: "pony",
+    [BASE_MODELS.HIDREAM]: "hidream",
     
     // Default
     [BASE_MODELS.UNKNOWN]: "unknown"
