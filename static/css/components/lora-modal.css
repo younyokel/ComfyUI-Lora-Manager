@@ -1133,8 +1133,8 @@
     pointer-events: none;
 }
 
-/* Show metadata panel only on hover */
-.media-wrapper:hover .image-metadata-panel {
+/* Show metadata panel only when the 'visible' class is added */
+.media-wrapper .image-metadata-panel.visible {
     transform: translateY(0);
     opacity: 0.98;
     pointer-events: auto;

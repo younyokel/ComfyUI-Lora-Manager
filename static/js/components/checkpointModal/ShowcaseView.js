@@ -322,8 +322,42 @@ function initMetadataPanelHandlers(container) {
     const mediaWrappers = container.querySelectorAll('.media-wrapper');
     
     mediaWrappers.forEach(wrapper => {
+        // Get the metadata panel and media element (img or video)
         const metadataPanel = wrapper.querySelector('.image-metadata-panel');
-        if (!metadataPanel) return;
+        const mediaElement = wrapper.querySelector('img, video');
+        
+        if (!metadataPanel || !mediaElement) return;
+        
+        // Add event listeners to the wrapper for mouse tracking
+        wrapper.addEventListener('mousemove', (e) => {
+            // Get mouse position relative to wrapper
+            const rect = wrapper.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Get the actual displayed dimensions of the media element
+            const mediaRect = getRenderedMediaRect(mediaElement, rect.width, rect.height);
+            
+            // Check if mouse is over the actual media content
+            const isOverMedia = (
+                mouseX >= mediaRect.left && 
+                mouseX <= mediaRect.right && 
+                mouseY >= mediaRect.top && 
+                mouseY <= mediaRect.bottom
+            );
+            
+            // Show metadata panel only when over actual media content
+            if (isOverMedia) {
+                metadataPanel.classList.add('visible');
+            } else {
+                metadataPanel.classList.remove('visible');
+            }
+        });
+        
+        wrapper.addEventListener('mouseleave', () => {
+            // Hide panel when mouse leaves the wrapper
+            metadataPanel.classList.remove('visible');
+        });
         
         // Prevent events from bubbling
         metadataPanel.addEventListener('click', (e) => {
@@ -355,6 +389,50 @@ function initMetadataPanelHandlers(container) {
             e.stopPropagation();
         });
     });
+}
+
+/**
+ * Get the actual rendered rectangle of a media element with object-fit: contain
+ * @param {HTMLElement} mediaElement - The img or video element
+ * @param {number} containerWidth - Width of the container
+ * @param {number} containerHeight - Height of the container
+ * @returns {Object} - Rect with left, top, right, bottom coordinates
+ */
+function getRenderedMediaRect(mediaElement, containerWidth, containerHeight) {
+    // Get natural dimensions of the media
+    const naturalWidth = mediaElement.naturalWidth || mediaElement.videoWidth || mediaElement.clientWidth;
+    const naturalHeight = mediaElement.naturalHeight || mediaElement.videoHeight || mediaElement.clientHeight;
+    
+    if (!naturalWidth || !naturalHeight) {
+        // Fallback if dimensions cannot be determined
+        return { left: 0, top: 0, right: containerWidth, bottom: containerHeight };
+    }
+    
+    // Calculate aspect ratios
+    const containerRatio = containerWidth / containerHeight;
+    const mediaRatio = naturalWidth / naturalHeight;
+    
+    let renderedWidth, renderedHeight, left = 0, top = 0;
+    
+    // Apply object-fit: contain logic
+    if (containerRatio > mediaRatio) {
+        // Container is wider than media - will have empty space on sides
+        renderedHeight = containerHeight;
+        renderedWidth = renderedHeight * mediaRatio;
+        left = (containerWidth - renderedWidth) / 2;
+    } else {
+        // Container is taller than media - will have empty space top/bottom
+        renderedWidth = containerWidth;
+        renderedHeight = renderedWidth / mediaRatio;
+        top = (containerHeight - renderedHeight) / 2;
+    }
+    
+    return {
+        left,
+        top,
+        right: left + renderedWidth,
+        bottom: top + renderedHeight
+    };
 }
 
 /**
