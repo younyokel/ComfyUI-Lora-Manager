@@ -283,7 +283,7 @@ If you find this project helpful, consider supporting its development:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/pixelpawsai)
 
-WeChat & Alipay: [Click to view QR codes](static/images/combined-qr.jpg)
+WeChat & Alipay: [Click to view QR codes](https://raw.githubusercontent.com/willmiao/ComfyUI-Lora-Manager/main/static/images/combined-qr.webp)
 
 ## 💬 Community
 
