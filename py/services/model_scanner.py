@@ -38,6 +38,7 @@ class ModelScanner:
         self._hash_index = hash_index or ModelHashIndex()
         self._tags_count = {}  # Dictionary to store tag counts
         self._is_initializing = False  # Flag to track initialization state
+        self._excluded_models = []  # List to track excluded models
         
         # Register this service
         asyncio.create_task(self._register_service())
@@ -394,6 +395,9 @@ class ModelScanner:
                             if file_path in cached_paths:
                                 found_paths.add(file_path)
                                 continue
+
+                            if file_path in self._excluded_models:
+                                continue
                                 
                             # Try case-insensitive match on Windows
                             if os.name == 'nt':
@@ -406,7 +410,7 @@ class ModelScanner:
                                         break
                                 if matched:
                                     continue
-                            
+                                
                             # This is a new file to process
                             new_files.append(file_path)
                     
@@ -586,6 +590,11 @@ class ModelScanner:
         
         model_data = metadata.to_dict()
         
+        # Skip excluded models
+        if model_data.get('exclude', False):
+            self._excluded_models.append(model_data['file_path'])
+            return None
+            
         await self._fetch_missing_metadata(file_path, model_data)
         rel_path = os.path.relpath(file_path, root_path)
         folder = os.path.dirname(rel_path)
@@ -905,6 +914,10 @@ class ModelScanner:
             logger.error(f"Error getting model info by name: {e}", exc_info=True)
             return None
         
+    def get_excluded_models(self) -> List[str]:
+        """Get list of excluded model file paths"""
+        return self._excluded_models.copy()
+
     async def update_preview_in_cache(self, file_path: str, preview_url: str) -> bool:
         """Update preview URL in cache for a specific lora
         

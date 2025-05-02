@@ -43,6 +43,7 @@ class ApiRoutes:
         app.on_startup.append(lambda _: routes.initialize_services())
         
         app.router.add_post('/api/delete_model', routes.delete_model)
+        app.router.add_post('/api/exclude_model', routes.exclude_model)  # Add new exclude endpoint
         app.router.add_post('/api/fetch-civitai', routes.fetch_civitai)
         app.router.add_post('/api/replace_preview', routes.replace_preview)
         app.router.add_get('/api/loras', routes.get_loras)
@@ -80,6 +81,12 @@ class ApiRoutes:
         if self.scanner is None:
             self.scanner = await ServiceRegistry.get_lora_scanner()
         return await ModelRouteUtils.handle_delete_model(request, self.scanner)
+
+    async def exclude_model(self, request: web.Request) -> web.Response:
+        """Handle model exclusion request"""
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+        return await ModelRouteUtils.handle_exclude_model(request, self.scanner)
 
     async def fetch_civitai(self, request: web.Request) -> web.Response:
         """Handle CivitAI metadata fetch request"""
