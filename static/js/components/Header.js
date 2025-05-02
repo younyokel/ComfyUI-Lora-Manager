@@ -78,5 +78,33 @@ export class HeaderManager {
           // Handle support panel logic
         });
       }
+
+      // Handle QR code toggle
+      const qrToggle = document.getElementById('toggleQRCode');
+      const qrContainer = document.getElementById('qrCodeContainer');
+      
+      if (qrToggle && qrContainer) {
+          qrToggle.addEventListener('click', function() {
+              qrContainer.classList.toggle('show');
+              qrToggle.classList.toggle('active');
+              
+              const toggleText = qrToggle.querySelector('.toggle-text');
+              if (qrContainer.classList.contains('show')) {
+                  toggleText.textContent = 'Hide QR Codes';
+                  // Add small delay to ensure DOM is updated before scrolling
+                  setTimeout(() => {
+                      const supportModal = document.querySelector('.support-modal');
+                      if (supportModal) {
+                          supportModal.scrollTo({
+                              top: supportModal.scrollHeight,
+                              behavior: 'smooth'
+                          });
+                      }
+                  }, 250);
+              } else {
+                  toggleText.textContent = 'Show QR Codes';
+              }
+          });
+      }
     }
 }
