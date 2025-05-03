@@ -8,7 +8,7 @@ import { DownloadManager } from './managers/DownloadManager.js';
 import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
-import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
+import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
 
 // Initialize the LoRA page
 class LoraPageManager {
@@ -35,6 +35,8 @@ class LoraPageManager {
         window.showLoraModal = showLoraModal;
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
+        window.confirmExclude = confirmExclude;
+        window.closeExcludeModal = closeExcludeModal;
         window.downloadManager = this.downloadManager;
         window.moveManager = moveManager;
         window.toggleShowcase = toggleShowcase;

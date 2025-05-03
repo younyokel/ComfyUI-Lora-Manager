@@ -6,7 +6,8 @@ import {
     deleteModel as baseDeleteModel,
     replaceModelPreview,
     fetchCivitaiMetadata,
-    refreshSingleModelMetadata
+    refreshSingleModelMetadata,
+    excludeModel as baseExcludeModel
 } from './baseModelApi.js';
 
 /**
@@ -32,6 +33,15 @@ export async function saveModelMetadata(filePath, data) {
     }
     
     return response.json();
+}
+
+/**
+ * Exclude a lora model from being shown in the UI
+ * @param {string} filePath - File path of the model to exclude
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+export async function excludeLora(filePath) {
+    return baseExcludeModel(filePath, 'lora');
 }
 
 export async function loadMoreLoras(resetPage = false, updateFolders = false) {

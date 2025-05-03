@@ -3,6 +3,7 @@ import { refreshSingleLoraMetadata, saveModelMetadata } from '../../api/loraApi.
 import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
+import { showExcludeModal } from '../../utils/modalUtils.js';
 
 export class LoraContextMenu extends BaseContextMenu {
     constructor() {
@@ -50,6 +51,9 @@ export class LoraContextMenu extends BaseContextMenu {
                 break;
             case 'set-nsfw':
                 this.showNSFWLevelSelector(null, null, this.currentCard);
+                break;
+            case 'exclude':
+                showExcludeModal(this.currentCard.dataset.filepath);
                 break;
         }
     }

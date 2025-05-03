@@ -11,6 +11,19 @@
     </div>
 </div>
 
+<!-- Exclude Confirmation Modal -->
+<div id="excludeModal" class="modal delete-modal">
+    <div class="modal-content delete-modal-content">
+        <h2>Exclude Model</h2>
+        <p class="delete-message">Are you sure you want to exclude this model? Excluded models won't appear in searches or model lists.</p>
+        <div class="exclude-model-info"></div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="closeExcludeModal()">Cancel</button>
+            <button class="exclude-btn" onclick="confirmExclude()">Exclude</button>
+        </div>
+    </div>
+</div>
+
 <!-- Settings Modal -->
 <div id="settingsModal" class="modal">
     <div class="modal-content settings-modal">

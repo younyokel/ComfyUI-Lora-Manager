@@ -6,7 +6,8 @@ import {
     deleteModel as baseDeleteModel,
     replaceModelPreview,
     fetchCivitaiMetadata,
-    refreshSingleModelMetadata
+    refreshSingleModelMetadata,
+    excludeModel as baseExcludeModel
 } from './baseModelApi.js';
 
 // Load more checkpoints with pagination
@@ -85,4 +86,13 @@ export async function saveModelMetadata(filePath, data) {
     }
     
     return response.json();
+}
+
+/**
+ * Exclude a checkpoint model from being shown in the UI
+ * @param {string} filePath - File path of the checkpoint to exclude
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+export function excludeCheckpoint(filePath) {
+    return baseExcludeModel(filePath, 'checkpoint');
 }

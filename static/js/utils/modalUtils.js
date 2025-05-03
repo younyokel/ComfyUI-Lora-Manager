@@ -1,15 +1,18 @@
 import { modalManager } from '../managers/ModalManager.js';
+import { excludeLora } from '../api/loraApi.js';
+import { excludeCheckpoint } from '../api/checkpointApi.js';
 
 let pendingDeletePath = null;
 let pendingModelType = null;
+let pendingExcludePath = null;
+let pendingExcludeModelType = null;
 
 export function showDeleteModal(filePath, modelType = 'lora') {
-    // event.stopPropagation();
     pendingDeletePath = filePath;
     pendingModelType = modelType;
     
     const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-    const modelName = card.dataset.name;
+    const modelName = card ? card.dataset.name : filePath.split('/').pop();
     const modal = modalManager.getModal('deleteModal').element;
     const modelInfo = modal.querySelector('.delete-model-info');
     
@@ -61,4 +64,46 @@ export function closeDeleteModal() {
     modalManager.closeModal('deleteModal');
     pendingDeletePath = null;
     pendingModelType = null;
+}
+
+// Functions for the exclude modal
+export function showExcludeModal(filePath, modelType = 'lora') {
+    pendingExcludePath = filePath;
+    pendingExcludeModelType = modelType;
+    
+    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const modelName = card ? card.dataset.name : filePath.split('/').pop();
+    const modal = modalManager.getModal('excludeModal').element;
+    const modelInfo = modal.querySelector('.exclude-model-info');
+    
+    modelInfo.innerHTML = `
+        <strong>Model:</strong> ${modelName}
+        <br>
+        <strong>File:</strong> ${filePath}
+    `;
+    
+    modalManager.showModal('excludeModal');
+}
+
+export function closeExcludeModal() {
+    modalManager.closeModal('excludeModal');
+    pendingExcludePath = null;
+    pendingExcludeModelType = null;
+}
+
+export async function confirmExclude() {
+    if (!pendingExcludePath) return;
+    
+    try {
+        // Use appropriate exclude function based on model type
+        if (pendingExcludeModelType === 'checkpoint') {
+            await excludeCheckpoint(pendingExcludePath);
+        } else {
+            await excludeLora(pendingExcludePath);
+        }
+        
+        closeExcludeModal();
+    } catch (error) {
+        console.error('Error excluding model:', error);
+    }
 }

@@ -2,7 +2,7 @@ import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
-import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata } from '../api/checkpointApi.js';
+import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata, deleteCheckpoint } from '../api/checkpointApi.js';
 
 export function createCheckpointCard(checkpoint) {
     const card = document.createElement('div');
@@ -319,17 +319,6 @@ function openCivitai(modelName) {
             // If no ID, try searching by name
             window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
         }
-    }
-}
-
-function deleteCheckpoint(filePath) {
-    if (window.deleteCheckpoint) {
-        window.deleteCheckpoint(filePath);
-    } else {
-        // Use the modal delete functionality
-        import('../utils/modalUtils.js').then(({ showDeleteModal }) => {
-            showDeleteModal(filePath, 'checkpoint');
-        });
     }
 }
 

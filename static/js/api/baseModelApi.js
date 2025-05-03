@@ -209,13 +209,7 @@ export function replaceModelPreview(filePath, modelType = 'lora') {
 
 // Delete a model (generic)
 export function deleteModel(filePath, modelType = 'lora') {
-    if (modelType === 'checkpoint') {
-        confirmDelete('Are you sure you want to delete this checkpoint?', () => {
-            performDelete(filePath, modelType);
-        });
-    } else {
-        showDeleteModal(filePath);
-    }
+    showDeleteModal(filePath);
 }
 
 // Reset and reload models
@@ -391,6 +385,48 @@ export async function refreshSingleModelMetadata(filePath, modelType = 'lora') {
     } finally {
         state.loadingManager.hide();
         state.loadingManager.restoreProgressBar();
+    }
+}
+
+// Generic function to exclude a model
+export async function excludeModel(filePath, modelType = 'lora') {
+    try {
+        const endpoint = modelType === 'checkpoint' 
+            ? '/api/checkpoints/exclude' 
+            : '/api/loras/exclude';
+            
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_path: filePath
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to exclude ${modelType}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Remove the card from UI
+            const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+            if (card) {
+                card.remove();
+            }
+            
+            showToast(`${modelType} excluded successfully`, 'success');
+            return true;
+        } else {
+            throw new Error(data.error || `Failed to exclude ${modelType}`);
+        }
+    } catch (error) {
+        console.error(`Error excluding ${modelType}:`, error);
+        showToast(`Failed to exclude ${modelType}: ${error.message}`, 'error');
+        return false;
     }
 }
 

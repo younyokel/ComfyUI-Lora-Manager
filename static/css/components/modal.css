@@ -44,24 +44,10 @@ body.modal-open {
 }
 
 /* Delete Modal specific styles */
-.delete-modal-content {
-    max-width: 500px;
-    text-align: center;
-}
 
 .delete-message {
     color: var(--text-color);
     margin: var(--space-2) 0;
-}
-
-.delete-model-info {
-    background: var(--lora-surface);
-    border: 1px solid var(--lora-border);
-    border-radius: var(--border-radius-sm);
-    padding: var(--space-2);
-    margin: var(--space-2) 0;
-    color: var(--text-color);
-    word-break: break-all;
 }
 
 /* Update delete modal styles */
@@ -92,7 +78,8 @@ body.modal-open {
     animation: modalFadeIn 0.2s ease-out;
 }
 
-.delete-model-info {
+.delete-model-info,
+.exclude-model-info {
     /* Update info display styling */
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
@@ -123,7 +110,7 @@ body.modal-open {
     margin-top: var(--space-3);
 }
 
-.cancel-btn, .delete-btn {
+.cancel-btn, .delete-btn, .exclude-btn {
     padding: 8px var(--space-2);
     border-radius: 6px;
     border: none;
@@ -143,12 +130,23 @@ body.modal-open {
     color: white;
 }
 
+/* Style for exclude button - different from delete button */
+.exclude-btn {
+    background: var(--lora-accent, #4f46e5);
+    color: white;
+}
+
 .cancel-btn:hover {
     background: var(--lora-border);
 }
 
 .delete-btn:hover {
     opacity: 0.9;
+}
+
+.exclude-btn:hover {
+    opacity: 0.9;
+    background: oklch(from var(--lora-accent, #4f46e5) l c h / 85%);
 }
 
 .modal-content h2 {
@@ -587,7 +585,7 @@ input:checked + .toggle-slider:before {
     border-radius: var(--border-radius-xs);
     border: 1px solid var(--border-color);
     background-color: var(--lora-surface);
-    color: var(--text-color);
+    color: var (--text-color);
     font-size: 0.95em;
     height: 32px;
 }

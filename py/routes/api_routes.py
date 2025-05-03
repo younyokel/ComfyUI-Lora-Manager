@@ -43,7 +43,7 @@ class ApiRoutes:
         app.on_startup.append(lambda _: routes.initialize_services())
         
         app.router.add_post('/api/delete_model', routes.delete_model)
-        app.router.add_post('/api/exclude_model', routes.exclude_model)  # Add new exclude endpoint
+        app.router.add_post('/api/loras/exclude', routes.exclude_model)  # Add new exclude endpoint
         app.router.add_post('/api/fetch-civitai', routes.fetch_civitai)
         app.router.add_post('/api/replace_preview', routes.replace_preview)
         app.router.add_get('/api/loras', routes.get_loras)

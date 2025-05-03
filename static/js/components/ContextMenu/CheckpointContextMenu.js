@@ -3,6 +3,7 @@ import { refreshSingleCheckpointMetadata, saveModelMetadata } from '../../api/ch
 import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
+import { showExcludeModal } from '../../utils/modalUtils.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {
@@ -61,6 +62,10 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 // Move to folder (placeholder)
                 showToast('Move to folder feature coming soon', 'info');
                 break;
+            case 'exclude':
+                showExcludeModal(this.currentCard.dataset.filepath, 'checkpoint');
+                break;
+
         }
     }
 

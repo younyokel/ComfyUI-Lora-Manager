@@ -1,6 +1,6 @@
 import { appCore } from './core.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
-import { confirmDelete, closeDeleteModal } from './utils/modalUtils.js';
+import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
 import { loadMoreCheckpoints } from './api/checkpointApi.js';
 import { CheckpointDownloadManager } from './managers/CheckpointDownloadManager.js';
@@ -23,6 +23,8 @@ class CheckpointsPageManager {
         // Minimal set of functions that need to remain global
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
+        window.confirmExclude = confirmExclude;
+        window.closeExcludeModal = closeExcludeModal;
         
         // Add loadCheckpoints function to window for FilterManager compatibility
         window.checkpointManager = {
