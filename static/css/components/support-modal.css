@@ -151,11 +151,12 @@
 }
 
 .qrcode-image {
-    max-width: 100%;
+    max-width: 80%;
     height: auto;
     border-radius: var(--border-radius-sm);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--lora-border);
+    aspect-ratio: 1/1; /* Ensure proper aspect ratio for the square QR code */
 }
 
 .support-footer {
