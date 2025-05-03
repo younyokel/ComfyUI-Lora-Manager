@@ -23,6 +23,7 @@ class BaseModelMetadata:
     modelDescription: str = ""  # Full model description
     civitai_deleted: bool = False  # Whether deleted from Civitai
     favorite: bool = False      # Whether the model is a favorite
+    exclude: bool = False       # Whether to exclude this model from the cache
 
     def __post_init__(self):
         # Initialize empty lists to avoid mutable default parameter issue

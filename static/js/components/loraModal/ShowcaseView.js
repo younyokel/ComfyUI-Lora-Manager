@@ -335,6 +335,8 @@ function initMetadataPanelHandlers(container) {
         
         if (!metadataPanel || !mediaElement) return;
         
+        let isOverMetadataPanel = false;
+        
         // Add event listeners to the wrapper for mouse tracking
         wrapper.addEventListener('mousemove', (e) => {
             // Get mouse position relative to wrapper
@@ -353,8 +355,8 @@ function initMetadataPanelHandlers(container) {
                 mouseY <= mediaRect.bottom
             );
             
-            // Show metadata panel only when over actual media content
-            if (isOverMedia) {
+            // Show metadata panel when over media content
+            if (isOverMedia || isOverMetadataPanel) {
                 metadataPanel.classList.add('visible');
             } else {
                 metadataPanel.classList.remove('visible');
@@ -362,8 +364,36 @@ function initMetadataPanelHandlers(container) {
         });
         
         wrapper.addEventListener('mouseleave', () => {
-            // Hide panel when mouse leaves the wrapper
-            metadataPanel.classList.remove('visible');
+            // Only hide panel when mouse leaves the wrapper and not over the metadata panel
+            if (!isOverMetadataPanel) {
+                metadataPanel.classList.remove('visible');
+            }
+        });
+        
+        // Add mouse enter/leave events for the metadata panel itself
+        metadataPanel.addEventListener('mouseenter', () => {
+            isOverMetadataPanel = true;
+            metadataPanel.classList.add('visible');
+        });
+        
+        metadataPanel.addEventListener('mouseleave', () => {
+            isOverMetadataPanel = false;
+            // Only hide if mouse is not over the media
+            const rect = wrapper.getBoundingClientRect();
+            const mediaRect = getRenderedMediaRect(mediaElement, rect.width, rect.height);
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            const isOverMedia = (
+                mouseX >= mediaRect.left && 
+                mouseX <= mediaRect.right && 
+                mouseY >= mediaRect.top && 
+                mouseY <= mediaRect.bottom
+            );
+            
+            if (!isOverMedia) {
+                metadataPanel.classList.remove('visible');
+            }
         });
         
         // Prevent events from the metadata panel from bubbling

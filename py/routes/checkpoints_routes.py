@@ -49,6 +49,7 @@ class CheckpointsRoutes:
         
         # Add new routes for model management similar to LoRA routes
         app.router.add_post('/api/checkpoints/delete', self.delete_model)
+        app.router.add_post('/api/checkpoints/exclude', self.exclude_model)  # Add new exclude endpoint
         app.router.add_post('/api/checkpoints/fetch-civitai', self.fetch_civitai)
         app.router.add_post('/api/checkpoints/replace-preview', self.replace_preview)
         app.router.add_post('/api/checkpoints/download', self.download_checkpoint)
@@ -499,6 +500,10 @@ class CheckpointsRoutes:
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle checkpoint model deletion request"""
         return await ModelRouteUtils.handle_delete_model(request, self.scanner)
+
+    async def exclude_model(self, request: web.Request) -> web.Response:
+        """Handle checkpoint model exclusion request"""
+        return await ModelRouteUtils.handle_exclude_model(request, self.scanner)
     
     async def fetch_civitai(self, request: web.Request) -> web.Response:
         """Handle CivitAI metadata fetch request for checkpoints"""
@@ -653,7 +658,7 @@ class CheckpointsRoutes:
             model_type = response.get('type', '')
             
             # Check model type - should be Checkpoint
-            if model_type.lower() != 'checkpoint':
+            if (model_type.lower() != 'checkpoint'):
                 return web.json_response({
                     'error': f"Model type mismatch. Expected Checkpoint, got {model_type}"
                 }, status=400)

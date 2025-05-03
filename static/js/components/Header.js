@@ -90,7 +90,7 @@ export class HeaderManager {
               
               const toggleText = qrToggle.querySelector('.toggle-text');
               if (qrContainer.classList.contains('show')) {
-                  toggleText.textContent = 'Hide QR Codes';
+                  toggleText.textContent = 'Hide WeChat QR Code';
                   // Add small delay to ensure DOM is updated before scrolling
                   setTimeout(() => {
                       const supportModal = document.querySelector('.support-modal');
@@ -102,7 +102,7 @@ export class HeaderManager {
                       }
                   }, 250);
               } else {
-                  toggleText.textContent = 'Show QR Codes';
+                  toggleText.textContent = 'Show WeChat QR Code';
               }
           });
       }

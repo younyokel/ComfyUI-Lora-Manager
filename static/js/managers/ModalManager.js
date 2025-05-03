@@ -59,6 +59,19 @@ export class ModalManager {
                 }
             });
         }
+        
+        // Add excludeModal registration
+        const excludeModal = document.getElementById('excludeModal');
+        if (excludeModal) {
+            this.registerModal('excludeModal', {
+                element: excludeModal,
+                onClose: () => {
+                    this.getModal('excludeModal').element.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
+        }
 
         // Add downloadModal registration
         const downloadModal = document.getElementById('downloadModal');
@@ -208,7 +221,7 @@ export class ModalManager {
         // Store current scroll position before showing modal
         this.scrollPosition = window.scrollY;
 
-        if (id === 'deleteModal') {
+        if (id === 'deleteModal' || id === 'excludeModal') {
             modal.element.classList.add('show');
         } else {
             modal.element.style.display = 'block';

@@ -3,6 +3,7 @@ import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
 import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata } from '../api/checkpointApi.js';
+import { showDeleteModal } from '../utils/modalUtils.js';
 
 export function createCheckpointCard(checkpoint) {
     const card = document.createElement('div');
@@ -262,7 +263,7 @@ export function createCheckpointCard(checkpoint) {
     // Delete button click event
     card.querySelector('.fa-trash')?.addEventListener('click', e => {
         e.stopPropagation();
-        deleteCheckpoint(checkpoint.file_path);
+        showDeleteModal(checkpoint.file_path);
     });
 
     // Replace preview button click event
@@ -319,17 +320,6 @@ function openCivitai(modelName) {
             // If no ID, try searching by name
             window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
         }
-    }
-}
-
-function deleteCheckpoint(filePath) {
-    if (window.deleteCheckpoint) {
-        window.deleteCheckpoint(filePath);
-    } else {
-        // Use the modal delete functionality
-        import('../utils/modalUtils.js').then(({ showDeleteModal }) => {
-            showDeleteModal(filePath, 'checkpoint');
-        });
     }
 }
 

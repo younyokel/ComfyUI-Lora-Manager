@@ -11,6 +11,19 @@
     </div>
 </div>
 
+<!-- Exclude Confirmation Modal -->
+<div id="excludeModal" class="modal delete-modal">
+    <div class="modal-content delete-modal-content">
+        <h2>Exclude Model</h2>
+        <p class="delete-message">Are you sure you want to exclude this model? Excluded models won't appear in searches or model lists.</p>
+        <div class="exclude-model-info"></div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="closeExcludeModal()">Cancel</button>
+            <button class="exclude-btn" onclick="confirmExclude()">Exclude</button>
+        </div>
+    </div>
+</div>
+
 <!-- Settings Modal -->
 <div id="settingsModal" class="modal">
     <div class="modal-content settings-modal">
@@ -232,15 +245,15 @@
 
             <!-- New section for Chinese payment methods -->
             <div class="support-section">
-                <h3><i class="fas fa-qrcode"></i> WeChat & Alipay Support</h3>
-                <p>For users in China, you can support via WeChat Pay or Alipay:</p>
+                <h3><i class="fas fa-qrcode"></i> WeChat Support</h3>
+                <p>For users in China, you can support via WeChat:</p>
                 <button class="secondary-btn qrcode-toggle" id="toggleQRCode">
                     <i class="fas fa-qrcode"></i>
-                    <span class="toggle-text">Show QR Codes</span>
+                    <span class="toggle-text">Show WeChat QR Code</span>
                     <i class="fas fa-chevron-down toggle-icon"></i>
                 </button>
                 <div class="qrcode-container" id="qrCodeContainer">
-                    <img src="/loras_static/images/combined-qr.webp" alt="WeChat Pay & Alipay QR Codes" class="qrcode-image">
+                    <img src="/loras_static/images/wechat-qr.webp" alt="WeChat Pay QR Code" class="qrcode-image">
                 </div>
             </div>
             

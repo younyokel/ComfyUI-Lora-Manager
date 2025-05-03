@@ -426,6 +426,65 @@ class ModelRouteUtils:
             return web.Response(text=str(e), status=500)
 
     @staticmethod
+    async def handle_exclude_model(request: web.Request, scanner) -> web.Response:
+        """Handle model exclusion request
+        
+        Args:
+            request: The aiohttp request
+            scanner: The model scanner instance with cache management methods
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            if not file_path:
+                return web.Response(text='Model path is required', status=400)
+
+            # Update metadata to mark as excluded
+            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+            metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+            metadata['exclude'] = True
+            
+            # Save updated metadata
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+            # Update cache
+            cache = await scanner.get_cached_data()
+
+            # Find and remove model from cache
+            model_to_remove = next((item for item in cache.raw_data if item['file_path'] == file_path), None)
+            if model_to_remove:
+                # Update tags count
+                for tag in model_to_remove.get('tags', []):
+                    if tag in scanner._tags_count:
+                        scanner._tags_count[tag] = max(0, scanner._tags_count[tag] - 1)
+                        if scanner._tags_count[tag] == 0:
+                            del scanner._tags_count[tag]
+
+                # Remove from hash index if available
+                if hasattr(scanner, '_hash_index') and scanner._hash_index:
+                    scanner._hash_index.remove_by_path(file_path)
+
+                # Remove from cache data
+                cache.raw_data = [item for item in cache.raw_data if item['file_path'] != file_path]
+                await cache.resort()
+            
+            # Add to excluded models list
+            scanner._excluded_models.append(file_path)
+            
+            return web.json_response({
+                'success': True,
+                'message': f"Model {os.path.basename(file_path)} excluded"
+            })
+            
+        except Exception as e:
+            logger.error(f"Error excluding model: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
+
+    @staticmethod
     async def handle_download_model(request: web.Request, download_manager: DownloadManager, model_type="lora") -> web.Response:
         """Handle model download request
         
