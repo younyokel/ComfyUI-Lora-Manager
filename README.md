@@ -20,6 +20,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.12
+* **Enhanced Model Discovery** - Added alphabetical navigation bar to LoRAs page for faster browsing through large collections
+* **Optimized Example Images** - Improved download logic to automatically refresh stale metadata before fetching example images
+* **Model Exclusion System** - New right-click option to exclude specific LoRAs or checkpoints from management
+* **Improved Showcase Experience** - Enhanced interaction in LoRA and checkpoint showcase areas for better usability
+
 ### v0.8.11
 * **Offline Image Support** - Added functionality to download and save all model example images locally, ensuring access even when offline or if images are removed from CivitAI or the site is down
 * **Resilient Download System** - Implemented pause/resume capability with checkpoint recovery that persists through restarts or unexpected exits
@@ -283,16 +289,7 @@ If you find this project helpful, consider supporting its development:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/pixelpawsai)
 
-<div align="left">
-  <table>
-    <tr>
-      <td align="center">
-        <p>WeChat:</p>
-        <img src="https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/wechat-qr.webp" alt="WeChat QR" width="200" />
-      </td>
-    </tr>
-  </table>
-</div>
+WeChat: [Click to view QR code](https://raw.githubusercontent.com/willmiao/ComfyUI-Lora-Manager/main/static/images/wechat-qr.webp)
 
 ## 💬 Community
 
