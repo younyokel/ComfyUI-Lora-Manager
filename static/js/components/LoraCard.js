@@ -3,7 +3,8 @@ import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
-import { replacePreview, deleteModel, saveModelMetadata } from '../api/loraApi.js'
+import { replacePreview, saveModelMetadata } from '../api/loraApi.js'
+import { showDeleteModal } from '../utils/modalUtils.js';
 
 export function createLoraCard(lora) {
     const card = document.createElement('div');
@@ -260,7 +261,7 @@ export function createLoraCard(lora) {
     // Delete button click event
     card.querySelector('.fa-trash')?.addEventListener('click', e => {
         e.stopPropagation();
-        deleteModel(lora.file_path);
+        showDeleteModal(lora.file_path);
     });
 
     // Replace preview button click event

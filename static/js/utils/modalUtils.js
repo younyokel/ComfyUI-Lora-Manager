@@ -1,6 +1,6 @@
 import { modalManager } from '../managers/ModalManager.js';
-import { excludeLora } from '../api/loraApi.js';
-import { excludeCheckpoint } from '../api/checkpointApi.js';
+import { excludeLora, deleteModel as deleteLora } from '../api/loraApi.js';
+import { excludeCheckpoint, deleteCheckpoint } from '../api/checkpointApi.js';
 
 let pendingDeletePath = null;
 let pendingModelType = null;
@@ -31,31 +31,19 @@ export async function confirmDelete() {
     const card = document.querySelector(`.lora-card[data-filepath="${pendingDeletePath}"]`);
     
     try {
-        // Use the appropriate endpoint based on model type
-        const endpoint = pendingModelType === 'checkpoint' ? 
-            '/api/checkpoints/delete' : 
-            '/api/delete_model';
-        
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                file_path: pendingDeletePath
-            })
-        });
-
-        if (response.ok) {
-            if (card) {
-                card.remove();
-            }
-            closeDeleteModal();
+        // Use appropriate delete function based on model type
+        if (pendingModelType === 'checkpoint') {
+            await deleteCheckpoint(pendingDeletePath);
         } else {
-            const error = await response.text();
-            alert(`Failed to delete model: ${error}`);
+            await deleteLora(pendingDeletePath);
         }
+
+        if (card) {
+            card.remove();
+        }
+        closeDeleteModal();
     } catch (error) {
+        console.error('Error deleting model:', error);
         alert(`Error deleting model: ${error}`);
     }
 }

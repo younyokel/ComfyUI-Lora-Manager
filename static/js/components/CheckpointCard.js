@@ -2,7 +2,8 @@ import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
-import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata, deleteCheckpoint } from '../api/checkpointApi.js';
+import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata } from '../api/checkpointApi.js';
+import { showDeleteModal } from '../utils/modalUtils.js';
 
 export function createCheckpointCard(checkpoint) {
     const card = document.createElement('div');
@@ -262,7 +263,7 @@ export function createCheckpointCard(checkpoint) {
     // Delete button click event
     card.querySelector('.fa-trash')?.addEventListener('click', e => {
         e.stopPropagation();
-        deleteCheckpoint(checkpoint.file_path);
+        showDeleteModal(checkpoint.file_path);
     });
 
     // Replace preview button click event

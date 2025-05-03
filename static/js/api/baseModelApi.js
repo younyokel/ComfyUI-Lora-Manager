@@ -208,8 +208,45 @@ export function replaceModelPreview(filePath, modelType = 'lora') {
 }
 
 // Delete a model (generic)
-export function deleteModel(filePath, modelType = 'lora') {
-    showDeleteModal(filePath);
+export async function deleteModel(filePath, modelType = 'lora') {
+    try {
+        const endpoint = modelType === 'checkpoint' 
+            ? '/api/checkpoints/delete' 
+            : '/api/delete_model';
+            
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_path: filePath
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to delete ${modelType}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Remove the card from UI
+            const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+            if (card) {
+                card.remove();
+            }
+            
+            showToast(`${modelType} deleted successfully`, 'success');
+            return true;
+        } else {
+            throw new Error(data.error || `Failed to delete ${modelType}`);
+        }
+    } catch (error) {
+        console.error(`Error deleting ${modelType}:`, error);
+        showToast(`Failed to delete ${modelType}: ${error.message}`, 'error');
+        return false;
+    }
 }
 
 // Reset and reload models
