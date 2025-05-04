@@ -136,15 +136,9 @@ class DownloadManager:
             # 3. Prepare download
             file_name = file_info['name']
             save_path = os.path.join(save_dir, file_name)
-            file_size = file_info.get('sizeKB', 0) * 1024
 
             # 4. Notify file monitor - use normalized path and file size
-            file_monitor = await self._get_lora_monitor() if model_type == "lora" else await self._get_checkpoint_monitor()
-            if file_monitor and file_monitor.handler:
-                file_monitor.handler.add_ignore_path(
-                    save_path.replace(os.sep, '/'),
-                    file_size
-                )
+            # file monitor is despreted, so we don't need to use it
 
             # 5. Prepare metadata based on model type
             if model_type == "checkpoint":

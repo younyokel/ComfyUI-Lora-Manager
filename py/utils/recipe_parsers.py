@@ -426,10 +426,11 @@ class StandardMetadataParser(RecipeMetadataParser):
                             resources = json.loads(resources_json)
                             # Filter loras and checkpoints
                             for resource in resources:
-                                if resource.get('type') == 'lora':
-                                    # 确保 weight 字段被正确保留
+                                # Process both 'lora' and 'lycoris' types as loras
+                                if resource.get('type') == 'lora' or resource.get('type') == 'lycoris':
+                                    # Ensure weight field is properly preserved
                                     lora_entry = resource.copy()
-                                    # 如果找不到 weight，默认为 1.0
+                                    # Default to 1.0 if weight not found
                                     if 'weight' not in lora_entry:
                                         lora_entry['weight'] = 1.0
                                     # Ensure modelVersionName is included

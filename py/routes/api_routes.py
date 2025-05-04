@@ -386,10 +386,10 @@ class ApiRoutes:
             versions = response.get('modelVersions', [])
             model_type = response.get('type', '')
             
-            # Check model type - should be LORA
-            if model_type.lower() != 'lora':
+            # Check model type - should be LORA or LoCon
+            if model_type.lower() not in ['lora', 'locon']:
                 return web.json_response({
-                    'error': f"Model type mismatch. Expected LORA, got {model_type}"
+                    'error': f"Model type mismatch. Expected LORA or LoCon, got {model_type}"
                 }, status=400)
             
             # Check local availability for each version
