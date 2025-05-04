@@ -12,11 +12,13 @@
     transition: transform 0.3s ease, opacity 0.3s ease;
     opacity: 0;
     transform: translateY(20px);
+    pointer-events: none; /* Ignore mouse events when invisible */
 }
 
 .progress-panel.visible {
     opacity: 1;
     transform: translateY(0);
+    pointer-events: auto; /* Capture mouse events when visible */
 }
 
 .progress-panel.collapsed .progress-panel-content {
