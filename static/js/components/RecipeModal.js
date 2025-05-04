@@ -451,8 +451,6 @@ class RecipeModal {
             lorasListElement.innerHTML = '<div class="no-loras">No LoRAs associated with this recipe</div>';
             this.recipeLorasSyntax = '';
         }
-
-        console.log(this.currentRecipe.loras);
         
         // Show the modal
         modalManager.showModal('recipeModal');
@@ -951,8 +949,8 @@ class RecipeModal {
             let loraSyntaxMatch = inputValue.match(/<lora:([^:>]+)(?::[^>]+)?>/);
             let fileName = loraSyntaxMatch ? loraSyntaxMatch[1] : inputValue.trim();
             
-            // Remove any file extension if present
-            fileName = fileName.replace(/\.\w+$/, '');
+            // Remove .safetensors extension if present
+            fileName = fileName.replace(/\.safetensors$/, '');
             
             // Get the deleted lora data
             const deletedLora = this.currentRecipe.loras[loraIndex];
