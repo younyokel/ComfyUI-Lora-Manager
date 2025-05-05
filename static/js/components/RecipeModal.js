@@ -2,6 +2,7 @@
 import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { setSessionItem, removeSessionItem } from '../utils/storageHelpers.js';
+import { updateRecipeCard } from '../utils/cardUpdater.js';
 
 class RecipeModal {
     constructor() {
@@ -82,7 +83,7 @@ class RecipeModal {
     
     showRecipeDetails(recipe) {
         // Store the full recipe for editing
-        this.currentRecipe = JSON.parse(JSON.stringify(recipe)); // 深拷贝以避免对原始对象的修改
+        this.currentRecipe = recipe;
         
         // Set modal title with edit icon
         const modalTitle = document.getElementById('recipeModalTitle');
@@ -685,50 +686,8 @@ class RecipeModal {
                 // 更新当前recipe对象的属性
                 Object.assign(this.currentRecipe, updates);
                 
-                // 确保这个更新也传播到卡片视图
-                // 尝试找到可能显示这个recipe的卡片并更新它
-                try {
-                    const recipeCards = document.querySelectorAll('.recipe-card');
-                    recipeCards.forEach(card => {
-                        if (card.dataset.recipeId === this.recipeId) {
-                            // 更新卡片标题
-                            if (updates.title) {
-                                const titleElement = card.querySelector('.recipe-title');
-                                if (titleElement) {
-                                    titleElement.textContent = updates.title;
-                                }
-                            }
-                            
-                            // 更新卡片标签
-                            if (updates.tags) {
-                                const tagsElement = card.querySelector('.recipe-tags');
-                                if (tagsElement) {
-                                    if (updates.tags.length > 0) {
-                                        tagsElement.innerHTML = updates.tags.map(
-                                            tag => `<div class="recipe-tag">${tag}</div>`
-                                        ).join('');
-                                    } else {
-                                        tagsElement.innerHTML = '';
-                                    }
-                                }
-                            }
-                        }
-                    });
-                } catch (err) {
-                    console.log("Non-critical error updating recipe cards:", err);
-                }
-                
-                // 重要：强制刷新recipes列表，确保从服务器获取最新数据
-                try {
-                    if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
-                        // 异步刷新recipes列表，不阻塞用户界面
-                        setTimeout(() => {
-                            window.recipeManager.loadRecipes(true);
-                        }, 500);
-                    }
-                } catch (err) {
-                    console.log("Error refreshing recipes list:", err);
-                }
+                // Update the recipe card in the UI
+                updateRecipeCard(this.recipeId, updates);
             } else {
                 showToast(`Failed to update recipe: ${data.error}`, 'error');
             }

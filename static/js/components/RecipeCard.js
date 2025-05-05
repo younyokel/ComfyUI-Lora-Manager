@@ -7,6 +7,9 @@ class RecipeCard {
         this.recipe = recipe;
         this.clickHandler = clickHandler;
         this.element = this.createCardElement();
+        
+        // Store reference to this instance on the DOM element for updates
+        this.element._recipeCardInstance = this;
     }
     
     createCardElement() {
