@@ -6,12 +6,27 @@
         <!-- Step 1: Upload Image or Input URL -->
         <div class="import-step" id="uploadStep">
             <div class="import-mode-toggle">
-                <button class="toggle-btn active" data-mode="upload" onclick="importManager.toggleImportMode('upload')">
+                <button class="toggle-btn active" data-mode="url" onclick="importManager.toggleImportMode('url')">
+                    <i class="fas fa-link"></i> URL / Local Path
+                </button>
+                <button class="toggle-btn" data-mode="upload" onclick="importManager.toggleImportMode('upload')">
                     <i class="fas fa-upload"></i> Upload Image
                 </button>
-                <button class="toggle-btn" data-mode="url" onclick="importManager.toggleImportMode('url')">
-                    <i class="fas fa-link"></i> Input URL
-                </button>
+            </div>
+            
+            <!-- Input URL/Path Section -->
+            <div class="import-section" id="urlSection">
+                <p>Input a Civitai image URL or local file path to import as a recipe.</p>
+                <div class="input-group">
+                    <label for="imageUrlInput">Image URL or File Path:</label>
+                    <div class="input-with-button">
+                        <input type="text" id="imageUrlInput" placeholder="https://civitai.com/images/... or C:/path/to/image.png">
+                        <button class="primary-btn" onclick="importManager.handleUrlInput()">
+                            <i class="fas fa-download"></i> Fetch Image
+                        </button>
+                    </div>
+                    <div class="error-message" id="urlError"></div>
+                </div>
             </div>
             
             <!-- Upload Image Section -->
@@ -26,21 +41,6 @@
                         </div>
                     </div>
                     <div class="error-message" id="uploadError"></div>
-                </div>
-            </div>
-            
-            <!-- Input URL Section -->
-            <div class="import-section" id="urlSection" style="display: none;">
-                <p>Input a Civitai image URL to import as a recipe.</p>
-                <div class="input-group">
-                    <label for="imageUrlInput">Image URL:</label>
-                    <div class="input-with-button">
-                        <input type="text" id="imageUrlInput" placeholder="https://civitai.com/images/...">
-                        <button class="primary-btn" onclick="importManager.handleUrlInput()">
-                            <i class="fas fa-download"></i> Fetch Image
-                        </button>
-                    </div>
-                    <div class="error-message" id="urlError"></div>
                 </div>
             </div>
             

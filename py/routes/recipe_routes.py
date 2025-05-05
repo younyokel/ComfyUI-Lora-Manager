@@ -1,5 +1,6 @@
 import os
 import time
+import base64
 import numpy as np
 from PIL import Image
 import torch
@@ -56,6 +57,7 @@ class RecipeRoutes:
         app.router.add_get('/api/recipes', routes.get_recipes)
         app.router.add_get('/api/recipe/{recipe_id}', routes.get_recipe_detail)
         app.router.add_post('/api/recipes/analyze-image', routes.analyze_recipe_image)
+        app.router.add_post('/api/recipes/analyze-local-image', routes.analyze_local_image)
         app.router.add_post('/api/recipes/save', routes.save_recipe)
         app.router.add_delete('/api/recipe/{recipe_id}', routes.delete_recipe)
         
@@ -300,7 +302,6 @@ class RecipeRoutes:
                 
                 # For URL mode, include the image data as base64
                 if is_url_mode and temp_path:
-                    import base64
                     with open(temp_path, "rb") as image_file:
                         result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
                     
@@ -317,7 +318,6 @@ class RecipeRoutes:
                 
                 # For URL mode, include the image data as base64
                 if is_url_mode and temp_path:
-                    import base64
                     with open(temp_path, "rb") as image_file:
                         result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
                     
@@ -332,7 +332,6 @@ class RecipeRoutes:
             
             # For URL mode, include the image data as base64
             if is_url_mode and temp_path:
-                import base64
                 with open(temp_path, "rb") as image_file:
                     result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
             
@@ -355,7 +354,85 @@ class RecipeRoutes:
                     os.unlink(temp_path)
                 except Exception as e:
                     logger.error(f"Error deleting temporary file: {e}")
+    
+    async def analyze_local_image(self, request: web.Request) -> web.Response:
+        """Analyze a local image file for recipe metadata"""
+        try:
+            # Ensure services are initialized 
+            await self.init_services()
+            
+            # Get JSON data from request
+            data = await request.json()
+            file_path = data.get('path')
+            
+            if not file_path:
+                return web.json_response({
+                    'error': 'No file path provided',
+                    'loras': []
+                }, status=400)
+                
+            # Normalize file path for cross-platform compatibility
+            file_path = os.path.normpath(file_path.strip('"').strip("'"))
+            
+            # Validate that the file exists
+            if not os.path.isfile(file_path):
+                return web.json_response({
+                    'error': 'File not found',
+                    'loras': []
+                }, status=404)
+                
+            # Extract metadata from the image using ExifUtils
+            metadata = ExifUtils.extract_image_metadata(file_path)
+            
+            # If no metadata found, return error
+            if not metadata:
+                # Get base64 image data
+                with open(file_path, "rb") as image_file:
+                    image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                    
+                return web.json_response({
+                    "error": "No metadata found in this image",
+                    "loras": [],  # Return empty loras array to prevent client-side errors
+                    "image_base64": image_base64
+                }, status=200)
+            
+            # Use the parser factory to get the appropriate parser
+            parser = RecipeParserFactory.create_parser(metadata)
 
+            if parser is None:
+                # Get base64 image data
+                with open(file_path, "rb") as image_file:
+                    image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                    
+                return web.json_response({
+                    "error": "No parser found for this image",
+                    "loras": [],  # Return empty loras array to prevent client-side errors
+                    "image_base64": image_base64
+                }, status=200)
+            
+            # Parse the metadata
+            result = await parser.parse_metadata(
+                metadata, 
+                recipe_scanner=self.recipe_scanner, 
+                civitai_client=self.civitai_client
+            )
+            
+            # Add base64 image data to result
+            with open(file_path, "rb") as image_file:
+                result["image_base64"] = base64.b64encode(image_file.read()).decode('utf-8')
+            
+            # Check for errors
+            if "error" in result and not result.get("loras"):
+                return web.json_response(result, status=200)
+            
+            return web.json_response(result)
+            
+        except Exception as e:
+            logger.error(f"Error analyzing local image: {e}", exc_info=True)
+            return web.json_response({
+                'error': str(e),
+                'loras': []  # Return empty loras array to prevent client-side errors
+            }, status=500)
 
     async def save_recipe(self, request: web.Request) -> web.Response:
         """Save a recipe to the recipes folder"""
@@ -425,7 +502,6 @@ class RecipeRoutes:
             if not image:
                 if image_base64:
                     # Convert base64 to binary
-                    import base64
                     try:
                         # Remove potential data URL prefix
                         if ',' in image_base64:

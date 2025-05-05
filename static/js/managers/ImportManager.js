@@ -23,8 +23,8 @@ export class ImportManager {
         // 添加对注入样式的引用
         this.injectedStyles = null;
         
-        // Add import mode tracking
-        this.importMode = 'upload'; // Default mode: 'upload' or 'url'
+        // Change default mode to url/path
+        this.importMode = 'url'; // Default mode changed to: 'url' or 'upload'
     }
 
     showImportModal(recipeData = null, recipeId = null) {
@@ -123,9 +123,9 @@ export class ImportManager {
         this.missingLoras = [];
         this.downloadableLoRAs = [];
         
-        // Reset import mode to upload
-        this.importMode = 'upload';
-        this.toggleImportMode('upload');
+        // Reset import mode to url/path instead of upload
+        this.importMode = 'url';
+        this.toggleImportMode('url');
         
         // Clear selected folder and remove selection from UI
         this.selectedFolder = '';
@@ -224,17 +224,11 @@ export class ImportManager {
     async handleUrlInput() {
         const urlInput = document.getElementById('imageUrlInput');
         const errorElement = document.getElementById('urlError');
-        const url = urlInput.value.trim();
+        const input = urlInput.value.trim();
         
-        // Validate URL
-        if (!url) {
-            errorElement.textContent = 'Please enter a URL';
-            return;
-        }
-        
-        // Basic URL validation
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            errorElement.textContent = 'Please enter a valid URL';
+        // Validate input
+        if (!input) {
+            errorElement.textContent = 'Please enter a URL or file path';
             return;
         }
         
@@ -242,13 +236,19 @@ export class ImportManager {
         errorElement.textContent = '';
         
         // Show loading indicator
-        this.loadingManager.showSimpleLoading('Fetching image from URL...');
+        this.loadingManager.showSimpleLoading('Processing input...');
         
         try {
-            // Call API to analyze the URL
-            await this.analyzeImageFromUrl(url);
+            // Check if it's a URL or a local file path
+            if (input.startsWith('http://') || input.startsWith('https://')) {
+                // Handle as URL
+                await this.analyzeImageFromUrl(input);
+            } else {
+                // Handle as local file path
+                await this.analyzeImageFromLocalPath(input);
+            }
         } catch (error) {
-            errorElement.textContent = error.message || 'Failed to fetch image from URL';
+            errorElement.textContent = error.message || 'Failed to process input';
         } finally {
             this.loadingManager.hide();
         }
@@ -291,6 +291,48 @@ export class ImportManager {
             
         } catch (error) {
             console.error('Error analyzing URL:', error);
+            throw error;
+        }
+    }
+
+    // Add new method to handle local file paths
+    async analyzeImageFromLocalPath(path) {
+        try {
+            // Call the API with local path data
+            const response = await fetch('/api/recipes/analyze-local-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ path: path })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to load image from local path');
+            }
+            
+            // Get recipe data from response
+            this.recipeData = await response.json();
+            
+            // Check if we have an error message
+            if (this.recipeData.error) {
+                throw new Error(this.recipeData.error);
+            }
+            
+            // Check if we have valid recipe data
+            if (!this.recipeData || !this.recipeData.loras || this.recipeData.loras.length === 0) {
+                throw new Error('No LoRA information found in this image');
+            }
+            
+            // Find missing LoRAs
+            this.missingLoras = this.recipeData.loras.filter(lora => !lora.existsLocally);
+            
+            // Proceed to recipe details step
+            this.showRecipeDetailsStep();
+            
+        } catch (error) {
+            console.error('Error analyzing local path:', error);
             throw error;
         }
     }
