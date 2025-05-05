@@ -2,6 +2,7 @@ import asyncio
 from typing import List, Dict
 from dataclasses import dataclass
 from operator import itemgetter
+from natsort import natsorted
 
 @dataclass
 class ModelCache:
@@ -17,7 +18,7 @@ class ModelCache:
     async def resort(self, name_only: bool = False):
         """Resort all cached data views"""
         async with self._lock:
-            self.sorted_by_name = sorted(
+            self.sorted_by_name = natsorted(
                 self.raw_data, 
                 key=lambda x: x['model_name'].lower()  # Case-insensitive sort
             )
