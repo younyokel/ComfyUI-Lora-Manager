@@ -1007,13 +1007,13 @@ class MetaFormatParser(RecipeMetadataParser):
 class ImageSaverMetadataParser(RecipeMetadataParser):
     """Parser for ComfyUI Image Saver plugin metadata format"""
     
-    METADATA_MARKER = r'Hashes: \{"LORA:'
+    METADATA_MARKER = r'Hashes: \{.*\}'
     LORA_PATTERN = r'<lora:([^:]+):([^>]+)>'
     HASH_PATTERN = r'Hashes: (\{.*?\})'
     
     def is_metadata_matching(self, user_comment: str) -> bool:
         """Check if the user comment matches the Image Saver metadata format"""
-        return re.search(self.METADATA_MARKER, user_comment, re.IGNORECASE | re.DOTALL) is not None
+        return "Hashes:" in user_comment and re.search(self.HASH_PATTERN, user_comment) is not None
     
     async def parse_metadata(self, user_comment: str, recipe_scanner=None, civitai_client=None) -> Dict[str, Any]:
         """Parse metadata from Image Saver plugin format"""
