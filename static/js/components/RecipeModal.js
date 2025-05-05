@@ -245,6 +245,49 @@ class RecipeModal {
                 imgElement.alt = recipe.title || 'Recipe Preview';
                 mediaContainer.appendChild(imgElement);
             }
+
+            // Add source URL container if the recipe has a source_path
+            const sourceUrlContainer = document.createElement('div');
+            sourceUrlContainer.className = 'source-url-container';
+            const hasSourceUrl = recipe.source_path && recipe.source_path.trim().length > 0;
+            const sourceUrl = hasSourceUrl ? recipe.source_path : '';
+            const isValidUrl = hasSourceUrl && (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://'));
+            
+            sourceUrlContainer.innerHTML = `
+                <div class="source-url-content">
+                    <span class="source-url-icon"><i class="fas fa-link"></i></span>
+                    <span class="source-url-text" title="${isValidUrl ? 'Click to open source URL' : 'No valid URL'}">${
+                        hasSourceUrl ? sourceUrl : 'No source URL'
+                    }</span>
+                    <span class="source-url-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="source-url-tooltip">Source of the original image (e.g., Civitai post)</span>
+                    </span>
+                </div>
+                <button class="source-url-edit-btn" title="Edit source URL">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+            `;
+            
+            // Add source URL editor
+            const sourceUrlEditor = document.createElement('div');
+            sourceUrlEditor.className = 'source-url-editor';
+            sourceUrlEditor.innerHTML = `
+                <input type="text" class="source-url-input" placeholder="Enter source URL (e.g., https://civitai.com/...)" value="${sourceUrl}">
+                <div class="source-url-actions">
+                    <button class="source-url-cancel-btn">Cancel</button>
+                    <button class="source-url-save-btn">Save</button>
+                </div>
+            `;
+            
+            // Append both containers to the media container
+            mediaContainer.appendChild(sourceUrlContainer);
+            mediaContainer.appendChild(sourceUrlEditor);
+            
+            // Set up event listeners for source URL functionality
+            setTimeout(() => {
+                this.setupSourceUrlHandlers();
+            }, 50);
         }
         
         // Set generation parameters
@@ -1065,6 +1108,56 @@ class RecipeModal {
                 // Navigate to the LoRAs page with the specific LoRA index
                 this.navigateToLorasPage(loraIndex);
             });
+        });
+    }
+
+    // New method to set up source URL handlers
+    setupSourceUrlHandlers() {
+        const sourceUrlContainer = document.querySelector('.source-url-container');
+        const sourceUrlEditor = document.querySelector('.source-url-editor');
+        const sourceUrlText = sourceUrlContainer.querySelector('.source-url-text');
+        const sourceUrlEditBtn = sourceUrlContainer.querySelector('.source-url-edit-btn');
+        const sourceUrlCancelBtn = sourceUrlEditor.querySelector('.source-url-cancel-btn');
+        const sourceUrlSaveBtn = sourceUrlEditor.querySelector('.source-url-save-btn');
+        const sourceUrlInput = sourceUrlEditor.querySelector('.source-url-input');
+        
+        // Show editor on edit button click
+        sourceUrlEditBtn.addEventListener('click', () => {
+            sourceUrlContainer.classList.add('hide');
+            sourceUrlEditor.classList.add('active');
+            sourceUrlInput.focus();
+        });
+        
+        // Cancel editing
+        sourceUrlCancelBtn.addEventListener('click', () => {
+            sourceUrlEditor.classList.remove('active');
+            sourceUrlContainer.classList.remove('hide');
+            sourceUrlInput.value = this.currentRecipe.source_path || '';
+        });
+        
+        // Save new source URL
+        sourceUrlSaveBtn.addEventListener('click', () => {
+            const newSourceUrl = sourceUrlInput.value.trim();
+            if (newSourceUrl && newSourceUrl !== this.currentRecipe.source_path) {
+                // Update source URL in the UI
+                sourceUrlText.textContent = newSourceUrl;
+                sourceUrlText.title = newSourceUrl.startsWith('http://') || newSourceUrl.startsWith('https://') ? 'Click to open source URL' : 'No valid URL';
+                
+                // Update the recipe on the server
+                this.updateRecipeMetadata({ source_path: newSourceUrl });
+            }
+            
+            // Hide editor
+            sourceUrlEditor.classList.remove('active');
+            sourceUrlContainer.classList.remove('hide');
+        });
+        
+        // Open source URL in a new tab if it's valid
+        sourceUrlText.addEventListener('click', () => {
+            const url = sourceUrlText.textContent.trim();
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                window.open(url, '_blank');
+            }
         });
     }
 }
