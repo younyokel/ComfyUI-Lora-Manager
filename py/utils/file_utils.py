@@ -233,6 +233,17 @@ async def load_metadata(file_path: str, model_class: Type[BaseModelMetadata] = L
                     data['usage_tips'] = "{}"
                     needs_update = True
                 
+                # Update preview_nsfw_level if needed
+                civitai_data = data.get('civitai', {})
+                civitai_images = civitai_data.get('images', []) if civitai_data else []
+                if (data.get('preview_url') and 
+                    data.get('preview_nsfw_level', 0) == 0 and 
+                    civitai_images and 
+                    civitai_images[0].get('nsfwLevel', 0) != 0):
+                    data['preview_nsfw_level'] = civitai_images[0]['nsfwLevel']
+                    # TODO: write to metadata file
+                    # needs_update = True
+
                 if needs_update:
                     with open(metadata_path, 'w', encoding='utf-8') as f:
                         json.dump(data, f, indent=2, ensure_ascii=False)
