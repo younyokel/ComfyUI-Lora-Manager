@@ -259,10 +259,6 @@ class RecipeModal {
                     <span class="source-url-text" title="${isValidUrl ? 'Click to open source URL' : 'No valid URL'}">${
                         hasSourceUrl ? sourceUrl : 'No source URL'
                     }</span>
-                    <span class="source-url-info">
-                        <i class="fas fa-info-circle"></i>
-                        <span class="source-url-tooltip">Source of the original image (e.g., Civitai post)</span>
-                    </span>
                 </div>
                 <button class="source-url-edit-btn" title="Edit source URL">
                     <i class="fas fa-pencil-alt"></i>
