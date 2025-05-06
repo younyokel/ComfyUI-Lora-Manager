@@ -4,7 +4,7 @@ import re
 import json
 import logging
 from typing import Dict, Any
-from py.config import config
+from ...config import config
 from ..base import RecipeMetadataParser
 from ..constants import GEN_PARAM_KEYS
 

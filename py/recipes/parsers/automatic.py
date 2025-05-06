@@ -4,7 +4,6 @@ import re
 import json
 import logging
 from typing import Dict, Any
-from py.config import config
 from ..base import RecipeMetadataParser
 from ..constants import GEN_PARAM_KEYS
 
@@ -254,25 +253,6 @@ class AutomaticMetadataParser(RecipeMetadataParser):
                                 lora_entry = populated_entry
                             except Exception as e:
                                 logger.error(f"Error fetching Civitai info for LoRA {lora_name}: {e}")
-                        
-                        # Check if we can find it locally
-                        if lora_hash and recipe_scanner:
-                            lora_scanner = recipe_scanner._lora_scanner
-                            exists_locally = lora_scanner.has_lora_hash(lora_hash)
-                            if exists_locally:
-                                try:
-                                    lora_cache = await lora_scanner.get_cached_data()
-                                    lora_item = next((item for item in lora_cache.raw_data 
-                                                     if item['sha256'].lower() == lora_hash.lower()), None)
-                                    if lora_item:
-                                        lora_entry['existsLocally'] = True
-                                        lora_entry['localPath'] = lora_item['file_path']
-                                        lora_entry['file_name'] = lora_item['file_name']
-                                        lora_entry['size'] = lora_item['size']
-                                        if 'preview_url' in lora_item:
-                                            lora_entry['thumbnailUrl'] = config.get_preview_static_url(lora_item['preview_url'])
-                                except Exception as e:
-                                    logger.error(f"Error getting local lora path: {e}")
                         
                         loras.append(lora_entry)
                 
