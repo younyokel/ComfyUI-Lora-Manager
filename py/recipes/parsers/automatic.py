@@ -84,7 +84,28 @@ class AutomaticMetadataParser(RecipeMetadataParser):
                     if hashes_match:
                         try:
                             hashes = json.loads(hashes_match.group(1))
-                            metadata["hashes"] = hashes
+                            # Process hash keys
+                            processed_hashes = {}
+                            for key, value in hashes.items():
+                                # Convert Model: or LORA: prefix to lowercase if present
+                                if ':' in key:
+                                    prefix, name = key.split(':', 1)
+                                    prefix = prefix.lower()
+                                else:
+                                    prefix = ''
+                                    name = key
+
+                                # Clean up the name part
+                                if '/' in name:
+                                    name = name.split('/')[-1]  # Get last part after /
+                                if '.safetensors' in name:
+                                    name = name.split('.safetensors')[0]  # Remove .safetensors
+                                
+                                # Reconstruct the key
+                                new_key = f"{prefix}:{name}" if prefix else name
+                                processed_hashes[new_key] = value
+
+                            metadata["hashes"] = processed_hashes
                             # Remove hashes from params section to not interfere with other parsing
                             params_section = params_section.replace(hashes_match.group(0), '')
                         except json.JSONDecodeError:
