@@ -9,6 +9,7 @@ from .recipe_cache import RecipeCache
 from .service_registry import ServiceRegistry
 from .lora_scanner import LoraScanner
 from ..utils.utils import fuzzy_match
+from natsort import natsorted
 import sys
 
 logger = logging.getLogger(__name__)
@@ -164,7 +165,7 @@ class RecipeScanner:
                 if hasattr(self._cache, "resort"):
                     try:
                         # Sort by name
-                        self._cache.sorted_by_name = sorted(
+                        self._cache.sorted_by_name = natsorted(
                             self._cache.raw_data,
                             key=lambda x: x.get('title', '').lower()
                         )
