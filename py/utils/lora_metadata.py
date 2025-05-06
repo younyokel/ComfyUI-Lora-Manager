@@ -2,6 +2,9 @@ from safetensors import safe_open
 from typing import Dict
 from .model_utils import determine_base_model
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def extract_lora_metadata(file_path: str) -> Dict:
     """Extract essential metadata from safetensors file"""

@@ -907,17 +907,17 @@ export class ImportManager {
         }
         
         try {
-            this.loadingManager.showSimpleLoading(isDownloadOnly ? 'Preparing download...' : 'Saving recipe...');
+            // Show progress indicator
+            this.loadingManager.showSimpleLoading(isDownloadOnly ? 'Downloading LoRAs...' : 'Saving recipe...');
             
-            // If we're only downloading LoRAs for an existing recipe, skip the recipe save step
+            // Only send the complete recipe to save if not in download-only mode
             if (!isDownloadOnly) {
-                // First save the recipe
-                // Create form data for save request
+                // Create FormData object for saving recipe
                 const formData = new FormData();
                 
-                // Handle image data - either from file upload or from URL mode
+                // Add image data - depends on import mode
                 if (this.recipeImage) {
-                    // File upload mode
+                    // Direct upload
                     formData.append('image', this.recipeImage);
                 } else if (this.recipeData && this.recipeData.image_base64) {
                     // URL mode with base64 data
@@ -944,6 +944,15 @@ export class ImportManager {
                     gen_params: this.recipeData.gen_params || {},
                     raw_metadata: this.recipeData.raw_metadata || {}
                 };
+                
+                // Add source_path to metadata to track where the recipe was imported from
+                if (this.importMode === 'url') {
+                    const urlInput = document.getElementById('imageUrlInput');
+                    console.log("urlInput.value", urlInput.value);
+                    if (urlInput && urlInput.value) {
+                        completeMetadata.source_path = urlInput.value;
+                    }
+                }
                 
                 formData.append('metadata', JSON.stringify(completeMetadata));
             

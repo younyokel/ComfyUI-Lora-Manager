@@ -229,8 +229,10 @@
     background: var(--lora-surface);
     border: 1px solid var(--border-color);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .recipe-preview-container img,
@@ -244,6 +246,133 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+}
+
+/* Source URL container */
+.source-url-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.3s ease;
+    transform: translateY(100%);
+}
+
+.recipe-preview-container:hover .source-url-container {
+    transform: translateY(0);
+}
+
+.source-url-container.active {
+    transform: translateY(0);
+}
+
+.source-url-content {
+    display: flex;
+    align-items: center;
+    color: #fff;
+    flex: 1;
+    overflow: hidden;
+    font-size: 0.85em;
+}
+
+.source-url-icon {
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.source-url-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    flex: 1;
+}
+
+.source-url-edit-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 8px;
+    border-radius: var(--border-radius-xs);
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.source-url-edit-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Source URL editor */
+.source-url-editor {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+    padding: 12px;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 5;
+}
+
+.source-url-editor.active {
+    display: flex;
+}
+
+.source-url-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.source-url-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.source-url-cancel-btn, 
+.source-url-save-btn {
+    padding: 6px 12px;
+    border-radius: var(--border-radius-xs);
+    font-size: 0.85em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.source-url-cancel-btn {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.source-url-save-btn {
+    background: var(--lora-accent);
+    color: white;
+}
+
+.source-url-cancel-btn:hover {
+    background: var(--lora-surface);
+}
+
+.source-url-save-btn:hover {
+    background: color-mix(in oklch, var(--lora-accent), black 10%);
 }
 
 /* Generation Parameters */

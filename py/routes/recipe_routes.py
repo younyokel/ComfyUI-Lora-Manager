@@ -550,7 +550,7 @@ class RecipeRoutes:
             with open(image_path, 'wb') as f:
                 f.write(optimized_image)
             
-            # Create the recipe JSON
+            # Create the recipe data structure
             current_time = time.time()
             
             # Format loras data according to the recipe.json format
@@ -605,6 +605,10 @@ class RecipeRoutes:
             # Add tags if provided
             if tags:
                 recipe_data["tags"] = tags
+            
+            # Add source_path if provided in metadata
+            if metadata.get("source_path"):
+                recipe_data["source_path"] = metadata.get("source_path")
             
             # Save the recipe JSON
             json_filename = f"{recipe_id}.recipe.json"
@@ -1165,9 +1169,9 @@ class RecipeRoutes:
             data = await request.json()
             
             # Validate required fields
-            if 'title' not in data and 'tags' not in data:
+            if 'title' not in data and 'tags' not in data and 'source_path' not in data:
                 return web.json_response({
-                    "error": "At least one field to update must be provided (title or tags)"
+                    "error": "At least one field to update must be provided (title or tags or source_path)"
                 }, status=400)
             
             # Use the recipe scanner's update method
