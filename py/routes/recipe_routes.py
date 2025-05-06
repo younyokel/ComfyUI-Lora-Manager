@@ -13,7 +13,7 @@ import json
 import asyncio
 import sys
 from ..utils.exif_utils import ExifUtils
-from ..utils.recipe_parsers import RecipeParserFactory
+from ..recipes import RecipeParserFactory
 from ..utils.constants import CARD_PREVIEW_WIDTH
 
 from ..config import config
