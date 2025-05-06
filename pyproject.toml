@@ -13,7 +13,8 @@ dependencies = [
     "Pillow",
     "olefile", # for getting rid of warning message
     "requests",
-    "toml"
+    "toml",
+    "natsort"
 ]
 
 [project.urls]
