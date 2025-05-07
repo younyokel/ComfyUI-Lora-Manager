@@ -72,11 +72,17 @@ class RecipeRoutes:
         # Add new endpoint for getting recipe syntax
         app.router.add_get('/api/recipe/{recipe_id}/syntax', routes.get_recipe_syntax)
         
-        # Add new endpoint for updating recipe metadata (name and tags)
+        # Add new endpoint for updating recipe metadata (name, tags and source_path)
         app.router.add_put('/api/recipe/{recipe_id}/update', routes.update_recipe)
         
         # Add new endpoint for reconnecting deleted LoRAs
         app.router.add_post('/api/recipe/lora/reconnect', routes.reconnect_lora)
+        
+        # Add new endpoint for finding duplicate recipes
+        app.router.add_get('/api/recipes/find-duplicates', routes.find_duplicates)
+        
+        # Add new endpoint for bulk deletion of recipes
+        app.router.add_post('/api/recipes/bulk-delete', routes.bulk_delete)
         
         # Start cache initialization
         app.on_startup.append(routes._init_cache)
@@ -339,6 +345,21 @@ class RecipeRoutes:
             if "error" in result and not result.get("loras"):
                 return web.json_response(result, status=200)
             
+            # Calculate fingerprint from parsed loras
+            from ..utils.utils import calculate_recipe_fingerprint
+            fingerprint = calculate_recipe_fingerprint(result.get("loras", []))
+            
+            # Add fingerprint to result
+            result["fingerprint"] = fingerprint
+            
+            # Find matching recipes with the same fingerprint
+            matching_recipes = []
+            if fingerprint:
+                matching_recipes = await self.recipe_scanner.find_recipes_by_fingerprint(fingerprint)
+                
+            # Add matching recipes to result
+            result["matching_recipes"] = matching_recipes
+            
             return web.json_response(result)
             
         except Exception as e:
@@ -424,6 +445,21 @@ class RecipeRoutes:
             # Check for errors
             if "error" in result and not result.get("loras"):
                 return web.json_response(result, status=200)
+            
+            # Calculate fingerprint from parsed loras
+            from ..utils.utils import calculate_recipe_fingerprint
+            fingerprint = calculate_recipe_fingerprint(result.get("loras", []))
+            
+            # Add fingerprint to result
+            result["fingerprint"] = fingerprint
+            
+            # Find matching recipes with the same fingerprint
+            matching_recipes = []
+            if fingerprint:
+                matching_recipes = await self.recipe_scanner.find_recipes_by_fingerprint(fingerprint)
+                
+            # Add matching recipes to result
+            result["matching_recipes"] = matching_recipes
             
             return web.json_response(result)
             
@@ -590,6 +626,10 @@ class RecipeRoutes:
                     "clip_skip": raw_metadata.get("clip_skip", "")
                 }
             
+            # Calculate recipe fingerprint 
+            from ..utils.utils import calculate_recipe_fingerprint
+            fingerprint = calculate_recipe_fingerprint(loras_data)
+            
             # Create the recipe data structure
             recipe_data = {
                 "id": recipe_id,
@@ -599,7 +639,8 @@ class RecipeRoutes:
                 "created_date": current_time,
                 "base_model": metadata.get("base_model", ""),
                 "loras": loras_data,
-                "gen_params": gen_params
+                "gen_params": gen_params,
+                "fingerprint": fingerprint
             }
             
             # Add tags if provided
@@ -619,6 +660,14 @@ class RecipeRoutes:
             # Add recipe metadata to the image
             ExifUtils.append_recipe_metadata(image_path, recipe_data)
             
+            # Check for duplicates
+            matching_recipes = []
+            if fingerprint:
+                matching_recipes = await self.recipe_scanner.find_recipes_by_fingerprint(fingerprint)
+                # Remove current recipe from matches
+                if recipe_id in matching_recipes:
+                    matching_recipes.remove(recipe_id)
+            
             # Simplified cache update approach
             # Instead of trying to update the cache directly, just set it to None
             # to force a refresh on the next get_cached_data call
@@ -634,7 +683,8 @@ class RecipeRoutes:
                 'success': True,
                 'recipe_id': recipe_id,
                 'image_path': image_path,
-                'json_path': json_path
+                'json_path': json_path,
+                'matching_recipes': matching_recipes
             })
             
         except Exception as e:
@@ -1266,6 +1316,10 @@ class RecipeRoutes:
                     
             if not found:
                 return web.json_response({"error": "Could not find matching deleted LoRA in recipe"}, status=404)
+            
+            # Recalculate recipe fingerprint after updating LoRA
+            from ..utils.utils import calculate_recipe_fingerprint
+            recipe_data['fingerprint'] = calculate_recipe_fingerprint(recipe_data.get('loras', []))
                 
             # Save updated recipe
             with open(recipe_path, 'w', encoding='utf-8') as f:
@@ -1281,6 +1335,8 @@ class RecipeRoutes:
                     if cache_item.get('id') == recipe_id:
                         # Replace loras array with updated version
                         cache_item['loras'] = recipe_data['loras']
+                        # Update fingerprint in cache
+                        cache_item['fingerprint'] = recipe_data['fingerprint']
                         
                         # Resort the cache
                         asyncio.create_task(scanner._cache.resort())
@@ -1291,11 +1347,20 @@ class RecipeRoutes:
             if image_path and os.path.exists(image_path):
                 from ..utils.exif_utils import ExifUtils
                 ExifUtils.append_recipe_metadata(image_path, recipe_data)
+            
+            # Find other recipes with the same fingerprint
+            matching_recipes = []
+            if 'fingerprint' in recipe_data:
+                matching_recipes = await scanner.find_recipes_by_fingerprint(recipe_data['fingerprint'])
+                # Remove current recipe from matches
+                if recipe_id in matching_recipes:
+                    matching_recipes.remove(recipe_id)
                 
             return web.json_response({
                 "success": True,
                 "recipe_id": recipe_id,
-                "updated_lora": updated_lora
+                "updated_lora": updated_lora,
+                "matching_recipes": matching_recipes
             })
             
         except Exception as e:
@@ -1367,6 +1432,153 @@ class RecipeRoutes:
             })
         except Exception as e:
             logger.error(f"Error refreshing recipe cache: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    async def find_duplicates(self, request: web.Request) -> web.Response:
+        """Find all duplicate recipes based on fingerprints"""
+        try:
+            # Ensure services are initialized
+            await self.init_services()
+            
+            # Get all duplicate recipes
+            duplicate_groups = await self.recipe_scanner.find_all_duplicate_recipes()
+            
+            # Create response data with additional recipe information
+            response_data = []
+            
+            for fingerprint, recipe_ids in duplicate_groups.items():
+                # Skip groups with only one recipe (not duplicates)
+                if len(recipe_ids) <= 1:
+                    continue
+                    
+                # Get recipe details for each recipe in the group
+                recipes = []
+                for recipe_id in recipe_ids:
+                    recipe = await self.recipe_scanner.get_recipe_by_id(recipe_id)
+                    if recipe:
+                        # Add only needed fields to keep response size manageable
+                        recipes.append({
+                            'id': recipe.get('id'),
+                            'title': recipe.get('title'),
+                            'file_url': recipe.get('file_url') or self._format_recipe_file_url(recipe.get('file_path', '')),
+                            'modified': recipe.get('modified'),
+                            'created_date': recipe.get('created_date'),
+                            'lora_count': len(recipe.get('loras', [])),
+                        })
+                        
+                # Only include groups with at least 2 valid recipes
+                if len(recipes) >= 2:
+                    # Sort recipes by modified date (newest first)
+                    recipes.sort(key=lambda x: x.get('modified', 0), reverse=True)
+                    
+                    response_data.append({
+                        'fingerprint': fingerprint,
+                        'count': len(recipes),
+                        'recipes': recipes
+                    })
+            
+            # Sort groups by count (highest first)
+            response_data.sort(key=lambda x: x['count'], reverse=True)
+            
+            return web.json_response({
+                'success': True,
+                'duplicate_groups': response_data
+            })
+            
+        except Exception as e:
+            logger.error(f"Error finding duplicate recipes: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    async def bulk_delete(self, request: web.Request) -> web.Response:
+        """Delete multiple recipes by ID"""
+        try:
+            # Ensure services are initialized
+            await self.init_services()
+            
+            # Parse request data
+            data = await request.json()
+            recipe_ids = data.get('recipe_ids', [])
+            
+            if not recipe_ids:
+                return web.json_response({
+                    'success': False,
+                    'error': 'No recipe IDs provided'
+                }, status=400)
+                
+            # Get recipes directory
+            recipes_dir = self.recipe_scanner.recipes_dir
+            if not recipes_dir or not os.path.exists(recipes_dir):
+                return web.json_response({
+                    'success': False,
+                    'error': 'Recipes directory not found'
+                }, status=404)
+            
+            # Track deleted and failed recipes
+            deleted_recipes = []
+            failed_recipes = []
+            
+            # Process each recipe ID
+            for recipe_id in recipe_ids:
+                # Find recipe JSON file
+                recipe_json_path = os.path.join(recipes_dir, f"{recipe_id}.recipe.json")
+                
+                if not os.path.exists(recipe_json_path):
+                    failed_recipes.append({
+                        'id': recipe_id,
+                        'reason': 'Recipe not found'
+                    })
+                    continue
+                
+                try:
+                    # Load recipe data to get image path
+                    with open(recipe_json_path, 'r', encoding='utf-8') as f:
+                        recipe_data = json.load(f)
+                    
+                    # Get image path
+                    image_path = recipe_data.get('file_path')
+                    
+                    # Delete recipe JSON file
+                    os.remove(recipe_json_path)
+                    
+                    # Delete recipe image if it exists
+                    if image_path and os.path.exists(image_path):
+                        os.remove(image_path)
+                        
+                    deleted_recipes.append(recipe_id)
+                    
+                except Exception as e:
+                    failed_recipes.append({
+                        'id': recipe_id,
+                        'reason': str(e)
+                    })
+            
+            # Update cache if any recipes were deleted
+            if deleted_recipes and self.recipe_scanner._cache is not None:
+                # Remove deleted recipes from raw_data
+                self.recipe_scanner._cache.raw_data = [
+                    r for r in self.recipe_scanner._cache.raw_data 
+                    if r.get('id') not in deleted_recipes
+                ]
+                # Resort the cache
+                asyncio.create_task(self.recipe_scanner._cache.resort())
+                logger.info(f"Removed {len(deleted_recipes)} recipes from cache")
+            
+            return web.json_response({
+                'success': True,
+                'deleted': deleted_recipes,
+                'failed': failed_recipes,
+                'total_deleted': len(deleted_recipes),
+                'total_failed': len(failed_recipes)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error performing bulk delete: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)
