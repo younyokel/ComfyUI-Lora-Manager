@@ -948,11 +948,7 @@ export function addLorasWidget(node, name, opts, callback) {
   widget.callback = callback;
 
   widget.serializeValue = () => {
-    // Add dummy items to avoid the 2-element serialization issue, a bug in comfyui
-    return [...widgetValue, 
-        { name: "__dummy_item1__", strength: 0, active: false, _isDummy: true },
-        { name: "__dummy_item2__", strength: 0, active: false, _isDummy: true }
-      ];
+    return widgetValue;
   }
 
   widget.onRemove = () => {

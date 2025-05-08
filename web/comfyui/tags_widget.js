@@ -220,13 +220,8 @@ export function addTagsWidget(node, name, opts, callback) {
   // Set callback
   widget.callback = callback;
 
-  // Add serialization method to avoid ComfyUI serialization issues
   widget.serializeValue = () => {
-    // Add dummy items to avoid the 2-element serialization issue
-    return [...widgetValue, 
-        { text: "__dummy_item__", active: false, _isDummy: true },
-        { text: "__dummy_item__", active: false, _isDummy: true }
-      ];
+    return widgetValue
   };
 
   return { minWidth: 300, minHeight: defaultHeight, widget };
