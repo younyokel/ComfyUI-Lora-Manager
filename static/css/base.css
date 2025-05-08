@@ -38,7 +38,7 @@ html, body {
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(95% 0.02 256);
     --lora-error: oklch(75% 0.32 29);
-    --lora-warning: oklch(75% 0.25 80); /* Add warning color for deleted LoRAs */
+    --lora-warning: oklch(75% 0.25 80); /* Modified to be used with oklch() */
     
     /* Spacing Scale */
     --space-1: calc(8px * 1);
@@ -79,7 +79,7 @@ html[data-theme="light"] {
     --lora-surface: oklch(25% 0.02 256 / 0.98);
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(98% 0.02 256);
-    --lora-warning: oklch(75% 0.25 80); /* Add warning color for dark theme too */
+    --lora-warning: oklch(75% 0.25 80); /* Modified to be used with oklch() */
 }
 
 body {

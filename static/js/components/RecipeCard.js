@@ -1,6 +1,7 @@
 // Recipe Card Component
 import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
+import { getCurrentPageState } from '../state/index.js';
 
 class RecipeCard {
     constructor(recipe, clickHandler) {
@@ -36,10 +37,15 @@ class RecipeCard {
                          (this.recipe.file_path ? `/loras_static/root1/preview/${this.recipe.file_path.split('/').pop()}` : 
                          '/loras_static/images/no-preview.png');
 
+        // Check if in duplicates mode
+        const pageState = getCurrentPageState();
+        const isDuplicatesMode = pageState.duplicatesMode;
+
         card.innerHTML = `
-            <div class="recipe-indicator" title="Recipe">R</div>
+            ${!isDuplicatesMode ? `<div class="recipe-indicator" title="Recipe">R</div>` : ''}
             <div class="card-preview">
                 <img src="${imageUrl}" alt="${this.recipe.title}">
+                ${!isDuplicatesMode ? `
                 <div class="card-header">
                     <div class="base-model-wrapper">
                         ${baseModel ? `<span class="base-model-label" title="${baseModel}">${baseModel}</span>` : ''}
@@ -50,19 +56,22 @@ class RecipeCard {
                         <i class="fas fa-trash" title="Delete Recipe"></i>
                     </div>
                 </div>
+                ` : ''}
                 <div class="card-footer">
                     <div class="model-info">
                         <span class="model-name">${this.recipe.title}</span>
                     </div>
+                    ${!isDuplicatesMode ? `
                     <div class="lora-count ${allLorasAvailable ? 'ready' : (lorasCount > 0 ? 'missing' : '')}" 
                          title="${this.getLoraStatusTitle(lorasCount, missingLorasCount)}">
                         <i class="fas fa-layer-group"></i> ${lorasCount}
                     </div>
+                    ` : ''}
                 </div>
             </div>
         `;
         
-        this.attachEventListeners(card);
+        this.attachEventListeners(card, isDuplicatesMode);
         return card;
     }
     
@@ -72,29 +81,31 @@ class RecipeCard {
         return `${missingCount} of ${totalCount} LoRAs missing`;
     }
     
-    attachEventListeners(card) {
-        // Recipe card click event
-        card.addEventListener('click', () => {
-            this.clickHandler(this.recipe);
-        });
-        
-        // Share button click event - prevent propagation to card
-        card.querySelector('.fa-share-alt')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.shareRecipe();
-        });
-        
-        // Copy button click event - prevent propagation to card
-        card.querySelector('.fa-copy')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.copyRecipeSyntax();
-        });
-        
-        // Delete button click event - prevent propagation to card
-        card.querySelector('.fa-trash')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.showDeleteConfirmation();
-        });
+    attachEventListeners(card, isDuplicatesMode) {
+        // Recipe card click event - only attach if not in duplicates mode
+        if (!isDuplicatesMode) {
+            card.addEventListener('click', () => {
+                this.clickHandler(this.recipe);
+            });
+            
+            // Share button click event - prevent propagation to card
+            card.querySelector('.fa-share-alt')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.shareRecipe();
+            });
+            
+            // Copy button click event - prevent propagation to card
+            card.querySelector('.fa-copy')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.copyRecipeSyntax();
+            });
+            
+            // Delete button click event - prevent propagation to card
+            card.querySelector('.fa-trash')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showDeleteConfirmation();
+            });
+        }
     }
     
     copyRecipeSyntax() {

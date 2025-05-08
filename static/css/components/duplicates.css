@@ -1,0 +1,259 @@
+/* Duplicates Management Styles */
+
+/* Duplicates banner */
+.duplicates-banner {
+    position: sticky;
+    top: 48px; /* Match header height */
+    left: 0;
+    width: 100%;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+    z-index: var(--z-overlay);
+    padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.duplicates-banner .banner-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.duplicates-banner i.fa-exclamation-triangle {
+    font-size: 18px;
+    color: oklch(var(--lora-warning));
+}
+
+.duplicates-banner .banner-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.duplicates-banner button {
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: var(--border-radius-xs);
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.duplicates-banner button:hover {
+    border-color: var(--lora-accent);
+    background: var(--bg-color);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
+}
+
+.duplicates-banner button.btn-exit {
+    min-width: unset;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.duplicates-banner button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Duplicate groups */
+.duplicate-group {
+    position: relative;
+    border: 2px solid oklch(var(--lora-warning));
+    border-radius: var(--border-radius-base);
+    padding: 16px;
+    margin-bottom: 24px;
+    background: var(--card-bg);
+}
+
+.duplicate-group-header {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: var(--border-radius-xs);
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.duplicate-group-header span:last-child {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.duplicate-group-header button {
+    min-width: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: var(--border-radius-xs);
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin-left: 8px;
+}
+
+.duplicate-group-header button:hover {
+    border-color: var(--lora-accent);
+    background: var(--bg-color);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
+}
+
+.card-group-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+/* Make cards in duplicate groups have consistent width */
+.card-group-container .lora-card {
+    flex: 0 0 auto;
+    width: 240px;
+    margin: 0;
+    cursor: pointer; /* Indicate the card is clickable */
+}
+
+/* Ensure the grid layout is only applied to the main recipe grid, not duplicate groups */
+.duplicate-mode .card-grid {
+    display: block;
+}
+
+/* Scrollable container for large duplicate groups */
+.card-group-container.scrollable {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* Add a toggle button to expand/collapse large duplicate groups */
+.group-toggle-btn {
+    position: absolute;
+    right: 16px;
+    bottom: -12px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.group-toggle-btn:hover {
+    border-color: var(--lora-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
+}
+
+/* Duplicate card styling */
+.lora-card.duplicate {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.lora-card.duplicate:hover {
+    border-color: var(--lora-accent);
+}
+
+.lora-card.duplicate.latest {
+    border-style: solid;
+    border-color: oklch(var(--lora-warning));
+}
+
+.lora-card.duplicate-selected {
+    border: 2px solid oklch(var(--lora-accent));
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.lora-card .selector-checkbox {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Latest indicator */
+.lora-card.duplicate.latest::after {
+    content: "Latest";
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: oklch(var(--lora-accent));
+    color: white;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: var(--border-radius-xs);
+    z-index: 5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .duplicates-banner .banner-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .duplicates-banner .banner-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+    }
+    
+    .duplicate-group-header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .duplicate-group-header span:last-child {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .duplicate-group-header button {
+        margin-left: 0;
+        flex: 1;
+    }
+}

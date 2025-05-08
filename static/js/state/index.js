@@ -65,6 +65,7 @@ export const state = {
             },
             pageSize: 20,
             showFavoritesOnly: false,
+            duplicatesMode: false, // Add flag for duplicates mode
         },
         
         checkpoints: {
