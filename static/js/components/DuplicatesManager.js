@@ -335,12 +335,27 @@ export class DuplicatesManager {
         }
         
         try {
-            // Show confirmation dialog
-            if (!confirm(`Are you sure you want to delete ${this.selectedForDeletion.size} selected recipes?`)) {
-                return;
+            // Show the delete confirmation modal instead of a simple confirm
+            const duplicateDeleteCount = document.getElementById('duplicateDeleteCount');
+            if (duplicateDeleteCount) {
+                duplicateDeleteCount.textContent = this.selectedForDeletion.size;
             }
             
+            // Use the modal manager to show the confirmation modal
+            modalManager.showModal('duplicateDeleteModal');
+        } catch (error) {
+            console.error('Error preparing delete:', error);
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Add new method to execute deletion after confirmation
+    async confirmDeleteDuplicates() {
+        try {
             document.body.classList.add('loading');
+            
+            // Close the modal
+            modalManager.closeModal('duplicateDeleteModal');
             
             // Prepare recipe IDs for deletion
             const recipeIds = Array.from(this.selectedForDeletion);

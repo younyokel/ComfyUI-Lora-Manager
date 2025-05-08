@@ -390,6 +390,10 @@ class RecipeManager {
     deleteSelectedDuplicates() {
         this.duplicatesManager.deleteSelectedDuplicates();
     }
+
+    confirmDeleteDuplicates() {
+        this.duplicatesManager.confirmDeleteDuplicates();
+    }
     
     exitDuplicateMode() {
         this.duplicatesManager.exitDuplicateMode();
