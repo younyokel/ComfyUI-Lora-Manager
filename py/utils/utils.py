@@ -114,3 +114,49 @@ def fuzzy_match(text: str, pattern: str, threshold: float = 0.7) -> bool:
         
         # All words found either as substrings or fuzzy matches
         return True
+
+def calculate_recipe_fingerprint(loras):
+    """
+    Calculate a unique fingerprint for a recipe based on its LoRAs.
+    
+    The fingerprint is created by sorting LoRA hashes, filtering invalid entries,
+    normalizing strength values to 2 decimal places, and joining in format:
+    hash1:strength1|hash2:strength2|...
+    
+    Args:
+        loras (list): List of LoRA dictionaries with hash and strength values
+        
+    Returns:
+        str: The calculated fingerprint
+    """
+    if not loras:
+        return ""
+    
+    # Filter valid entries and extract hash and strength
+    valid_loras = []
+    for lora in loras:
+        # Skip excluded loras
+        if lora.get("exclude", False):
+            continue
+            
+        # Get the hash - use modelVersionId as fallback if hash is empty
+        hash_value = lora.get("hash", "").lower()
+        if not hash_value and lora.get("isDeleted", False) and lora.get("modelVersionId"):
+            hash_value = lora.get("modelVersionId")
+            
+        # Skip entries without a valid hash
+        if not hash_value:
+            continue
+            
+        # Normalize strength to 2 decimal places (check both strength and weight fields)
+        strength = round(float(lora.get("strength", lora.get("weight", 1.0))), 2)
+        
+        valid_loras.append((hash_value, strength))
+    
+    # Sort by hash
+    valid_loras.sort()
+    
+    # Join in format hash1:strength1|hash2:strength2|...
+    fingerprint = "|".join([f"{hash_value}:{strength}" for hash_value, strength in valid_loras])
+    
+    return fingerprint

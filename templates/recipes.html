@@ -42,6 +42,10 @@
             <div title="Import recipes" class="control-group">
                 <button onclick="importManager.showImportModal()"><i class="fas fa-file-import"></i> Import</button>
             </div>
+            <!-- Add duplicate detection button -->
+            <div title="Find duplicate recipes" class="control-group">
+                <button onclick="recipeManager.findDuplicateRecipes()"><i class="fas fa-clone"></i> Find Duplicates</button>
+            </div>
             <!-- Custom filter indicator button (hidden by default) -->
             <div id="customFilterIndicator" class="control-group hidden">
                 <div class="filter-active">
@@ -49,6 +53,25 @@
                     <i class="fas fa-times-circle clear-filter"></i>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Duplicates banner (hidden by default) -->
+    <div id="duplicatesBanner" class="duplicates-banner" style="display: none;">
+        <div class="banner-content">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="duplicatesCount">Found 0 duplicate groups</span>
+          <div class="banner-actions">
+            <button class="btn-select-latest" onclick="recipeManager.selectLatestDuplicates()">
+              Keep Latest Versions
+            </button>
+            <button class="btn-delete-selected disabled" onclick="recipeManager.deleteSelectedDuplicates()">
+              Delete Selected (<span id="selectedCount">0</span>)
+            </button>
+            <button class="btn-exit" onclick="recipeManager.exitDuplicateMode()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
     </div>
     

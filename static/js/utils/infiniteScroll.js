@@ -14,6 +14,11 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     
     // Get the current page state
     const pageState = getCurrentPageState();
+    
+    // Skip initializing if in duplicates mode (for recipes page)
+    if (pageType === 'recipes' && pageState.duplicatesMode) {
+        return;
+    }
 
     // Determine the load more function and grid ID based on page type
     let loadMoreFunction;

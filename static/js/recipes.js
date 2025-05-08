@@ -6,6 +6,8 @@ import { RecipeModal } from './components/RecipeModal.js';
 import { getCurrentPageState } from './state/index.js';
 import { getSessionItem, removeSessionItem } from './utils/storageHelpers.js';
 import { RecipeContextMenu } from './components/ContextMenu/index.js';
+import { DuplicatesManager } from './components/DuplicatesManager.js';
+import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 
 class RecipeManager {
     constructor() {
@@ -17,6 +19,9 @@ class RecipeManager {
         
         // Initialize RecipeModal
         this.recipeModal = new RecipeModal();
+        
+        // Initialize DuplicatesManager
+        this.duplicatesManager = new DuplicatesManager(this);
         
         // Add state tracking for infinite scroll
         this.pageState.isLoading = false;
@@ -179,6 +184,12 @@ class RecipeManager {
     
     async loadRecipes(resetPage = true) {
         try {
+            // Skip loading if in duplicates mode
+            const pageState = getCurrentPageState();
+            if (pageState.duplicatesMode) {
+                return;
+            }
+            
             // Show loading indicator
             document.body.classList.add('loading');
             this.pageState.isLoading = true;
@@ -365,6 +376,28 @@ class RecipeManager {
     
     showRecipeDetails(recipe) {
         this.recipeModal.showRecipeDetails(recipe);
+    }
+    
+    // Duplicate detection and management methods
+    async findDuplicateRecipes() {
+        return await this.duplicatesManager.findDuplicates();
+    }
+    
+    selectLatestDuplicates() {
+        this.duplicatesManager.selectLatestDuplicates();
+    }
+    
+    deleteSelectedDuplicates() {
+        this.duplicatesManager.deleteSelectedDuplicates();
+    }
+
+    confirmDeleteDuplicates() {
+        this.duplicatesManager.confirmDeleteDuplicates();
+    }
+    
+    exitDuplicateMode() {
+        this.duplicatesManager.exitDuplicateMode();
+        initializeInfiniteScroll();
     }
 }
 

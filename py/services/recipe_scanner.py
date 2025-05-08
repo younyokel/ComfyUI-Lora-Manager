@@ -322,6 +322,20 @@ class RecipeScanner:
             
             # Update lora information with local paths and availability
             await self._update_lora_information(recipe_data)
+
+            # Calculate and update fingerprint if missing
+            if 'loras' in recipe_data and 'fingerprint' not in recipe_data:
+                from ..utils.utils import calculate_recipe_fingerprint
+                fingerprint = calculate_recipe_fingerprint(recipe_data['loras'])
+                recipe_data['fingerprint'] = fingerprint
+                
+                # Write updated recipe data back to file
+                try:
+                    with open(recipe_path, 'w', encoding='utf-8') as f:
+                        json.dump(recipe_data, f, indent=4, ensure_ascii=False)
+                    logger.info(f"Added fingerprint to recipe: {recipe_path}")
+                except Exception as e:
+                    logger.error(f"Error writing updated recipe with fingerprint: {e}")
             
             return recipe_data
         except Exception as e:
@@ -802,3 +816,60 @@ class RecipeScanner:
             logger.info(f"Resorted recipe cache after updating {cache_updated_count} items")
             
         return file_updated_count, cache_updated_count
+
+    async def find_recipes_by_fingerprint(self, fingerprint: str) -> list:
+        """Find recipes with a matching fingerprint
+        
+        Args:
+            fingerprint: The recipe fingerprint to search for
+            
+        Returns:
+            List of recipe details that match the fingerprint
+        """
+        if not fingerprint:
+            return []
+            
+        # Get all recipes from cache
+        cache = await self.get_cached_data()
+        
+        # Find recipes with matching fingerprint
+        matching_recipes = []
+        for recipe in cache.raw_data:
+            if recipe.get('fingerprint') == fingerprint:
+                recipe_details = {
+                    'id': recipe.get('id'),
+                    'title': recipe.get('title'),
+                    'file_url': self._format_file_url(recipe.get('file_path')),
+                    'modified': recipe.get('modified'),
+                    'created_date': recipe.get('created_date'),
+                    'lora_count': len(recipe.get('loras', []))
+                }
+                matching_recipes.append(recipe_details)
+        
+        return matching_recipes
+        
+    async def find_all_duplicate_recipes(self) -> dict:
+        """Find all recipe duplicates based on fingerprints
+        
+        Returns:
+            Dictionary where keys are fingerprints and values are lists of recipe IDs
+        """
+        # Get all recipes from cache
+        cache = await self.get_cached_data()
+        
+        # Group recipes by fingerprint
+        fingerprint_groups = {}
+        for recipe in cache.raw_data:
+            fingerprint = recipe.get('fingerprint')
+            if not fingerprint:
+                continue
+                
+            if fingerprint not in fingerprint_groups:
+                fingerprint_groups[fingerprint] = []
+                
+            fingerprint_groups[fingerprint].append(recipe.get('id'))
+        
+        # Filter to only include groups with more than one recipe
+        duplicate_groups = {k: v for k, v in fingerprint_groups.items() if len(v) > 1}
+        
+        return duplicate_groups
