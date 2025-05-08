@@ -196,24 +196,134 @@ export class RecipeDataManager {
             }
         }
         
-        // Update Next button state based on missing LoRAs
+        // Check for duplicate recipes and display warning if found
+        this.checkAndDisplayDuplicates();
+        
+        // Update Next button state based on missing LoRAs and duplicates
         this.updateNextButtonState();
+    }
+    
+    checkAndDisplayDuplicates() {
+        // Check if we have duplicate recipes
+        if (this.importManager.recipeData && 
+            this.importManager.recipeData.matching_recipes && 
+            this.importManager.recipeData.matching_recipes.length > 0) {
+            
+            // Store duplicates in the importManager for later use
+            this.importManager.duplicateRecipes = this.importManager.recipeData.matching_recipes;
+            
+            // Create duplicate warning container
+            const duplicateContainer = document.getElementById('duplicateRecipesContainer') || 
+                this.createDuplicateContainer();
+                
+            // Format date helper function
+            const formatDate = (timestamp) => {
+                try {
+                    const date = new Date(timestamp * 1000);
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                } catch (e) {
+                    return 'Unknown date';
+                }
+            };
+            
+            // Generate the HTML for duplicate recipes
+            duplicateContainer.innerHTML = `
+                <div class="duplicate-warning">
+                    <div class="warning-icon"><i class="fas fa-clone"></i></div>
+                    <div class="warning-content">
+                        <div class="warning-title">
+                            ${this.importManager.duplicateRecipes.length} similar ${this.importManager.duplicateRecipes.length === 1 ? 'recipe' : 'recipes'} found in your library
+                        </div>
+                        <div class="warning-text">
+                            These recipes contain the same LoRAs with similar weights.
+                        </div>
+                    </div>
+                </div>
+                <div class="duplicate-recipes-list">
+                    ${this.importManager.duplicateRecipes.map((recipe, index) => `
+                        <div class="duplicate-recipe-item" data-recipe-id="${recipe.id}">
+                            <div class="duplicate-recipe-preview">
+                                <img src="${recipe.file_url}" alt="Recipe preview">
+                            </div>
+                            <div class="duplicate-recipe-content">
+                                <div class="duplicate-recipe-title">${recipe.title}</div>
+                                <div class="duplicate-recipe-info">
+                                    <div class="duplicate-recipe-date">
+                                        <i class="fas fa-calendar-alt"></i> ${formatDate(recipe.modified)}
+                                    </div>
+                                    <div class="duplicate-recipe-lora-count">
+                                        <i class="fas fa-layer-group"></i> ${recipe.lora_count} LoRAs
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="duplicate-recipe-actions">
+                                <button class="danger-btn delete-recipe-btn" onclick="importManager.markDuplicateForDeletion('${recipe.id}', this)">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Show the duplicate container
+            duplicateContainer.style.display = 'block';
+            
+            // Initialize deletion tracking if not already done
+            if (!this.importManager.recipesToDelete) {
+                this.importManager.recipesToDelete = [];
+            }
+        } else {
+            // No duplicates, hide the container if it exists
+            const duplicateContainer = document.getElementById('duplicateRecipesContainer');
+            if (duplicateContainer) {
+                duplicateContainer.style.display = 'none';
+            }
+            
+            // Reset deletion tracking
+            this.importManager.duplicateRecipes = [];
+            this.importManager.recipesToDelete = [];
+        }
+    }
+    
+    createDuplicateContainer() {
+        // Find where to insert the duplicate container
+        const lorasListContainer = document.querySelector('.input-group:has(#lorasList)');
+        
+        if (!lorasListContainer) return null;
+        
+        // Create container
+        const duplicateContainer = document.createElement('div');
+        duplicateContainer.id = 'duplicateRecipesContainer';
+        duplicateContainer.className = 'duplicate-recipes-container';
+        
+        // Insert before the LoRA list
+        lorasListContainer.parentNode.insertBefore(duplicateContainer, lorasListContainer);
+        
+        return duplicateContainer;
     }
     
     updateNextButtonState() {
         const nextButton = document.querySelector('#detailsStep .primary-btn');
-        if (!nextButton) return;
+        const actionsContainer = document.querySelector('#detailsStep .modal-actions');
+        if (!nextButton || !actionsContainer) return;
         
-        // Always clean up previous warnings first
+        // Always clean up previous warnings and buttons first
         const existingWarning = document.getElementById('deletedLorasWarning');
         if (existingWarning) {
             existingWarning.remove();
         }
         
+        // Remove any existing "import anyway" button
+        const importAnywayBtn = document.getElementById('importAnywayBtn');
+        if (importAnywayBtn) {
+            importAnywayBtn.remove();
+        }
+        
         // Count deleted LoRAs
         const deletedLoras = this.importManager.recipeData.loras.filter(lora => lora.isDeleted).length;
         
-        // If we have deleted LoRAs, show a warning and update button text
+        // If we have deleted LoRAs, show a warning
         if (deletedLoras > 0) {
             // Create a new warning container above the buttons
             const buttonsContainer = document.querySelector('#detailsStep .modal-actions') || nextButton.parentNode;
@@ -233,17 +343,60 @@ export class RecipeDataManager {
             // Insert before the buttons container
             buttonsContainer.parentNode.insertBefore(warningContainer, buttonsContainer);
         }
-            
+        
+        // Check for duplicates to adjust button actions
+        const hasDuplicates = this.importManager.duplicateRecipes && 
+                             this.importManager.duplicateRecipes.length > 0;
+        
         // If we have missing LoRAs (not deleted), show "Download Missing LoRAs"
-        // Otherwise show "Save Recipe"
+        // Otherwise show appropriate action based on duplicates
         const missingNotDeleted = this.importManager.recipeData.loras.filter(
             lora => !lora.existsLocally && !lora.isDeleted
         ).length;
         
-        if (missingNotDeleted > 0) {
-            nextButton.textContent = 'Download Missing LoRAs';
+        // All LoRAs exist locally
+        const allLorasExist = missingNotDeleted === 0;
+        
+        if (hasDuplicates) {
+            if (missingNotDeleted > 0) {
+                // We have both duplicates and missing LoRAs
+                nextButton.textContent = 'Download Missing LoRAs';
+                
+                // Add "Import Anyway" as a secondary option
+                const importAnywayButton = document.createElement('button');
+                importAnywayButton.id = 'importAnywayBtn';
+                importAnywayButton.className = 'secondary-btn';
+                importAnywayButton.innerHTML = '<i class="fas fa-plus"></i> Import as New Recipe';
+                importAnywayButton.onclick = () => this.importManager.importRecipeAnyway();
+                
+                // Insert after the back button
+                const backButton = document.querySelector('#detailsStep .secondary-btn');
+                actionsContainer.insertBefore(importAnywayButton, backButton.nextSibling);
+            } else {
+                // All LoRAs exist locally, but we have duplicates
+                nextButton.textContent = 'Replace Existing Recipe';
+                nextButton.classList.add('warning-btn');
+                
+                // Add "Import as New" as a secondary option
+                const importAsNewButton = document.createElement('button');
+                importAsNewButton.id = 'importAnywayBtn';
+                importAsNewButton.className = 'secondary-btn';
+                importAsNewButton.innerHTML = '<i class="fas fa-plus"></i> Import as New Recipe';
+                importAsNewButton.onclick = () => this.importManager.importRecipeAnyway();
+                
+                // Insert after the back button
+                const backButton = document.querySelector('#detailsStep .secondary-btn');
+                actionsContainer.insertBefore(importAsNewButton, backButton.nextSibling);
+            }
         } else {
-            nextButton.textContent = 'Save Recipe';
+            // No duplicates, standard behavior
+            nextButton.classList.remove('warning-btn');
+            
+            if (missingNotDeleted > 0) {
+                nextButton.textContent = 'Download Missing LoRAs';
+            } else {
+                nextButton.textContent = 'Save Recipe';
+            }
         }
     }
 
@@ -298,10 +451,24 @@ export class RecipeDataManager {
             });
         }
         
+        // Process any recipes marked for deletion
+        if (this.importManager.recipesToDelete && this.importManager.recipesToDelete.length > 0) {
+            this.deleteMarkedRecipes();
+        }
+        
         // Update missing LoRAs list to exclude deleted LoRAs
         this.importManager.missingLoras = this.importManager.recipeData.loras.filter(lora => 
             !lora.existsLocally && !lora.isDeleted);
-            
+        
+        // Check if we're replacing a duplicate or proceeding normally
+        const hasDuplicates = this.importManager.duplicateRecipes && 
+                             this.importManager.duplicateRecipes.length > 0;
+                             
+        // Store replacement flag in importManager
+        this.importManager.isReplacingDuplicate = hasDuplicates && 
+                                               this.importManager.missingLoras.length === 0 &&
+                                               !this.importManager.importAsNew;
+        
         // Check for early access loras and show warning if any exist
         const earlyAccessLoras = this.importManager.missingLoras.filter(lora => lora.isEarlyAccess);
         if (earlyAccessLoras.length > 0) {
@@ -344,6 +511,48 @@ export class RecipeDataManager {
         } else {
             // Otherwise, save the recipe directly
             this.importManager.saveRecipe();
+        }
+    }
+    
+    async deleteMarkedRecipes() {
+        if (!this.importManager.recipesToDelete || this.importManager.recipesToDelete.length === 0) {
+            return;
+        }
+        
+        try {
+            // Show loading indicator
+            this.importManager.loadingManager.showSimpleLoading('Deleting marked recipes...');
+            
+            // Call API to delete recipes
+            const response = await fetch('/api/recipes/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    recipe_ids: this.importManager.recipesToDelete
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete recipes');
+            }
+            
+            const result = await response.json();
+            
+            // Show success message
+            const deletedCount = this.importManager.recipesToDelete.length;
+            showToast(`Successfully deleted ${deletedCount} ${deletedCount === 1 ? 'recipe' : 'recipes'}`, 'success');
+            
+            // Reset the delete list
+            this.importManager.recipesToDelete = [];
+            
+        } catch (error) {
+            console.error('Error deleting recipes:', error);
+            showToast('Failed to delete recipes: ' + error.message, 'error');
+        } finally {
+            this.importManager.loadingManager.hide();
         }
     }
 }

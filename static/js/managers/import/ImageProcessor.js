@@ -94,6 +94,9 @@ export class ImageProcessor {
                 lora => !lora.existsLocally
             );
             
+            // Reset import as new flag
+            this.importManager.importAsNew = false;
+            
             // Proceed to recipe details step
             this.importManager.showRecipeDetailsStep();
             
@@ -138,6 +141,9 @@ export class ImageProcessor {
             this.importManager.missingLoras = this.importManager.recipeData.loras.filter(
                 lora => !lora.existsLocally
             );
+            
+            // Reset import as new flag
+            this.importManager.importAsNew = false;
             
             // Proceed to recipe details step
             this.importManager.showRecipeDetailsStep();
@@ -186,6 +192,9 @@ export class ImageProcessor {
             this.importManager.missingLoras = this.importManager.recipeData.loras.filter(
                 lora => !lora.existsLocally
             );
+            
+            // Reset import as new flag
+            this.importManager.importAsNew = false;
             
             // Proceed to recipe details step
             this.importManager.showRecipeDetailsStep();

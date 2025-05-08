@@ -245,6 +245,48 @@ export class ImportManager {
         return true;
     }
 
+    /**
+     * Marks or unmarks a duplicate recipe for deletion
+     * @param {string} recipeId - The ID of the recipe to mark/unmark
+     * @param {HTMLElement} buttonElement - The button element that was clicked
+     */
+    markDuplicateForDeletion(recipeId, buttonElement) {
+        // Initialize recipesToDelete array if it doesn't exist
+        if (!this.recipesToDelete) {
+            this.recipesToDelete = [];
+        }
+
+        // Get the recipe item container
+        const recipeItem = buttonElement.closest('.duplicate-recipe-item');
+        if (!recipeItem) return;
+
+        // Check if this recipe is already marked for deletion
+        const isMarked = this.recipesToDelete.includes(recipeId);
+        
+        if (isMarked) {
+            // Unmark the recipe
+            this.recipesToDelete = this.recipesToDelete.filter(id => id !== recipeId);
+            recipeItem.classList.remove('marked-for-deletion');
+            buttonElement.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        } else {
+            // Mark the recipe for deletion
+            this.recipesToDelete.push(recipeId);
+            recipeItem.classList.add('marked-for-deletion');
+            buttonElement.innerHTML = '<i class="fas fa-undo"></i> Keep';
+        }
+    }
+
+    /**
+     * Imports the recipe as new, ignoring duplicates
+     */
+    importRecipeAnyway() {
+        // Set flag to indicate we're importing as a new recipe
+        this.importAsNew = true;
+        
+        // Proceed with normal flow but skip duplicate replacement
+        this.proceedFromDetails();
+    }
+
     downloadMissingLoras(recipeData, recipeId) {
         // Store the recipe data and ID
         this.recipeData = recipeData;
