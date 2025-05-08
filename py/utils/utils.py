@@ -148,8 +148,8 @@ def calculate_recipe_fingerprint(loras):
         if not hash_value:
             continue
             
-        # Normalize strength to 2 decimal places
-        strength = round(float(lora.get("strength", 1.0)), 2)
+        # Normalize strength to 2 decimal places (check both strength and weight fields)
+        strength = round(float(lora.get("strength", lora.get("weight", 1.0))), 2)
         
         valid_loras.append((hash_value, strength))
     

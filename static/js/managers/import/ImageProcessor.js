@@ -170,8 +170,6 @@ export class ImageProcessor {
             // Get recipe data from response
             this.importManager.recipeData = await response.json();
 
-            console.log('Recipe data:', this.importManager.recipeData);
-            
             // Check if we have an error message
             if (this.importManager.recipeData.error) {
                 throw new Error(this.importManager.recipeData.error);
@@ -182,11 +180,6 @@ export class ImageProcessor {
                 !this.importManager.recipeData.loras || 
                 this.importManager.recipeData.loras.length === 0) {
                 throw new Error('No LoRA information found in this image');
-            }
-            
-            // Store generation parameters if available
-            if (this.importManager.recipeData.gen_params) {
-                console.log('Generation parameters found:', this.importManager.recipeData.gen_params);
             }
             
             // Find missing LoRAs

@@ -56,7 +56,6 @@ export class DownloadManager {
                 // Add source_path to metadata to track where the recipe was imported from
                 if (this.importManager.importMode === 'url') {
                     const urlInput = document.getElementById('imageUrlInput');
-                    console.log("urlInput.value", urlInput.value);
                     if (urlInput && urlInput.value) {
                         completeMetadata.source_path = urlInput.value;
                     }

@@ -824,7 +824,7 @@ class RecipeScanner:
             fingerprint: The recipe fingerprint to search for
             
         Returns:
-            List of recipe IDs that match the fingerprint
+            List of recipe details that match the fingerprint
         """
         if not fingerprint:
             return []
@@ -836,7 +836,15 @@ class RecipeScanner:
         matching_recipes = []
         for recipe in cache.raw_data:
             if recipe.get('fingerprint') == fingerprint:
-                matching_recipes.append(recipe.get('id'))
+                recipe_details = {
+                    'id': recipe.get('id'),
+                    'title': recipe.get('title'),
+                    'file_url': self._format_file_url(recipe.get('file_path')),
+                    'modified': recipe.get('modified'),
+                    'created_date': recipe.get('created_date'),
+                    'lora_count': len(recipe.get('loras', []))
+                }
+                matching_recipes.append(recipe_details)
         
         return matching_recipes
         
