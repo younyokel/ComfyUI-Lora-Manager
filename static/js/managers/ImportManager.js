@@ -120,6 +120,9 @@ export class ImportManager {
         
         const earlyAccessWarning = document.getElementById('earlyAccessWarning');
         if (earlyAccessWarning) earlyAccessWarning.remove();
+        
+        // Reset duplicate related properties
+        this.duplicateRecipes = [];
     }
 
     toggleImportMode(mode) {
@@ -246,44 +249,21 @@ export class ImportManager {
     }
 
     /**
-     * Marks or unmarks a duplicate recipe for deletion
-     * @param {string} recipeId - The ID of the recipe to mark/unmark
-     * @param {HTMLElement} buttonElement - The button element that was clicked
+     * NOTE: This function is no longer needed with the simplified duplicates flow.
+     * We're keeping it as a no-op stub to avoid breaking existing code that might call it.
      */
     markDuplicateForDeletion(recipeId, buttonElement) {
-        // Initialize recipesToDelete array if it doesn't exist
-        if (!this.recipesToDelete) {
-            this.recipesToDelete = [];
-        }
-
-        // Get the recipe item container
-        const recipeItem = buttonElement.closest('.duplicate-recipe-item');
-        if (!recipeItem) return;
-
-        // Check if this recipe is already marked for deletion
-        const isMarked = this.recipesToDelete.includes(recipeId);
-        
-        if (isMarked) {
-            // Unmark the recipe
-            this.recipesToDelete = this.recipesToDelete.filter(id => id !== recipeId);
-            recipeItem.classList.remove('marked-for-deletion');
-            buttonElement.innerHTML = '<i class="fas fa-trash"></i> Delete';
-        } else {
-            // Mark the recipe for deletion
-            this.recipesToDelete.push(recipeId);
-            recipeItem.classList.add('marked-for-deletion');
-            buttonElement.innerHTML = '<i class="fas fa-undo"></i> Keep';
-        }
+        // This functionality has been removed
+        console.log('markDuplicateForDeletion is deprecated');
     }
 
     /**
-     * Imports the recipe as new, ignoring duplicates
+     * NOTE: This function is no longer needed with the simplified duplicates flow.
+     * We're keeping it as a no-op stub to avoid breaking existing code that might call it.
      */
     importRecipeAnyway() {
-        // Set flag to indicate we're importing as a new recipe
-        this.importAsNew = true;
-        
-        // Proceed with normal flow but skip duplicate replacement
+        // This functionality has been simplified
+        // Just proceed with normal flow
         this.proceedFromDetails();
     }
 
