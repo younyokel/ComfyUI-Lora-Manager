@@ -56,7 +56,6 @@ class LoraManagerLoader:
         
         # Then process loras from kwargs with support for both old and new formats
         loras_list = get_loras_list(kwargs)
-        print(f"Loaded loras list: {loras_list}")
         for lora in loras_list:
             if not lora.get('active', False):
                 continue

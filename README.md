@@ -20,6 +20,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.13
+* **Enhanced Recipe Management** - Added "Find duplicates" feature to identify and batch delete duplicate recipes with duplicate detection notifications during imports
+* **Improved Source Tracking** - Source URLs are now saved with recipes imported via URL, allowing users to view original content with one click or manually edit links
+* **Advanced LoRA Control** - Double-click LoRAs in Loader/Stacker nodes to access expanded CLIP strength controls for more precise adjustments of model and CLIP strength separately
+* **Lycoris Model Support** - Added compatibility with Lycoris models for expanded creative options
+* **Bug Fixes & UX Improvements** - Resolved various issues and enhanced overall user experience with numerous optimizations
+
 ### v0.8.12
 * **Enhanced Model Discovery** - Added alphabetical navigation bar to LoRAs page for faster browsing through large collections
 * **Optimized Example Images** - Improved download logic to automatically refresh stale metadata before fetching example images
