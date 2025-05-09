@@ -38,7 +38,7 @@ class LoraStacker:
         
         # Process existing lora_stack if available
         lora_stack = kwargs.get('lora_stack', None)
-        if lora_stack:
+        if (lora_stack):
             stack.extend(lora_stack)
             # Get trigger words from existing stack entries
             for lora_path, _, _ in lora_stack:
@@ -54,7 +54,8 @@ class LoraStacker:
                 
             lora_name = lora['name']
             model_strength = float(lora['strength'])
-            clip_strength = model_strength  # Using same strength for both as in the original loader
+            # Get clip strength - use model strength as default if not specified
+            clip_strength = float(lora.get('clipStrength', model_strength))
             
             # Get lora path and trigger words
             lora_path, trigger_words = asyncio.run(get_lora_info(lora_name))
@@ -62,15 +63,24 @@ class LoraStacker:
             # Add to stack without loading
             # replace '/' with os.sep to avoid different OS path format
             stack.append((lora_path.replace('/', os.sep), model_strength, clip_strength))
-            active_loras.append((lora_name, model_strength))
+            active_loras.append((lora_name, model_strength, clip_strength))
             
             # Add trigger words to collection
             all_trigger_words.extend(trigger_words)
         
         # use ',, ' to separate trigger words for group mode
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
-        # Format active_loras as <lora:lora_name:strength> separated by spaces
-        active_loras_text = " ".join([f"<lora:{name}:{str(strength).strip()}>" 
-                                  for name, strength in active_loras])
+        
+        # Format active_loras with support for both formats
+        formatted_loras = []
+        for name, model_strength, clip_strength in active_loras:
+            if abs(model_strength - clip_strength) > 0.001:
+                # Different model and clip strengths
+                formatted_loras.append(f"<lora:{name}:{str(model_strength).strip()}:{str(clip_strength).strip()}>")
+            else:
+                # Same strength for both
+                formatted_loras.append(f"<lora:{name}:{str(model_strength).strip()}>")
+                
+        active_loras_text = " ".join(formatted_loras)
 
         return (stack, trigger_words_text, active_loras_text)

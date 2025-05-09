@@ -29,9 +29,12 @@ export function addLorasWidget(node, name, opts, callback) {
 
   // Fixed sizes for component calculations
   const LORA_ENTRY_HEIGHT = 40; // Height of a single lora entry
+  const CLIP_ENTRY_HEIGHT = 40; // Height of a clip entry
   const HEADER_HEIGHT = 40; // Height of the header section
   const CONTAINER_PADDING = 12; // Top and bottom padding
   const EMPTY_CONTAINER_HEIGHT = 100; // Height when no loras are present
+
+  // Remove expandedClipEntries Set since we'll determine expansion based on strength values
 
   // Parse LoRA entries from value
   const parseLoraValue = (value) => {
@@ -367,7 +370,7 @@ export function addLorasWidget(node, name, opts, callback) {
   };
 
   // Function to handle strength adjustment via dragging
-  const handleStrengthDrag = (name, initialStrength, initialX, event, widget) => {
+  const handleStrengthDrag = (name, initialStrength, initialX, event, widget, isClipStrength = false) => {
     // Calculate drag sensitivity (how much the strength changes per pixel)
     // Using 0.01 per 10 pixels of movement
     const sensitivity = 0.001;
@@ -391,7 +394,12 @@ export function addLorasWidget(node, name, opts, callback) {
     const loraIndex = lorasData.findIndex(l => l.name === name);
     
     if (loraIndex >= 0) {
-      lorasData[loraIndex].strength = newStrength;
+      // Update the appropriate strength property based on isClipStrength flag
+      if (isClipStrength) {
+        lorasData[loraIndex].clipStrength = newStrength;
+      } else {
+        lorasData[loraIndex].strength = newStrength;
+      }
       
       // Update the widget value
       widget.value = formatLoraValue(lorasData);
@@ -402,7 +410,7 @@ export function addLorasWidget(node, name, opts, callback) {
   };
   
   // Function to initialize drag operation
-  const initDrag = (loraEl, nameEl, name, widget) => {
+  const initDrag = (dragEl, name, widget, isClipStrength = false) => {
     let isDragging = false;
     let initialX = 0;
     let initialStrength = 0;
@@ -420,9 +428,8 @@ export function addLorasWidget(node, name, opts, callback) {
       document.head.appendChild(styleEl);
     }
     
-    // Create a drag handler that's applied to the entire lora entry
-    // except toggle and strength controls
-    loraEl.addEventListener('mousedown', (e) => {
+    // Create a drag handler
+    dragEl.addEventListener('mousedown', (e) => {
       // Skip if clicking on toggle or strength control areas
       if (e.target.closest('.comfy-lora-toggle') || 
           e.target.closest('input') || 
@@ -437,7 +444,7 @@ export function addLorasWidget(node, name, opts, callback) {
       if (!loraData) return;
       
       initialX = e.clientX;
-      initialStrength = loraData.strength;
+      initialStrength = isClipStrength ? loraData.clipStrength : loraData.strength;
       isDragging = true;
       
       // Add class to body to enforce cursor style globally
@@ -453,7 +460,7 @@ export function addLorasWidget(node, name, opts, callback) {
       if (!isDragging) return;
       
       // Call the strength adjustment function
-      handleStrengthDrag(name, initialStrength, initialX, e, widget);
+      handleStrengthDrag(name, initialStrength, initialX, e, widget, isClipStrength);
       
       // Prevent showing the preview tooltip during drag
       previewTooltip.hide();
@@ -691,10 +698,17 @@ export function addLorasWidget(node, name, opts, callback) {
     header.appendChild(strengthLabel);
     container.appendChild(header);
 
+    // Track the total visible entries for height calculation
+    let totalVisibleEntries = lorasData.length;
+
     // Render each lora entry
     lorasData.forEach((loraData) => {
-      const { name, strength, active } = loraData;
+      const { name, strength, clipStrength, active } = loraData;
       
+      // Determine expansion state using our helper function
+      const isExpanded = shouldShowClipEntry(loraData);
+      
+      // Create the main LoRA entry
       const loraEl = document.createElement("div");
       loraEl.className = "comfy-lora-entry";
       Object.assign(loraEl.style, {
@@ -706,6 +720,41 @@ export function addLorasWidget(node, name, opts, callback) {
         backgroundColor: active ? "rgba(45, 55, 72, 0.7)" : "rgba(35, 40, 50, 0.5)",
         transition: "all 0.2s ease",
         marginBottom: "4px",
+      });
+
+      // Add double-click handler to toggle clip entry
+      loraEl.addEventListener('dblclick', (e) => {
+        // Skip if clicking on toggle or strength control areas
+        if (e.target.closest('.comfy-lora-toggle') || 
+            e.target.closest('input') || 
+            e.target.closest('.comfy-lora-arrow')) {
+          return;
+        }
+        
+        // Prevent default behavior
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Toggle the clip entry expanded state
+        const lorasData = parseLoraValue(widget.value);
+        const loraIndex = lorasData.findIndex(l => l.name === name);
+        
+        if (loraIndex >= 0) {
+          // Explicitly toggle the expansion state
+          const currentExpanded = shouldShowClipEntry(lorasData[loraIndex]);
+          lorasData[loraIndex].expanded = !currentExpanded;
+          
+          // If collapsing, set clipStrength = strength
+          if (!lorasData[loraIndex].expanded) {
+            lorasData[loraIndex].clipStrength = lorasData[loraIndex].strength;
+          } 
+          
+          // Update the widget value
+          widget.value = formatLoraValue(lorasData);
+          
+          // Re-render to show/hide clip entry
+          renderLoras(widget.value, widget);
+        }
       });
 
       // Create toggle for this lora
@@ -740,6 +789,14 @@ export function addLorasWidget(node, name, opts, callback) {
         msUserSelect: "none",
       });
 
+      // Add expand indicator to name element
+      const expandIndicator = document.createElement("span");
+      expandIndicator.textContent = isExpanded ? " ▼" : " ▶";
+      expandIndicator.style.opacity = "0.7";
+      expandIndicator.style.fontSize = "9px";
+      expandIndicator.style.marginLeft = "4px";
+      nameEl.appendChild(expandIndicator);
+
       // Move preview tooltip events to nameEl instead of loraEl
       nameEl.addEventListener('mouseenter', async (e) => {
         e.stopPropagation();
@@ -753,7 +810,7 @@ export function addLorasWidget(node, name, opts, callback) {
       });
       
       // Initialize drag functionality for strength adjustment
-      initDrag(loraEl, nameEl, name, widget);
+      initDrag(loraEl, name, widget, false);
 
       // Remove the preview tooltip events from loraEl
       loraEl.onmouseenter = () => {
@@ -897,10 +954,185 @@ export function addLorasWidget(node, name, opts, callback) {
       loraEl.appendChild(strengthControl);
 
       container.appendChild(loraEl);
+
+      // If expanded, show the clip entry
+      if (isExpanded) {
+        totalVisibleEntries++;
+        const clipEl = document.createElement("div");
+        clipEl.className = "comfy-lora-clip-entry";
+        Object.assign(clipEl.style, {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "6px",
+          paddingLeft: "20px", // Indent to align with parent name
+          borderRadius: "6px",
+          backgroundColor: active ? "rgba(65, 70, 90, 0.6)" : "rgba(50, 55, 65, 0.5)",
+          borderLeft: "2px solid rgba(72, 118, 255, 0.6)",
+          transition: "all 0.2s ease",
+          marginBottom: "4px",
+          marginLeft: "10px",
+          marginTop: "-2px"
+        });
+
+        // Create clip name display
+        const clipNameEl = document.createElement("div");
+        clipNameEl.textContent = "[clip] " + name;
+        Object.assign(clipNameEl.style, {
+          flex: "1",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          color: active ? "rgba(200, 215, 240, 0.9)" : "rgba(200, 215, 240, 0.6)",
+          fontSize: "13px",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          MozUserSelect: "none",
+          msUserSelect: "none",
+        });
+
+        // Create clip strength control
+        const clipStrengthControl = document.createElement("div");
+        Object.assign(clipStrengthControl.style, {
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        });
+
+        // Left arrow for clip
+        const clipLeftArrow = createArrowButton("left", () => {
+          // Decrease clip strength
+          const lorasData = parseLoraValue(widget.value);
+          const loraIndex = lorasData.findIndex(l => l.name === name);
+          
+          if (loraIndex >= 0) {
+            lorasData[loraIndex].clipStrength = (parseFloat(lorasData[loraIndex].clipStrength) - 0.05).toFixed(2);
+            
+            const newValue = formatLoraValue(lorasData);
+            widget.value = newValue;
+          }
+        });
+
+        // Clip strength display
+        const clipStrengthEl = document.createElement("input");
+        clipStrengthEl.type = "text";
+        clipStrengthEl.value = typeof clipStrength === 'number' ? clipStrength.toFixed(2) : Number(clipStrength).toFixed(2);
+        Object.assign(clipStrengthEl.style, {
+          minWidth: "50px",
+          width: "50px",
+          textAlign: "center",
+          color: active ? "rgba(200, 215, 240, 0.9)" : "rgba(200, 215, 240, 0.6)",
+          fontSize: "13px",
+          background: "none",
+          border: "1px solid transparent",
+          padding: "2px 4px",
+          borderRadius: "3px",
+          outline: "none",
+        });
+
+        // Add hover effect
+        clipStrengthEl.addEventListener('mouseenter', () => {
+          clipStrengthEl.style.border = "1px solid rgba(226, 232, 240, 0.2)";
+        });
+
+        clipStrengthEl.addEventListener('mouseleave', () => {
+          if (document.activeElement !== clipStrengthEl) {
+            clipStrengthEl.style.border = "1px solid transparent";
+          }
+        });
+
+        // Handle focus
+        clipStrengthEl.addEventListener('focus', () => {
+          clipStrengthEl.style.border = "1px solid rgba(72, 118, 255, 0.6)";
+          clipStrengthEl.style.background = "rgba(0, 0, 0, 0.2)";
+          // Auto-select all content
+          clipStrengthEl.select();
+        });
+
+        clipStrengthEl.addEventListener('blur', () => {
+          clipStrengthEl.style.border = "1px solid transparent";
+          clipStrengthEl.style.background = "none";
+        });
+
+        // Handle input changes
+        clipStrengthEl.addEventListener('change', () => {
+          let newValue = parseFloat(clipStrengthEl.value);
+          
+          // Validate input
+          if (isNaN(newValue)) {
+            newValue = 1.0;
+          }
+          
+          // Update value
+          const lorasData = parseLoraValue(widget.value);
+          const loraIndex = lorasData.findIndex(l => l.name === name);
+          
+          if (loraIndex >= 0) {
+            lorasData[loraIndex].clipStrength = newValue.toFixed(2);
+            
+            // Update value and trigger callback
+            const newLorasValue = formatLoraValue(lorasData);
+            widget.value = newLorasValue;
+          }
+        });
+
+        // Handle key events
+        clipStrengthEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            clipStrengthEl.blur();
+          }
+        });
+
+        // Right arrow for clip
+        const clipRightArrow = createArrowButton("right", () => {
+          // Increase clip strength
+          const lorasData = parseLoraValue(widget.value);
+          const loraIndex = lorasData.findIndex(l => l.name === name);
+          
+          if (loraIndex >= 0) {
+            lorasData[loraIndex].clipStrength = (parseFloat(lorasData[loraIndex].clipStrength) + 0.05).toFixed(2);
+            
+            const newValue = formatLoraValue(lorasData);
+            widget.value = newValue;
+          }
+        });
+
+        clipStrengthControl.appendChild(clipLeftArrow);
+        clipStrengthControl.appendChild(clipStrengthEl);
+        clipStrengthControl.appendChild(clipRightArrow);
+
+        // Assemble clip entry
+        const clipLeftSection = document.createElement("div");
+        Object.assign(clipLeftSection.style, {
+          display: "flex",
+          alignItems: "center",
+          flex: "1",
+          minWidth: "0", // Allow shrinking
+        });
+        
+        clipLeftSection.appendChild(clipNameEl);
+        
+        clipEl.appendChild(clipLeftSection);
+        clipEl.appendChild(clipStrengthControl);
+
+        // Hover effects for clip entry
+        clipEl.onmouseenter = () => {
+          clipEl.style.backgroundColor = active ? "rgba(70, 75, 95, 0.7)" : "rgba(55, 60, 70, 0.6)";
+        };
+        
+        clipEl.onmouseleave = () => {
+          clipEl.style.backgroundColor = active ? "rgba(65, 70, 90, 0.6)" : "rgba(50, 55, 65, 0.5)";
+        };
+
+        // Add drag functionality to clip entry
+        initDrag(clipEl, name, widget, true);
+
+        container.appendChild(clipEl);
+      }
     });
     
     // Calculate height based on number of loras and fixed sizes
-    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (Math.min(lorasData.length, 5) * LORA_ENTRY_HEIGHT);
+    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (Math.min(totalVisibleEntries, 8) * LORA_ENTRY_HEIGHT);
     updateWidgetHeight(calculatedHeight);
   };
 
@@ -921,7 +1153,37 @@ export function addLorasWidget(node, name, opts, callback) {
         return [...filtered, lora];
       }, []);
 
-      widgetValue = uniqueValue;
+      // Preserve clip strengths and expanded state when updating the value
+      const oldLoras = parseLoraValue(widgetValue);
+      
+      // Apply existing clip strength values and transfer them to the new value
+      const updatedValue = uniqueValue.map(lora => {
+        const existingLora = oldLoras.find(oldLora => oldLora.name === lora.name);
+        
+        // If there's an existing lora with the same name, preserve its clip strength and expanded state
+        if (existingLora) {
+          return {
+            ...lora,
+            clipStrength: existingLora.clipStrength || lora.strength,
+            expanded: existingLora.hasOwnProperty('expanded') ? 
+                      existingLora.expanded : 
+                      Number(existingLora.clipStrength || lora.strength) !== Number(lora.strength)
+          };
+        }
+        
+        // For new loras, default clip strength to model strength and expanded to false
+        // unless clipStrength is already different from strength
+        const clipStrength = lora.clipStrength || lora.strength;
+        return {
+          ...lora,
+          clipStrength: clipStrength,
+          expanded: lora.hasOwnProperty('expanded') ? 
+                    lora.expanded : 
+                    Number(clipStrength) !== Number(lora.strength)
+        };
+      });
+
+      widgetValue = updatedValue;
       renderLoras(widgetValue, widget);
     },
     getMinHeight: function() {
@@ -948,11 +1210,7 @@ export function addLorasWidget(node, name, opts, callback) {
   widget.callback = callback;
 
   widget.serializeValue = () => {
-    // Add dummy items to avoid the 2-element serialization issue, a bug in comfyui
-    return [...widgetValue, 
-        { name: "__dummy_item1__", strength: 0, active: false, _isDummy: true },
-        { name: "__dummy_item2__", strength: 0, active: false, _isDummy: true }
-      ];
+    return widgetValue;
   }
 
   widget.onRemove = () => {
@@ -966,6 +1224,8 @@ export function addLorasWidget(node, name, opts, callback) {
 // Function to directly save the recipe without dialog
 async function saveRecipeDirectly(widget) {
   try {
+    const prompt = await app.graphToPrompt();
+    console.log(prompt);
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {
       app.extensionManager.toast.add({
@@ -1014,4 +1274,14 @@ async function saveRecipeDirectly(widget) {
       });
     }
   }
+}
+
+// Determine if clip entry should be shown - now based on expanded property or initial diff values
+const shouldShowClipEntry = (loraData) => {
+  // If expanded property exists, use that
+  if (loraData.hasOwnProperty('expanded')) {
+    return loraData.expanded;
+  }
+  // Otherwise use the legacy logic - if values differ, it should be expanded
+  return Number(loraData.strength) !== Number(loraData.clipStrength);
 }

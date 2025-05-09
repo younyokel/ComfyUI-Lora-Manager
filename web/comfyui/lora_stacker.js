@@ -1,8 +1,8 @@
 import { app } from "../../scripts/app.js";
 import { dynamicImportByVersion } from "./utils.js";
 
-// Extract pattern into a constant for consistent use
-const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)>/g;
+// Update pattern to match both formats: <lora:name:model_strength> or <lora:name:model_strength:clip_strength>
+const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)(?::([-\d\.]+))?>/g;
 
 // Function to get the appropriate loras widget based on ComfyUI version
 async function getLorasWidgetModule() {
@@ -57,10 +57,15 @@ function mergeLoras(lorasText, lorasArr) {
     const result = [];
     let match;
 
+    // Reset pattern index before using
+    LORA_PATTERN.lastIndex = 0;
+    
     // Parse text input and create initial entries
     while ((match = LORA_PATTERN.exec(lorasText)) !== null) {
         const name = match[1];
-        const inputStrength = Number(match[2]);
+        const modelStrength = Number(match[2]);
+        // Extract clip strength if provided, otherwise use model strength
+        const clipStrength = match[3] ? Number(match[3]) : modelStrength;
         
         // Find if this lora exists in the array data
         const existingLora = lorasArr.find(l => l.name === name);
@@ -68,8 +73,9 @@ function mergeLoras(lorasText, lorasArr) {
         result.push({
             name: name,
             // Use existing strength if available, otherwise use input strength
-            strength: existingLora ? existingLora.strength : inputStrength,
-            active: existingLora ? existingLora.active : true
+            strength: existingLora ? existingLora.strength : modelStrength,
+            active: existingLora ? existingLora.active : true,
+            clipStrength: existingLora ? existingLora.clipStrength : clipStrength,
         });
     }
 
