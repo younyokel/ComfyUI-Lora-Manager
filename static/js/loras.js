@@ -2,7 +2,7 @@ import { appCore } from './core.js';
 import { state } from './state/index.js';
 import { showLoraModal, toggleShowcase, scrollToTop } from './components/loraModal/index.js';
 import { loadMoreLoras } from './api/loraApi.js';
-import { updateCardsForBulkMode } from './components/LoraCard.js';
+import { updateCardsForBulkMode, setupLoraCardEventDelegation } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { moveManager } from './managers/MoveManager.js';
@@ -24,7 +24,6 @@ class LoraPageManager {
         this.pageControls = createPageControls('loras');
         
         // Expose necessary functions to the page that still need global access
-        // These will be refactored in future updates
         this._exposeRequiredGlobalFunctions();
     }
     
@@ -57,13 +56,16 @@ class LoraPageManager {
         this.pageControls.initFolderTagsVisibility();
         new LoraContextMenu();
         
-        // Initialize cards for current bulk mode state (should be false initially)
+        // Set up event delegation for lora cards
+        setupLoraCardEventDelegation();
+        
+        // Initialize cards for current bulk mode state
         updateCardsForBulkMode(state.bulkMode);
         
         // Initialize the bulk manager
         bulkManager.initialize();
         
-        // Initialize common page features (lazy loading, infinite scroll)
+        // Initialize common page features (lazy loading, virtual scroll)
         appCore.initializePageFeatures();
     }
 }
