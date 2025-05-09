@@ -1,8 +1,8 @@
 import { app } from "../../scripts/app.js";
 import { dynamicImportByVersion } from "./utils.js";
 
-// Extract pattern into a constant for consistent use
-const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)>/g;
+// Update pattern to match both formats: <lora:name:model_strength> or <lora:name:model_strength:clip_strength>
+const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)(?::([-\d\.]+))?>/g;
 
 // Function to get the appropriate loras widget based on ComfyUI version
 async function getLorasWidgetModule() {
@@ -61,10 +61,15 @@ function mergeLoras(lorasText, lorasArr) {
     const result = [];
     let match;
 
+    // Reset pattern index before using
+    LORA_PATTERN.lastIndex = 0;
+    
     // Parse text input and create initial entries
     while ((match = LORA_PATTERN.exec(lorasText)) !== null) {
         const name = match[1];
-        const inputStrength = Number(match[2]);
+        const modelStrength = Number(match[2]);
+        // Extract clip strength if provided, otherwise use model strength
+        const clipStrength = match[3] ? Number(match[3]) : modelStrength;
         
         // Find if this lora exists in the array data
         const existingLora = lorasArr.find(l => l.name === name);
@@ -72,8 +77,9 @@ function mergeLoras(lorasText, lorasArr) {
         result.push({
             name: name,
             // Use existing strength if available, otherwise use input strength
-            strength: existingLora ? existingLora.strength : inputStrength,
-            active: existingLora ? existingLora.active : true
+            strength: existingLora ? existingLora.strength : modelStrength,
+            active: existingLora ? existingLora.active : true,
+            clipStrength: existingLora ? existingLora.clipStrength : clipStrength,
         });
     }
 
@@ -102,18 +108,7 @@ app.registerExtension({
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
                     const savedValue = node.widgets_values[1];
-                    // TODO: clean up this code
-                    try {
-                        // Check if the value is already an array/object
-                        if (typeof savedValue === 'object' && savedValue !== null) {
-                            existingLoras = savedValue;
-                        } else if (typeof savedValue === 'string') {
-                            existingLoras = JSON.parse(savedValue);
-                        }
-                    } catch (e) {
-                        console.warn("Failed to parse loras data:", e);
-                        existingLoras = [];
-                    }
+                    existingLoras = savedValue || [];
                 }
                 // Merge the loras data
                 const mergedLoras = mergeLoras(node.widgets[0].value, existingLoras);
@@ -139,7 +134,7 @@ app.registerExtension({
                         const currentLoras = value.map(l => l.name);
                         
                         // Use the constant pattern here as well
-                        let newText = inputWidget.value.replace(LORA_PATTERN, (match, name, strength) => {
+                        let newText = inputWidget.value.replace(LORA_PATTERN, (match, name, strength, clipStrength) => {
                             return currentLoras.includes(name) ? match : '';
                         });
                         
