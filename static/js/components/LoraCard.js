@@ -6,184 +6,6 @@ import { NSFW_LEVELS } from '../utils/constants.js';
 import { replacePreview, saveModelMetadata } from '../api/loraApi.js'
 import { showDeleteModal } from '../utils/modalUtils.js';
 
-// Set up event delegation for all card interactions
-export function setupLoraCardEventDelegation() {
-    const loraGrid = document.getElementById('loraGrid');
-    if (!loraGrid) {
-        console.warn('Lora grid not found, will try to set up event delegation later');
-        // Try again when DOM might be ready
-        setTimeout(setupLoraCardEventDelegation, 500);
-        return;
-    }
-    
-    // Remove existing event listener if any
-    const oldListener = loraGrid._cardClickListener;
-    if (oldListener) {
-        loraGrid.removeEventListener('click', oldListener);
-    }
-    
-    // Create and store the event listener
-    loraGrid._cardClickListener = (e) => {
-        // Find the card that was clicked
-        const card = e.target.closest('.lora-card');
-        if (!card) return;
-        
-        // Handle various click targets
-        if (e.target.closest('.toggle-blur-btn') || e.target.closest('.show-content-btn')) {
-            e.stopPropagation();
-            toggleCardBlur(card);
-        } else if (e.target.closest('.fa-star')) {
-            e.stopPropagation();
-            toggleFavoriteStatus(card);
-        } else if (e.target.closest('.fa-globe') && card.dataset.from_civitai === 'true') {
-            e.stopPropagation();
-            openCivitai(card.dataset.name);
-        } else if (e.target.closest('.fa-copy')) {
-            e.stopPropagation();
-            copyCardLoraText(card);
-        } else if (e.target.closest('.fa-trash')) {
-            e.stopPropagation();
-            showDeleteModal(card.dataset.filepath);
-        } else if (e.target.closest('.fa-image')) {
-            e.stopPropagation();
-            replacePreview(card.dataset.filepath);
-        } else if (state.bulkMode) {
-            bulkManager.toggleCardSelection(card);
-        } else {
-            // Main card click - show modal
-            const loraMeta = getLoraDataFromCard(card);
-            showLoraModal(loraMeta);
-        }
-    };
-    
-    console.log('Setting up event delegation for LoRA cards');
-    // Add the event listener
-    loraGrid.addEventListener('click', loraGrid._cardClickListener);
-    
-    // Set up hover event delegation for video autoplay if needed
-    if (state.global?.settings?.autoplayOnHover) {
-        // Remove any existing handlers
-        if (loraGrid._mouseEnterListener) {
-            loraGrid.removeEventListener('mouseenter', loraGrid._mouseEnterListener, true);
-        }
-        if (loraGrid._mouseLeaveListener) {
-            loraGrid.removeEventListener('mouseleave', loraGrid._mouseLeaveListener, true);
-        }
-        
-        // Create and save the handlers
-        loraGrid._mouseEnterListener = (e) => {
-            const cardPreview = e.target.closest('.card-preview');
-            if (!cardPreview) return;
-            
-            const video = cardPreview.querySelector('video');
-            if (video) video.play().catch(() => {});
-        };
-        
-        loraGrid._mouseLeaveListener = (e) => {
-            const cardPreview = e.target.closest('.card-preview');
-            if (!cardPreview) return;
-            
-            const video = cardPreview.querySelector('video');
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-            }
-        };
-        
-        // Add the listeners
-        loraGrid.addEventListener('mouseenter', loraGrid._mouseEnterListener, true);
-        loraGrid.addEventListener('mouseleave', loraGrid._mouseLeaveListener, true);
-    }
-}
-
-// Helper function to toggle blur state
-function toggleCardBlur(card) {
-    const preview = card.querySelector('.card-preview');
-    const isBlurred = preview.classList.toggle('blurred');
-    const icon = card.querySelector('.toggle-blur-btn i');
-    
-    if (icon) {
-        icon.className = isBlurred ? 'fas fa-eye' : 'fas fa-eye-slash';
-    }
-    
-    const overlay = card.querySelector('.nsfw-overlay');
-    if (overlay) {
-        overlay.style.display = isBlurred ? 'flex' : 'none';
-    }
-}
-
-// Helper function to toggle favorite status
-async function toggleFavoriteStatus(card) {
-    const starIcon = card.querySelector('.fa-star');
-    if (!starIcon) return;
-    
-    const isFavorite = starIcon.classList.contains('fas');
-    const newFavoriteState = !isFavorite;
-    
-    try {
-        // Save the new favorite state to the server
-        await saveModelMetadata(card.dataset.filepath, { 
-            favorite: newFavoriteState 
-        });
-
-        // Update the UI
-        if (newFavoriteState) {
-            starIcon.classList.remove('far');
-            starIcon.classList.add('fas', 'favorite-active');
-            starIcon.title = 'Remove from favorites';
-            card.dataset.favorite = 'true';
-            showToast('Added to favorites', 'success');
-        } else {
-            starIcon.classList.remove('fas', 'favorite-active');
-            starIcon.classList.add('far');
-            starIcon.title = 'Add to favorites';
-            card.dataset.favorite = 'false';
-            showToast('Removed from favorites', 'success');
-        }
-    } catch (error) {
-        console.error('Failed to update favorite status:', error);
-        showToast('Failed to update favorite status', 'error');
-    }
-}
-
-// Helper function to copy LoRA syntax
-async function copyCardLoraText(card) {
-    const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
-    const strength = usageTips.strength || 1;
-    const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
-    
-    await copyToClipboard(loraSyntax, 'LoRA syntax copied');
-}
-
-// Helper function to extract LoRA data from card
-function getLoraDataFromCard(card) {
-    return {
-        sha256: card.dataset.sha256,
-        file_path: card.dataset.filepath,
-        model_name: card.dataset.name,
-        file_name: card.dataset.file_name,
-        folder: card.dataset.folder,
-        modified: card.dataset.modified,
-        file_size: card.dataset.file_size,
-        from_civitai: card.dataset.from_civitai === 'true',
-        base_model: card.dataset.base_model,
-        usage_tips: card.dataset.usage_tips,
-        notes: card.dataset.notes,
-        favorite: card.dataset.favorite === 'true',
-        // Parse civitai metadata from the card's dataset
-        civitai: (() => {
-            try {
-                return JSON.parse(card.dataset.meta || '{}');
-            } catch (e) {
-                console.error('Failed to parse civitai metadata:', e);
-                return {}; 
-            }
-        })(),
-        tags: JSON.parse(card.dataset.tags || '[]'),
-        modelDescription: card.dataset.modelDescription || ''
-    };
-}
-
 export function createLoraCard(lora) {
     const card = document.createElement('div');
     card.className = 'lora-card';
@@ -243,8 +65,7 @@ export function createLoraCard(lora) {
     // Check if autoplayOnHover is enabled for video previews
     const autoplayOnHover = state.global.settings.autoplayOnHover || false;
     const isVideo = previewUrl.endsWith('.mp4');
-    // Don't automatically play videos until visible
-    const videoAttrs = autoplayOnHover ? 'controls muted loop' : 'controls muted loop';
+    const videoAttrs = autoplayOnHover ? 'controls muted loop' : 'controls autoplay muted loop';
 
     // Get favorite status from the lora data
     const isFavorite = lora.favorite === true;
@@ -255,8 +76,8 @@ export function createLoraCard(lora) {
                 `<video ${videoAttrs}>
                     <source src="${versionedPreviewUrl}" type="video/mp4">
                 </video>` :
-                `<img src="${versionedPreviewUrl}" alt="${lora.model_name}">
-            `}
+                `<img src="${versionedPreviewUrl}" alt="${lora.model_name}">`
+            }
             <div class="card-header">
                 ${shouldBlur ? 
                   `<button class="toggle-blur-btn" title="Toggle blur">
@@ -301,6 +122,153 @@ export function createLoraCard(lora) {
             </div>
         </div>
     `;
+
+    // Main card click event - modified to handle bulk mode
+    card.addEventListener('click', () => {
+        // Check if we're in bulk mode
+        if (state.bulkMode) {
+            // Toggle selection using the bulk manager
+            bulkManager.toggleCardSelection(card);
+        } else {
+            // Normal behavior - show modal
+            const loraMeta = {
+                sha256: card.dataset.sha256,
+                file_path: card.dataset.filepath,
+                model_name: card.dataset.name,
+                file_name: card.dataset.file_name,
+                folder: card.dataset.folder,
+                modified: card.dataset.modified,
+                file_size: card.dataset.file_size,
+                from_civitai: card.dataset.from_civitai === 'true',
+                base_model: card.dataset.base_model,
+                usage_tips: card.dataset.usage_tips,
+                notes: card.dataset.notes,
+                favorite: card.dataset.favorite === 'true',
+                // Parse civitai metadata from the card's dataset
+                civitai: (() => {
+                    try {
+                        // Attempt to parse the JSON string
+                        return JSON.parse(card.dataset.meta || '{}');
+                    } catch (e) {
+                        console.error('Failed to parse civitai metadata:', e);
+                        return {}; // Return empty object on error
+                    }
+                })(),
+                tags: JSON.parse(card.dataset.tags || '[]'),
+                modelDescription: card.dataset.modelDescription || ''
+            };
+            showLoraModal(loraMeta);
+        }
+    });
+
+    // Toggle blur button functionality
+    const toggleBlurBtn = card.querySelector('.toggle-blur-btn');
+    if (toggleBlurBtn) {
+        toggleBlurBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const preview = card.querySelector('.card-preview');
+            const isBlurred = preview.classList.toggle('blurred');
+            const icon = toggleBlurBtn.querySelector('i');
+            
+            // Update the icon based on blur state
+            if (isBlurred) {
+                icon.className = 'fas fa-eye';
+            } else {
+                icon.className = 'fas fa-eye-slash';
+            }
+            
+            // Toggle the overlay visibility
+            const overlay = card.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = isBlurred ? 'flex' : 'none';
+            }
+        });
+    }
+
+    // Show content button functionality
+    const showContentBtn = card.querySelector('.show-content-btn');
+    if (showContentBtn) {
+        showContentBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const preview = card.querySelector('.card-preview');
+            preview.classList.remove('blurred');
+            
+            // Update the toggle button icon
+            const toggleBtn = card.querySelector('.toggle-blur-btn');
+            if (toggleBtn) {
+                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+            }
+            
+            // Hide the overlay
+            const overlay = card.querySelector('.nsfw-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        });
+    }
+
+    // Favorite button click event
+    card.querySelector('.fa-star')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const starIcon = e.currentTarget;
+        const isFavorite = starIcon.classList.contains('fas');
+        const newFavoriteState = !isFavorite;
+        
+        try {
+            // Save the new favorite state to the server
+            await saveModelMetadata(card.dataset.filepath, { 
+                favorite: newFavoriteState 
+            });
+
+            // Update the UI
+            if (newFavoriteState) {
+                starIcon.classList.remove('far');
+                starIcon.classList.add('fas', 'favorite-active');
+                starIcon.title = 'Remove from favorites';
+                card.dataset.favorite = 'true';
+                showToast('Added to favorites', 'success');
+            } else {
+                starIcon.classList.remove('fas', 'favorite-active');
+                starIcon.classList.add('far');
+                starIcon.title = 'Add to favorites';
+                card.dataset.favorite = 'false';
+                showToast('Removed from favorites', 'success');
+            }
+        } catch (error) {
+            console.error('Failed to update favorite status:', error);
+            showToast('Failed to update favorite status', 'error');
+        }
+    });
+
+    // Copy button click event
+    card.querySelector('.fa-copy')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+        const strength = usageTips.strength || 1;
+        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+        
+        await copyToClipboard(loraSyntax, 'LoRA syntax copied');
+    });
+
+    // Civitai button click event
+    if (lora.from_civitai) {
+        card.querySelector('.fa-globe')?.addEventListener('click', e => {
+            e.stopPropagation();
+            openCivitai(lora.model_name);
+        });
+    }
+
+    // Delete button click event
+    card.querySelector('.fa-trash')?.addEventListener('click', e => {
+        e.stopPropagation();
+        showDeleteModal(lora.file_path);
+    });
+
+    // Replace preview button click event
+    card.querySelector('.fa-image')?.addEventListener('click', e => {
+        e.stopPropagation();
+        replacePreview(lora.file_path);
+    });
     
     // Apply bulk mode styling if currently in bulk mode
     if (state.bulkMode) {
@@ -310,6 +278,26 @@ export function createLoraCard(lora) {
         });
     }
     
+    // Add autoplayOnHover handlers for video elements if needed
+    const videoElement = card.querySelector('video');
+    if (videoElement && autoplayOnHover) {
+        const cardPreview = card.querySelector('.card-preview');
+        
+        // Remove autoplay attribute and pause initially
+        videoElement.removeAttribute('autoplay');
+        videoElement.pause();
+        
+        // Add mouse events to trigger play/pause
+        cardPreview.addEventListener('mouseenter', () => {
+            videoElement.play();
+        });
+        
+        cardPreview.addEventListener('mouseleave', () => {
+            videoElement.pause();
+            videoElement.currentTime = 0;
+        });
+    }
+
     return card;
 }
 

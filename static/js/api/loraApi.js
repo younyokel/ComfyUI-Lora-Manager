@@ -1,4 +1,4 @@
-import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
+import { createLoraCard } from '../components/LoraCard.js';
 import {
     loadMoreModels,
     resetAndReload as baseResetAndReload,
@@ -45,9 +45,6 @@ export async function excludeLora(filePath) {
 }
 
 export async function loadMoreLoras(resetPage = false, updateFolders = false) {
-    // Make sure event delegation is set up
-    setupLoraCardEventDelegation();
-    
     return loadMoreModels({
         resetPage,
         updateFolders,
@@ -71,6 +68,16 @@ export async function deleteModel(filePath) {
 
 export async function replacePreview(filePath) {
     return replaceModelPreview(filePath, 'lora');
+}
+
+export function appendLoraCards(loras) {
+    const grid = document.getElementById('loraGrid');
+    const sentinel = document.getElementById('scroll-sentinel');
+    
+    loras.forEach(lora => {
+        const card = createLoraCard(lora);
+        grid.appendChild(card);
+    });
 }
 
 export async function resetAndReload(updateFolders = false) {
