@@ -1,12 +1,176 @@
 // filepath: d:\Workspace\ComfyUI\custom_nodes\ComfyUI-Lora-Manager\static\js\api\baseModelApi.js
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
-import { showDeleteModal, confirmDelete } from '../utils/modalUtils.js';
 import { getSessionItem, saveMapToStorage } from '../utils/storageHelpers.js';
 
 /**
  * Shared functionality for handling models (loras and checkpoints)
  */
+
+// Virtual scrolling configuration
+const VIRTUAL_SCROLL_CONFIG = {
+    MAX_DOM_CARDS: 300, // Maximum DOM elements to keep
+    BUFFER_SIZE: 20,    // Extra items to render above/below viewport
+    CLEANUP_INTERVAL: 5000, // How often to check for cards to clean up (ms)
+}
+
+// Track rendered items and all loaded items
+const virtualScrollState = {
+    visibleItems: new Map(), // Track rendered items by filepath
+    allItems: [],            // All data items loaded so far
+    observer: null,          // IntersectionObserver for visibility tracking
+    cleanupTimer: null,      // Timer for periodic cleanup
+    initialized: false       // Whether virtual scrolling is initialized
+}
+
+// Initialize virtual scrolling
+function initVirtualScroll(modelType) {
+    if (virtualScrollState.initialized) return;
+    
+    const gridId = modelType === 'checkpoint' ? 'checkpointGrid' : 'loraGrid';
+    const gridElement = document.getElementById(gridId);
+    if (!gridElement) return;
+    
+    // Create intersection observer to track visible cards
+    virtualScrollState.observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const cardElement = entry.target;
+            const filepath = cardElement.dataset.filepath;
+            
+            if (entry.isIntersecting) {
+                // Load media for cards entering viewport
+                lazyLoadCardMedia(cardElement);
+            } else {
+                // Card is no longer visible
+                if (entry.boundingClientRect.top < -1000 || entry.boundingClientRect.top > window.innerHeight + 1000) {
+                    // If card is far outside viewport, consider removing it
+                    virtualScrollState.visibleItems.delete(filepath);
+                    cleanupCardResources(cardElement);
+                    cardElement.remove();
+                }
+            }
+        });
+    }, {
+        rootMargin: '500px', // Start loading when within 500px of viewport
+        threshold: 0
+    });
+    
+    // Set up periodic cleanup for DOM elements
+    virtualScrollState.cleanupTimer = setInterval(() => {
+        checkCardThreshold(modelType);
+    }, VIRTUAL_SCROLL_CONFIG.CLEANUP_INTERVAL);
+    
+    // Set up scroll event listener for loading more content
+    window.addEventListener('scroll', throttle(() => {
+        const scrollPosition = window.scrollY + window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        // If we're close to the bottom and not already loading, load more
+        if (scrollPosition > documentHeight - 1000) {
+            const pageState = getCurrentPageState();
+            if (!pageState.isLoading && pageState.hasMore) {
+                // This will trigger loading more items using the existing pagination
+                const loadMoreFunction = modelType === 'checkpoint' ? 
+                    window.loadMoreCheckpoints : window.loadMoreLoras;
+                    
+                if (typeof loadMoreFunction === 'function') {
+                    loadMoreFunction(false, false);
+                }
+            }
+        }
+    }, 200));
+    
+    virtualScrollState.initialized = true;
+}
+
+// Clean up resources for a card
+function cleanupCardResources(cardElement) {
+    try {
+        // Stop videos and free resources
+        const video = cardElement.querySelector('video');
+        if (video) {
+            video.pause();
+            video.src = '';
+            video.load();
+        }
+        
+        // Remove from observer
+        if (virtualScrollState.observer) {
+            virtualScrollState.observer.unobserve(cardElement);
+        }
+    } catch (e) {
+        console.error('Error cleaning up card resources:', e);
+    }
+}
+
+// Lazy load media content in a card
+function lazyLoadCardMedia(cardElement) {
+    // Lazy load images
+    const img = cardElement.querySelector('img[data-src]');
+    if (img) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+    }
+    
+    // Lazy load videos
+    const video = cardElement.querySelector('video[data-src]');
+    if (video) {
+        video.src = video.dataset.src;
+        video.removeAttribute('data-src');
+        
+        // Check if we should autoplay this video
+        const autoplayOnHover = state?.global?.settings?.autoplayOnHover || false;
+        
+        if (!autoplayOnHover) {
+            // If not in hover-only mode, autoplay videos when they enter viewport
+            video.muted = true; // Muted videos can autoplay without user interaction
+            video.play().catch(err => {
+                console.log("Could not autoplay video, likely due to browser policy:", err);
+            });
+        }
+    }
+}
+
+// Check if we need to clean up any cards
+function checkCardThreshold(modelType) {
+    const gridId = modelType === 'checkpoint' ? 'checkpointGrid' : 'loraGrid';
+    const cards = document.querySelectorAll(`#${gridId} .lora-card`);
+    
+    if (cards.length > VIRTUAL_SCROLL_CONFIG.MAX_DOM_CARDS) {
+        // We have more cards than our threshold, remove those far from viewport
+        const cardsToRemove = cards.length - VIRTUAL_SCROLL_CONFIG.MAX_DOM_CARDS;
+        console.log(`Cleaning up ${cardsToRemove} cards to maintain performance`);
+        
+        let removedCount = 0;
+        cards.forEach(card => {
+            if (removedCount >= cardsToRemove) return;
+            
+            const rect = card.getBoundingClientRect();
+            // Remove cards that are far outside viewport
+            if (rect.bottom < -1000 || rect.top > window.innerHeight + 1000) {
+                const filepath = card.dataset.filepath;
+                virtualScrollState.visibleItems.delete(filepath);
+                cleanupCardResources(card);
+                card.remove();
+                removedCount++;
+            }
+        });
+    }
+}
+
+// Utility function to throttle function calls
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
 
 // Generic function to load more models with pagination
 export async function loadMoreModels(options = {}) {
@@ -26,13 +190,20 @@ export async function loadMoreModels(options = {}) {
     document.body.classList.add('loading');
     
     try {
-        // Reset to first page if requested
+        // Initialize virtual scrolling if not already done
+        initVirtualScroll(modelType);
+        
+        // Reset pagination and state if requested
         if (resetPage) {
             pageState.currentPage = 1;
-            // Clear grid if resetting
+            
+            // Clear the grid and virtual scroll state
             const gridId = modelType === 'checkpoint' ? 'checkpointGrid' : 'loraGrid';
             const grid = document.getElementById(gridId);
             if (grid) grid.innerHTML = '';
+            
+            virtualScrollState.visibleItems.clear();
+            virtualScrollState.allItems = [];
         }
         
         const params = new URLSearchParams({
@@ -135,10 +306,23 @@ export async function loadMoreModels(options = {}) {
         } else if (data.items.length > 0) {
             pageState.hasMore = pageState.currentPage < data.total_pages;
             
-            // Append model cards using the provided card creation function
+            // Add new items to our collection of all items
+            virtualScrollState.allItems = [...virtualScrollState.allItems, ...data.items];
+            
+            // Create and append cards with optimized rendering
             data.items.forEach(model => {
-                const card = createCardFunction(model);
+                // Skip if we already have this card rendered
+                if (virtualScrollState.visibleItems.has(model.file_path)) return;
+                
+                // Create the card with lazy loading for media
+                const card = createOptimizedCard(model, createCardFunction);
                 grid.appendChild(card);
+                
+                // Track this card and observe it
+                virtualScrollState.visibleItems.set(model.file_path, card);
+                if (virtualScrollState.observer) {
+                    virtualScrollState.observer.observe(card);
+                }
             });
             
             // Increment the page number AFTER successful loading
@@ -158,6 +342,57 @@ export async function loadMoreModels(options = {}) {
         pageState.isLoading = false;
         document.body.classList.remove('loading');
     }
+}
+
+// Create a card with optimizations for lazy loading media
+function createOptimizedCard(model, createCardFunction) {
+    // Create the card using the original function
+    const card = createCardFunction(model);
+    
+    // Optimize image/video loading
+    const img = card.querySelector('img');
+    if (img) {
+        // Replace src with data-src to defer loading
+        img.dataset.src = img.src;
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // Tiny transparent placeholder
+    }
+    
+    const video = card.querySelector('video');
+    if (video) {
+        const source = video.querySelector('source');
+        if (source) {
+            // Store the video source for lazy loading
+            video.dataset.src = source.src;
+            source.removeAttribute('src');
+        } else if (video.src) {
+            // Handle direct src attribute
+            video.dataset.src = video.src;
+            video.removeAttribute('src');
+        }
+        
+        // Save autoplay state but prevent autoplay until visible
+        if (video.hasAttribute('autoplay')) {
+            video.dataset.autoplay = 'true';
+            video.removeAttribute('autoplay');
+        }
+    }
+    
+    return card;
+}
+
+// Clean up virtual scroll when page changes
+export function cleanupVirtualScroll() {
+    if (virtualScrollState.observer) {
+        virtualScrollState.observer.disconnect();
+    }
+    
+    if (virtualScrollState.cleanupTimer) {
+        clearInterval(virtualScrollState.cleanupTimer);
+    }
+    
+    virtualScrollState.visibleItems.clear();
+    virtualScrollState.allItems = [];
+    virtualScrollState.initialized = false;
 }
 
 // Update folder tags in the UI

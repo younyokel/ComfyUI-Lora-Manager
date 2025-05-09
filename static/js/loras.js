@@ -2,13 +2,14 @@ import { appCore } from './core.js';
 import { state } from './state/index.js';
 import { showLoraModal, toggleShowcase, scrollToTop } from './components/loraModal/index.js';
 import { loadMoreLoras } from './api/loraApi.js';
-import { updateCardsForBulkMode } from './components/LoraCard.js';
+import { updateCardsForBulkMode, setupLoraCardEventDelegation } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { DownloadManager } from './managers/DownloadManager.js';
 import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
+import { cleanupVirtualScroll } from './api/baseModelApi.js';
 
 // Initialize the LoRA page
 class LoraPageManager {
@@ -63,8 +64,16 @@ class LoraPageManager {
         // Initialize the bulk manager
         bulkManager.initialize();
         
+        // Set up event delegation for card interactions
+        setupLoraCardEventDelegation();
+        
         // Initialize common page features (lazy loading, infinite scroll)
         appCore.initializePageFeatures();
+
+        // Handle cleanup when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            cleanupVirtualScroll();
+        });
     }
 }
 
