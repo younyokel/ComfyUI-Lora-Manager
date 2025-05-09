@@ -362,6 +362,23 @@ class CLIPTextEncodeFluxExtractor(NodeMetadataExtractor):
                 
             metadata[SAMPLING][node_id]["parameters"]["guidance"] = guidance_value
 
+class CFGGuiderExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs or "cfg" not in inputs:
+            return
+            
+        cfg_value = inputs.get("cfg")
+        
+        # Store the cfg value in SAMPLING category
+        if SAMPLING not in metadata:
+            metadata[SAMPLING] = {}
+            
+        if node_id not in metadata[SAMPLING]:
+            metadata[SAMPLING][node_id] = {"parameters": {}, "node_id": node_id}
+            
+        metadata[SAMPLING][node_id]["parameters"]["cfg"] = cfg_value
+
 # Registry of node-specific extractors
 NODE_EXTRACTORS = {
     # Sampling
@@ -383,6 +400,7 @@ NODE_EXTRACTORS = {
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux
     "FluxGuidance": FluxGuidanceExtractor,      # Add FluxGuidance
+    "CFGGuider": CFGGuiderExtractor,            # Add CFGGuider
     # Image
     "VAEDecode": VAEDecodeExtractor,  # Added VAEDecode extractor
     # Add other nodes as needed

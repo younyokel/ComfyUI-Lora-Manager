@@ -187,19 +187,36 @@ class MetadataProcessor:
                         sampler_params = metadata[SAMPLING][sampler_node_id].get("parameters", {})
                         params["sampler"] = sampler_params.get("sampler_name")
                     
-                    # 3. Trace guider input for FluxGuidance and CLIPTextEncode
+                    # 3. Trace guider input for CFGGuider, FluxGuidance and CLIPTextEncode
                     guider_node_id = MetadataProcessor.trace_node_input(prompt, primary_sampler_id, "guider", max_depth=5)
-                    if guider_node_id:
-                        # Look for FluxGuidance along the guider path
-                        flux_node_id = MetadataProcessor.trace_node_input(prompt, guider_node_id, "conditioning", "FluxGuidance", max_depth=5)
-                        if flux_node_id and flux_node_id in metadata.get(SAMPLING, {}):
-                            flux_params = metadata[SAMPLING][flux_node_id].get("parameters", {})
-                            params["guidance"] = flux_params.get("guidance")
-                        
-                        # Find CLIPTextEncode for positive prompt (through conditioning)
-                        positive_node_id = MetadataProcessor.trace_node_input(prompt, guider_node_id, "conditioning", "CLIPTextEncode", max_depth=10)
-                        if positive_node_id and positive_node_id in metadata.get(PROMPTS, {}):
-                            params["prompt"] = metadata[PROMPTS][positive_node_id].get("text", "")
+                    if guider_node_id and guider_node_id in prompt.original_prompt:
+                        # Check if the guider node is a CFGGuider
+                        if prompt.original_prompt[guider_node_id].get("class_type") == "CFGGuider":
+                            # Extract cfg value from the CFGGuider
+                            if guider_node_id in metadata.get(SAMPLING, {}):
+                                cfg_params = metadata[SAMPLING][guider_node_id].get("parameters", {})
+                                params["cfg_scale"] = cfg_params.get("cfg")
+                            
+                            # Find CLIPTextEncode for positive prompt
+                            positive_node_id = MetadataProcessor.trace_node_input(prompt, guider_node_id, "positive", "CLIPTextEncode", max_depth=10)
+                            if positive_node_id and positive_node_id in metadata.get(PROMPTS, {}):
+                                params["prompt"] = metadata[PROMPTS][positive_node_id].get("text", "")
+                            
+                            # Find CLIPTextEncode for negative prompt
+                            negative_node_id = MetadataProcessor.trace_node_input(prompt, guider_node_id, "negative", "CLIPTextEncode", max_depth=10)
+                            if negative_node_id and negative_node_id in metadata.get(PROMPTS, {}):
+                                params["negative_prompt"] = metadata[PROMPTS][negative_node_id].get("text", "")
+                        else:
+                            # Look for FluxGuidance along the guider path
+                            flux_node_id = MetadataProcessor.trace_node_input(prompt, guider_node_id, "conditioning", "FluxGuidance", max_depth=5)
+                            if flux_node_id and flux_node_id in metadata.get(SAMPLING, {}):
+                                flux_params = metadata[SAMPLING][flux_node_id].get("parameters", {})
+                                params["guidance"] = flux_params.get("guidance")
+                            
+                            # Find CLIPTextEncode for positive prompt (through conditioning)
+                            positive_node_id = MetadataProcessor.trace_node_input(prompt, guider_node_id, "conditioning", "CLIPTextEncode", max_depth=10)
+                            if positive_node_id and positive_node_id in metadata.get(PROMPTS, {}):
+                                params["prompt"] = metadata[PROMPTS][positive_node_id].get("text", "")
                 
                 else:
                     # Original tracing for standard samplers
