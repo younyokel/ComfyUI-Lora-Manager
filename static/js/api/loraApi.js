@@ -70,6 +70,16 @@ export async function replacePreview(filePath) {
     return replaceModelPreview(filePath, 'lora');
 }
 
+export function appendLoraCards(loras) {
+    const grid = document.getElementById('loraGrid');
+    const sentinel = document.getElementById('scroll-sentinel');
+    
+    loras.forEach(lora => {
+        const card = createLoraCard(lora);
+        grid.appendChild(card);
+    });
+}
+
 export async function resetAndReload(updateFolders = false) {
     return baseResetAndReload({
         updateFolders,

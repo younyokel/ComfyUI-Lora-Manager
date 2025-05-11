@@ -7,7 +7,7 @@ import { HeaderManager } from './components/Header.js';
 import { settingsManager } from './managers/SettingsManager.js';
 import { exampleImagesManager } from './managers/ExampleImagesManager.js';
 import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
-import { initializeVirtualScroll } from './utils/virtualScroll.js';
+import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { migrateStorageItems } from './utils/storageHelpers.js';
 
 // Core application class
@@ -63,9 +63,9 @@ export class AppCore {
         // Initialize lazy loading for images on all pages
         lazyLoadImages();
         
-        // Initialize virtual scroll for pages that need it
+        // Initialize infinite scroll for pages that need it
         if (['loras', 'recipes', 'checkpoints'].includes(pageType)) {
-            initializeVirtualScroll(pageType);
+            initializeInfiniteScroll(pageType);
         }
         
         return this;
@@ -81,4 +81,4 @@ document.addEventListener('DOMContentLoaded', () => {
 export const appCore = new AppCore();
 
 // Export common utilities for global use
-export { showToast, lazyLoadImages, initializeVirtualScroll };
+export { showToast, lazyLoadImages, initializeInfiniteScroll };

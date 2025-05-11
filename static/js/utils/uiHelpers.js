@@ -92,68 +92,16 @@ export function showToast(message, type = 'info') {
 }
 
 export function lazyLoadImages() {
-    // Use a single observer for all images with data-src attribute
-    const observer = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
             if (entry.isIntersecting && entry.target.dataset.src) {
-                // Only set src when the image becomes visible
                 entry.target.src = entry.target.dataset.src;
-                
-                // Once loaded, stop observing this image
                 observer.unobserve(entry.target);
-                
-                // Handle load error by replacing with a fallback
-                entry.target.onerror = () => {
-                    entry.target.src = '/loras_static/images/no-preview.png';
-                };
             }
         });
-    }, {
-        rootMargin: '100px', // Load images a bit before they come into view
-        threshold: 0.1
     });
 
-    // Start observing all images with data-src attribute
-    document.querySelectorAll('img[data-src]').forEach(img => {
-        observer.observe(img);
-    });
-    
-    // Store the observer in state to avoid multiple instances
-    if (state.imageObserver) {
-        state.imageObserver.disconnect();
-    }
-    state.imageObserver = observer;
-    
-    // Add a mutation observer to handle dynamically added images
-    if (!state.mutationObserver) {
-        state.mutationObserver = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) { // Element node
-                            // Check for img[data-src] in the added node
-                            const images = node.querySelectorAll 
-                                ? node.querySelectorAll('img[data-src]') 
-                                : [];
-                            
-                            images.forEach(img => observer.observe(img));
-                            
-                            // Check if the node itself is an image with data-src
-                            if (node.tagName === 'IMG' && node.dataset.src) {
-                                observer.observe(node);
-                            }
-                        }
-                    });
-                }
-            });
-        });
-        
-        // Start observing the body for changes
-        state.mutationObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
+    document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img));
 }
 
 export function restoreFolderFilter() {
