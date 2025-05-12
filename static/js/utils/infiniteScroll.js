@@ -1,7 +1,7 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { debounce } from './debounce.js';
 import { VirtualScroller } from './VirtualScroller.js';
-import { createLoraCard } from '../components/LoraCard.js';
+import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
 import { fetchLorasPage } from '../api/loraApi.js';
 import { showToast } from './uiHelpers.js';
 
@@ -73,6 +73,11 @@ export async function initializeInfiniteScroll(pageType = 'loras') {
 
     // Use virtual scrolling for all page types
     await initializeVirtualScroll(pageType);
+    
+    // Setup event delegation for lora cards if on the loras page
+    if (pageType === 'loras') {
+        setupLoraCardEventDelegation();
+    }
 }
 
 async function initializeVirtualScroll(pageType) {

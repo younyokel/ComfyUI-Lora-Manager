@@ -27,6 +27,13 @@ export class VirtualScroller {
         this.pendingScroll = null;
         this.resizeObserver = null;
 
+        // Data windowing parameters
+        this.windowSize = options.windowSize || 2000; // ±1000 items from current view
+        this.windowPadding = options.windowPadding || 500; // Buffer before loading more
+        this.dataWindow = { start: 0, end: 0 }; // Current data window indices
+        this.absoluteWindowStart = 0; // Start index in absolute terms
+        this.fetchingWindow = false; // Flag to track window fetching state
+
         // Responsive layout state
         this.itemWidth = 0;
         this.itemHeight = 0;
@@ -176,9 +183,13 @@ export class VirtualScroller {
         
         try {
             const { items, totalItems, hasMore } = await this.fetchItemsFn(1, this.pageSize);
+            
+            // Initialize the data window with the first batch of items
             this.items = items || [];
             this.totalItems = totalItems || 0;
             this.hasMore = hasMore;
+            this.dataWindow = { start: 0, end: this.items.length };
+            this.absoluteWindowStart = 0;
             
             // Update the spacer height based on the total number of items
             this.updateSpacerHeight();
@@ -337,20 +348,31 @@ export class VirtualScroller {
             }
         }
         
-        // Add new visible items
+        // Use DocumentFragment for batch DOM operations
+        const fragment = document.createDocumentFragment();
+        
+        // Add new visible items to the fragment
         for (let i = start; i < end && i < this.items.length; i++) {
             if (!this.renderedItems.has(i)) {
                 const item = this.items[i];
                 const element = this.createItemElement(item, i);
-                this.gridElement.appendChild(element);
+                fragment.appendChild(element);
                 this.renderedItems.set(i, element);
             }
+        }
+        
+        // Add the fragment to the grid (single DOM operation)
+        if (fragment.childNodes.length > 0) {
+            this.gridElement.appendChild(fragment);
         }
         
         // If we're close to the end and have more items to load, fetch them
         if (end > this.items.length - (this.columnsCount * 2) && this.hasMore && !this.isLoading) {
             this.loadMoreItems();
         }
+        
+        // Check if we need to slide the data window
+        this.slideDataWindow();
     }
 
     clearRenderedItems() {
@@ -404,11 +426,30 @@ export class VirtualScroller {
         this.scrollDirection = scrollTop > this.lastScrollTop ? 'down' : 'up';
         this.lastScrollTop = scrollTop;
         
+        // Handle large jumps in scroll position - check if we need to fetch a new window
+        const { scrollHeight } = this.scrollContainer;
+        const scrollRatio = scrollTop / scrollHeight;
+        
+        // If we've jumped to a position that's significantly outside our current window
+        // and we know there are many items, fetch a new data window
+        if (this.totalItems > this.windowSize) {
+            const estimatedIndex = Math.floor(scrollRatio * this.totalItems);
+            const currentWindowStart = this.absoluteWindowStart;
+            const currentWindowEnd = currentWindowStart + this.items.length;
+            
+            // If the estimated position is outside our current window by a significant amount
+            if (estimatedIndex < currentWindowStart || estimatedIndex > currentWindowEnd) {
+                // Fetch a new data window centered on the estimated position
+                this.fetchDataWindow(Math.max(0, estimatedIndex - Math.floor(this.windowSize / 2)));
+                return; // Skip normal rendering until new data is loaded
+            }
+        }
+        
         // Render visible items
         this.scheduleRender();
         
         // If we're near the bottom and have more items, load them
-        const { clientHeight, scrollHeight } = this.scrollContainer;
+        const { clientHeight } = this.scrollContainer;
         const scrollBottom = scrollTop + clientHeight;
         
         // Fix the threshold calculation - use percentage of remaining height instead
@@ -423,21 +464,91 @@ export class VirtualScroller {
         
         const shouldLoadMore = remainingScroll <= scrollThreshold;
         
-        // Enhanced debugging
-        // console.log('Scroll metrics:', {
-        //     scrollBottom,
-        //     scrollHeight,
-        //     remainingScroll,
-        //     scrollThreshold,
-        //     shouldLoad: shouldLoadMore,
-        //     hasMore: this.hasMore,
-        //     isLoading: this.isLoading,
-        //     itemsLoaded: this.items.length,
-        //     totalItems: this.totalItems
-        // });
-        
         if (shouldLoadMore && this.hasMore && !this.isLoading) {
             this.loadMoreItems();
+        }
+    }
+
+    // Method to fetch data for a specific window position
+    async fetchDataWindow(targetIndex) {
+        if (this.fetchingWindow) return;
+        this.fetchingWindow = true;
+        
+        try {
+            // Calculate which page we need to fetch based on target index
+            const targetPage = Math.floor(targetIndex / this.pageSize) + 1;
+            console.log(`Fetching data window for index ${targetIndex}, page ${targetPage}`);
+            
+            const { items, totalItems, hasMore } = await this.fetchItemsFn(targetPage, this.pageSize);
+            
+            if (items && items.length > 0) {
+                // Calculate new absolute window start
+                this.absoluteWindowStart = (targetPage - 1) * this.pageSize;
+                
+                // Replace the entire data window with new items
+                this.items = items;
+                this.dataWindow = { 
+                    start: 0,
+                    end: items.length
+                };
+                
+                this.totalItems = totalItems || 0;
+                this.hasMore = hasMore;
+                
+                // Update the current page for future fetches
+                const pageState = getCurrentPageState();
+                pageState.currentPage = targetPage + 1;
+                pageState.hasMore = hasMore;
+                
+                // Update the spacer height and clear current rendered items
+                this.updateSpacerHeight();
+                this.clearRenderedItems();
+                this.scheduleRender();
+                
+                console.log(`Loaded ${items.length} items for window at absolute index ${this.absoluteWindowStart}`);
+            }
+        } catch (err) {
+            console.error('Failed to fetch data window:', err);
+            showToast('Failed to load items at this position', 'error');
+        } finally {
+            this.fetchingWindow = false;
+        }
+    }
+
+    // Method to slide the data window if we're approaching its edges
+    async slideDataWindow() {
+        const { start, end } = this.getVisibleRange();
+        const windowStart = this.dataWindow.start;
+        const windowEnd = this.dataWindow.end;
+        const absoluteIndex = this.absoluteWindowStart + windowStart;
+        
+        // Calculate the midpoint of the visible range
+        const visibleMidpoint = Math.floor((start + end) / 2);
+        const absoluteMidpoint = this.absoluteWindowStart + visibleMidpoint;
+        
+        // Check if we're too close to the window edges
+        const closeToStart = start - windowStart < this.windowPadding;
+        const closeToEnd = windowEnd - end < this.windowPadding;
+        
+        // If we're close to either edge and have total items > window size
+        if ((closeToStart || closeToEnd) && this.totalItems > this.windowSize) {
+            // Calculate a new target index centered around the current viewport
+            const halfWindow = Math.floor(this.windowSize / 2);
+            const targetIndex = Math.max(0, absoluteMidpoint - halfWindow);
+            
+            // Don't fetch a new window if we're already showing items near the beginning
+            if (targetIndex === 0 && this.absoluteWindowStart === 0) {
+                return;
+            }
+            
+            // Don't fetch if we're showing the end of the list and are near the end
+            if (this.absoluteWindowStart + this.items.length >= this.totalItems && 
+                this.totalItems - end < halfWindow) {
+                return;
+            }
+            
+            // Fetch the new data window
+            await this.fetchDataWindow(targetIndex);
         }
     }
 
