@@ -11,13 +11,18 @@ async function getCardCreator(pageType) {
     if (pageType === 'loras') {
         return createLoraCard;
     } else if (pageType === 'recipes') {
-        try {
-            const { createRecipeCard } = await import('../components/RecipeCard.js');
-            return createRecipeCard;
-        } catch (err) {
-            console.error('Failed to load recipe card creator:', err);
-            return null;
-        }
+        // Import the RecipeCard module
+        const { RecipeCard } = await import('../components/RecipeCard.js');
+        
+        // Return a wrapper function that creates a recipe card element
+        return (recipe) => {
+            const recipeCard = new RecipeCard(recipe, (recipe) => {
+                if (window.recipeManager) {
+                    window.recipeManager.showRecipeDetails(recipe);
+                }
+            });
+            return recipeCard.element;
+        };
     } else if (pageType === 'checkpoints') {
         return createCheckpointCard;
     }
@@ -29,13 +34,9 @@ async function getDataFetcher(pageType) {
     if (pageType === 'loras') {
         return fetchLorasPage;
     } else if (pageType === 'recipes') {
-        try {
-            const { fetchRecipesPage } = await import('../api/recipeApi.js');
-            return fetchRecipesPage;
-        } catch (err) {
-            console.error('Failed to load recipe data fetcher:', err);
-            return null;
-        }
+        // Import the recipeApi module and use the fetchRecipesPage function
+        const { fetchRecipesPage } = await import('../api/recipeApi.js');
+        return fetchRecipesPage;
     } else if (pageType === 'checkpoints') {
         return fetchCheckpointsPage;
     }

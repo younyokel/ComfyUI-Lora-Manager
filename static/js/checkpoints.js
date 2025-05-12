@@ -1,5 +1,4 @@
 import { appCore } from './core.js';
-import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
 import { loadMoreCheckpoints } from './api/checkpointApi.js';
@@ -39,9 +38,6 @@ class CheckpointsPageManager {
         
         // Initialize context menu
         new CheckpointContextMenu();
-        
-        // Initialize infinite scroll
-        initializeInfiniteScroll('checkpoints');
         
         // Initialize common page features
         appCore.initializePageFeatures();
