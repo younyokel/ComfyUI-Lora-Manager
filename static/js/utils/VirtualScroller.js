@@ -194,6 +194,13 @@ export class VirtualScroller {
             // Update the spacer height based on the total number of items
             this.updateSpacerHeight();
             
+            // Check if there are no items and show placeholder if needed
+            if (this.items.length === 0) {
+                this.showNoItemsPlaceholder();
+            } else {
+                this.removeNoItemsPlaceholder();
+            }
+            
             // Reset page state to sync with our virtual scroller
             pageState.currentPage = 2; // Next page to load would be 2
             pageState.hasMore = this.hasMore;
@@ -202,6 +209,7 @@ export class VirtualScroller {
             return { items, totalItems, hasMore };
         } catch (err) {
             console.error('Failed to load initial batch:', err);
+            this.showNoItemsPlaceholder('Failed to load items. Please try refreshing the page.');
             throw err;
         } finally {
             this.isLoading = false;
@@ -387,6 +395,13 @@ export class VirtualScroller {
         this.hasMore = hasMore;
         this.updateSpacerHeight();
         
+        // Check if there are no items and show placeholder if needed
+        if (this.items.length === 0) {
+            this.showNoItemsPlaceholder();
+        } else {
+            this.removeNoItemsPlaceholder();
+        }
+        
         // Clear all rendered items and redraw
         this.clearRenderedItems();
         this.scheduleRender();
@@ -564,6 +579,9 @@ export class VirtualScroller {
         // Reset spacer height
         this.spacerElement.style.height = '0px';
         
+        // Remove any placeholder
+        this.removeNoItemsPlaceholder();
+        
         // Schedule a re-render
         this.scheduleRender();
     }
@@ -589,6 +607,60 @@ export class VirtualScroller {
         
         // Clear any pending timeout
         this.clearLoadingTimeout();
+    }
+
+    // Add methods to handle placeholder display
+    showNoItemsPlaceholder(message) {
+        // Remove any existing placeholder first
+        this.removeNoItemsPlaceholder();
+        
+        // Create placeholder message
+        const placeholder = document.createElement('div');
+        placeholder.className = 'placeholder-message';
+        
+        // Determine appropriate message based on page type
+        let placeholderText = '';
+        
+        if (message) {
+            placeholderText = message;
+        } else {
+            const pageType = state.currentPageType;
+            
+            if (pageType === 'recipes') {
+                placeholderText = `
+                    <p>No recipes found</p>
+                    <p>Add recipe images to your recipes folder to see them here.</p>
+                `;
+            } else if (pageType === 'loras') {
+                placeholderText = `
+                    <p>No LoRAs found</p>
+                    <p>Add LoRAs to your models folder to see them here.</p>
+                `;
+            } else if (pageType === 'checkpoints') {
+                placeholderText = `
+                    <p>No checkpoints found</p>
+                    <p>Add checkpoints to your models folder to see them here.</p>
+                `;
+            } else {
+                placeholderText = `
+                    <p>No items found</p>
+                    <p>Try adjusting your search filters or add more content.</p>
+                `;
+            }
+        }
+        
+        placeholder.innerHTML = placeholderText;
+        placeholder.id = 'virtualScrollPlaceholder';
+        
+        // Append placeholder to the grid
+        this.gridElement.appendChild(placeholder);
+    }
+
+    removeNoItemsPlaceholder() {
+        const placeholder = document.getElementById('virtualScrollPlaceholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
     }
 
     // Utility method for debouncing

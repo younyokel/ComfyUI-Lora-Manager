@@ -77,43 +77,8 @@
     
     <!-- Recipe grid -->
     <div class="card-grid" id="recipeGrid">
-        {% if recipes and recipes|length > 0 %}
-            {% for recipe in recipes %}
-                <div class="lora-card" data-file-path="{{ recipe.file_path }}" data-title="{{ recipe.title }}" data-created="{{ recipe.created_date }}">
-                    <div class="recipe-indicator" title="Recipe">R</div>
-                    <div class="card-preview">
-                        <img src="{{ recipe.file_url }}" alt="{{ recipe.title }}">
-                        <div class="card-header">
-                            <div class="base-model-wrapper">
-                                {% if recipe.base_model %}
-                                <span class="base-model-label" title="{{ recipe.base_model }}">
-                                    {{ recipe.base_model }}
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="card-actions">
-                                <i class="fas fa-share-alt" title="Share Recipe"></i>
-                                <i class="fas fa-copy" title="Copy Recipe"></i>
-                                <i class="fas fa-trash" title="Delete Recipe"></i>
-                            </div>
-                        </div>
-                        <div class="card-footer">
-                            <div class="model-info">
-                                <span class="model-name">{{ recipe.title }}</span>
-                            </div>
-                            <div class="lora-count" title="Number of LoRAs in this recipe">
-                                <i class="fas fa-layer-group"></i> {{ recipe.loras|length }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="placeholder-message">
-                <p>No recipes found</p>
-                <p>Add recipe images to your recipes folder to see them here.</p>
-            </div>
-        {% endif %}
+        <!-- Remove the server-side conditional rendering and placeholder -->
+        <!-- Virtual scrolling will handle the display logic on the client side -->
     </div>
 {% endblock %}
 
