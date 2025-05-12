@@ -10,6 +10,8 @@ import {
     refreshSingleModelMetadata,
     excludeModel as baseExcludeModel
 } from './baseModelApi.js';
+import { state, getCurrentPageState } from '../state/index.js';
+import { showToast } from '../utils/uiHelpers.js';
 
 /**
  * Save model metadata to the server
@@ -45,14 +47,66 @@ export async function excludeLora(filePath) {
     return baseExcludeModel(filePath, 'lora');
 }
 
+/**
+ * Load more loras with pagination - updated to work with VirtualScroller
+ * @param {boolean} resetPage - Whether to reset to the first page
+ * @param {boolean} updateFolders - Whether to update folder tags
+ * @returns {Promise<void>}
+ */
 export async function loadMoreLoras(resetPage = false, updateFolders = false) {
-    return loadMoreModels({
-        resetPage,
-        updateFolders,
-        modelType: 'lora',
-        createCardFunction: createLoraCard,
-        endpoint: '/api/loras'
-    });
+    const pageState = getCurrentPageState();
+    
+    // Check if virtual scroller is available
+    if (state.virtualScroller) {
+        try {
+            // Start loading state
+            pageState.isLoading = true;
+            document.body.classList.add('loading');
+            
+            // Reset to first page if requested
+            if (resetPage) {
+                pageState.currentPage = 1;
+            }
+            
+            // Fetch the first page of data
+            const result = await fetchLorasPage(pageState.currentPage, pageState.pageSize || 50);
+            
+            // Update virtual scroller with the new data
+            state.virtualScroller.refreshWithData(
+                result.items,
+                result.totalItems,
+                result.hasMore
+            );
+            
+            // Update state
+            pageState.hasMore = result.hasMore;
+            pageState.currentPage = 2; // Next page to load would be 2
+            
+            // Update folders if needed
+            if (updateFolders && result.folders) {
+                // Import function dynamically to avoid circular dependencies
+                const { updateFolderTags } = await import('./baseModelApi.js');
+                updateFolderTags(result.folders);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Error loading loras:', error);
+            showToast(`Failed to load loras: ${error.message}`, 'error');
+        } finally {
+            pageState.isLoading = false;
+            document.body.classList.remove('loading');
+        }
+    } else {
+        // Fall back to the original implementation if virtual scroller isn't available
+        return loadMoreModels({
+            resetPage,
+            updateFolders,
+            modelType: 'lora',
+            createCardFunction: createLoraCard,
+            endpoint: '/api/loras'
+        });
+    }
 }
 
 /**
@@ -87,21 +141,69 @@ export async function replacePreview(filePath) {
 }
 
 export function appendLoraCards(loras) {
-    const grid = document.getElementById('loraGrid');
-    const sentinel = document.getElementById('scroll-sentinel');
-    
-    loras.forEach(lora => {
-        const card = createLoraCard(lora);
-        grid.appendChild(card);
-    });
+    // This function is no longer needed with virtual scrolling
+    // but kept for compatibility
+    if (state.virtualScroller) {
+        console.warn('appendLoraCards is deprecated when using virtual scrolling');
+    } else {
+        const grid = document.getElementById('loraGrid');
+        
+        loras.forEach(lora => {
+            const card = createLoraCard(lora);
+            grid.appendChild(card);
+        });
+    }
 }
 
 export async function resetAndReload(updateFolders = false) {
-    return baseResetAndReload({
-        updateFolders,
-        modelType: 'lora',
-        loadMoreFunction: loadMoreLoras
-    });
+    const pageState = getCurrentPageState();
+    
+    // Check if virtual scroller is available
+    if (state.virtualScroller) {
+        try {
+            pageState.isLoading = true;
+            document.body.classList.add('loading');
+            
+            // Reset page counter
+            pageState.currentPage = 1;
+            
+            // Fetch the first page
+            const result = await fetchLorasPage(1, pageState.pageSize || 50);
+            
+            // Update the virtual scroller
+            state.virtualScroller.refreshWithData(
+                result.items,
+                result.totalItems,
+                result.hasMore
+            );
+            
+            // Update state
+            pageState.hasMore = result.hasMore;
+            pageState.currentPage = 2; // Next page will be 2
+            
+            // Update folders if needed
+            if (updateFolders && result.folders) {
+                // Import function dynamically to avoid circular dependencies
+                const { updateFolderTags } = await import('./baseModelApi.js');
+                updateFolderTags(result.folders);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Error reloading loras:', error);
+            showToast(`Failed to reload loras: ${error.message}`, 'error');
+        } finally {
+            pageState.isLoading = false;
+            document.body.classList.remove('loading');
+        }
+    } else {
+        // Fall back to original implementation
+        return baseResetAndReload({
+            updateFolders,
+            modelType: 'lora',
+            loadMoreFunction: loadMoreLoras
+        });
+    }
 }
 
 export async function refreshLoras() {

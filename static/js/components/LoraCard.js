@@ -328,7 +328,7 @@ export function updateCardsForBulkMode(isBulkMode) {
     
     document.body.classList.toggle('bulk-mode', isBulkMode);
     
-    // Get all lora cards
+    // Get all lora cards - this can now be from the DOM or through the virtual scroller
     const loraCards = document.querySelectorAll('.lora-card');
     
     loraCards.forEach(card => {
@@ -349,6 +349,11 @@ export function updateCardsForBulkMode(isBulkMode) {
             });
         }
     });
+    
+    // If using virtual scroller, we need to rerender after toggling bulk mode
+    if (state.virtualScroller && typeof state.virtualScroller.scheduleRender === 'function') {
+        state.virtualScroller.scheduleRender();
+    }
     
     // Apply selection state to cards if entering bulk mode
     if (isBulkMode) {

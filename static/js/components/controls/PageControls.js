@@ -37,7 +37,7 @@ export class PageControls {
      */
     initializeState() {
         // Set default values
-        this.pageState.pageSize = 20; 
+        this.pageState.pageSize = 100;
         this.pageState.isLoading = false;
         this.pageState.hasMore = true;
         
