@@ -6,6 +6,181 @@ import { NSFW_LEVELS } from '../utils/constants.js';
 import { replacePreview, saveModelMetadata } from '../api/loraApi.js'
 import { showDeleteModal } from '../utils/modalUtils.js';
 
+// Add a global event delegation handler
+export function setupLoraCardEventDelegation() {
+    const gridElement = document.getElementById('loraGrid');
+    if (!gridElement) return;
+    
+    // Remove any existing event listener to prevent duplication
+    gridElement.removeEventListener('click', handleLoraCardEvent);
+    
+    // Add the event delegation handler
+    gridElement.addEventListener('click', handleLoraCardEvent);
+}
+
+// Event delegation handler for all lora card events
+function handleLoraCardEvent(event) {
+    // Find the closest card element
+    const card = event.target.closest('.lora-card');
+    if (!card) return;
+    
+    // Handle specific elements within the card
+    if (event.target.closest('.toggle-blur-btn')) {
+        event.stopPropagation();
+        toggleBlurContent(card);
+        return;
+    }
+    
+    if (event.target.closest('.show-content-btn')) {
+        event.stopPropagation();
+        showBlurredContent(card);
+        return;
+    }
+    
+    if (event.target.closest('.fa-star')) {
+        event.stopPropagation();
+        toggleFavorite(card);
+        return;
+    }
+    
+    if (event.target.closest('.fa-globe')) {
+        event.stopPropagation();
+        if (card.dataset.from_civitai === 'true') {
+            openCivitai(card.dataset.name);
+        }
+        return;
+    }
+    
+    if (event.target.closest('.fa-copy')) {
+        event.stopPropagation();
+        copyLoraCode(card);
+        return;
+    }
+    
+    if (event.target.closest('.fa-trash')) {
+        event.stopPropagation();
+        showDeleteModal(card.dataset.filepath);
+        return;
+    }
+    
+    if (event.target.closest('.fa-image')) {
+        event.stopPropagation();
+        replacePreview(card.dataset.filepath);
+        return;
+    }
+    
+    // If no specific element was clicked, handle the card click (show modal or toggle selection)
+    if (state.bulkMode) {
+        // Toggle selection using the bulk manager
+        bulkManager.toggleCardSelection(card);
+    } else {
+        // Normal behavior - show modal
+        const loraMeta = {
+            sha256: card.dataset.sha256,
+            file_path: card.dataset.filepath,
+            model_name: card.dataset.name,
+            file_name: card.dataset.file_name,
+            folder: card.dataset.folder,
+            modified: card.dataset.modified,
+            file_size: card.dataset.file_size,
+            from_civitai: card.dataset.from_civitai === 'true',
+            base_model: card.dataset.base_model,
+            usage_tips: card.dataset.usage_tips,
+            notes: card.dataset.notes,
+            favorite: card.dataset.favorite === 'true',
+            // Parse civitai metadata from the card's dataset
+            civitai: (() => {
+                try {
+                    // Attempt to parse the JSON string
+                    return JSON.parse(card.dataset.meta || '{}');
+                } catch (e) {
+                    console.error('Failed to parse civitai metadata:', e);
+                    return {}; // Return empty object on error
+                }
+            })(),
+            tags: JSON.parse(card.dataset.tags || '[]'),
+            modelDescription: card.dataset.modelDescription || ''
+        };
+        showLoraModal(loraMeta);
+    }
+}
+
+// Helper functions for event handling
+function toggleBlurContent(card) {
+    const preview = card.querySelector('.card-preview');
+    const isBlurred = preview.classList.toggle('blurred');
+    const icon = card.querySelector('.toggle-blur-btn i');
+    
+    // Update the icon based on blur state
+    if (isBlurred) {
+        icon.className = 'fas fa-eye';
+    } else {
+        icon.className = 'fas fa-eye-slash';
+    }
+    
+    // Toggle the overlay visibility
+    const overlay = card.querySelector('.nsfw-overlay');
+    if (overlay) {
+        overlay.style.display = isBlurred ? 'flex' : 'none';
+    }
+}
+
+function showBlurredContent(card) {
+    const preview = card.querySelector('.card-preview');
+    preview.classList.remove('blurred');
+    
+    // Update the toggle button icon
+    const toggleBtn = card.querySelector('.toggle-blur-btn');
+    if (toggleBtn) {
+        toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+    }
+    
+    // Hide the overlay
+    const overlay = card.querySelector('.nsfw-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+async function toggleFavorite(card) {
+    const starIcon = card.querySelector('.fa-star');
+    const isFavorite = starIcon.classList.contains('fas');
+    const newFavoriteState = !isFavorite;
+    
+    try {
+        // Save the new favorite state to the server
+        await saveModelMetadata(card.dataset.filepath, { 
+            favorite: newFavoriteState 
+        });
+
+        // Update the UI
+        if (newFavoriteState) {
+            starIcon.classList.remove('far');
+            starIcon.classList.add('fas', 'favorite-active');
+            starIcon.title = 'Remove from favorites';
+            card.dataset.favorite = 'true';
+            showToast('Added to favorites', 'success');
+        } else {
+            starIcon.classList.remove('fas', 'favorite-active');
+            starIcon.classList.add('far');
+            starIcon.title = 'Add to favorites';
+            card.dataset.favorite = 'false';
+            showToast('Removed from favorites', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to update favorite status:', error);
+        showToast('Failed to update favorite status', 'error');
+    }
+}
+
+async function copyLoraCode(card) {
+    const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+    const strength = usageTips.strength || 1;
+    const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+    
+    await copyToClipboard(loraSyntax, 'LoRA syntax copied');
+}
+
 export function createLoraCard(lora) {
     const card = document.createElement('div');
     card.className = 'lora-card';
@@ -123,162 +298,12 @@ export function createLoraCard(lora) {
         </div>
     `;
 
-    // Main card click event - modified to handle bulk mode
-    card.addEventListener('click', () => {
-        // Check if we're in bulk mode
-        if (state.bulkMode) {
-            // Toggle selection using the bulk manager
-            bulkManager.toggleCardSelection(card);
-        } else {
-            // Normal behavior - show modal
-            const loraMeta = {
-                sha256: card.dataset.sha256,
-                file_path: card.dataset.filepath,
-                model_name: card.dataset.name,
-                file_name: card.dataset.file_name,
-                folder: card.dataset.folder,
-                modified: card.dataset.modified,
-                file_size: card.dataset.file_size,
-                from_civitai: card.dataset.from_civitai === 'true',
-                base_model: card.dataset.base_model,
-                usage_tips: card.dataset.usage_tips,
-                notes: card.dataset.notes,
-                favorite: card.dataset.favorite === 'true',
-                // Parse civitai metadata from the card's dataset
-                civitai: (() => {
-                    try {
-                        // Attempt to parse the JSON string
-                        return JSON.parse(card.dataset.meta || '{}');
-                    } catch (e) {
-                        console.error('Failed to parse civitai metadata:', e);
-                        return {}; // Return empty object on error
-                    }
-                })(),
-                tags: JSON.parse(card.dataset.tags || '[]'),
-                modelDescription: card.dataset.modelDescription || ''
-            };
-            showLoraModal(loraMeta);
-        }
-    });
-
-    // Toggle blur button functionality
-    const toggleBlurBtn = card.querySelector('.toggle-blur-btn');
-    if (toggleBlurBtn) {
-        toggleBlurBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const preview = card.querySelector('.card-preview');
-            const isBlurred = preview.classList.toggle('blurred');
-            const icon = toggleBlurBtn.querySelector('i');
-            
-            // Update the icon based on blur state
-            if (isBlurred) {
-                icon.className = 'fas fa-eye';
-            } else {
-                icon.className = 'fas fa-eye-slash';
-            }
-            
-            // Toggle the overlay visibility
-            const overlay = card.querySelector('.nsfw-overlay');
-            if (overlay) {
-                overlay.style.display = isBlurred ? 'flex' : 'none';
-            }
-        });
-    }
-
-    // Show content button functionality
-    const showContentBtn = card.querySelector('.show-content-btn');
-    if (showContentBtn) {
-        showContentBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const preview = card.querySelector('.card-preview');
-            preview.classList.remove('blurred');
-            
-            // Update the toggle button icon
-            const toggleBtn = card.querySelector('.toggle-blur-btn');
-            if (toggleBtn) {
-                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
-            }
-            
-            // Hide the overlay
-            const overlay = card.querySelector('.nsfw-overlay');
-            if (overlay) {
-                overlay.style.display = 'none';
-            }
-        });
-    }
-
-    // Favorite button click event
-    card.querySelector('.fa-star')?.addEventListener('click', async e => {
-        e.stopPropagation();
-        const starIcon = e.currentTarget;
-        const isFavorite = starIcon.classList.contains('fas');
-        const newFavoriteState = !isFavorite;
-        
-        try {
-            // Save the new favorite state to the server
-            await saveModelMetadata(card.dataset.filepath, { 
-                favorite: newFavoriteState 
-            });
-
-            // Update the UI
-            if (newFavoriteState) {
-                starIcon.classList.remove('far');
-                starIcon.classList.add('fas', 'favorite-active');
-                starIcon.title = 'Remove from favorites';
-                card.dataset.favorite = 'true';
-                showToast('Added to favorites', 'success');
-            } else {
-                starIcon.classList.remove('fas', 'favorite-active');
-                starIcon.classList.add('far');
-                starIcon.title = 'Add to favorites';
-                card.dataset.favorite = 'false';
-                showToast('Removed from favorites', 'success');
-            }
-        } catch (error) {
-            console.error('Failed to update favorite status:', error);
-            showToast('Failed to update favorite status', 'error');
-        }
-    });
-
-    // Copy button click event
-    card.querySelector('.fa-copy')?.addEventListener('click', async e => {
-        e.stopPropagation();
-        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
-        const strength = usageTips.strength || 1;
-        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
-        
-        await copyToClipboard(loraSyntax, 'LoRA syntax copied');
-    });
-
-    // Civitai button click event
-    if (lora.from_civitai) {
-        card.querySelector('.fa-globe')?.addEventListener('click', e => {
-            e.stopPropagation();
-            openCivitai(lora.model_name);
-        });
-    }
-
-    // Delete button click event
-    card.querySelector('.fa-trash')?.addEventListener('click', e => {
-        e.stopPropagation();
-        showDeleteModal(lora.file_path);
-    });
-
-    // Replace preview button click event
-    card.querySelector('.fa-image')?.addEventListener('click', e => {
-        e.stopPropagation();
-        replacePreview(lora.file_path);
-    });
-    
-    // Apply bulk mode styling if currently in bulk mode
-    if (state.bulkMode) {
-        const actions = card.querySelectorAll('.card-actions');
-        actions.forEach(actionGroup => {
-            actionGroup.style.display = 'none';
-        });
+    // Add a special class for virtual scroll positioning if needed
+    if (state.virtualScroller) {
+        card.classList.add('virtual-scroll-item');
     }
     
-    // Add autoplayOnHover handlers for video elements if needed
+    // Add video auto-play on hover functionality if needed
     const videoElement = card.querySelector('video');
     if (videoElement && autoplayOnHover) {
         const cardPreview = card.querySelector('.card-preview');
@@ -287,15 +312,10 @@ export function createLoraCard(lora) {
         videoElement.removeAttribute('autoplay');
         videoElement.pause();
         
-        // Add mouse events to trigger play/pause
-        cardPreview.addEventListener('mouseenter', () => {
-            videoElement.play();
-        });
-        
-        cardPreview.addEventListener('mouseleave', () => {
-            videoElement.pause();
-            videoElement.currentTime = 0;
-        });
+        // Add mouse events to trigger play/pause using event attributes
+        // This approach reduces the number of event listeners created
+        cardPreview.setAttribute('onmouseenter', 'this.querySelector("video")?.play()');
+        cardPreview.setAttribute('onmouseleave', 'const v=this.querySelector("video"); if(v){v.pause();v.currentTime=0;}');
     }
 
     return card;
@@ -308,7 +328,7 @@ export function updateCardsForBulkMode(isBulkMode) {
     
     document.body.classList.toggle('bulk-mode', isBulkMode);
     
-    // Get all lora cards
+    // Get all lora cards - this can now be from the DOM or through the virtual scroller
     const loraCards = document.querySelectorAll('.lora-card');
     
     loraCards.forEach(card => {
@@ -329,6 +349,11 @@ export function updateCardsForBulkMode(isBulkMode) {
             });
         }
     });
+    
+    // If using virtual scroller, we need to rerender after toggling bulk mode
+    if (state.virtualScroller && typeof state.virtualScroller.scheduleRender === 'function') {
+        state.virtualScroller.scheduleRender();
+    }
     
     // Apply selection state to cards if entering bulk mode
     if (isBulkMode) {

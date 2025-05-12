@@ -1,7 +1,7 @@
 // Duplicates Manager Component
 import { showToast } from '../utils/uiHelpers.js';
 import { RecipeCard } from './RecipeCard.js';
-import { getCurrentPageState } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 
 export class DuplicatesManager {
@@ -61,10 +61,9 @@ export class DuplicatesManager {
             banner.style.display = 'block';
         }
         
-        // Disable infinite scroll
-        if (this.recipeManager.observer) {
-            this.recipeManager.observer.disconnect();
-            this.recipeManager.observer = null;
+        // Disable virtual scrolling if active
+        if (state.virtualScroller) {
+            state.virtualScroller.disable();
         }
         
         // Add duplicate-mode class to the body
@@ -94,13 +93,21 @@ export class DuplicatesManager {
         // Remove duplicate-mode class from the body
         document.body.classList.remove('duplicate-mode');
         
-        // Reload normal recipes view
-        this.recipeManager.loadRecipes();
+        // Clear the recipe grid first
+        const recipeGrid = document.getElementById('recipeGrid');
+        if (recipeGrid) {
+            recipeGrid.innerHTML = '';
+        }
         
-        // Reinitialize infinite scroll
-        setTimeout(() => {
-            initializeInfiniteScroll('recipes');
-        }, 500);
+        // Re-enable virtual scrolling
+        if (state.virtualScroller) {
+            state.virtualScroller.enable();
+        } else {
+            // If virtual scroller doesn't exist, reinitialize it
+            setTimeout(() => {
+                initializeInfiniteScroll('recipes');
+            }, 100);
+        }
     }
     
     renderDuplicateGroups() {

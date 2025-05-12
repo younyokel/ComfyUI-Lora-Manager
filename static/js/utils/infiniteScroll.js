@@ -1,12 +1,53 @@
 import { state, getCurrentPageState } from '../state/index.js';
-import { loadMoreLoras } from '../api/loraApi.js';
-import { loadMoreCheckpoints } from '../api/checkpointApi.js';
-import { debounce } from './debounce.js';
+import { VirtualScroller } from './VirtualScroller.js';
+import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
+import { createCheckpointCard } from '../components/CheckpointCard.js';
+import { fetchLorasPage } from '../api/loraApi.js';
+import { fetchCheckpointsPage } from '../api/checkpointApi.js';
+import { showToast } from './uiHelpers.js';
 
-export function initializeInfiniteScroll(pageType = 'loras') {
-    // Clean up any existing observer
-    if (state.observer) {
-        state.observer.disconnect();
+// Function to dynamically import the appropriate card creator based on page type
+async function getCardCreator(pageType) {
+    if (pageType === 'loras') {
+        return createLoraCard;
+    } else if (pageType === 'recipes') {
+        // Import the RecipeCard module
+        const { RecipeCard } = await import('../components/RecipeCard.js');
+        
+        // Return a wrapper function that creates a recipe card element
+        return (recipe) => {
+            const recipeCard = new RecipeCard(recipe, (recipe) => {
+                if (window.recipeManager) {
+                    window.recipeManager.showRecipeDetails(recipe);
+                }
+            });
+            return recipeCard.element;
+        };
+    } else if (pageType === 'checkpoints') {
+        return createCheckpointCard;
+    }
+    return null;
+}
+
+// Function to get the appropriate data fetcher based on page type
+async function getDataFetcher(pageType) {
+    if (pageType === 'loras') {
+        return fetchLorasPage;
+    } else if (pageType === 'recipes') {
+        // Import the recipeApi module and use the fetchRecipesPage function
+        const { fetchRecipesPage } = await import('../api/recipeApi.js');
+        return fetchRecipesPage;
+    } else if (pageType === 'checkpoints') {
+        return fetchCheckpointsPage;
+    }
+    return null;
+}
+
+export async function initializeInfiniteScroll(pageType = 'loras') {
+    // Clean up any existing virtual scroller
+    if (state.virtualScroller) {
+        state.virtualScroller.dispose();
+        state.virtualScroller = null;
     }
 
     // Set the current page type
@@ -17,109 +58,96 @@ export function initializeInfiniteScroll(pageType = 'loras') {
     
     // Skip initializing if in duplicates mode (for recipes page)
     if (pageType === 'recipes' && pageState.duplicatesMode) {
+        console.log('Skipping virtual scroll initialization - duplicates mode is active');
         return;
     }
 
-    // Determine the load more function and grid ID based on page type
-    let loadMoreFunction;
+    // Use virtual scrolling for all page types
+    await initializeVirtualScroll(pageType);
+    
+    // Setup event delegation for lora cards if on the loras page
+    if (pageType === 'loras') {
+        setupLoraCardEventDelegation();
+    }
+}
+
+async function initializeVirtualScroll(pageType) {
+    // Determine the grid ID based on page type
     let gridId;
     
     switch (pageType) {
         case 'recipes':
-            loadMoreFunction = () => {
-                if (!pageState.isLoading && pageState.hasMore) {
-                    window.recipeManager.loadRecipes(false); // false to not reset pagination
-                }
-            };
             gridId = 'recipeGrid';
             break;
         case 'checkpoints':
-            loadMoreFunction = () => {
-                if (!pageState.isLoading && pageState.hasMore) {
-                    loadMoreCheckpoints(false); // false to not reset
-                }
-            };
             gridId = 'checkpointGrid';
             break;
         case 'loras':
         default:
-            loadMoreFunction = () => {
-                if (!pageState.isLoading && pageState.hasMore) {
-                    loadMoreLoras(false); // false to not reset
-                }
-            };
             gridId = 'loraGrid';
             break;
     }
 
-    const debouncedLoadMore = debounce(loadMoreFunction, 100);
-    
     const grid = document.getElementById(gridId);
+    
     if (!grid) {
-        console.warn(`Grid with ID "${gridId}" not found for infinite scroll`);
+        console.warn(`Grid with ID "${gridId}" not found for virtual scroll`);
         return;
     }
     
-    // Remove any existing sentinel
-    const existingSentinel = document.getElementById('scroll-sentinel');
-    if (existingSentinel) {
-        existingSentinel.remove();
+    // Change this line to get the actual scrolling container
+    const scrollContainer = document.querySelector('.page-content');
+    const gridContainer = scrollContainer.querySelector('.container');
+    
+    if (!gridContainer) {
+        console.warn('Grid container element not found for virtual scroll');
+        return;
     }
     
-    // Create a sentinel element after the grid (not inside it)
-    const sentinel = document.createElement('div');
-    sentinel.id = 'scroll-sentinel';
-    sentinel.style.width = '100%';
-    sentinel.style.height = '20px';
-    sentinel.style.visibility = 'hidden'; // Make it invisible but still affect layout
-    
-    // Insert after grid instead of inside
-    grid.parentNode.insertBefore(sentinel, grid.nextSibling);
-    
-    // Create observer with appropriate settings, slightly different for checkpoints page
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: pageType === 'checkpoints' ? '0px 0px 200px 0px' : '0px 0px 100px 0px'
-    };
-    
-    // Initialize the observer
-    state.observer = new IntersectionObserver((entries) => {
-        const target = entries[0];
-        if (target.isIntersecting && !pageState.isLoading && pageState.hasMore) {
-            debouncedLoadMore();
+    try {
+        // Get the card creator and data fetcher for this page type
+        const createCardFn = await getCardCreator(pageType);
+        const fetchDataFn = await getDataFetcher(pageType);
+        
+        if (!createCardFn || !fetchDataFn) {
+            throw new Error(`Required components not available for ${pageType} page`);
         }
-    }, observerOptions);
-    
-    // Start observing
-    state.observer.observe(sentinel);
-    
-    // Clean up any existing scroll event listener
-    if (state.scrollHandler) {
-        window.removeEventListener('scroll', state.scrollHandler);
-        state.scrollHandler = null;
+        
+        // Initialize virtual scroller with renamed container elements
+        state.virtualScroller = new VirtualScroller({
+            gridElement: grid,
+            containerElement: gridContainer,
+            scrollContainer: scrollContainer,
+            createItemFn: createCardFn,
+            fetchItemsFn: fetchDataFn,
+            pageSize: 100,
+            rowGap: 20
+        });
+        
+        // Initialize the virtual scroller
+        await state.virtualScroller.initialize();
+        
+        // Add grid class for CSS styling
+        grid.classList.add('virtual-scroll');
+        
+    } catch (error) {
+        console.error(`Error initializing virtual scroller for ${pageType}:`, error);
+        showToast(`Failed to initialize ${pageType} page. Please reload.`, 'error');
+        
+        // Fallback: show a message in the grid
+        grid.innerHTML = `
+            <div class="placeholder-message">
+                <h3>Failed to initialize ${pageType}</h3>
+                <p>There was an error loading this page. Please try reloading.</p>
+            </div>
+        `;
     }
-    
-    // Add a simple backup scroll handler
-    const handleScroll = debounce(() => {
-        if (pageState.isLoading || !pageState.hasMore) return;
-        
-        const sentinel = document.getElementById('scroll-sentinel');
-        if (!sentinel) return;
-        
-        const rect = sentinel.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
-        
-        if (rect.top < windowHeight + 200) {
-            debouncedLoadMore();
-        }
-    }, 200);
-    
-    state.scrollHandler = handleScroll;
-    window.addEventListener('scroll', state.scrollHandler);
-    
-    // Clear any existing interval
-    if (state.scrollCheckInterval) {
-        clearInterval(state.scrollCheckInterval);
-        state.scrollCheckInterval = null;
+}
+
+// Export a method to refresh the virtual scroller when filters change
+export function refreshVirtualScroll() {
+    if (state.virtualScroller) {
+        state.virtualScroller.reset();
+        state.virtualScroller.initialize();
     }
 }

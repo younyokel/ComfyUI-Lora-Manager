@@ -1,7 +1,6 @@
 // filepath: d:\Workspace\ComfyUI\custom_nodes\ComfyUI-Lora-Manager\static\js\api\baseModelApi.js
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
-import { showDeleteModal, confirmDelete } from '../utils/modalUtils.js';
 import { getSessionItem, saveMapToStorage } from '../utils/storageHelpers.js';
 
 /**
@@ -154,6 +153,231 @@ export async function loadMoreModels(options = {}) {
     } catch (error) {
         console.error(`Error loading ${modelType}s:`, error);
         showToast(`Failed to load ${modelType}s: ${error.message}`, 'error');
+    } finally {
+        pageState.isLoading = false;
+        document.body.classList.remove('loading');
+    }
+}
+
+// New method for virtual scrolling fetch
+export async function fetchModelsPage(options = {}) {
+    const {
+        modelType = 'lora',
+        page = 1,
+        pageSize = 100,
+        endpoint = '/api/loras'
+    } = options;
+
+    const pageState = getCurrentPageState();
+    
+    try {
+        const params = new URLSearchParams({
+            page: page,
+            page_size: pageSize || pageState.pageSize || 20,
+            sort_by: pageState.sortBy
+        });
+        
+        if (pageState.activeFolder !== null) {
+            params.append('folder', pageState.activeFolder);
+        }
+
+        // Add favorites filter parameter if enabled
+        if (pageState.showFavoritesOnly) {
+            params.append('favorites_only', 'true');
+        }
+        
+        // Add active letter filter if set
+        if (pageState.activeLetterFilter) {
+            params.append('first_letter', pageState.activeLetterFilter);
+        }
+
+        // Add search parameters if there's a search term
+        if (pageState.filters?.search) {
+            params.append('search', pageState.filters.search);
+            params.append('fuzzy', 'true');
+            
+            // Add search option parameters if available
+            if (pageState.searchOptions) {
+                params.append('search_filename', pageState.searchOptions.filename.toString());
+                params.append('search_modelname', pageState.searchOptions.modelname.toString());
+                if (pageState.searchOptions.tags !== undefined) {
+                    params.append('search_tags', pageState.searchOptions.tags.toString());
+                }
+                params.append('recursive', (pageState.searchOptions?.recursive ?? false).toString());
+            }
+        }
+        
+        // Add filter parameters if active
+        if (pageState.filters) {
+            // Handle tags filters
+            if (pageState.filters.tags && pageState.filters.tags.length > 0) {
+                // Checkpoints API expects individual 'tag' parameters, Loras API expects comma-separated 'tags'
+                if (modelType === 'checkpoint') {
+                    pageState.filters.tags.forEach(tag => {
+                        params.append('tag', tag);
+                    });
+                } else {
+                    params.append('tags', pageState.filters.tags.join(','));
+                }
+            }
+            
+            // Handle base model filters
+            if (pageState.filters.baseModel && pageState.filters.baseModel.length > 0) {
+                if (modelType === 'checkpoint') {
+                    pageState.filters.baseModel.forEach(model => {
+                        params.append('base_model', model);
+                    });
+                } else {
+                    params.append('base_models', pageState.filters.baseModel.join(','));
+                }
+            }
+        }
+
+        // Add model-specific parameters
+        if (modelType === 'lora') {
+            // Check for recipe-based filtering parameters from session storage
+            const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
+            const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
+
+            // Add hash filter parameter if present
+            if (filterLoraHash) {
+                params.append('lora_hash', filterLoraHash);
+            } 
+            // Add multiple hashes filter if present
+            else if (filterLoraHashes) {
+                try {
+                    if (Array.isArray(filterLoraHashes) && filterLoraHashes.length > 0) {
+                        params.append('lora_hashes', filterLoraHashes.join(','));
+                    }
+                } catch (error) {
+                    console.error('Error parsing lora hashes from session storage:', error);
+                }
+            }
+        }
+
+        const response = await fetch(`${endpoint}?${params}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch models: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        return {
+            items: data.items,
+            totalItems: data.total,
+            totalPages: data.total_pages,
+            currentPage: page,
+            hasMore: page < data.total_pages,
+            folders: data.folders
+        };
+        
+    } catch (error) {
+        console.error(`Error fetching ${modelType}s:`, error);
+        showToast(`Failed to fetch ${modelType}s: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
+/**
+ * Reset and reload models using virtual scrolling
+ * @param {Object} options - Operation options
+ * @returns {Promise<Object>} The fetch result
+ */
+export async function resetAndReloadWithVirtualScroll(options = {}) {
+    const {
+        modelType = 'lora',
+        updateFolders = false,
+        fetchPageFunction
+    } = options;
+    
+    const pageState = getCurrentPageState();
+    
+    try {
+        pageState.isLoading = true;
+        document.body.classList.add('loading');
+        
+        // Reset page counter
+        pageState.currentPage = 1;
+        
+        // Fetch the first page
+        const result = await fetchPageFunction(1, pageState.pageSize || 50);
+        
+        // Update the virtual scroller
+        state.virtualScroller.refreshWithData(
+            result.items,
+            result.totalItems,
+            result.hasMore
+        );
+        
+        // Update state
+        pageState.hasMore = result.hasMore;
+        pageState.currentPage = 2; // Next page will be 2
+        
+        // Update folders if needed
+        if (updateFolders && result.folders) {
+            updateFolderTags(result.folders);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error(`Error reloading ${modelType}s:`, error);
+        showToast(`Failed to reload ${modelType}s: ${error.message}`, 'error');
+        throw error;
+    } finally {
+        pageState.isLoading = false;
+        document.body.classList.remove('loading');
+    }
+}
+
+/**
+ * Load more models using virtual scrolling
+ * @param {Object} options - Operation options
+ * @returns {Promise<Object>} The fetch result
+ */
+export async function loadMoreWithVirtualScroll(options = {}) {
+    const {
+        modelType = 'lora',
+        resetPage = false,
+        updateFolders = false,
+        fetchPageFunction
+    } = options;
+    
+    const pageState = getCurrentPageState();
+    
+    try {
+        // Start loading state
+        pageState.isLoading = true;
+        document.body.classList.add('loading');
+        
+        // Reset to first page if requested
+        if (resetPage) {
+            pageState.currentPage = 1;
+        }
+        
+        // Fetch the first page of data
+        const result = await fetchPageFunction(pageState.currentPage, pageState.pageSize || 50);
+        
+        // Update virtual scroller with the new data
+        state.virtualScroller.refreshWithData(
+            result.items,
+            result.totalItems,
+            result.hasMore
+        );
+        
+        // Update state
+        pageState.hasMore = result.hasMore;
+        pageState.currentPage = 2; // Next page to load would be 2
+        
+        // Update folders if needed
+        if (updateFolders && result.folders) {
+            updateFolderTags(result.folders);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error(`Error loading ${modelType}s:`, error);
+        showToast(`Failed to load ${modelType}s: ${error.message}`, 'error');
+        throw error;
     } finally {
         pageState.isLoading = false;
         document.body.classList.remove('loading');

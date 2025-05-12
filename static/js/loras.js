@@ -63,8 +63,14 @@ class LoraPageManager {
         // Initialize the bulk manager
         bulkManager.initialize();
         
-        // Initialize common page features (lazy loading, infinite scroll)
+        // Initialize common page features (virtual scroll)
         appCore.initializePageFeatures();
+        
+        // Add virtual scroll class to grid for CSS adjustments
+        const loraGrid = document.getElementById('loraGrid');
+        if (loraGrid && state.virtualScroller) {
+            loraGrid.classList.add('virtual-scroll');
+        }
     }
 }
 

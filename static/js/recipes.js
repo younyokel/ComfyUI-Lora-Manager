@@ -1,13 +1,13 @@
 // Recipe manager module
 import { appCore } from './core.js';
 import { ImportManager } from './managers/ImportManager.js';
-import { RecipeCard } from './components/RecipeCard.js';
 import { RecipeModal } from './components/RecipeModal.js';
-import { getCurrentPageState } from './state/index.js';
+import { getCurrentPageState, state } from './state/index.js';
 import { getSessionItem, removeSessionItem } from './utils/storageHelpers.js';
 import { RecipeContextMenu } from './components/ContextMenu/index.js';
 import { DuplicatesManager } from './components/DuplicatesManager.js';
-import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
+import { initializeInfiniteScroll, refreshVirtualScroll } from './utils/infiniteScroll.js';
+import { resetAndReload, refreshRecipes } from './api/recipeApi.js';
 
 class RecipeManager {
     constructor() {
@@ -27,8 +27,8 @@ class RecipeManager {
         this.pageState.isLoading = false;
         this.pageState.hasMore = true;
         
-        // Custom filter state
-        this.customFilter = {
+        // Custom filter state - move to pageState for compatibility with virtual scrolling
+        this.pageState.customFilter = {
             active: false,
             loraName: null,
             loraHash: null,
@@ -49,13 +49,10 @@ class RecipeManager {
         // Check for custom filter parameters in session storage
         this._checkCustomFilter();
         
-        // Load initial set of recipes
-        await this.loadRecipes();
-        
         // Expose necessary functions to the page
         this._exposeGlobalFunctions();
         
-        // Initialize common page features (lazy loading, infinite scroll)
+        // Initialize common page features
         appCore.initializePageFeatures();
     }
     
@@ -87,7 +84,7 @@ class RecipeManager {
         
         // Set custom filter if any parameter is present
         if (filterLoraName || filterLoraHash || viewRecipeId) {
-            this.customFilter = {
+            this.pageState.customFilter = {
                 active: true,
                 loraName: filterLoraName,
                 loraHash: filterLoraHash,
@@ -108,11 +105,11 @@ class RecipeManager {
         // Update text based on filter type
         let filterText = '';
         
-        if (this.customFilter.recipeId) {
+        if (this.pageState.customFilter.recipeId) {
             filterText = 'Viewing specific recipe';
-        } else if (this.customFilter.loraName) {
+        } else if (this.pageState.customFilter.loraName) {
             // Format with Lora name
-            const loraName = this.customFilter.loraName;
+            const loraName = this.pageState.customFilter.loraName;
             const displayName = loraName.length > 25 ? 
                 loraName.substring(0, 22) + '...' : 
                 loraName;
@@ -125,8 +122,8 @@ class RecipeManager {
         // Update indicator text and show it
         textElement.innerHTML = filterText;
         // Add title attribute to show the lora name as a tooltip
-        if (this.customFilter.loraName) {
-            textElement.setAttribute('title', this.customFilter.loraName);
+        if (this.pageState.customFilter.loraName) {
+            textElement.setAttribute('title', this.pageState.customFilter.loraName);
         }
         indicator.classList.remove('hidden');
         
@@ -149,7 +146,7 @@ class RecipeManager {
     
     _clearCustomFilter() {
         // Reset custom filter
-        this.customFilter = {
+        this.pageState.customFilter = {
             active: false,
             loraName: null,
             loraHash: null,
@@ -167,8 +164,8 @@ class RecipeManager {
         removeSessionItem('lora_to_recipe_filterLoraHash');
         removeSessionItem('viewRecipeId');
         
-        // Reload recipes without custom filter
-        this.loadRecipes();
+        // Reset and refresh the virtual scroller
+        refreshVirtualScroll();
     }
     
     initEventListeners() {
@@ -177,105 +174,21 @@ class RecipeManager {
         if (sortSelect) {
             sortSelect.addEventListener('change', () => {
                 this.pageState.sortBy = sortSelect.value;
-                this.loadRecipes();
+                refreshVirtualScroll();
             });
         }
     }
     
+    // This method is kept for compatibility but now uses virtual scrolling
     async loadRecipes(resetPage = true) {
-        try {
-            // Skip loading if in duplicates mode
-            const pageState = getCurrentPageState();
-            if (pageState.duplicatesMode) {
-                return;
-            }
-            
-            // Show loading indicator
-            document.body.classList.add('loading');
-            this.pageState.isLoading = true;
-            
-            // Reset to first page if requested
-            if (resetPage) {
-                this.pageState.currentPage = 1;
-                // Clear grid if resetting
-                const grid = document.getElementById('recipeGrid');
-                if (grid) grid.innerHTML = '';
-            }
-            
-            // If we have a specific recipe ID to load
-            if (this.customFilter.active && this.customFilter.recipeId) {
-                await this._loadSpecificRecipe(this.customFilter.recipeId);
-                return;
-            }
-            
-            // Build query parameters
-            const params = new URLSearchParams({
-                page: this.pageState.currentPage,
-                page_size: this.pageState.pageSize || 20,
-                sort_by: this.pageState.sortBy
-            });
-            
-            // Add custom filter for Lora if present
-            if (this.customFilter.active && this.customFilter.loraHash) {
-                params.append('lora_hash', this.customFilter.loraHash);
-                
-                // Skip other filters when using custom filter
-                params.append('bypass_filters', 'true');
-            } else {
-                // Normal filtering logic
-                
-                // Add search filter if present
-                if (this.pageState.filters.search) {
-                    params.append('search', this.pageState.filters.search);
-                    
-                    // Add search option parameters
-                    if (this.pageState.searchOptions) {
-                        params.append('search_title', this.pageState.searchOptions.title.toString());
-                        params.append('search_tags', this.pageState.searchOptions.tags.toString());
-                        params.append('search_lora_name', this.pageState.searchOptions.loraName.toString());
-                        params.append('search_lora_model', this.pageState.searchOptions.loraModel.toString());
-                        params.append('fuzzy', 'true');
-                    }
-                }
-                
-                // Add base model filters
-                if (this.pageState.filters.baseModel && this.pageState.filters.baseModel.length) {
-                    params.append('base_models', this.pageState.filters.baseModel.join(','));
-                }
-                
-                // Add tag filters
-                if (this.pageState.filters.tags && this.pageState.filters.tags.length) {
-                    params.append('tags', this.pageState.filters.tags.join(','));
-                }
-            }
-
-            // Fetch recipes
-            const response = await fetch(`/api/recipes?${params.toString()}`);
-            
-            if (!response.ok) {
-                throw new Error(`Failed to load recipes: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-
-            // Update recipes grid
-            this.updateRecipesGrid(data, resetPage);
-            
-            // Update pagination state based on current page and total pages
-            this.pageState.hasMore = data.page < data.total_pages;
-            
-            // Increment the page number AFTER successful loading
-            if (data.items.length > 0) {
-                this.pageState.currentPage++;
-            }
-            
-        } catch (error) {
-            console.error('Error loading recipes:', error);
-            appCore.showToast('Failed to load recipes', 'error');
-        } finally {
-            // Hide loading indicator
-            document.body.classList.remove('loading');
-            this.pageState.isLoading = false;
+        // Skip loading if in duplicates mode
+        const pageState = getCurrentPageState();
+        if (pageState.duplicatesMode) {
+            return;
+        }
+        
+        if (resetPage) {
+            refreshVirtualScroll();
         }
     }
     
@@ -283,95 +196,7 @@ class RecipeManager {
      * Refreshes the recipe list by first rebuilding the cache and then loading recipes
      */
     async refreshRecipes() {
-        try {           
-            // Call the new endpoint to rebuild the recipe cache
-            const response = await fetch('/api/recipes/scan');
-            
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to refresh recipe cache');
-            }
-            
-            // After successful cache rebuild, load the recipes
-            await this.loadRecipes(true);
-            
-            appCore.showToast('Refresh complete', 'success');
-        } catch (error) {
-            console.error('Error refreshing recipes:', error);
-            appCore.showToast(error.message || 'Failed to refresh recipes', 'error');
-            
-            // Still try to load recipes even if scan failed
-            await this.loadRecipes(true);
-        }
-    }
-    
-    async _loadSpecificRecipe(recipeId) {
-        try {
-            // Fetch specific recipe by ID
-            const response = await fetch(`/api/recipe/${recipeId}`);
-            
-            if (!response.ok) {
-                throw new Error(`Failed to load recipe: ${response.statusText}`);
-            }
-            
-            const recipe = await response.json();
-            
-            // Create a data structure that matches the expected format
-            const recipeData = {
-                items: [recipe],
-                total: 1,
-                page: 1,
-                page_size: 1,
-                total_pages: 1
-            };
-            
-            // Update grid with single recipe
-            this.updateRecipesGrid(recipeData, true);
-            
-            // Pagination not needed for single recipe
-            this.pageState.hasMore = false;
-            
-            // Show recipe details modal
-            setTimeout(() => {
-                this.showRecipeDetails(recipe);
-            }, 300);
-            
-        } catch (error) {
-            console.error('Error loading specific recipe:', error);
-            appCore.showToast('Failed to load recipe details', 'error');
-            
-            // Clear the filter and show all recipes
-            this._clearCustomFilter();
-        }
-    }
-    
-    updateRecipesGrid(data, resetGrid = true) {
-        const grid = document.getElementById('recipeGrid');
-        if (!grid) return;
-        
-        // Check if data exists and has items
-        if (!data.items || data.items.length === 0) {
-            if (resetGrid) {
-                grid.innerHTML = `
-                    <div class="placeholder-message">
-                        <p>No recipes found</p>
-                        <p>Add recipe images to your recipes folder to see them here.</p>
-                    </div>
-                `;
-            }
-            return;
-        }
-        
-        // Clear grid if resetting
-        if (resetGrid) {
-            grid.innerHTML = '';
-        }
-        
-        // Create recipe cards
-        data.items.forEach(recipe => {
-            const recipeCard = new RecipeCard(recipe, (recipe) => this.showRecipeDetails(recipe));
-            grid.appendChild(recipeCard.element);
-        });
+        return refreshRecipes();
     }
     
     showRecipeDetails(recipe) {
@@ -396,8 +221,18 @@ class RecipeManager {
     }
     
     exitDuplicateMode() {
+        // Clear the grid first to prevent showing old content temporarily
+        const recipeGrid = document.getElementById('recipeGrid');
+        if (recipeGrid) {
+            recipeGrid.innerHTML = '';
+        }
+        
         this.duplicatesManager.exitDuplicateMode();
-        initializeInfiniteScroll();
+        
+        // Use a small delay before initializing to ensure DOM is ready
+        setTimeout(() => {
+            initializeInfiniteScroll('recipes');
+        }, 100);
     }
 }
 

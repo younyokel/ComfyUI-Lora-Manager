@@ -1,7 +1,10 @@
 import { createCheckpointCard } from '../components/CheckpointCard.js';
 import {
     loadMoreModels,
+    fetchModelsPage,
     resetAndReload as baseResetAndReload,
+    resetAndReloadWithVirtualScroll,
+    loadMoreWithVirtualScroll,
     refreshModels as baseRefreshModels,
     deleteModel as baseDeleteModel,
     replaceModelPreview,
@@ -9,25 +12,67 @@ import {
     refreshSingleModelMetadata,
     excludeModel as baseExcludeModel
 } from './baseModelApi.js';
+import { state } from '../state/index.js';
 
-// Load more checkpoints with pagination
-export async function loadMoreCheckpoints(resetPagination = true) {
-    return loadMoreModels({
-        resetPage: resetPagination,
-        updateFolders: true,
+/**
+ * Fetch checkpoints with pagination for virtual scrolling
+ * @param {number} page - Page number to fetch
+ * @param {number} pageSize - Number of items per page
+ * @returns {Promise<Object>} Object containing items, total count, and pagination info
+ */
+export async function fetchCheckpointsPage(page = 1, pageSize = 100) {
+    return fetchModelsPage({
         modelType: 'checkpoint',
-        createCardFunction: createCheckpointCard,
+        page,
+        pageSize,
         endpoint: '/api/checkpoints'
     });
 }
 
+/**
+ * Load more checkpoints with pagination - updated to work with VirtualScroller
+ * @param {boolean} resetPage - Whether to reset to the first page
+ * @param {boolean} updateFolders - Whether to update folder tags
+ * @returns {Promise<void>}
+ */
+export async function loadMoreCheckpoints(resetPage = false, updateFolders = false) {
+    // Check if virtual scroller is available
+    if (state.virtualScroller) {
+        return loadMoreWithVirtualScroll({
+            modelType: 'checkpoint',
+            resetPage,
+            updateFolders,
+            fetchPageFunction: fetchCheckpointsPage
+        });
+    } else {
+        // Fall back to the original implementation if virtual scroller isn't available
+        return loadMoreModels({
+            resetPage,
+            updateFolders,
+            modelType: 'checkpoint',
+            createCardFunction: createCheckpointCard,
+            endpoint: '/api/checkpoints'
+        });
+    }
+}
+
 // Reset and reload checkpoints
-export async function resetAndReload() {
-    return baseResetAndReload({
-        updateFolders: true,
-        modelType: 'checkpoint',
-        loadMoreFunction: loadMoreCheckpoints
-    });
+export async function resetAndReload(updateFolders = false) {
+    // Check if virtual scroller is available
+    if (state.virtualScroller) {
+        return resetAndReloadWithVirtualScroll({
+            modelType: 'checkpoint',
+            updateFolders,
+            fetchPageFunction: fetchCheckpointsPage
+        });
+    } else {
+        // Fall back to original implementation
+        return baseResetAndReload({
+            updateFolders,
+            modelType: 'checkpoint',
+            loadMoreFunction: loadMoreCheckpoints
+        });
+    }
 }
 
 // Refresh checkpoints
@@ -60,7 +105,11 @@ export async function fetchCivitai() {
 
 // Refresh single checkpoint metadata
 export async function refreshSingleCheckpointMetadata(filePath) {
-    return refreshSingleModelMetadata(filePath, 'checkpoint');
+    const success = await refreshSingleModelMetadata(filePath, 'checkpoint');
+    if (success) {
+        // Reload the current view to show updated data
+        await resetAndReload();
+    }
 }
 
 /**

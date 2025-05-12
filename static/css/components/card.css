@@ -1,12 +1,13 @@
 /* 卡片网格布局 */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); /* Adjusted from 320px */
-    gap: 12px; /* Reduced from var(--space-2) for tighter horizontal spacing */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); /* Base size */
+    gap: 12px; /* Consistent gap for both row and column spacing */
+    row-gap: 20px; /* Increase vertical spacing between rows */
     margin-top: var(--space-2);
     padding-top: 4px; /* 添加顶部内边距，为悬停动画提供空间 */
     padding-bottom: 4px; /* 添加底部内边距，为悬停动画提供空间 */
-    max-width: 1400px; /* Container width control */
+    max-width: 1400px; /* Base container width */
     margin-left: auto;
     margin-right: auto;
 }
@@ -17,13 +18,14 @@
     border-radius: var(--border-radius-base);
     backdrop-filter: blur(16px);
     transition: transform 160ms ease-out;
-    aspect-ratio: 896/1152;
-    max-width: 260px; /* Adjusted from 320px to fit 5 cards */
+    aspect-ratio: 896/1152; /* Preserve aspect ratio */
+    max-width: 260px; /* Base size */
+    width: 100%;
     margin: 0 auto;
-    cursor: pointer; /* Added from recipe-card */
-    display: flex; /* Added from recipe-card */
-    flex-direction: column; /* Added from recipe-card */
-    overflow: hidden; /* Add overflow hidden to contain children */
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .lora-card:hover {
@@ -34,6 +36,30 @@
 .lora-card:focus-visible {
     outline: 2px solid var(--lora-accent);
     outline-offset: 2px;
+}
+
+/* Responsive adjustments for 1440p screens (2K) */
+@media (min-width: 2000px) {
+    .card-grid {
+        max-width: 1800px; /* Increased for 2K screens */
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    }
+    
+    .lora-card {
+        max-width: 270px;
+    }
+}
+
+/* Responsive adjustments for 4K screens */
+@media (min-width: 3000px) {
+    .card-grid {
+        max-width: 2400px; /* Increased for 4K screens */
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+    
+    .lora-card {
+        max-width: 280px;
+    }
 }
 
 /* Responsive adjustments */
@@ -362,4 +388,42 @@
     padding: 2rem;
     background: var(--lora-surface-alt);
     border-radius: var(--border-radius-base);
+}
+
+/* Virtual scrolling specific styles - updated */
+.virtual-scroll-item {
+    position: absolute;
+    box-sizing: border-box;
+    transition: transform 160ms ease-out;
+    margin: 0; /* Remove margins, positioning is handled by VirtualScroller */
+    width: 100%; /* Allow width to be set by the VirtualScroller */
+}
+
+.virtual-scroll-item:hover {
+    transform: translateY(-2px); /* Keep hover effect */
+    z-index: 1; /* Ensure hovered items appear above others */
+}
+
+/* When using virtual scroll, adjust container */
+.card-grid.virtual-scroll {
+    display: block;
+    position: relative;
+    margin: 0 auto;
+    padding: 6px 0; /* Add top/bottom padding equivalent to card padding */
+    height: auto;
+    width: 100%;
+    max-width: 1400px; /* Keep the max-width from original grid */
+}
+
+/* For larger screens, allow more space for the cards */
+@media (min-width: 2000px) {
+    .card-grid.virtual-scroll {
+        max-width: 1800px;
+    }
+}
+
+@media (min-width: 3000px) {
+    .card-grid.virtual-scroll {
+        max-width: 2400px;
+    }
 }

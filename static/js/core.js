@@ -9,6 +9,7 @@ import { exampleImagesManager } from './managers/ExampleImagesManager.js';
 import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { migrateStorageItems } from './utils/storageHelpers.js';
+import { setupLoraCardEventDelegation } from './components/LoraCard.js';
 
 // Core application class
 export class AppCore {
@@ -63,7 +64,12 @@ export class AppCore {
         // Initialize lazy loading for images on all pages
         lazyLoadImages();
         
-        // Initialize infinite scroll for pages that need it
+        // Setup event delegation for lora cards if on the loras page
+        if (pageType === 'loras') {
+            setupLoraCardEventDelegation();
+        }
+        
+        // Initialize virtual scroll for pages that need it
         if (['loras', 'recipes', 'checkpoints'].includes(pageType)) {
             initializeInfiniteScroll(pageType);
         }
