@@ -58,6 +58,7 @@ export async function initializeInfiniteScroll(pageType = 'loras') {
     
     // Skip initializing if in duplicates mode (for recipes page)
     if (pageType === 'recipes' && pageState.duplicatesMode) {
+        console.log('Skipping virtual scroll initialization - duplicates mode is active');
         return;
     }
 

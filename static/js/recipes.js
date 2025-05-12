@@ -221,8 +221,18 @@ class RecipeManager {
     }
     
     exitDuplicateMode() {
+        // Clear the grid first to prevent showing old content temporarily
+        const recipeGrid = document.getElementById('recipeGrid');
+        if (recipeGrid) {
+            recipeGrid.innerHTML = '';
+        }
+        
         this.duplicatesManager.exitDuplicateMode();
-        initializeInfiniteScroll('recipes');
+        
+        // Use a small delay before initializing to ensure DOM is ready
+        setTimeout(() => {
+            initializeInfiniteScroll('recipes');
+        }, 100);
     }
 }
 

@@ -317,8 +317,9 @@ export class VirtualScroller {
         return { start: firstIndex, end: lastIndex };
     }
 
+    // Update the scheduleRender method to check for disabled state
     scheduleRender() {
-        if (this.renderScheduled) return;
+        if (this.disabled || this.renderScheduled) return;
         
         this.renderScheduled = true;
         requestAnimationFrame(() => {
@@ -327,8 +328,9 @@ export class VirtualScroller {
         });
     }
 
+    // Update the renderItems method to check for disabled state
     renderItems() {
-        if (this.items.length === 0 || this.columnsCount === 0) return;
+        if (this.disabled || this.items.length === 0 || this.columnsCount === 0) return;
         
         const { start, end } = this.getVisibleRange();
         
@@ -671,5 +673,45 @@ export class VirtualScroller {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(context, args), wait);
         };
+    }
+
+    // Add disable method to stop rendering and events
+    disable() {
+        // Detach scroll event listener
+        this.scrollContainer.removeEventListener('scroll', this.scrollHandler);
+        
+        // Clear all rendered items from the DOM
+        this.clearRenderedItems();
+        
+        // Hide the spacer element
+        if (this.spacerElement) {
+            this.spacerElement.style.display = 'none';
+        }
+        
+        // Flag as disabled
+        this.disabled = true;
+        
+        console.log('Virtual scroller disabled');
+    }
+
+    // Add enable method to resume rendering and events
+    enable() {
+        if (!this.disabled) return;
+        
+        // Reattach scroll event listener
+        this.scrollContainer.addEventListener('scroll', this.scrollHandler);
+        
+        // Show the spacer element
+        if (this.spacerElement) {
+            this.spacerElement.style.display = 'block';
+        }
+        
+        // Flag as enabled
+        this.disabled = false;
+        
+        // Re-render items
+        this.scheduleRender();
+        
+        console.log('Virtual scroller enabled');
     }
 }
