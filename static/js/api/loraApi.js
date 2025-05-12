@@ -1,6 +1,7 @@
 import { createLoraCard } from '../components/LoraCard.js';
 import {
     loadMoreModels,
+    fetchModelsPage,
     resetAndReload as baseResetAndReload,
     refreshModels as baseRefreshModels,
     deleteModel as baseDeleteModel,
@@ -50,6 +51,22 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
         updateFolders,
         modelType: 'lora',
         createCardFunction: createLoraCard,
+        endpoint: '/api/loras'
+    });
+}
+
+/**
+ * Fetch loras with pagination for virtual scrolling
+ * @param {number} page - Page number to fetch
+ * @param {number} pageSize - Number of items per page
+ * @returns {Promise<Object>} Object containing items, total count, and pagination info
+ */
+export async function fetchLorasPage(page = 1, pageSize = 50) {
+    console.log('Fetching loras page:', page, pageSize);
+    return fetchModelsPage({
+        modelType: 'lora',
+        page,
+        pageSize,
         endpoint: '/api/loras'
     });
 }

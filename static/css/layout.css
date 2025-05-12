@@ -15,6 +15,19 @@
     z-index: var(--z-base);
 }
 
+/* Responsive container for larger screens */
+@media (min-width: 2000px) {
+    .container {
+        max-width: 1800px;
+    }
+}
+
+@media (min-width: 3000px) {
+    .container {
+        max-width: 2400px;
+    }
+}
+
 .controls {
     display: flex;
     flex-direction: column;

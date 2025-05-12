@@ -63,7 +63,7 @@ export class AppCore {
         // Initialize lazy loading for images on all pages
         lazyLoadImages();
         
-        // Initialize infinite scroll for pages that need it
+        // Initialize virtual scroll for pages that need it
         if (['loras', 'recipes', 'checkpoints'].includes(pageType)) {
             initializeInfiniteScroll(pageType);
         }

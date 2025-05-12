@@ -298,6 +298,11 @@ export function createLoraCard(lora) {
         });
     }
 
+    // Add a special class for virtual scroll positioning if needed
+    if (state.virtualScroller) {
+        card.classList.add('virtual-scroll-item');
+    }
+
     return card;
 }
 
