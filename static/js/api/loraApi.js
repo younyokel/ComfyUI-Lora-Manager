@@ -62,7 +62,6 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
  * @returns {Promise<Object>} Object containing items, total count, and pagination info
  */
 export async function fetchLorasPage(page = 1, pageSize = 50) {
-    console.log('Fetching loras page:', page, pageSize);
     return fetchModelsPage({
         modelType: 'lora',
         page,

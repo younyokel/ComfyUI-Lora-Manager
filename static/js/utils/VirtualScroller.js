@@ -9,9 +9,11 @@ export class VirtualScroller {
         this.fetchItemsFn = options.fetchItemsFn;
         this.overscan = options.overscan || 5; // Extra items to render above/below viewport
         this.containerElement = options.containerElement || this.gridElement.parentElement;
+        this.scrollContainer = options.scrollContainer || this.containerElement;
         this.batchSize = options.batchSize || 50;
         this.pageSize = options.pageSize || 100;
         this.itemAspectRatio = 896/1152; // Aspect ratio of cards
+        this.rowGap = options.rowGap || 20; // Add vertical gap between rows (default 20px)
 
         // State
         this.items = []; // All items metadata
@@ -31,6 +33,10 @@ export class VirtualScroller {
         this.columnsCount = 0;
         this.gridPadding = 12; // Gap between cards
         this.columnGap = 12; // Horizontal gap
+
+        // Add loading timeout state
+        this.loadingTimeout = null;
+        this.loadingTimeoutDuration = options.loadingTimeoutDuration || 15000; // 15 seconds default
 
         // Initialize
         this.initializeContainer();
@@ -63,8 +69,14 @@ export class VirtualScroller {
     }
 
     calculateLayout() {
-        // Get container width
+        // Get container width and style information
         const containerWidth = this.containerElement.clientWidth;
+        const containerStyle = getComputedStyle(this.containerElement);
+        const paddingLeft = parseInt(containerStyle.paddingLeft, 10) || 0;
+        const paddingRight = parseInt(containerStyle.paddingRight, 10) || 0;
+        
+        // Calculate available content width (excluding padding)
+        const availableContentWidth = containerWidth - paddingLeft - paddingRight;
         
         // Calculate ideal card width based on breakpoints
         let baseCardWidth = 260; // Default for 1080p
@@ -77,37 +89,41 @@ export class VirtualScroller {
         }
 
         // Calculate how many columns can fit
-        const availableWidth = Math.min(
-            containerWidth, 
-            window.innerWidth >= 3000 ? 2400 : // 4K
-            window.innerWidth >= 2000 ? 1800 : // 2K
-            1400 // 1080p
-        );
+        const maxGridWidth = window.innerWidth >= 3000 ? 2400 : // 4K
+                           window.innerWidth >= 2000 ? 1800 : // 2K
+                           1400; // 1080p
+        
+        // Use the smaller of available content width or max grid width
+        const actualGridWidth = Math.min(availableContentWidth, maxGridWidth);
         
         // Calculate column count based on available width and card width
-        this.columnsCount = Math.max(1, Math.floor((availableWidth + this.columnGap) / (baseCardWidth + this.columnGap)));
+        this.columnsCount = Math.max(1, Math.floor((actualGridWidth + this.columnGap) / (baseCardWidth + this.columnGap)));
         
-        // Calculate actual item width based on container and column count
-        this.itemWidth = (availableWidth - (this.columnsCount - 1) * this.columnGap) / this.columnsCount;
+        // Calculate actual item width
+        this.itemWidth = (actualGridWidth - (this.columnsCount - 1) * this.columnGap) / this.columnsCount;
         
         // Calculate height based on aspect ratio
         this.itemHeight = this.itemWidth / this.itemAspectRatio;
         
-        // Calculate the left offset to center the grid
-        this.leftOffset = Math.max(0, (containerWidth - availableWidth) / 2);
+        // Calculate the left offset to center the grid within the content area
+        this.leftOffset = Math.max(0, (availableContentWidth - actualGridWidth) / 2);
         
         // Log layout info
         console.log('Virtual Scroll Layout:', {
             containerWidth,
-            availableWidth,
+            availableContentWidth,
+            actualGridWidth,
             columnsCount: this.columnsCount,
             itemWidth: this.itemWidth,
             itemHeight: this.itemHeight,
-            leftOffset: this.leftOffset
+            leftOffset: this.leftOffset,
+            paddingLeft,
+            paddingRight,
+            rowGap: this.rowGap // Log row gap for debugging
         });
 
         // Update grid element max-width to match available width
-        this.gridElement.style.maxWidth = `${availableWidth}px`;
+        this.gridElement.style.maxWidth = `${actualGridWidth}px`;
         
         // Update spacer height
         this.updateSpacerHeight();
@@ -122,7 +138,7 @@ export class VirtualScroller {
     setupEventListeners() {
         // Debounced scroll handler
         this.scrollHandler = this.debounce(() => this.handleScroll(), 10);
-        this.containerElement.addEventListener('scroll', this.scrollHandler);
+        this.scrollContainer.addEventListener('scroll', this.scrollHandler);
         
         // Window resize handler for layout recalculation
         this.resizeHandler = this.debounce(() => {
@@ -156,6 +172,8 @@ export class VirtualScroller {
         if (this.isLoading) return;
         
         this.isLoading = true;
+        this.setLoadingTimeout(); // Add loading timeout safety
+        
         try {
             const { items, totalItems, hasMore } = await this.fetchItemsFn(1, this.pageSize);
             this.items = items || [];
@@ -173,8 +191,10 @@ export class VirtualScroller {
             return { items, totalItems, hasMore };
         } catch (err) {
             console.error('Failed to load initial batch:', err);
-            this.isLoading = false;
             throw err;
+        } finally {
+            this.isLoading = false;
+            this.clearLoadingTimeout(); // Clear the timeout
         }
     }
 
@@ -184,8 +204,10 @@ export class VirtualScroller {
         
         this.isLoading = true;
         pageState.isLoading = true;
+        this.setLoadingTimeout(); // Add loading timeout safety
         
         try {
+            console.log('Loading more items, page:', pageState.currentPage);
             const { items, hasMore } = await this.fetchItemsFn(pageState.currentPage, this.pageSize);
             
             if (items && items.length > 0) {
@@ -201,9 +223,12 @@ export class VirtualScroller {
                 
                 // Render the newly loaded items if they're in view
                 this.scheduleRender();
+                
+                console.log(`Loaded ${items.length} more items, total now: ${this.items.length}`);
             } else {
                 this.hasMore = false;
                 pageState.hasMore = false;
+                console.log('No more items to load');
             }
             
             return items;
@@ -213,6 +238,30 @@ export class VirtualScroller {
         } finally {
             this.isLoading = false;
             pageState.isLoading = false;
+            this.clearLoadingTimeout(); // Clear the timeout
+        }
+    }
+
+    // Add new methods for loading timeout
+    setLoadingTimeout() {
+        // Clear any existing timeout first
+        this.clearLoadingTimeout();
+        
+        // Set a new timeout to prevent loading state from getting stuck
+        this.loadingTimeout = setTimeout(() => {
+            if (this.isLoading) {
+                console.warn('Loading timeout occurred. Resetting loading state.');
+                this.isLoading = false;
+                const pageState = getCurrentPageState();
+                pageState.isLoading = false;
+            }
+        }, this.loadingTimeoutDuration);
+    }
+
+    clearLoadingTimeout() {
+        if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
         }
     }
 
@@ -221,19 +270,21 @@ export class VirtualScroller {
         
         // Calculate total rows needed based on total items and columns
         const totalRows = Math.ceil(this.totalItems / this.columnsCount);
-        const totalHeight = totalRows * this.itemHeight;
+        // Add row gaps to the total height calculation
+        const totalHeight = totalRows * this.itemHeight + (totalRows - 1) * this.rowGap;
         
         // Update spacer height to represent all items
         this.spacerElement.style.height = `${totalHeight}px`;
     }
 
     getVisibleRange() {
-        const scrollTop = this.containerElement.scrollTop;
-        const viewportHeight = this.containerElement.clientHeight;
+        const scrollTop = this.scrollContainer.scrollTop;
+        const viewportHeight = this.scrollContainer.clientHeight;
         
-        // Calculate the visible row range
-        const startRow = Math.floor(scrollTop / this.itemHeight);
-        const endRow = Math.ceil((scrollTop + viewportHeight) / this.itemHeight);
+        // Calculate the visible row range, accounting for row gaps
+        const rowHeight = this.itemHeight + this.rowGap;
+        const startRow = Math.floor(scrollTop / rowHeight);
+        const endRow = Math.ceil((scrollTop + viewportHeight) / rowHeight);
         
         // Add overscan for smoother scrolling
         const overscanRows = this.overscan;
@@ -330,8 +381,11 @@ export class VirtualScroller {
         const row = Math.floor(index / this.columnsCount);
         const col = index % this.columnsCount;
         
-        // Calculate precise positions
-        const topPos = row * this.itemHeight;
+        // Calculate precise positions with row gap included
+        const topPos = row * (this.itemHeight + this.rowGap);
+        
+        // Position correctly with leftOffset (no need to add padding as absolute
+        // positioning is already relative to the padding edge of the container)
         const leftPos = this.leftOffset + (col * (this.itemWidth + this.columnGap));
         
         // Position the element with absolute positioning
@@ -346,7 +400,7 @@ export class VirtualScroller {
 
     handleScroll() {
         // Determine scroll direction
-        const scrollTop = this.containerElement.scrollTop;
+        const scrollTop = this.scrollContainer.scrollTop;
         this.scrollDirection = scrollTop > this.lastScrollTop ? 'down' : 'up';
         this.lastScrollTop = scrollTop;
         
@@ -354,11 +408,35 @@ export class VirtualScroller {
         this.scheduleRender();
         
         // If we're near the bottom and have more items, load them
-        const { clientHeight, scrollHeight } = this.containerElement;
+        const { clientHeight, scrollHeight } = this.scrollContainer;
         const scrollBottom = scrollTop + clientHeight;
-        const scrollThreshold = scrollHeight - (this.itemHeight * this.overscan);
         
-        if (scrollBottom >= scrollThreshold && this.hasMore && !this.isLoading) {
+        // Fix the threshold calculation - use percentage of remaining height instead
+        // We'll trigger loading when within 20% of the bottom of rendered content
+        const remainingScroll = scrollHeight - scrollBottom;
+        const scrollThreshold = Math.min(
+            // Either trigger when within 20% of the total height from bottom
+            scrollHeight * 0.2,
+            // Or when within 2 rows of content from the bottom, whichever is larger
+            (this.itemHeight + this.rowGap) * 2
+        );
+        
+        const shouldLoadMore = remainingScroll <= scrollThreshold;
+        
+        // Enhanced debugging
+        // console.log('Scroll metrics:', {
+        //     scrollBottom,
+        //     scrollHeight,
+        //     remainingScroll,
+        //     scrollThreshold,
+        //     shouldLoad: shouldLoadMore,
+        //     hasMore: this.hasMore,
+        //     isLoading: this.isLoading,
+        //     itemsLoaded: this.items.length,
+        //     totalItems: this.totalItems
+        // });
+        
+        if (shouldLoadMore && this.hasMore && !this.isLoading) {
             this.loadMoreItems();
         }
     }
@@ -381,7 +459,7 @@ export class VirtualScroller {
 
     dispose() {
         // Remove event listeners
-        this.containerElement.removeEventListener('scroll', this.scrollHandler);
+        this.scrollContainer.removeEventListener('scroll', this.scrollHandler);
         window.removeEventListener('resize', this.resizeHandler);
         
         // Clean up the resize observer if present
@@ -397,6 +475,9 @@ export class VirtualScroller {
         
         // Remove virtual scroll class
         this.gridElement.classList.remove('virtual-scroll');
+        
+        // Clear any pending timeout
+        this.clearLoadingTimeout();
     }
 
     // Utility method for debouncing

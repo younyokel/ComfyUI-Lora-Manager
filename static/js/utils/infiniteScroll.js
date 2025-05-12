@@ -99,7 +99,9 @@ async function initializeVirtualScroll(pageType) {
         return;
     }
     
-    const pageContent = document.querySelector('.page-content');
+    // Change this line to get the actual scrolling container
+    const pageContainer = document.querySelector('.page-content');
+    const pageContent = pageContainer.querySelector('.container');
     
     if (!pageContent) {
         console.warn('Page content element not found for virtual scroll');
@@ -115,13 +117,15 @@ async function initializeVirtualScroll(pageType) {
             throw new Error(`Required components not available for ${pageType} page`);
         }
         
-        // Initialize the virtual scroller
+        // Pass the correct scrolling container
         state.virtualScroller = new VirtualScroller({
             gridElement: grid,
             containerElement: pageContent,
+            scrollContainer: pageContainer, // Add this new parameter
             createItemFn: createCardFn,
             fetchItemsFn: fetchDataFn,
-            pageSize: 100
+            pageSize: 100,
+            rowGap: 20 // Add consistent vertical spacing between rows
         });
         
         // Initialize the virtual scroller
