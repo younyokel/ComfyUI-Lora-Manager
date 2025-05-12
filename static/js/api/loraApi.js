@@ -3,6 +3,8 @@ import {
     loadMoreModels,
     fetchModelsPage,
     resetAndReload as baseResetAndReload,
+    resetAndReloadWithVirtualScroll,
+    loadMoreWithVirtualScroll,
     refreshModels as baseRefreshModels,
     deleteModel as baseDeleteModel,
     replaceModelPreview,
@@ -58,45 +60,12 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
     
     // Check if virtual scroller is available
     if (state.virtualScroller) {
-        try {
-            // Start loading state
-            pageState.isLoading = true;
-            document.body.classList.add('loading');
-            
-            // Reset to first page if requested
-            if (resetPage) {
-                pageState.currentPage = 1;
-            }
-            
-            // Fetch the first page of data
-            const result = await fetchLorasPage(pageState.currentPage, pageState.pageSize || 50);
-            
-            // Update virtual scroller with the new data
-            state.virtualScroller.refreshWithData(
-                result.items,
-                result.totalItems,
-                result.hasMore
-            );
-            
-            // Update state
-            pageState.hasMore = result.hasMore;
-            pageState.currentPage = 2; // Next page to load would be 2
-            
-            // Update folders if needed
-            if (updateFolders && result.folders) {
-                // Import function dynamically to avoid circular dependencies
-                const { updateFolderTags } = await import('./baseModelApi.js');
-                updateFolderTags(result.folders);
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('Error loading loras:', error);
-            showToast(`Failed to load loras: ${error.message}`, 'error');
-        } finally {
-            pageState.isLoading = false;
-            document.body.classList.remove('loading');
-        }
+        return loadMoreWithVirtualScroll({
+            modelType: 'lora',
+            resetPage,
+            updateFolders,
+            fetchPageFunction: fetchLorasPage
+        });
     } else {
         // Fall back to the original implementation if virtual scroller isn't available
         return loadMoreModels({
@@ -115,7 +84,7 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
  * @param {number} pageSize - Number of items per page
  * @returns {Promise<Object>} Object containing items, total count, and pagination info
  */
-export async function fetchLorasPage(page = 1, pageSize = 50) {
+export async function fetchLorasPage(page = 1, pageSize = 100) {
     return fetchModelsPage({
         modelType: 'lora',
         page,
@@ -160,42 +129,11 @@ export async function resetAndReload(updateFolders = false) {
     
     // Check if virtual scroller is available
     if (state.virtualScroller) {
-        try {
-            pageState.isLoading = true;
-            document.body.classList.add('loading');
-            
-            // Reset page counter
-            pageState.currentPage = 1;
-            
-            // Fetch the first page
-            const result = await fetchLorasPage(1, pageState.pageSize || 50);
-            
-            // Update the virtual scroller
-            state.virtualScroller.refreshWithData(
-                result.items,
-                result.totalItems,
-                result.hasMore
-            );
-            
-            // Update state
-            pageState.hasMore = result.hasMore;
-            pageState.currentPage = 2; // Next page will be 2
-            
-            // Update folders if needed
-            if (updateFolders && result.folders) {
-                // Import function dynamically to avoid circular dependencies
-                const { updateFolderTags } = await import('./baseModelApi.js');
-                updateFolderTags(result.folders);
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('Error reloading loras:', error);
-            showToast(`Failed to reload loras: ${error.message}`, 'error');
-        } finally {
-            pageState.isLoading = false;
-            document.body.classList.remove('loading');
-        }
+        return resetAndReloadWithVirtualScroll({
+            modelType: 'lora',
+            updateFolders,
+            fetchPageFunction: fetchLorasPage
+        });
     } else {
         // Fall back to original implementation
         return baseResetAndReload({

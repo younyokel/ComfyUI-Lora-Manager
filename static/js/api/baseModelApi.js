@@ -1,7 +1,6 @@
 // filepath: d:\Workspace\ComfyUI\custom_nodes\ComfyUI-Lora-Manager\static\js\api\baseModelApi.js
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
-import { showDeleteModal, confirmDelete } from '../utils/modalUtils.js';
 import { getSessionItem, saveMapToStorage } from '../utils/storageHelpers.js';
 
 /**
@@ -276,6 +275,112 @@ export async function fetchModelsPage(options = {}) {
         console.error(`Error fetching ${modelType}s:`, error);
         showToast(`Failed to fetch ${modelType}s: ${error.message}`, 'error');
         throw error;
+    }
+}
+
+/**
+ * Reset and reload models using virtual scrolling
+ * @param {Object} options - Operation options
+ * @returns {Promise<Object>} The fetch result
+ */
+export async function resetAndReloadWithVirtualScroll(options = {}) {
+    const {
+        modelType = 'lora',
+        updateFolders = false,
+        fetchPageFunction
+    } = options;
+    
+    const pageState = getCurrentPageState();
+    
+    try {
+        pageState.isLoading = true;
+        document.body.classList.add('loading');
+        
+        // Reset page counter
+        pageState.currentPage = 1;
+        
+        // Fetch the first page
+        const result = await fetchPageFunction(1, pageState.pageSize || 50);
+        
+        // Update the virtual scroller
+        state.virtualScroller.refreshWithData(
+            result.items,
+            result.totalItems,
+            result.hasMore
+        );
+        
+        // Update state
+        pageState.hasMore = result.hasMore;
+        pageState.currentPage = 2; // Next page will be 2
+        
+        // Update folders if needed
+        if (updateFolders && result.folders) {
+            updateFolderTags(result.folders);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error(`Error reloading ${modelType}s:`, error);
+        showToast(`Failed to reload ${modelType}s: ${error.message}`, 'error');
+        throw error;
+    } finally {
+        pageState.isLoading = false;
+        document.body.classList.remove('loading');
+    }
+}
+
+/**
+ * Load more models using virtual scrolling
+ * @param {Object} options - Operation options
+ * @returns {Promise<Object>} The fetch result
+ */
+export async function loadMoreWithVirtualScroll(options = {}) {
+    const {
+        modelType = 'lora',
+        resetPage = false,
+        updateFolders = false,
+        fetchPageFunction
+    } = options;
+    
+    const pageState = getCurrentPageState();
+    
+    try {
+        // Start loading state
+        pageState.isLoading = true;
+        document.body.classList.add('loading');
+        
+        // Reset to first page if requested
+        if (resetPage) {
+            pageState.currentPage = 1;
+        }
+        
+        // Fetch the first page of data
+        const result = await fetchPageFunction(pageState.currentPage, pageState.pageSize || 50);
+        
+        // Update virtual scroller with the new data
+        state.virtualScroller.refreshWithData(
+            result.items,
+            result.totalItems,
+            result.hasMore
+        );
+        
+        // Update state
+        pageState.hasMore = result.hasMore;
+        pageState.currentPage = 2; // Next page to load would be 2
+        
+        // Update folders if needed
+        if (updateFolders && result.folders) {
+            updateFolderTags(result.folders);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error(`Error loading ${modelType}s:`, error);
+        showToast(`Failed to load ${modelType}s: ${error.message}`, 'error');
+        throw error;
+    } finally {
+        pageState.isLoading = false;
+        document.body.classList.remove('loading');
     }
 }
 

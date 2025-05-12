@@ -1,8 +1,9 @@
 import { state, getCurrentPageState } from '../state/index.js';
-import { debounce } from './debounce.js';
 import { VirtualScroller } from './VirtualScroller.js';
 import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
+import { createCheckpointCard } from '../components/CheckpointCard.js';
 import { fetchLorasPage } from '../api/loraApi.js';
+import { fetchCheckpointsPage } from '../api/checkpointApi.js';
 import { showToast } from './uiHelpers.js';
 
 // Function to dynamically import the appropriate card creator based on page type
@@ -18,13 +19,7 @@ async function getCardCreator(pageType) {
             return null;
         }
     } else if (pageType === 'checkpoints') {
-        try {
-            const { createCheckpointCard } = await import('../components/CheckpointCard.js');
-            return createCheckpointCard;
-        } catch (err) {
-            console.error('Failed to load checkpoint card creator:', err);
-            return null;
-        }
+        return createCheckpointCard;
     }
     return null;
 }
@@ -42,13 +37,7 @@ async function getDataFetcher(pageType) {
             return null;
         }
     } else if (pageType === 'checkpoints') {
-        try {
-            const { fetchCheckpointsPage } = await import('../api/checkpointApi.js');
-            return fetchCheckpointsPage;
-        } catch (err) {
-            console.error('Failed to load checkpoint data fetcher:', err);
-            return null;
-        }
+        return fetchCheckpointsPage;
     }
     return null;
 }
@@ -105,11 +94,11 @@ async function initializeVirtualScroll(pageType) {
     }
     
     // Change this line to get the actual scrolling container
-    const pageContainer = document.querySelector('.page-content');
-    const pageContent = pageContainer.querySelector('.container');
+    const scrollContainer = document.querySelector('.page-content');
+    const gridContainer = scrollContainer.querySelector('.container');
     
-    if (!pageContent) {
-        console.warn('Page content element not found for virtual scroll');
+    if (!gridContainer) {
+        console.warn('Grid container element not found for virtual scroll');
         return;
     }
     
@@ -122,15 +111,15 @@ async function initializeVirtualScroll(pageType) {
             throw new Error(`Required components not available for ${pageType} page`);
         }
         
-        // Pass the correct scrolling container
+        // Initialize virtual scroller with renamed container elements
         state.virtualScroller = new VirtualScroller({
             gridElement: grid,
-            containerElement: pageContent,
-            scrollContainer: pageContainer, // Add this new parameter
+            containerElement: gridContainer,
+            scrollContainer: scrollContainer,
             createItemFn: createCardFn,
             fetchItemsFn: fetchDataFn,
             pageSize: 100,
-            rowGap: 20 // Add consistent vertical spacing between rows
+            rowGap: 20
         });
         
         // Initialize the virtual scroller
