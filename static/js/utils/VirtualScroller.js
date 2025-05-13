@@ -14,6 +14,9 @@ export class VirtualScroller {
         this.pageSize = options.pageSize || 100;
         this.itemAspectRatio = 896/1152; // Aspect ratio of cards
         this.rowGap = options.rowGap || 20; // Add vertical gap between rows (default 20px)
+        
+        // Add data windowing enable/disable flag
+        this.enableDataWindowing = options.enableDataWindowing !== undefined ? options.enableDataWindowing : false;
 
         // State
         this.items = []; // All items metadata
@@ -447,9 +450,8 @@ export class VirtualScroller {
         const { scrollHeight } = this.scrollContainer;
         const scrollRatio = scrollTop / scrollHeight;
         
-        // If we've jumped to a position that's significantly outside our current window
-        // and we know there are many items, fetch a new data window
-        if (this.totalItems > this.windowSize) {
+        // Only perform data windowing if the feature is enabled
+        if (this.enableDataWindowing && this.totalItems > this.windowSize) {
             const estimatedIndex = Math.floor(scrollRatio * this.totalItems);
             const currentWindowStart = this.absoluteWindowStart;
             const currentWindowEnd = currentWindowStart + this.items.length;
@@ -488,7 +490,9 @@ export class VirtualScroller {
 
     // Method to fetch data for a specific window position
     async fetchDataWindow(targetIndex) {
-        if (this.fetchingWindow) return;
+        // Skip if data windowing is disabled or already fetching
+        if (!this.enableDataWindowing || this.fetchingWindow) return;
+        
         this.fetchingWindow = true;
         
         try {
@@ -534,6 +538,9 @@ export class VirtualScroller {
 
     // Method to slide the data window if we're approaching its edges
     async slideDataWindow() {
+        // Skip if data windowing is disabled
+        if (!this.enableDataWindowing) return;
+        
         const { start, end } = this.getVisibleRange();
         const windowStart = this.dataWindow.start;
         const windowEnd = this.dataWindow.end;

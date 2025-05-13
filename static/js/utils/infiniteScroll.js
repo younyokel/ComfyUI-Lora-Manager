@@ -121,7 +121,8 @@ async function initializeVirtualScroll(pageType) {
             createItemFn: createCardFn,
             fetchItemsFn: fetchDataFn,
             pageSize: 100,
-            rowGap: 20
+            rowGap: 20,
+            enableDataWindowing: false // Explicitly set to false to disable data windowing
         });
         
         // Initialize the virtual scroller
