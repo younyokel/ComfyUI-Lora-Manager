@@ -58,6 +58,7 @@ export function syncClipStrengthIfCollapsed(loraData) {
 export async function saveRecipeDirectly() {
   try {
     const prompt = await app.graphToPrompt();
+    console.log('Prompt:', prompt); // for debugging purposes
     // Show loading toast
     if (app && app.extensionManager && app.extensionManager.toast) {
       app.extensionManager.toast.add({
@@ -106,4 +107,60 @@ export async function saveRecipeDirectly() {
       });
     }
   }
+}
+
+/**
+ * Utility function to copy text to clipboard with fallback for older browsers
+ * @param {string} text - The text to copy to clipboard
+ * @param {string} successMessage - Optional success message to show in toast
+ * @returns {Promise<boolean>} - Promise that resolves to true if copy was successful
+ */
+export async function copyToClipboard(text, successMessage = 'Copied to clipboard') {
+    try {
+        // Modern clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-99999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+        
+        if (successMessage) {
+            showToast(successMessage, 'success');
+        }
+        return true;
+    } catch (err) {
+        console.error('Copy failed:', err);
+        showToast('Copy failed', 'error');
+        return false;
+    }
+}
+
+/**
+ * Show a toast notification
+ * @param {string} message - The message to display
+ * @param {string} type - The type of toast (success, error, info, warning)
+ */
+export function showToast(message, type = 'info') {
+    if (app && app.extensionManager && app.extensionManager.toast) {
+        app.extensionManager.toast.add({
+            severity: type,
+            summary: type.charAt(0).toUpperCase() + type.slice(1),
+            detail: message,
+            life: 3000
+        });
+    } else {
+        console.log(`${type.toUpperCase()}: ${message}`);
+        // Fallback alert for critical errors only
+        if (type === 'error') {
+            alert(message);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 import { api } from "../../scripts/api.js";
 import { createMenuItem } from "./loras_widget_components.js";
-import { parseLoraValue, formatLoraValue, syncClipStrengthIfCollapsed, saveRecipeDirectly } from "./loras_widget_utils.js";
+import { parseLoraValue, formatLoraValue, syncClipStrengthIfCollapsed, saveRecipeDirectly, copyToClipboard, showToast } from "./loras_widget_utils.js";
 
 // Function to handle strength adjustment via dragging
 export function handleStrengthDrag(name, initialStrength, initialX, event, widget, isClipStrength = false) {
@@ -172,29 +172,11 @@ export function createContextMenu(x, y, loraName, widget, previewTooltip, render
           window.open(data.civitai_url, '_blank');
         } else {
           // Show error message if no Civitai URL
-          if (app && app.extensionManager && app.extensionManager.toast) {
-            app.extensionManager.toast.add({
-              severity: 'warning',
-              summary: 'Not Found',
-              detail: 'This LoRA has no associated Civitai URL',
-              life: 3000
-            });
-          } else {
-            alert('This LoRA has no associated Civitai URL');
-          }
+          showToast('This LoRA has no associated Civitai URL', 'warning');
         }
       } catch (error) {
         console.error('Error getting Civitai URL:', error);
-        if (app && app.extensionManager && app.extensionManager.toast) {
-          app.extensionManager.toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.message || 'Failed to get Civitai URL',
-            life: 5000
-          });
-        } else {
-          alert('Error: ' + (error.message || 'Failed to get Civitai URL'));
-        }
+        showToast(error.message || 'Failed to get Civitai URL', 'error');
       }
     }
   );
@@ -221,6 +203,82 @@ export function createContextMenu(x, y, loraName, widget, previewTooltip, render
     }
   );
 
+  // New option: Copy Notes with note icon
+  const copyNotesOption = createMenuItem(
+    'Copy Notes',
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+    async () => {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+      
+      try {
+        // Get notes from API
+        const response = await api.fetchApi(`/loras/get-notes?name=${encodeURIComponent(loraName)}`, {
+          method: 'GET'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to get notes');
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+          const notes = data.notes || '';
+          if (notes.trim()) {
+            await copyToClipboard(notes, 'Notes copied to clipboard');
+          } else {
+            showToast('No notes available for this LoRA', 'info');
+          }
+        } else {
+          throw new Error(data.error || 'Failed to get notes');
+        }
+      } catch (error) {
+        console.error('Error getting notes:', error);
+        showToast(error.message || 'Failed to get notes', 'error');
+      }
+    }
+  );
+
+  // New option: Copy Trigger Words with tag icon
+  const copyTriggerWordsOption = createMenuItem(
+    'Copy Trigger Words',
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>',
+    async () => {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+      
+      try {
+        // Get trigger words from API
+        const response = await api.fetchApi(`/loras/get-trigger-words?name=${encodeURIComponent(loraName)}`, {
+          method: 'GET'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to get trigger words');
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+          const triggerWords = data.trigger_words || [];
+          if (triggerWords.length > 0) {
+            // Join trigger words with commas
+            const triggerWordsText = triggerWords.join(', ');
+            await copyToClipboard(triggerWordsText, 'Trigger words copied to clipboard');
+          } else {
+            showToast('No trigger words available for this LoRA', 'info');
+          }
+        } else {
+          throw new Error(data.error || 'Failed to get trigger words');
+        }
+      } catch (error) {
+        console.error('Error getting trigger words:', error);
+        showToast(error.message || 'Failed to get trigger words', 'error');
+      }
+    }
+  );
+
   // Save recipe option with bookmark icon
   const saveOption = createMenuItem(
     'Save Recipe',
@@ -233,15 +291,25 @@ export function createContextMenu(x, y, loraName, widget, previewTooltip, render
   );
 
   // Add separator
-  const separator = document.createElement('div');
-  Object.assign(separator.style, {
+  const separator1 = document.createElement('div');
+  Object.assign(separator1.style, {
+    margin: '4px 0',
+    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+  });
+  
+  // Add second separator
+  const separator2 = document.createElement('div');
+  Object.assign(separator2.style, {
     margin: '4px 0',
     borderTop: '1px solid rgba(255, 255, 255, 0.1)',
   });
 
   menu.appendChild(viewOnCivitaiOption);
   menu.appendChild(deleteOption);
-  menu.appendChild(separator);
+  menu.appendChild(separator1);
+  menu.appendChild(copyNotesOption);
+  menu.appendChild(copyTriggerWordsOption);
+  menu.appendChild(separator2);
   menu.appendChild(saveOption);
   
   document.body.appendChild(menu);

@@ -72,6 +72,10 @@ class ApiRoutes:
 
         # Add new endpoint for letter counts
         app.router.add_get('/api/loras/letter-counts', routes.get_letter_counts)
+        
+        # Add new endpoints for copying lora data
+        app.router.add_get('/api/loras/get-notes', routes.get_lora_notes)
+        app.router.add_get('/api/loras/get-trigger-words', routes.get_lora_trigger_words)
 
         # Add update check routes
         UpdateRoutes.setup_routes(app)
@@ -1080,6 +1084,84 @@ class ApiRoutes:
             })
         except Exception as e:
             logger.error(f"Error getting letter counts: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    async def get_lora_notes(self, request: web.Request) -> web.Response:
+        """Get notes for a specific LoRA file"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            # Get lora file name from query parameters
+            lora_name = request.query.get('name')
+            if not lora_name:
+                return web.Response(text='Lora file name is required', status=400)
+
+            # Get cache data
+            cache = await self.scanner.get_cached_data()
+            
+            # Search for the lora in cache data
+            for lora in cache.raw_data:
+                file_name = lora['file_name']
+                if file_name == lora_name:
+                    notes = lora.get('notes', '')
+                    
+                    return web.json_response({
+                        'success': True,
+                        'notes': notes
+                    })
+
+            # If lora not found
+            return web.json_response({
+                'success': False,
+                'error': 'LoRA not found in cache'
+            }, status=404)
+
+        except Exception as e:
+            logger.error(f"Error getting lora notes: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    async def get_lora_trigger_words(self, request: web.Request) -> web.Response:
+        """Get trigger words for a specific LoRA file"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            # Get lora file name from query parameters
+            lora_name = request.query.get('name')
+            if not lora_name:
+                return web.Response(text='Lora file name is required', status=400)
+
+            # Get cache data
+            cache = await self.scanner.get_cached_data()
+            
+            # Search for the lora in cache data
+            for lora in cache.raw_data:
+                file_name = lora['file_name']
+                if file_name == lora_name:
+                    # Get trigger words from civitai data
+                    civitai_data = lora.get('civitai', {})
+                    trigger_words = civitai_data.get('trainedWords', [])
+                    
+                    return web.json_response({
+                        'success': True,
+                        'trigger_words': trigger_words
+                    })
+
+            # If lora not found
+            return web.json_response({
+                'success': False,
+                'error': 'LoRA not found in cache'
+            }, status=404)
+
+        except Exception as e:
+            logger.error(f"Error getting lora trigger words: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)
