@@ -507,7 +507,7 @@ export async function refreshModels(options = {}) {
         }
         
         if (typeof resetAndReloadFunction === 'function') {
-            await resetAndReloadFunction();
+            await resetAndReloadFunction(true); // update folders
         }
         
         showToast(`Refresh complete`, 'success');
