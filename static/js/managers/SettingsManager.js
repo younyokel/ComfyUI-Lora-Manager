@@ -26,6 +26,11 @@ export class SettingsManager {
         if (savedSettings) {
             state.global.settings = { ...state.global.settings, ...savedSettings };
         }
+        
+        // Initialize default values for new settings if they don't exist
+        if (state.global.settings.compactMode === undefined) {
+            state.global.settings.compactMode = false;
+        }
     }
 
     initialize() {
@@ -75,6 +80,12 @@ export class SettingsManager {
         const autoplayOnHoverCheckbox = document.getElementById('autoplayOnHover');
         if (autoplayOnHoverCheckbox) {
             autoplayOnHoverCheckbox.checked = state.global.settings.autoplayOnHover || false;
+        }
+        
+        // Set compact mode setting
+        const compactModeCheckbox = document.getElementById('compactMode');
+        if (compactModeCheckbox) {
+            compactModeCheckbox.checked = state.global.settings.compactMode || false;
         }
 
         // Load default lora root
@@ -149,6 +160,8 @@ export class SettingsManager {
             state.global.settings.autoplayOnHover = value;
         } else if (settingKey === 'optimize_example_images') {
             state.global.settings.optimizeExampleImages = value;
+        } else if (settingKey === 'compact_mode') {
+            state.global.settings.compactMode = value;
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;
@@ -183,6 +196,12 @@ export class SettingsManager {
             
             if (settingKey === 'show_only_sfw') {
                 this.reloadContent();
+            }
+            
+            // Recalculate layout when compact mode changes
+            if (settingKey === 'compact_mode' && state.virtualScroller) {
+                state.virtualScroller.calculateLayout();
+                showToast(`Compact Mode ${value ? 'enabled' : 'disabled'}`, 'success');
             }
             
         } catch (error) {

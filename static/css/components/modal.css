@@ -673,3 +673,13 @@ input:checked + .toggle-slider:before {
 .changelog-item a:hover {
     text-decoration: underline;
 }
+
+/* Add warning text style for settings */
+.warning-text {
+    color: var(--lora-warning, #e67e22);
+    font-weight: 500;
+}
+
+[data-theme="dark"] .warning-text {
+    color: var(--lora-warning, #f39c12);
+}

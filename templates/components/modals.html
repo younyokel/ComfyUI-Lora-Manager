@@ -154,6 +154,29 @@
                 </div>
             </div>
             
+            <!-- Add Layout Settings Section -->
+            <div class="settings-section">
+                <h3>Layout Settings</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="compactMode">Compact Mode</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="compactMode" 
+                                       onchange="settingsManager.saveToggleSetting('compactMode', 'compact_mode')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Display more cards per row (7 on 1080p, 8 on 2K, 10 on 4K). <span class="warning-text">Warning: May cause performance issues (lag and lower FPS) on systems with limited resources.</span>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Add Example Images Settings Section -->
             <div class="settings-section">
                 <h3>Example Images</h3>

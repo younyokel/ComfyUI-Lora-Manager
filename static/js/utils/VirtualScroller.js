@@ -88,26 +88,42 @@ export class VirtualScroller {
         // Calculate available content width (excluding padding)
         const availableContentWidth = containerWidth - paddingLeft - paddingRight;
         
-        // Calculate ideal card width based on breakpoints
-        let baseCardWidth = 260; // Default for 1080p
-
-        // Adjust card width based on screen width
+        // Get compact mode setting
+        const compactMode = state.global.settings?.compactMode || false;
+        
+        // Set exact column counts and grid widths to match CSS container widths
+        let maxColumns, maxGridWidth;
+        
+        // Match exact column counts and CSS container width values
         if (window.innerWidth >= 3000) { // 4K
-            baseCardWidth = 280;
+            maxColumns = compactMode ? 10 : 8;
+            maxGridWidth = 2400; // Match exact CSS container width for 4K
         } else if (window.innerWidth >= 2000) { // 2K/1440p
-            baseCardWidth = 270;
+            maxColumns = compactMode ? 8 : 6;
+            maxGridWidth = 1800; // Match exact CSS container width for 2K
+        } else {
+            // 1080p
+            maxColumns = compactMode ? 7 : 5;
+            maxGridWidth = 1400; // Match exact CSS container width for 1080p
         }
-
-        // Calculate how many columns can fit
-        const maxGridWidth = window.innerWidth >= 3000 ? 2400 : // 4K
-                           window.innerWidth >= 2000 ? 1800 : // 2K
-                           1400; // 1080p
+        
+        // Calculate baseCardWidth based on desired column count and available space
+        // Formula: (maxGridWidth - (columns-1)*gap) / columns
+        const baseCardWidth = (maxGridWidth - ((maxColumns - 1) * this.columnGap)) / maxColumns;
         
         // Use the smaller of available content width or max grid width
         const actualGridWidth = Math.min(availableContentWidth, maxGridWidth);
         
-        // Calculate column count based on available width and card width
-        this.columnsCount = Math.max(1, Math.floor((actualGridWidth + this.columnGap) / (baseCardWidth + this.columnGap)));
+        // Set exact column count based on screen size and mode
+        this.columnsCount = maxColumns;
+        
+        // When available width is smaller than maxGridWidth, recalculate columns
+        if (availableContentWidth < maxGridWidth) {
+            // Calculate how many columns can fit in the available space
+            this.columnsCount = Math.max(1, Math.floor(
+                (availableContentWidth + this.columnGap) / (baseCardWidth + this.columnGap)
+            ));
+        }
         
         // Calculate actual item width
         this.itemWidth = (actualGridWidth - (this.columnsCount - 1) * this.columnGap) / this.columnsCount;
@@ -129,11 +145,21 @@ export class VirtualScroller {
             leftOffset: this.leftOffset,
             paddingLeft,
             paddingRight,
-            rowGap: this.rowGap // Log row gap for debugging
+            compactMode,
+            maxColumns,
+            baseCardWidth,
+            rowGap: this.rowGap
         });
 
         // Update grid element max-width to match available width
         this.gridElement.style.maxWidth = `${actualGridWidth}px`;
+        
+        // Add or remove compact-mode class for style adjustments
+        if (compactMode) {
+            this.gridElement.classList.add('compact-mode');
+        } else {
+            this.gridElement.classList.remove('compact-mode');
+        }
         
         // Update spacer height
         this.updateSpacerHeight();
