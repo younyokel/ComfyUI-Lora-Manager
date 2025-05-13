@@ -166,7 +166,7 @@ class MiscRoutes:
             output_dir = data.get('output_dir')
             optimize = data.get('optimize', True)
             model_types = data.get('model_types', ['lora', 'checkpoint'])
-            delay = float(data.get('delay', 0.2))
+            delay = float(data.get('delay', 0.1)) # Default to 0.1 seconds
             
             if not output_dir:
                 return web.json_response({
