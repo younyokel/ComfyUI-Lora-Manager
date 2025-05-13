@@ -28,8 +28,6 @@ export function showDeleteModal(filePath, modelType = 'lora') {
 export async function confirmDelete() {
     if (!pendingDeletePath) return;
     
-    const card = document.querySelector(`.lora-card[data-filepath="${pendingDeletePath}"]`);
-    
     try {
         // Use appropriate delete function based on model type
         if (pendingModelType === 'checkpoint') {
@@ -37,10 +35,7 @@ export async function confirmDelete() {
         } else {
             await deleteLora(pendingDeletePath);
         }
-
-        if (card) {
-            card.remove();
-        }
+        
         closeDeleteModal();
     } catch (error) {
         console.error('Error deleting model:', error);

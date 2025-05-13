@@ -13,7 +13,6 @@ import {
     excludeModel as baseExcludeModel
 } from './baseModelApi.js';
 import { state, getCurrentPageState } from '../state/index.js';
-import { showToast } from '../utils/uiHelpers.js';
 
 /**
  * Save model metadata to the server

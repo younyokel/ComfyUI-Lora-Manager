@@ -455,10 +455,15 @@ export async function deleteModel(filePath, modelType = 'lora') {
         const data = await response.json();
         
         if (data.success) {
-            // Remove the card from UI
-            const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-            if (card) {
-                card.remove();
+            // If virtual scroller exists, update its data
+            if (state.virtualScroller) {
+                state.virtualScroller.removeItemByFilePath(filePath);
+            } else {
+                // Legacy approach: remove the card from UI directly
+                const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+                if (card) {
+                    card.remove();
+                }
             }
             
             showToast(`${modelType} deleted successfully`, 'success');
@@ -673,10 +678,15 @@ export async function excludeModel(filePath, modelType = 'lora') {
         const data = await response.json();
         
         if (data.success) {
-            // Remove the card from UI
-            const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-            if (card) {
-                card.remove();
+            // If virtual scroller exists, update its data
+            if (state.virtualScroller) {
+                state.virtualScroller.removeItemByFilePath(filePath);
+            } else {
+                // Legacy approach: remove the card from UI directly
+                const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+                if (card) {
+                    card.remove();
+                }
             }
             
             showToast(`${modelType} excluded successfully`, 'success');

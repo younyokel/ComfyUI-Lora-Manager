@@ -721,4 +721,61 @@ export class VirtualScroller {
         
         console.log('Virtual scroller enabled');
     }
+
+    // New method to remove an item by file path
+    removeItemByFilePath(filePath) {
+        if (!filePath || this.disabled || this.items.length === 0) return false;
+
+        // Find the index of the item with the matching file path
+        const index = this.items.findIndex(item => 
+            item.file_path === filePath || 
+            item.filepath === filePath || 
+            item.path === filePath
+        );
+
+        if (index === -1) {
+            console.warn(`Item with file path ${filePath} not found in virtual scroller data`);
+            return false;
+        }
+
+        // Remove the item from the data array
+        this.items.splice(index, 1);
+        
+        // Decrement total count
+        this.totalItems = Math.max(0, this.totalItems - 1);
+        
+        // Remove the item from rendered items if it exists
+        if (this.renderedItems.has(index)) {
+            this.renderedItems.get(index).remove();
+            this.renderedItems.delete(index);
+        }
+        
+        // Shift all rendered items with higher indices down by 1
+        const indicesToUpdate = [];
+        
+        // Collect all indices that need to be updated
+        for (const [idx, element] of this.renderedItems.entries()) {
+            if (idx > index) {
+                indicesToUpdate.push(idx);
+            }
+        }
+        
+        // Update the elements and map entries
+        for (const idx of indicesToUpdate) {
+            const element = this.renderedItems.get(idx);
+            this.renderedItems.delete(idx);
+            // The item is now at the previous index
+            this.renderedItems.set(idx - 1, element);
+        }
+        
+        // Update the spacer height to reflect the new total
+        this.updateSpacerHeight();
+        
+        // Re-render to ensure proper layout
+        this.clearRenderedItems();
+        this.scheduleRender();
+        
+        console.log(`Removed item with file path ${filePath} from virtual scroller data`);
+        return true;
+    }
 }
