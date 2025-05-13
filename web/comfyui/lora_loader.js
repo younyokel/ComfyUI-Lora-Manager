@@ -107,7 +107,9 @@ app.registerExtension({
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
-                    const savedValue = node.widgets_values[1];
+                    // TODO: This is a workaround for the issue caused by [AlekPet custom nodes](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet)
+                    // TODO: Need to be revisited when the issue is fixed. https://github.com/willmiao/ComfyUI-Lora-Manager/issues/176
+                    const savedValue = node.widgets_values[node.widgets_values.length - 1];
                     existingLoras = savedValue || [];
                 }
                 // Merge the loras data
