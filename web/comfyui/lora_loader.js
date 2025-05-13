@@ -1,61 +1,10 @@
 import { app } from "../../scripts/app.js";
-import { dynamicImportByVersion } from "./utils.js";
-
-// Update pattern to match both formats: <lora:name:model_strength> or <lora:name:model_strength:clip_strength>
-const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)(?::([-\d\.]+))?>/g;
-
-// Function to get the appropriate loras widget based on ComfyUI version
-async function getLorasWidgetModule() {
-    return await dynamicImportByVersion("./loras_widget.js", "./legacy_loras_widget.js");
-}
-
-// Function to get connected trigger toggle nodes
-function getConnectedTriggerToggleNodes(node) {
-    const connectedNodes = [];
-    
-    // Check if node has outputs
-    if (node.outputs && node.outputs.length > 0) {
-        // For each output slot
-        for (const output of node.outputs) {
-            // Check if this output has any links
-            if (output.links && output.links.length > 0) {
-                // For each link, get the target node
-                for (const linkId of output.links) {
-                    const link = app.graph.links[linkId];
-                    if (link) {
-                        const targetNode = app.graph.getNodeById(link.target_id);
-                        if (targetNode && targetNode.comfyClass === "TriggerWord Toggle (LoraManager)") {
-                            connectedNodes.push(targetNode.id);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return connectedNodes;
-}
-
-// Function to update trigger words for connected toggle nodes
-function updateConnectedTriggerWords(node, text) {
-    const connectedNodeIds = getConnectedTriggerToggleNodes(node);
-    if (connectedNodeIds.length > 0) {
-        const loraNames = new Set();
-        let match;
-        LORA_PATTERN.lastIndex = 0;
-        while ((match = LORA_PATTERN.exec(text)) !== null) {
-            loraNames.add(match[1]);
-        }
-        
-        fetch("/loramanager/get_trigger_words", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                lora_names: Array.from(loraNames),
-                node_ids: connectedNodeIds
-            })
-        }).catch(err => console.error("Error fetching trigger words:", err));
-    }
-}
+import { 
+    getLorasWidgetModule,
+    LORA_PATTERN,
+    collectActiveLorasFromChain,
+    updateConnectedTriggerWords 
+} from "./utils.js";
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -107,9 +56,8 @@ app.registerExtension({
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
-                    // TODO: This is a workaround for the issue caused by [AlekPet custom nodes](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet)
-                    // TODO: Need to be revisited when the issue is fixed. https://github.com/willmiao/ComfyUI-Lora-Manager/issues/176
-                    const savedValue = node.widgets_values[node.widgets_values.length - 1];
+                    // 0 for input widget, 1 for loras widget
+                    const savedValue = node.widgets_values[1];
                     existingLoras = savedValue || [];
                 }
                 // Merge the loras data
@@ -129,7 +77,7 @@ app.registerExtension({
                     // Prevent recursive calls
                     if (isUpdating) return;
                     isUpdating = true;
-                    
+
                     try {
                         // Remove loras that are not in the value array
                         const inputWidget = node.widgets[0];
@@ -145,8 +93,11 @@ app.registerExtension({
                         
                         inputWidget.value = newText;
                         
-                        // Add this line to update trigger words when lorasWidget changes cause inputWidget value to change
-                        updateConnectedTriggerWords(node, newText);
+                        // Collect all active loras from this node and its input chain
+                        const allActiveLoraNames = collectActiveLorasFromChain(node);
+                        
+                        // Update trigger words for connected toggle nodes with the aggregated lora names
+                        updateConnectedTriggerWords(node, allActiveLoraNames);
                     } finally {
                         isUpdating = false;
                     }
@@ -166,8 +117,11 @@ app.registerExtension({
                         
                         node.lorasWidget.value = mergedLoras;
                         
-                        // Replace the existing trigger word update code with the new function
-                        updateConnectedTriggerWords(node, value);
+                        // Collect all active loras from this node and its input chain
+                        const allActiveLoraNames = collectActiveLorasFromChain(node);
+                        
+                        // Update trigger words for connected toggle nodes with the aggregated lora names
+                        updateConnectedTriggerWords(node, allActiveLoraNames);
                     } finally {
                         isUpdating = false;
                     }

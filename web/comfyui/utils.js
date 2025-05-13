@@ -64,3 +64,105 @@ export class DataWrapper {
     this.data = data;
   }
 }
+
+// Function to get the appropriate loras widget based on ComfyUI version
+export async function getLorasWidgetModule() {
+  return await dynamicImportByVersion("./loras_widget.js", "./legacy_loras_widget.js");
+}
+
+// Update pattern to match both formats: <lora:name:model_strength> or <lora:name:model_strength:clip_strength>
+export const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)(?::([-\d\.]+))?>/g;
+
+// Get connected Lora Stacker nodes that feed into the current node
+export function getConnectedInputStackers(node) {
+    const connectedStackers = [];
+    
+    if (node.inputs) {
+        for (const input of node.inputs) {
+            if (input.name === "lora_stack" && input.link) {
+                const link = app.graph.links[input.link];
+                if (link) {
+                    const sourceNode = app.graph.getNodeById(link.origin_id);
+                    if (sourceNode && sourceNode.comfyClass === "Lora Stacker (LoraManager)") {
+                        connectedStackers.push(sourceNode);
+                    }
+                }
+            }
+        }
+    }
+    return connectedStackers;
+}
+
+// Get connected TriggerWord Toggle nodes that receive output from the current node
+export function getConnectedTriggerToggleNodes(node) {
+    const connectedNodes = [];
+    
+    if (node.outputs && node.outputs.length > 0) {
+        for (const output of node.outputs) {
+            if (output.links && output.links.length > 0) {
+                for (const linkId of output.links) {
+                    const link = app.graph.links[linkId];
+                    if (link) {
+                        const targetNode = app.graph.getNodeById(link.target_id);
+                        if (targetNode && targetNode.comfyClass === "TriggerWord Toggle (LoraManager)") {
+                            connectedNodes.push(targetNode.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return connectedNodes;
+}
+
+// Extract active lora names from a node's widgets
+export function getActiveLorasFromNode(node) {
+    const activeLoraNames = new Set();
+    
+    // For lorasWidget style entries (array of objects)
+    if (node.lorasWidget && node.lorasWidget.value) {
+        node.lorasWidget.value.forEach(lora => {
+            if (lora.active) {
+                activeLoraNames.add(lora.name);
+            }
+        });
+    }
+    
+    return activeLoraNames;
+}
+
+// Recursively collect all active loras from a node and its input chain
+export function collectActiveLorasFromChain(node, visited = new Set()) {
+    // Prevent infinite loops from circular references
+    if (visited.has(node.id)) {
+        return new Set();
+    }
+    visited.add(node.id);
+    
+    // Get active loras from current node
+    const allActiveLoraNames = getActiveLorasFromNode(node);
+    
+    // Get connected input stackers and collect their active loras
+    const inputStackers = getConnectedInputStackers(node);
+    for (const stacker of inputStackers) {
+        const stackerLoras = collectActiveLorasFromChain(stacker, visited);
+        stackerLoras.forEach(name => allActiveLoraNames.add(name));
+    }
+    
+    return allActiveLoraNames;
+}
+
+// Update trigger words for connected toggle nodes
+export function updateConnectedTriggerWords(node, loraNames) {
+    const connectedNodeIds = getConnectedTriggerToggleNodes(node);
+    if (connectedNodeIds.length > 0 && loraNames.size > 0) {
+        fetch("/loramanager/get_trigger_words", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                lora_names: Array.from(loraNames),
+                node_ids: connectedNodeIds
+            })
+        }).catch(err => console.error("Error fetching trigger words:", err));
+    }
+}

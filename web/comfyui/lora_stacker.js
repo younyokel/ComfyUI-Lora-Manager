@@ -1,57 +1,11 @@
 import { app } from "../../scripts/app.js";
-import { dynamicImportByVersion } from "./utils.js";
-
-// Update pattern to match both formats: <lora:name:model_strength> or <lora:name:model_strength:clip_strength>
-const LORA_PATTERN = /<lora:([^:]+):([-\d\.]+)(?::([-\d\.]+))?>/g;
-
-// Function to get the appropriate loras widget based on ComfyUI version
-async function getLorasWidgetModule() {
-    return await dynamicImportByVersion("./loras_widget.js", "./legacy_loras_widget.js");
-}
-
-// Function to get connected trigger toggle nodes
-function getConnectedTriggerToggleNodes(node) {
-    const connectedNodes = [];
-    
-    if (node.outputs && node.outputs.length > 0) {
-        for (const output of node.outputs) {
-            if (output.links && output.links.length > 0) {
-                for (const linkId of output.links) {
-                    const link = app.graph.links[linkId];
-                    if (link) {
-                        const targetNode = app.graph.getNodeById(link.target_id);
-                        if (targetNode && targetNode.comfyClass === "TriggerWord Toggle (LoraManager)") {
-                            connectedNodes.push(targetNode.id);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return connectedNodes;
-}
-
-// Function to update trigger words for connected toggle nodes
-function updateConnectedTriggerWords(node, text) {
-    const connectedNodeIds = getConnectedTriggerToggleNodes(node);
-    if (connectedNodeIds.length > 0) {
-        const loraNames = new Set();
-        let match;
-        LORA_PATTERN.lastIndex = 0;
-        while ((match = LORA_PATTERN.exec(text)) !== null) {
-            loraNames.add(match[1]);
-        }
-        
-        fetch("/loramanager/get_trigger_words", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                lora_names: Array.from(loraNames),
-                node_ids: connectedNodeIds
-            })
-        }).catch(err => console.error("Error fetching trigger words:", err));
-    }
-}
+import { 
+    getLorasWidgetModule, 
+    LORA_PATTERN, 
+    getActiveLorasFromNode,
+    collectActiveLorasFromChain,
+    updateConnectedTriggerWords
+} from "./utils.js";
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -99,19 +53,9 @@ app.registerExtension({
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (node.widgets_values && node.widgets_values.length > 0) {
+                    // 0 for input widget, 1 for loras widget
                     const savedValue = node.widgets_values[1];
-                    // TODO: clean up this code
-                    try {
-                        // Check if the value is already an array/object
-                        if (typeof savedValue === 'object' && savedValue !== null) {
-                            existingLoras = savedValue;
-                        } else if (typeof savedValue === 'string') {
-                            existingLoras = JSON.parse(savedValue);
-                        }
-                    } catch (e) {
-                        console.warn("Failed to parse loras data:", e);
-                        existingLoras = [];
-                    }
+                    existingLoras = savedValue || [];
                 }
                 // Merge the loras data
                 const mergedLoras = mergeLoras(node.widgets[0].value, existingLoras);
@@ -145,8 +89,17 @@ app.registerExtension({
                         
                         inputWidget.value = newText;
                         
-                        // Update trigger words when lorasWidget changes
-                        updateConnectedTriggerWords(node, newText);
+                        // Update this stacker's direct trigger toggles with its own active loras
+                        const activeLoraNames = new Set();
+                        value.forEach(lora => {
+                            if (lora.active) {
+                                activeLoraNames.add(lora.name);
+                            }
+                        });
+                        updateConnectedTriggerWords(node, activeLoraNames);
+                        
+                        // Find all Lora Loader nodes in the chain that might need updates
+                        updateDownstreamLoaders(node);
                     } finally {
                         isUpdating = false;
                     }
@@ -166,8 +119,12 @@ app.registerExtension({
                         
                         node.lorasWidget.value = mergedLoras;
                         
-                        // Update trigger words when input changes
-                        updateConnectedTriggerWords(node, value);
+                        // Update this stacker's direct trigger toggles with its own active loras
+                        const activeLoraNames = getActiveLorasFromNode(node);
+                        updateConnectedTriggerWords(node, activeLoraNames);
+                        
+                        // Find all Lora Loader nodes in the chain that might need updates
+                        updateDownstreamLoaders(node);
                     } finally {
                         isUpdating = false;
                     }
@@ -176,3 +133,33 @@ app.registerExtension({
         }
     },
 });
+
+// Helper function to find and update downstream Lora Loader nodes
+function updateDownstreamLoaders(startNode, visited = new Set()) {
+    if (visited.has(startNode.id)) return;
+    visited.add(startNode.id);
+    
+    // Check each output link
+    if (startNode.outputs) {
+        for (const output of startNode.outputs) {
+            if (output.links) {
+                for (const linkId of output.links) {
+                    const link = app.graph.links[linkId];
+                    if (link) {
+                        const targetNode = app.graph.getNodeById(link.target_id);
+                        
+                        // If target is a Lora Loader, collect all active loras in the chain and update
+                        if (targetNode && targetNode.comfyClass === "Lora Loader (LoraManager)") {
+                            const allActiveLoraNames = collectActiveLorasFromChain(targetNode);
+                            updateConnectedTriggerWords(targetNode, allActiveLoraNames);
+                        }
+                        // If target is another Lora Stacker, recursively check its outputs
+                        else if (targetNode && targetNode.comfyClass === "Lora Stacker (LoraManager)") {
+                            updateDownstreamLoaders(targetNode, visited);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
