@@ -399,6 +399,8 @@ export function addLorasWidget(node, name, opts, callback) {
         lorasData[loraIndex].clipStrength = newStrength;
       } else {
         lorasData[loraIndex].strength = newStrength;
+        // Sync clipStrength if collapsed
+        syncClipStrengthIfCollapsed(lorasData[loraIndex]);
       }
       
       // Update the widget value
@@ -844,6 +846,8 @@ export function addLorasWidget(node, name, opts, callback) {
         
         if (loraIndex >= 0) {
           lorasData[loraIndex].strength = (parseFloat(lorasData[loraIndex].strength) - 0.05).toFixed(2);
+          // Sync clipStrength if collapsed
+          syncClipStrengthIfCollapsed(lorasData[loraIndex]);
           
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
@@ -906,6 +910,8 @@ export function addLorasWidget(node, name, opts, callback) {
         
         if (loraIndex >= 0) {
           lorasData[loraIndex].strength = newValue.toFixed(2);
+          // Sync clipStrength if collapsed
+          syncClipStrengthIfCollapsed(lorasData[loraIndex]);
           
           // Update value and trigger callback
           const newLorasValue = formatLoraValue(lorasData);
@@ -928,6 +934,8 @@ export function addLorasWidget(node, name, opts, callback) {
         
         if (loraIndex >= 0) {
           lorasData[loraIndex].strength = (parseFloat(lorasData[loraIndex].strength) + 0.05).toFixed(2);
+          // Sync clipStrength if collapsed
+          syncClipStrengthIfCollapsed(lorasData[loraIndex]);
           
           const newValue = formatLoraValue(lorasData);
           widget.value = newValue;
@@ -1285,3 +1293,12 @@ const shouldShowClipEntry = (loraData) => {
   // Otherwise use the legacy logic - if values differ, it should be expanded
   return Number(loraData.strength) !== Number(loraData.clipStrength);
 }
+
+// Helper function to sync clipStrength with strength when collapsed
+const syncClipStrengthIfCollapsed = (loraData) => {
+  // If not expanded (collapsed), sync clipStrength with strength
+  if (loraData.hasOwnProperty('expanded') && !loraData.expanded) {
+    loraData.clipStrength = loraData.strength;
+  }
+  return loraData;
+};
