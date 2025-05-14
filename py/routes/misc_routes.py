@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 import aiohttp
+from server import PromptServer # type: ignore
 from aiohttp import web
 from ..services.settings_manager import settings
 from ..utils.usage_stats import UsageStats
@@ -49,6 +50,9 @@ class MiscRoutes:
         app.router.add_post('/api/pause-example-images', MiscRoutes.pause_example_images)
         app.router.add_post('/api/resume-example-images', MiscRoutes.resume_example_images)
         
+        # Lora code update endpoint
+        app.router.add_post('/api/update-lora-code', MiscRoutes.update_lora_code)
+    
     @staticmethod
     async def update_settings(request):
         """Update application settings"""
@@ -765,3 +769,62 @@ class MiscRoutes:
             
             # Set download status to not downloading
             is_downloading = False
+    
+    @staticmethod
+    async def update_lora_code(request):
+        """
+        Update Lora code in ComfyUI nodes
+        
+        Expects a JSON body with:
+        {
+            "node_ids": [123, 456], # List of node IDs to update
+            "lora_code": "<lora:modelname:1.0>", # The Lora code to send
+            "mode": "append" # or "replace" - whether to append or replace existing code
+        }
+        """
+        try:
+            # Parse the request body
+            data = await request.json()
+            node_ids = data.get('node_ids', [])
+            lora_code = data.get('lora_code', '')
+            mode = data.get('mode', 'append')
+            
+            if not node_ids or not lora_code:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing node_ids or lora_code parameter'
+                }, status=400)
+            
+            # Send the lora code update to each node
+            results = []
+            for node_id in node_ids:
+                try:
+                    # Send the message to the frontend
+                    PromptServer.instance.send_sync("lora_code_update", {
+                        "id": node_id,
+                        "lora_code": lora_code,
+                        "mode": mode
+                    })
+                    results.append({
+                        'node_id': node_id,
+                        'success': True
+                    })
+                except Exception as e:
+                    logger.error(f"Error sending lora code to node {node_id}: {e}")
+                    results.append({
+                        'node_id': node_id,
+                        'success': False,
+                        'error': str(e)
+                    })
+            
+            return web.json_response({
+                'success': True,
+                'results': results
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to update lora code: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)

@@ -5,6 +5,7 @@ import {
     collectActiveLorasFromChain,
     updateConnectedTriggerWords 
 } from "./utils.js";
+import { api } from "../../scripts/api.js";
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -37,6 +38,45 @@ function mergeLoras(lorasText, lorasArr) {
 
 app.registerExtension({
     name: "LoraManager.LoraLoader",
+    
+    setup() {
+        // Add message handler to listen for messages from Python
+        api.addEventListener("lora_code_update", (event) => {
+            const { id, lora_code, mode } = event.detail;
+            this.handleLoraCodeUpdate(id, lora_code, mode);
+        });
+    },
+    
+    // Handle lora code updates from Python
+    handleLoraCodeUpdate(id, loraCode, mode) {
+        const node = app.graph.getNodeById(+id);
+        if (!node || node.comfyClass !== "Lora Loader (LoraManager)") {
+            console.warn("Node not found or not a LoraLoader:", id);
+            return;
+        }
+        
+        // Update the input widget with new lora code
+        const inputWidget = node.widgets[0];
+        if (!inputWidget) return;
+        
+        // Get the current lora code
+        const currentValue = inputWidget.value || '';
+        
+        // Update based on mode (replace or append)
+        if (mode === 'replace') {
+            inputWidget.value = loraCode;
+        } else {
+            // Append mode - add a space if the current value isn't empty
+            inputWidget.value = currentValue.trim() 
+                ? `${currentValue.trim()} ${loraCode}` 
+                : loraCode;
+        }
+        
+        // Trigger the callback to update the loras widget
+        if (typeof inputWidget.callback === 'function') {
+            inputWidget.callback(inputWidget.value);
+        }
+    },
     
     async nodeCreated(node) {
         if (node.comfyClass === "Lora Loader (LoraManager)") {

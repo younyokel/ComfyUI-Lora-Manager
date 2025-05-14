@@ -352,3 +352,65 @@ export function getNSFWLevelName(level) {
     if (level >= 1) return 'PG';
     return 'Unknown';
 }
+
+/**
+ * Sends LoRA syntax to the active ComfyUI workflow
+ * @param {string} loraSyntax - The LoRA syntax to send
+ * @param {boolean} replaceMode - Whether to replace existing LoRAs (true) or append (false)
+ * @returns {Promise<boolean>} - Whether the operation was successful
+ */
+export async function sendLoraToWorkflow(loraSyntax, replaceMode = false) {
+  try {
+    // Get the current workflow from localStorage
+    const workflowData = localStorage.getItem('workflow');
+    if (!workflowData) {
+      showToast('No active workflow found', 'error');
+      return false;
+    }
+    
+    // Parse the workflow JSON
+    const workflow = JSON.parse(workflowData);
+    
+    // Find all Lora Loader (LoraManager) nodes
+    const loraNodes = [];
+    if (workflow.nodes && Array.isArray(workflow.nodes)) {
+      for (const node of workflow.nodes) {
+        if (node.type === "Lora Loader (LoraManager)") {
+          loraNodes.push(node.id);
+        }
+      }
+    }
+    
+    if (loraNodes.length === 0) {
+      showToast('No Lora Loader nodes found in the workflow', 'warning');
+      return false;
+    }
+    
+    // Call the backend API to update the lora code
+    const response = await fetch('/api/update-lora-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        node_ids: loraNodes,
+        lora_code: loraSyntax,
+        mode: replaceMode ? 'replace' : 'append'
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showToast(`LoRA ${replaceMode ? 'replaced' : 'added'} to workflow`, 'success');
+      return true;
+    } else {
+      showToast(result.error || 'Failed to send LoRA to workflow', 'error');
+      return false;
+    }
+  } catch (error) {
+    console.error('Failed to send LoRA to workflow:', error);
+    showToast('Failed to send LoRA to workflow', 'error');
+    return false;
+  }
+}
