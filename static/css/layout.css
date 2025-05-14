@@ -306,6 +306,26 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Prevent text selection in control and header areas */
+.tag,
+.control-group button,
+.control-group select,
+.toggle-folders-btn,
+.bulk-operations-panel,
+.app-header,
+.header-branding,
+.app-title,
+.main-nav,
+.nav-item,
+.header-actions button,
+.header-controls,
+.toggle-folders-container button {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 @media (max-width: 768px) {
     .actions {
         flex-wrap: wrap;

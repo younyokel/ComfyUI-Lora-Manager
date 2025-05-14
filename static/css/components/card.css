@@ -359,6 +359,25 @@
     font-size: 0.85em;
 }
 
+/* Prevent text selection on cards and interactive elements */
+.lora-card,
+.lora-card *,
+.card-actions,
+.card-actions i,
+.toggle-blur-btn,
+.show-content-btn,
+.card-preview img,
+.card-preview video,
+.card-footer,
+.card-header,
+.model-name,
+.base-model-label {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 /* Recipe specific elements - migrated from recipe-card.css */
 .recipe-indicator {
     position: absolute;
