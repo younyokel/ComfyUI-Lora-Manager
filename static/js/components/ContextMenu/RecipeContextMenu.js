@@ -1,5 +1,5 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
-import { showToast } from '../../utils/uiHelpers.js';
+import { showToast, copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { setSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
 import { state } from '../../state/index.js';
 
@@ -39,8 +39,16 @@ export class RecipeContextMenu extends BaseContextMenu {
                 this.currentCard.click();
                 break;
             case 'copy':
-                // Copy recipe to clipboard
-                this.currentCard.querySelector('.fa-copy')?.click();
+                // Copy recipe syntax to clipboard
+                this.copyRecipeSyntax();
+                break;
+            case 'sendappend':
+                // Send recipe to workflow (append mode)
+                this.sendRecipeToWorkflow(false);
+                break;
+            case 'sendreplace':
+                // Send recipe to workflow (replace mode)
+                this.sendRecipeToWorkflow(true);
                 break;
             case 'share':
                 // Share recipe
@@ -59,6 +67,52 @@ export class RecipeContextMenu extends BaseContextMenu {
                 this.downloadMissingLoRAs(recipeId);
                 break;
         }
+    }
+    
+    // New method to copy recipe syntax to clipboard
+    copyRecipeSyntax() {
+        const recipeId = this.currentCard.dataset.id;
+        if (!recipeId) {
+            showToast('Cannot copy recipe: Missing recipe ID', 'error');
+            return;
+        }
+
+        fetch(`/api/recipe/${recipeId}/syntax`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.syntax) {
+                    copyToClipboard(data.syntax, 'Recipe syntax copied to clipboard');
+                } else {
+                    throw new Error(data.error || 'No syntax returned');
+                }
+            })
+            .catch(err => {
+                console.error('Failed to copy recipe syntax: ', err);
+                showToast('Failed to copy recipe syntax', 'error');
+            });
+    }
+    
+    // New method to send recipe to workflow
+    sendRecipeToWorkflow(replaceMode) {
+        const recipeId = this.currentCard.dataset.id;
+        if (!recipeId) {
+            showToast('Cannot send recipe: Missing recipe ID', 'error');
+            return;
+        }
+
+        fetch(`/api/recipe/${recipeId}/syntax`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.syntax) {
+                    return sendLoraToWorkflow(data.syntax, replaceMode, 'recipe');
+                } else {
+                    throw new Error(data.error || 'No syntax returned');
+                }
+            })
+            .catch(err => {
+                console.error('Failed to send recipe to workflow: ', err);
+                showToast('Failed to send recipe to workflow', 'error');
+            });
     }
     
     // View all LoRAs in the recipe

@@ -1,6 +1,6 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { refreshSingleLoraMetadata, saveModelMetadata } from '../../api/loraApi.js';
-import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
+import { showToast, getNSFWLevelName, copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
 import { showExcludeModal } from '../../utils/modalUtils.js';
@@ -35,7 +35,16 @@ export class LoraContextMenu extends BaseContextMenu {
                 }
                 break;
             case 'copyname':
-                this.currentCard.querySelector('.fa-copy')?.click();
+                // Generate and copy LoRA syntax
+                this.copyLoraSyntax();
+                break;
+            case 'sendappend':
+                // Send LoRA to workflow (append mode)
+                this.sendLoraToWorkflow(false);
+                break;
+            case 'sendreplace':
+                // Send LoRA to workflow (replace mode)
+                this.sendLoraToWorkflow(true);
                 break;
             case 'preview':
                 this.currentCard.querySelector('.fa-image')?.click();
@@ -56,6 +65,26 @@ export class LoraContextMenu extends BaseContextMenu {
                 showExcludeModal(this.currentCard.dataset.filepath);
                 break;
         }
+    }
+
+    // New method to handle copy syntax functionality
+    copyLoraSyntax() {
+        const card = this.currentCard;
+        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+        const strength = usageTips.strength || 1;
+        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+        
+        copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
+    }
+
+    // New method to handle send to workflow functionality
+    sendLoraToWorkflow(replaceMode) {
+        const card = this.currentCard;
+        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+        const strength = usageTips.strength || 1;
+        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+        
+        sendLoraToWorkflow(loraSyntax, replaceMode, 'lora');
     }
 
     // NSFW Selector methods from the original context menu
