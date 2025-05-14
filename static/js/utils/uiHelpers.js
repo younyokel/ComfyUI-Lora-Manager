@@ -357,9 +357,10 @@ export function getNSFWLevelName(level) {
  * Sends LoRA syntax to the active ComfyUI workflow
  * @param {string} loraSyntax - The LoRA syntax to send
  * @param {boolean} replaceMode - Whether to replace existing LoRAs (true) or append (false)
+ * @param {string} syntaxType - The type of syntax ('lora' or 'recipe')
  * @returns {Promise<boolean>} - Whether the operation was successful
  */
-export async function sendLoraToWorkflow(loraSyntax, replaceMode = false) {
+export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntaxType = 'lora') {
   try {
     // Get the current workflow from localStorage
     const workflowData = localStorage.getItem('workflow');
@@ -402,15 +403,20 @@ export async function sendLoraToWorkflow(loraSyntax, replaceMode = false) {
     const result = await response.json();
     
     if (result.success) {
-      showToast(`LoRA ${replaceMode ? 'replaced' : 'added'} to workflow`, 'success');
+      // Use different toast messages based on syntax type
+      if (syntaxType === 'recipe') {
+        showToast(`Recipe ${replaceMode ? 'replaced' : 'added'} to workflow`, 'success');
+      } else {
+        showToast(`LoRA ${replaceMode ? 'replaced' : 'added'} to workflow`, 'success');
+      }
       return true;
     } else {
-      showToast(result.error || 'Failed to send LoRA to workflow', 'error');
+      showToast(result.error || `Failed to send ${syntaxType === 'recipe' ? 'recipe' : 'LoRA'} to workflow`, 'error');
       return false;
     }
   } catch (error) {
-    console.error('Failed to send LoRA to workflow:', error);
-    showToast('Failed to send LoRA to workflow', 'error');
+    console.error('Failed to send to workflow:', error);
+    showToast(`Failed to send ${syntaxType === 'recipe' ? 'recipe' : 'LoRA'} to workflow`, 'error');
     return false;
   }
 }

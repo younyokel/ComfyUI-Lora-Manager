@@ -1,5 +1,5 @@
 // Recipe Card Component
-import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
 import { getCurrentPageState } from '../state/index.js';
 
@@ -52,7 +52,7 @@ class RecipeCard {
                     </div>
                     <div class="card-actions">
                         <i class="fas fa-share-alt" title="Share Recipe"></i>
-                        <i class="fas fa-copy" title="Copy Recipe Syntax"></i>
+                        <i class="fas fa-paper-plane" title="Send Recipe to Workflow (Click: Append, Shift+Click: Replace)"></i>
                         <i class="fas fa-trash" title="Delete Recipe"></i>
                     </div>
                 </div>
@@ -94,10 +94,10 @@ class RecipeCard {
                 this.shareRecipe();
             });
             
-            // Copy button click event - prevent propagation to card
-            card.querySelector('.fa-copy')?.addEventListener('click', (e) => {
+            // Send button click event - prevent propagation to card
+            card.querySelector('.fa-paper-plane')?.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.copyRecipeSyntax();
+                this.sendRecipeToWorkflow(e.shiftKey);
             });
             
             // Delete button click event - prevent propagation to card
@@ -108,33 +108,32 @@ class RecipeCard {
         }
     }
     
-    copyRecipeSyntax() {
+    // Replace copyRecipeSyntax with sendRecipeToWorkflow
+    sendRecipeToWorkflow(replaceMode = false) {
         try {
             // Get recipe ID
             const recipeId = this.recipe.id;
             if (!recipeId) {
-                showToast('Cannot copy recipe syntax: Missing recipe ID', 'error');
+                showToast('Cannot send recipe: Missing recipe ID', 'error');
                 return;
             }
 
-            
-            // Fallback if button not found
             fetch(`/api/recipe/${recipeId}/syntax`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.syntax) {
-                        return copyToClipboard(data.syntax, 'Recipe syntax copied to clipboard');
+                        return sendLoraToWorkflow(data.syntax, replaceMode, 'recipe');
                     } else {
                         throw new Error(data.error || 'No syntax returned');
                     }
                 })
                 .catch(err => {
-                    console.error('Failed to copy: ', err);
-                    showToast('Failed to copy recipe syntax', 'error');
+                    console.error('Failed to send recipe to workflow: ', err);
+                    showToast('Failed to send recipe to workflow', 'error');
                 });
         } catch (error) {
-            console.error('Error copying recipe syntax:', error);
-            showToast('Error copying recipe syntax', 'error');
+            console.error('Error sending recipe to workflow:', error);
+            showToast('Error sending recipe to workflow', 'error');
         }
     }
     

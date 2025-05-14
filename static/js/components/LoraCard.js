@@ -51,14 +51,9 @@ function handleLoraCardEvent(event) {
         return;
     }
     
-    if (event.target.closest('.fa-copy') || event.target.closest('.fa-paper-plane')) {
+    if (event.target.closest('.fa-paper-plane')) {
         event.stopPropagation();
-        const useSendButton = state.settings.useSendButton || true;
-        if (useSendButton) {
-            sendLoraToComfyUI(card, event.shiftKey);
-        } else {
-            copyLoraCode(card);
-        }
+        sendLoraToComfyUI(card, event.shiftKey);
         return;
     }
     
@@ -178,21 +173,13 @@ async function toggleFavorite(card) {
     }
 }
 
-async function copyLoraCode(card) {
-    const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
-    const strength = usageTips.strength || 1;
-    const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
-    
-    await copyToClipboard(loraSyntax, 'LoRA syntax copied');
-}
-
-// New function to send LoRA to ComfyUI workflow
+// Function to send LoRA to ComfyUI workflow
 async function sendLoraToComfyUI(card, replaceMode) {
     const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
     const strength = usageTips.strength || 1;
     const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
     
-    sendLoraToWorkflow(loraSyntax, replaceMode);
+    sendLoraToWorkflow(loraSyntax, replaceMode, 'lora');
 }
 
 export function createLoraCard(lora) {
@@ -258,8 +245,6 @@ export function createLoraCard(lora) {
 
     // Get favorite status from the lora data
     const isFavorite = lora.favorite === true;
-    // Check if we're using send button instead of copy button
-    const useSendButton = state.settings.useSendButton || true;
 
     card.innerHTML = `
         <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
@@ -285,8 +270,8 @@ export function createLoraCard(lora) {
                        title="${lora.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
                        ${!lora.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
                     </i>
-                    <i class="${useSendButton ? 'fas fa-paper-plane' : 'fas fa-copy'}" 
-                       title="${useSendButton ? 'Send to ComfyUI (Click: Append, Shift+Click: Replace)' : 'Copy LoRA Syntax'}">
+                    <i class="fas fa-paper-plane" 
+                       title="Send to ComfyUI (Click: Append, Shift+Click: Replace)">
                     </i>
                     <i class="fas fa-trash" 
                        title="Delete Model">
