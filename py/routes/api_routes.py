@@ -512,7 +512,7 @@ class ApiRoutes:
                         logger.warning(f"Early access download failed: {error_message}")
                         return web.Response(
                             status=401,  # Use 401 status code to match Civitai's response
-                            text=f"Early Access Restriction: {error_message}"
+                            text=error_message
                         )
                     
                     return web.Response(status=500, text=error_message)
