@@ -114,6 +114,12 @@ app.registerExtension({
                 const result = addLorasWidget(node, "loras", {
                     defaultVal: mergedLoras  // Pass object directly
                 }, (value) => {
+                    // Collect all active loras from this node and its input chain
+                    const allActiveLoraNames = collectActiveLorasFromChain(node);
+                        
+                    // Update trigger words for connected toggle nodes with the aggregated lora names
+                    updateConnectedTriggerWords(node, allActiveLoraNames);
+
                     // Prevent recursive calls
                     if (isUpdating) return;
                     isUpdating = true;
@@ -132,12 +138,6 @@ app.registerExtension({
                         newText = newText.replace(/\s+/g, ' ').trim();
                         
                         inputWidget.value = newText;
-                        
-                        // Collect all active loras from this node and its input chain
-                        const allActiveLoraNames = collectActiveLorasFromChain(node);
-                        
-                        // Update trigger words for connected toggle nodes with the aggregated lora names
-                        updateConnectedTriggerWords(node, allActiveLoraNames);
                     } finally {
                         isUpdating = false;
                     }
@@ -156,12 +156,6 @@ app.registerExtension({
                         const mergedLoras = mergeLoras(value, currentLoras);
                         
                         node.lorasWidget.value = mergedLoras;
-                        
-                        // Collect all active loras from this node and its input chain
-                        const allActiveLoraNames = collectActiveLorasFromChain(node);
-                        
-                        // Update trigger words for connected toggle nodes with the aggregated lora names
-                        updateConnectedTriggerWords(node, allActiveLoraNames);
                     } finally {
                         isUpdating = false;
                     }
