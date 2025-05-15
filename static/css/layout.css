@@ -35,6 +35,13 @@
     margin-bottom: var(--space-2);
 }
 
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto; /* Push to the right */
+}
+
 .actions {
     display: flex;
     align-items: center;
@@ -338,11 +345,14 @@
         width: 100%;
     }
     
+    .controls-right {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+    
     .toggle-folders-container {
         margin-left: 0;
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
     }
     
     .folder-tags-container {

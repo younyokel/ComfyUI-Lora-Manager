@@ -23,6 +23,7 @@
 @import 'components/progress-panel.css';
 @import 'components/alphabet-bar.css'; /* Add alphabet bar component */
 @import 'components/duplicates.css'; /* Add duplicates component */
+@import 'components/keyboard-nav.css'; /* Add keyboard navigation component */
 
 .initialization-notice {
     display: flex;

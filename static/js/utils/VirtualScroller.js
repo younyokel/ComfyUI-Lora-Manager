@@ -804,4 +804,131 @@ export class VirtualScroller {
         console.log(`Removed item with file path ${filePath} from virtual scroller data`);
         return true;
     }
+
+    // Add keyboard navigation methods
+    handlePageUpDown(direction) {
+        // Prevent duplicate animations by checking last trigger time
+        const now = Date.now();
+        if (this.lastPageNavTime && now - this.lastPageNavTime < 300) {
+            return; // Ignore rapid repeated triggers
+        }
+        this.lastPageNavTime = now;
+        
+        const scrollContainer = this.scrollContainer;
+        const viewportHeight = scrollContainer.clientHeight;
+        
+        // Calculate scroll distance (one viewport minus 10% overlap for context)
+        const scrollDistance = viewportHeight * 0.9;
+        
+        // Determine the new scroll position
+        const newScrollTop = scrollContainer.scrollTop + (direction === 'down' ? scrollDistance : -scrollDistance);
+        
+        // Remove any existing transition indicators
+        this.removeExistingTransitionIndicator();
+        
+        // Scroll to the new position with smooth animation
+        scrollContainer.scrollTo({
+            top: newScrollTop,
+            behavior: 'smooth'
+        });
+        
+        // Page transition indicator removed
+        // this.showTransitionIndicator();
+        
+        // Force render after scrolling
+        setTimeout(() => this.renderItems(), 100);
+        setTimeout(() => this.renderItems(), 300);
+    }
+
+    // Helper to remove existing indicators
+    removeExistingTransitionIndicator() {
+        const existingIndicator = document.querySelector('.page-transition-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+    }
+
+    // Create a more contained transition indicator - commented out as it's no longer needed
+    /*
+    showTransitionIndicator() {
+        const container = this.containerElement;
+        const indicator = document.createElement('div');
+        indicator.className = 'page-transition-indicator';
+        
+        // Get container position to properly position the indicator
+        const containerRect = container.getBoundingClientRect();
+        
+        // Style the indicator to match just the container area
+        indicator.style.position = 'fixed';
+        indicator.style.top = `${containerRect.top}px`;
+        indicator.style.left = `${containerRect.left}px`;
+        indicator.style.width = `${containerRect.width}px`;
+        indicator.style.height = `${containerRect.height}px`;
+        
+        document.body.appendChild(indicator);
+
+        // Remove after animation completes
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.remove();
+            }
+        }, 500);
+    }
+    */
+
+    scrollToTop() {
+        this.removeExistingTransitionIndicator();
+        
+        // Page transition indicator removed
+        // this.showTransitionIndicator();
+        
+        this.scrollContainer.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+        
+        // Force render after scrolling
+        setTimeout(() => this.renderItems(), 100);
+    }
+
+    scrollToBottom() {
+        this.removeExistingTransitionIndicator();
+        
+        // Page transition indicator removed
+        // this.showTransitionIndicator();
+        
+        // Start loading all remaining pages to ensure content is available
+        this.loadRemainingPages().then(() => {
+            // After loading all content, scroll to the very bottom
+            const maxScroll = this.scrollContainer.scrollHeight - this.scrollContainer.clientHeight;
+            this.scrollContainer.scrollTo({
+                top: maxScroll,
+                behavior: 'smooth'
+            });
+        });
+    }
+    
+    // New method to load all remaining pages
+    async loadRemainingPages() {
+        // If we're already at the end or loading, don't proceed
+        if (!this.hasMore || this.isLoading) return;
+        
+        console.log('Loading all remaining pages for End key navigation...');
+        
+        // Keep loading pages until we reach the end
+        while (this.hasMore && !this.isLoading) {
+            await this.loadMoreItems();
+            
+            // Force render after each page load
+            this.renderItems();
+            
+            // Small delay to prevent overwhelming the browser
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        console.log('Finished loading all pages');
+        
+        // Final render to ensure all content is displayed
+        this.renderItems();
+    }
 }

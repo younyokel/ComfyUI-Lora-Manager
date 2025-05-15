@@ -131,6 +131,9 @@ async function initializeVirtualScroll(pageType) {
         // Add grid class for CSS styling
         grid.classList.add('virtual-scroll');
         
+        // Setup keyboard navigation
+        setupKeyboardNavigation();
+        
     } catch (error) {
         console.error(`Error initializing virtual scroller for ${pageType}:`, error);
         showToast(`Failed to initialize ${pageType} page. Please reload.`, 'error');
@@ -142,6 +145,61 @@ async function initializeVirtualScroll(pageType) {
                 <p>There was an error loading this page. Please try reloading.</p>
             </div>
         `;
+    }
+}
+
+// Add keyboard navigation setup function
+function setupKeyboardNavigation() {
+    // Keep track of the last keypress time to prevent multiple rapid triggers
+    let lastKeyTime = 0;
+    const keyDelay = 300; // ms between allowed keypresses
+    
+    // Store the event listener reference so we can remove it later if needed
+    const keyboardNavHandler = (event) => {
+        // Only handle keyboard events when not in form elements
+        if (event.target.matches('input, textarea, select')) return;
+        
+        // Prevent rapid keypresses
+        const now = Date.now();
+        if (now - lastKeyTime < keyDelay) return;
+        lastKeyTime = now;
+        
+        // Handle navigation keys
+        if (event.key === 'PageUp') {
+            event.preventDefault();
+            if (state.virtualScroller) {
+                state.virtualScroller.handlePageUpDown('up');
+            }
+        } else if (event.key === 'PageDown') {
+            event.preventDefault();
+            if (state.virtualScroller) {
+                state.virtualScroller.handlePageUpDown('down');
+            }
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            if (state.virtualScroller) {
+                state.virtualScroller.scrollToTop();
+            }
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            if (state.virtualScroller) {
+                state.virtualScroller.scrollToBottom();
+            }
+        }
+    };
+    
+    // Add the event listener
+    document.addEventListener('keydown', keyboardNavHandler);
+    
+    // Store the handler in state for potential cleanup
+    state.keyboardNavHandler = keyboardNavHandler;
+}
+
+// Add cleanup function to remove keyboard navigation when needed
+export function cleanupKeyboardNavigation() {
+    if (state.keyboardNavHandler) {
+        document.removeEventListener('keydown', state.keyboardNavHandler);
+        state.keyboardNavHandler = null;
     }
 }
 
