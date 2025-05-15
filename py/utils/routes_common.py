@@ -40,6 +40,7 @@ class ModelRouteUtils:
                                   civitai_metadata: Dict, client: CivitaiClient) -> None:
         """Update local metadata with CivitAI data"""
         local_metadata['civitai'] = civitai_metadata
+        local_metadata['from_civitai'] = True
         
         # Update model name if available
         if 'model' in civitai_metadata:
