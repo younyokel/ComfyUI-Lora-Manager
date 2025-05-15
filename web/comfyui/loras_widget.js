@@ -11,7 +11,7 @@ import {
   CONTAINER_PADDING, 
   EMPTY_CONTAINER_HEIGHT 
 } from "./loras_widget_utils.js";
-import { initDrag, createContextMenu } from "./loras_widget_events.js";
+import { initDrag, createContextMenu, initHeaderDrag } from "./loras_widget_events.js";
 
 export function addLorasWidget(node, name, opts, callback) {
   // Create container for loras
@@ -83,7 +83,8 @@ export function addLorasWidget(node, name, opts, callback) {
       alignItems: "center",
       padding: "4px 8px",
       borderBottom: "1px solid rgba(226, 232, 240, 0.2)",
-      marginBottom: "5px"
+      marginBottom: "5px",
+      position: "relative" // Added for positioning the drag hint
     });
 
     // Add toggle all control
@@ -118,7 +119,7 @@ export function addLorasWidget(node, name, opts, callback) {
     toggleContainer.appendChild(toggleAll);
     toggleContainer.appendChild(toggleLabel);
 
-    // Strength label
+    // Strength label with drag hint
     const strengthLabel = document.createElement("div");
     strengthLabel.textContent = "Strength";
     Object.assign(strengthLabel.style, {
@@ -129,11 +130,36 @@ export function addLorasWidget(node, name, opts, callback) {
       WebkitUserSelect: "none",
       MozUserSelect: "none",
       msUserSelect: "none",
+      display: "flex",
+      alignItems: "center"
+    });
+    
+    // Add drag hint icon next to strength label
+    const dragHint = document.createElement("span");
+    dragHint.innerHTML = "↔"; // Simple left-right arrow as drag indicator
+    Object.assign(dragHint.style, {
+      marginLeft: "5px",
+      fontSize: "11px",
+      opacity: "0.6",
+      transition: "opacity 0.2s ease"
+    });
+    strengthLabel.appendChild(dragHint);
+    
+    // Add hover effect to improve discoverability
+    header.addEventListener("mouseenter", () => {
+      dragHint.style.opacity = "1";
+    });
+    
+    header.addEventListener("mouseleave", () => {
+      dragHint.style.opacity = "0.6";
     });
 
     header.appendChild(toggleContainer);
     header.appendChild(strengthLabel);
     container.appendChild(header);
+    
+    // Initialize the header drag functionality
+    initHeaderDrag(header, widget, renderLoras);
 
     // Track the total visible entries for height calculation
     let totalVisibleEntries = lorasData.length;

@@ -46,6 +46,55 @@ export function handleStrengthDrag(name, initialStrength, initialX, event, widge
   }
 }
 
+// Function to handle proportional strength adjustment for all LoRAs via header dragging
+export function handleAllStrengthsDrag(initialStrengths, initialX, event, widget) {
+  // Define sensitivity (less sensitive than individual adjustment)
+  const sensitivity = 0.0005;
+  
+  // Get current mouse position
+  const currentX = event.clientX;
+  
+  // Calculate the distance moved
+  const deltaX = currentX - initialX;
+  
+  // Calculate adjustment factor (1.0 means no change, >1.0 means increase, <1.0 means decrease)
+  // For positive deltaX, we want to increase strengths, for negative we want to decrease
+  const adjustmentFactor = 1.0 + (deltaX * sensitivity);
+  
+  // Ensure adjustment factor is reasonable (prevent extreme changes)
+  const limitedFactor = Math.max(0.01, Math.min(3.0, adjustmentFactor));
+  
+  // Get current loras data
+  const lorasData = parseLoraValue(widget.value);
+  
+  // Apply the adjustment factor to each LoRA's strengths
+  lorasData.forEach((loraData, index) => {
+    // Get initial strengths for this LoRA
+    const initialModelStrength = initialStrengths[index].modelStrength;
+    const initialClipStrength = initialStrengths[index].clipStrength;
+    
+    // Apply the adjustment factor to both strengths
+    let newModelStrength = (initialModelStrength * limitedFactor).toFixed(2);
+    let newClipStrength = (initialClipStrength * limitedFactor).toFixed(2);
+    
+    // Limit the values to reasonable bounds (-10 to 10)
+    newModelStrength = Math.max(-10, Math.min(10, newModelStrength));
+    newClipStrength = Math.max(-10, Math.min(10, newClipStrength));
+    
+    // Update strengths
+    lorasData[index].strength = Number(newModelStrength);
+    lorasData[index].clipStrength = Number(newClipStrength);
+  });
+  
+  // Update widget value
+  widget.value = formatLoraValue(lorasData);
+  
+  // Force re-render via callback
+  if (widget.callback) {
+    widget.callback(widget.value);
+  }
+}
+
 // Function to initialize drag operation
 export function initDrag(dragEl, name, widget, isClipStrength = false, previewTooltip, renderFunction) {
   let isDragging = false;
@@ -110,6 +159,65 @@ export function initDrag(dragEl, name, widget, isClipStrength = false, previewTo
     }
   });
   
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      // Remove the class to restore normal cursor behavior
+      document.body.classList.remove('comfy-lora-dragging');
+    }
+  });
+}
+
+// Function to initialize header drag for proportional strength adjustment
+export function initHeaderDrag(headerEl, widget, renderFunction) {
+  let isDragging = false;
+  let initialX = 0;
+  let initialStrengths = [];
+  
+  // Add cursor style to indicate draggable
+  headerEl.style.cursor = 'ew-resize';
+  
+  // Create a drag handler
+  headerEl.addEventListener('mousedown', (e) => {
+    // Skip if clicking on toggle or other interactive elements
+    if (e.target.closest('.comfy-lora-toggle') || 
+        e.target.closest('input')) {
+      return;
+    }
+    
+    // Store initial X position
+    initialX = e.clientX;
+    
+    // Store initial strengths of all LoRAs
+    const lorasData = parseLoraValue(widget.value);
+    initialStrengths = lorasData.map(lora => ({
+      modelStrength: Number(lora.strength),
+      clipStrength: Number(lora.clipStrength)
+    }));
+    
+    isDragging = true;
+    
+    // Add class to body to enforce cursor style globally
+    document.body.classList.add('comfy-lora-dragging');
+    
+    // Prevent text selection during drag
+    e.preventDefault();
+  });
+  
+  // Handle mouse move for dragging
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    // Call the strength adjustment function
+    handleAllStrengthsDrag(initialStrengths, initialX, e, widget);
+    
+    // Force re-render to show updated strength values
+    if (renderFunction) {
+      renderFunction(widget.value, widget);
+    }
+  });
+  
+  // Handle mouse up to end dragging
   document.addEventListener('mouseup', () => {
     if (isDragging) {
       isDragging = false;
