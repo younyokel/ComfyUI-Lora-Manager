@@ -2,25 +2,38 @@
 
 /* Duplicates banner */
 .duplicates-banner {
-    position: sticky;
-    top: 48px; /* Match header height */
-    left: 0;
+    position: relative; /* Changed from sticky to relative */
     width: 100%;
     background-color: var(--card-bg);
     color: var(--text-color);
     border-bottom: 1px solid var(--border-color);
     z-index: var(--z-overlay);
-    padding: 12px 16px;
+    padding: 12px 0; /* Removed horizontal padding */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
+    margin-bottom: 20px; /* Add margin to create space below the banner */
 }
 
 .duplicates-banner .banner-content {
-    max-width: 1400px;
+    max-width: 1400px; /* Match the container max-width */
     margin: 0 auto;
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 0 16px; /* Move horizontal padding to the content */
+}
+
+/* Responsive container for larger screens - match container in layout.css */
+@media (min-width: 2000px) {
+    .duplicates-banner .banner-content {
+        max-width: 1800px;
+    }
+}
+
+@media (min-width: 3000px) {
+    .duplicates-banner .banner-content {
+        max-width: 2400px;
+    }
 }
 
 .duplicates-banner i.fa-exclamation-triangle {
