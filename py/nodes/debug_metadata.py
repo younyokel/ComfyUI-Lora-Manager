@@ -14,20 +14,23 @@ class DebugMetadata:
             "required": {
                 "images": ("IMAGE",),
             },
+            "hidden": {
+                "id": "UNIQUE_ID",
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("metadata_json",)
     FUNCTION = "process_metadata"
 
-    def process_metadata(self, images):
+    def process_metadata(self, images, id):
         try:
             # Get the current execution context's metadata
             from ..metadata_collector import get_metadata
             metadata = get_metadata()
             
             # Use the MetadataProcessor to convert it to JSON string
-            metadata_json = MetadataProcessor.to_json(metadata)
+            metadata_json = MetadataProcessor.to_json(metadata, id)
             
             return (metadata_json,)
         except Exception as e:

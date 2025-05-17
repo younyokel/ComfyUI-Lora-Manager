@@ -1,6 +1,6 @@
 import os
 
-from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE, IMAGES
+from .constants import MODELS, PROMPTS, SAMPLING, LORAS, SIZE, IMAGES, IS_SAMPLER
 
 
 class NodeMetadataExtractor:
@@ -61,7 +61,8 @@ class SamplerExtractor(NodeMetadataExtractor):
                 
         metadata[SAMPLING][node_id] = {
             "parameters": sampling_params,
-            "node_id": node_id
+            "node_id": node_id,
+            IS_SAMPLER: True  # Add sampler flag
         }
         
         # Extract latent image dimensions if available
@@ -98,7 +99,8 @@ class KSamplerAdvancedExtractor(NodeMetadataExtractor):
                 
         metadata[SAMPLING][node_id] = {
             "parameters": sampling_params,
-            "node_id": node_id
+            "node_id": node_id,
+            IS_SAMPLER: True  # Add sampler flag
         }
         
         # Extract latent image dimensions if available
@@ -269,7 +271,8 @@ class KSamplerSelectExtractor(NodeMetadataExtractor):
                 
         metadata[SAMPLING][node_id] = {
             "parameters": sampling_params,
-            "node_id": node_id
+            "node_id": node_id,
+            IS_SAMPLER: False  # Mark as non-primary sampler
         }
 
 class BasicSchedulerExtractor(NodeMetadataExtractor):
@@ -285,7 +288,8 @@ class BasicSchedulerExtractor(NodeMetadataExtractor):
                 
         metadata[SAMPLING][node_id] = {
             "parameters": sampling_params,
-            "node_id": node_id
+            "node_id": node_id,
+            IS_SAMPLER: False  # Mark as non-primary sampler
         }
 
 class SamplerCustomAdvancedExtractor(NodeMetadataExtractor):
@@ -303,7 +307,8 @@ class SamplerCustomAdvancedExtractor(NodeMetadataExtractor):
                 
         metadata[SAMPLING][node_id] = {
             "parameters": sampling_params,
-            "node_id": node_id
+            "node_id": node_id,
+            IS_SAMPLER: True  # Add sampler flag
         }
         
         # Extract latent image dimensions if available
@@ -338,11 +343,20 @@ class CLIPTextEncodeFluxExtractor(NodeMetadataExtractor):
         clip_l_text = inputs.get("clip_l", "")
         t5xxl_text = inputs.get("t5xxl", "")
         
-        # Create JSON string with T5 content first, then CLIP-L
-        combined_text = json.dumps({
-            "T5": t5xxl_text,
-            "CLIP-L": clip_l_text
-        })
+        # If both are empty, use empty string
+        if not clip_l_text and not t5xxl_text:
+            combined_text = ""
+        # If one is empty, use the non-empty one
+        elif not clip_l_text:
+            combined_text = t5xxl_text
+        elif not t5xxl_text:
+            combined_text = clip_l_text
+        # If both have content, use JSON format
+        else:
+            combined_text = json.dumps({
+                "T5": t5xxl_text,
+                "CLIP-L": clip_l_text
+            })
         
         metadata[PROMPTS][node_id] = {
             "text": combined_text,
@@ -391,11 +405,13 @@ NODE_EXTRACTORS = {
     # Loaders
     "CheckpointLoaderSimple": CheckpointLoaderExtractor,
     "UNETLoader": UNETLoaderExtractor,          # Updated to use dedicated extractor
+    "UnetLoaderGGUF": UNETLoaderExtractor,  # Updated to use dedicated extractor
     "LoraLoader": LoraLoaderExtractor,
     "LoraManagerLoader": LoraLoaderManagerExtractor,
     # Conditioning
     "CLIPTextEncode": CLIPTextEncodeExtractor,
     "CLIPTextEncodeFlux": CLIPTextEncodeFluxExtractor,  # Add CLIPTextEncodeFlux
+    "WAS_Text_to_Conditioning": CLIPTextEncodeExtractor,
     # Latent
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux

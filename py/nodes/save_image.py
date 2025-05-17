@@ -41,6 +41,7 @@ class SaveImage:
                 "add_counter_to_filename": ("BOOLEAN", {"default": True}),
             },
             "hidden": {
+                "id": "UNIQUE_ID",
                 "prompt": "PROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO",
             },
@@ -300,14 +301,14 @@ class SaveImage:
                     
         return filename
 
-    def save_images(self, images, filename_prefix, file_format, prompt=None, extra_pnginfo=None, 
+    def save_images(self, images, filename_prefix, file_format, id, prompt=None, extra_pnginfo=None, 
                    lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True):
         """Save images with metadata"""
         results = []
-        
+
         # Get metadata using the metadata collector
         raw_metadata = get_metadata()
-        metadata_dict = MetadataProcessor.to_dict(raw_metadata)
+        metadata_dict = MetadataProcessor.to_dict(raw_metadata, id)
             
         # Get or create metadata asynchronously
         metadata = asyncio.run(self.format_metadata(metadata_dict))
@@ -399,7 +400,7 @@ class SaveImage:
         
         return results
 
-    def process_image(self, images, filename_prefix="ComfyUI", file_format="png", prompt=None, extra_pnginfo=None,
+    def process_image(self, images, id, filename_prefix="ComfyUI", file_format="png", prompt=None, extra_pnginfo=None,
                      lossless_webp=True, quality=100, embed_workflow=False, add_counter_to_filename=True):
         """Process and save image with metadata"""
         # Make sure the output directory exists
@@ -416,6 +417,7 @@ class SaveImage:
             images, 
             filename_prefix, 
             file_format, 
+            id,
             prompt, 
             extra_pnginfo,
             lossless_webp,
