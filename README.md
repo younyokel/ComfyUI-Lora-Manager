@@ -9,6 +9,8 @@
 A comprehensive toolset that streamlines organizing, downloading, and applying LoRA models in ComfyUI. With powerful features like recipe management, checkpoint organization, and one-click workflow integration, working with models becomes faster, smoother, and significantly easier. Access the interface at: `http://localhost:8188/loras`
 
 ![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/screenshot.png)
+
+One-click Integration:
 ![One-Click Integration](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/one-click-send.jpg)
 
 ## 📺 Tutorial: One-Click LoRA Integration
