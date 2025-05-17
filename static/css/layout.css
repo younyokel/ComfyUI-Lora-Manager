@@ -1,10 +1,10 @@
 .page-content {
     height: calc(100vh - 48px); /* Full height minus header */
     margin-top: 48px; /* Push down below header */
-    overflow-y: auto; /* Enable scrolling here */
     width: 100%;
     position: relative;
-    overflow-y: scroll;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    overflow-y: auto; /* Enable vertical scrolling */
 }
 
 .container {
