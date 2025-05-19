@@ -6,8 +6,6 @@ import time
 import shutil
 from typing import List, Dict, Optional, Type, Set
 
-from ..utils.model_utils import determine_base_model
-
 from ..utils.models import BaseModelMetadata
 from ..config import config
 from ..utils.file_utils import load_metadata, get_file_info, find_preview_file, save_metadata
@@ -539,112 +537,68 @@ class ModelScanner:
     # Common methods shared between scanners
     async def _process_model_file(self, file_path: str, root_path: str) -> Dict:
         """Process a single model file and return its metadata"""
-        needs_metadata_update = False
-        original_save_metadata = save_metadata
+        metadata = await load_metadata(file_path, self.model_class)
         
-        # Temporarily override save_metadata to prevent intermediate writes
-        async def no_op_save(*args, **kwargs):
-            nonlocal needs_metadata_update
-            needs_metadata_update = True
-            return None
-            
-        # Use a context manager to temporarily replace save_metadata
-        from contextlib import contextmanager
-        
-        @contextmanager
-        def prevent_metadata_writes():
-            nonlocal needs_metadata_update
-            # Replace the function temporarily
-            import sys
-            from .. import utils
-            original = utils.file_utils.save_metadata
-            utils.file_utils.save_metadata = no_op_save
-            try:
-                yield
-            finally:
-                # Restore the original function
-                utils.file_utils.save_metadata = original
-        
-        # Process with write prevention
-        with prevent_metadata_writes():
-            metadata = await load_metadata(file_path, self.model_class)
-            
-            if metadata is None:
+        if metadata is None:
+            civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
+            if os.path.exists(civitai_info_path):
+                try:
+                    with open(civitai_info_path, 'r', encoding='utf-8') as f:
+                        version_info = json.load(f)
+                    
+                    file_info = next((f for f in version_info.get('files', []) if f.get('primary')), None)
+                    if file_info:
+                        file_name = os.path.splitext(os.path.basename(file_path))[0]
+                        file_info['name'] = file_name
+                    
+                        metadata = self.model_class.from_civitai_info(version_info, file_info, file_path)
+                        metadata.preview_url = find_preview_file(file_name, os.path.dirname(file_path))
+                        await save_metadata(file_path, metadata)
+                        logger.debug(f"Created metadata from .civitai.info for {file_path}")
+                except Exception as e:
+                    logger.error(f"Error creating metadata from .civitai.info for {file_path}: {e}")
+        else:
+            # Check if metadata exists but civitai field is empty - try to restore from civitai.info
+            if metadata.civitai is None or metadata.civitai == {}:
                 civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
                 if os.path.exists(civitai_info_path):
                     try:
                         with open(civitai_info_path, 'r', encoding='utf-8') as f:
                             version_info = json.load(f)
                         
-                        file_info = next((f for f in version_info.get('files', []) if f.get('primary')), None)
-                        if file_info:
-                            file_name = os.path.splitext(os.path.basename(file_path))[0]
-                            file_info['name'] = file_name
+                        logger.debug(f"Restoring missing civitai data from .civitai.info for {file_path}")
+                        metadata.civitai = version_info
                         
-                            metadata = self.model_class.from_civitai_info(version_info, file_info, file_path)
-                            metadata.preview_url = find_preview_file(file_name, os.path.dirname(file_path))
-                            needs_metadata_update = True
-                            logger.debug(f"Created metadata from .civitai.info for {file_path}")
+                        # Ensure tags are also updated if they're missing
+                        if (not metadata.tags or len(metadata.tags) == 0) and 'model' in version_info:
+                            if 'tags' in version_info['model']:
+                                metadata.tags = version_info['model']['tags']
+                        
+                        # Also restore description if missing
+                        if (not metadata.modelDescription or metadata.modelDescription == "") and 'model' in version_info:
+                            if 'description' in version_info['model']:
+                                metadata.modelDescription = version_info['model']['description']
+                        
+                        # Save the updated metadata
+                        await save_metadata(file_path, metadata)
+                        logger.debug(f"Updated metadata with civitai info for {file_path}")
                     except Exception as e:
-                        logger.error(f"Error creating metadata from .civitai.info for {file_path}: {e}")
-            else:
-                # Check if metadata exists but civitai field is empty - try to restore from civitai.info
-                if metadata.civitai is None or metadata.civitai == {}:
-                    civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
-                    if os.path.exists(civitai_info_path):
-                        try:
-                            with open(civitai_info_path, 'r', encoding='utf-8') as f:
-                                version_info = json.load(f)
-                            
-                            logger.debug(f"Restoring missing civitai data from .civitai.info for {file_path}")
-                            metadata.civitai = version_info
-                            needs_metadata_update = True
-                            
-                            # Ensure tags are also updated if they're missing
-                            if (not metadata.tags or len(metadata.tags) == 0) and 'model' in version_info:
-                                if 'tags' in version_info['model']:
-                                    metadata.tags = version_info['model']['tags']
-                                    needs_metadata_update = True
-                            
-                            # Also restore description if missing
-                            if (not metadata.modelDescription or metadata.modelDescription == "") and 'model' in version_info:
-                                if 'description' in version_info['model']:
-                                    metadata.modelDescription = version_info['model']['description']
-                                    needs_metadata_update = True
-                        except Exception as e:
-                            logger.error(f"Error restoring civitai data from .civitai.info for {file_path}: {e}")
-                
-                # Check if base_model is consistent with civitai baseModel
-                if metadata.civitai and 'baseModel' in metadata.civitai:
-                    civitai_base_model = determine_base_model(metadata.civitai['baseModel'])
-                    if metadata.base_model != civitai_base_model:
-                        logger.debug(f"Updating base_model from {metadata.base_model} to {civitai_base_model} for {file_path}")
-                        metadata.base_model = civitai_base_model
-                        needs_metadata_update = True
+                        logger.error(f"Error restoring civitai data from .civitai.info for {file_path}: {e}")
             
-            if metadata is None:
-                metadata = await self._get_file_info(file_path)
-                needs_metadata_update = True
+        if metadata is None:
+            metadata = await self._get_file_info(file_path)
         
-        # Continue processing
-        model_data = metadata.to_dict() if metadata else None
+        model_data = metadata.to_dict()
         
         # Skip excluded models
-        if model_data and model_data.get('exclude', False):
+        if model_data.get('exclude', False):
             self._excluded_models.append(model_data['file_path'])
             return None
             
-        # Fetch missing metadata from Civitai if needed (with write prevention)
-        with prevent_metadata_writes():
-            await self._fetch_missing_metadata(file_path, model_data)
-            
+        await self._fetch_missing_metadata(file_path, model_data)
         rel_path = os.path.relpath(file_path, root_path)
         folder = os.path.dirname(rel_path)
         model_data['folder'] = folder.replace(os.path.sep, '/')
-        
-        # Only save metadata if needed
-        if needs_metadata_update and metadata:
-            await original_save_metadata(file_path, metadata)
         
         return model_data
 
@@ -697,9 +651,9 @@ class ModelScanner:
 
                     model_data['civitai']['creator'] = model_metadata['creator']
                     
-                    # Create a metadata object and save it using save_metadata
-                    metadata_obj = self.model_class.from_dict(model_data)
-                    await save_metadata(file_path, metadata_obj)
+                    metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                    with open(metadata_path, 'w', encoding='utf-8') as f:
+                        json.dump(model_data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.error(f"Failed to update metadata from Civitai for {file_path}: {e}")
 
