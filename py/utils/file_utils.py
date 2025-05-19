@@ -245,7 +245,7 @@ async def load_metadata(file_path: str, model_class: Type[BaseModelMetadata] = L
                     # needs_update = True
 
                 if needs_update:
-                    save_metadata(file_path, model_class.from_dict(data))
+                    await save_metadata(file_path, model_class.from_dict(data))
                 
                 return model_class.from_dict(data)
                 
