@@ -51,7 +51,7 @@ class ModelRouteUtils:
             model_id = civitai_metadata['modelId']
             if model_id:
                 model_metadata, _ = await client.get_model_metadata(str(model_id))
-                if model_metadata:
+                if (model_metadata):
                     local_metadata['modelDescription'] = model_metadata.get('description', '')
                     local_metadata['tags'] = model_metadata.get('tags', [])
                     local_metadata['civitai']['creator'] = model_metadata['creator']
@@ -144,6 +144,11 @@ class ModelRouteUtils:
         """
         client = CivitaiClient()
         try:
+            # Validate input parameters
+            if not isinstance(model_data, dict):
+                logger.error(f"Invalid model_data type: {type(model_data)}")
+                return False
+
             metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
             
             # Check if model metadata exists
@@ -167,21 +172,25 @@ class ModelRouteUtils:
                 client
             )
             
-            # Update cache object directly
-            model_data.update({
+            # Update cache object directly using safe .get() method
+            update_dict = {
                 'model_name': local_metadata.get('model_name'),
                 'preview_url': local_metadata.get('preview_url'),
                 'from_civitai': True,
                 'civitai': civitai_metadata
-            })
+            }
+            model_data.update(update_dict)
             
             # Update cache using the provided function
             await update_cache_func(file_path, file_path, local_metadata)
                 
             return True
 
+        except KeyError as e:
+            logger.error(f"Error fetching CivitAI data - Missing key: {e} in model_data={model_data}")
+            return False
         except Exception as e:
-            logger.error(f"Error fetching CivitAI data: {e}")
+            logger.error(f"Error fetching CivitAI data: {str(e)}", exc_info=True)  # Include stack trace
             return False
         finally:
             await client.close()
