@@ -31,6 +31,16 @@ export class SettingsManager {
         if (state.global.settings.compactMode === undefined) {
             state.global.settings.compactMode = false;
         }
+        
+        // Convert old boolean compactMode to new displayDensity string
+        if (typeof state.global.settings.displayDensity === 'undefined') {
+            if (state.global.settings.compactMode === true) {
+                state.global.settings.displayDensity = 'compact';
+            } else {
+                state.global.settings.displayDensity = 'default';
+            }
+            // We can delete the old setting, but keeping it for backwards compatibility
+        }
     }
 
     initialize() {
@@ -82,10 +92,10 @@ export class SettingsManager {
             autoplayOnHoverCheckbox.checked = state.global.settings.autoplayOnHover || false;
         }
         
-        // Set compact mode setting
-        const compactModeCheckbox = document.getElementById('compactMode');
-        if (compactModeCheckbox) {
-            compactModeCheckbox.checked = state.global.settings.compactMode || false;
+        // Set display density setting
+        const displayDensitySelect = document.getElementById('displayDensity');
+        if (displayDensitySelect) {
+            displayDensitySelect.value = state.global.settings.displayDensity || 'default';
         }
 
         // Load default lora root
@@ -219,6 +229,11 @@ export class SettingsManager {
         // Update frontend state
         if (settingKey === 'default_lora_root') {
             state.global.settings.default_loras_root = value;
+        } else if (settingKey === 'display_density') {
+            state.global.settings.displayDensity = value;
+            
+            // Also update compactMode for backwards compatibility
+            state.global.settings.compactMode = (value !== 'default');
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;
@@ -229,22 +244,38 @@ export class SettingsManager {
         
         try {
             // For backend settings, make API call
-            const payload = {};
-            payload[settingKey] = value;
-            
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
+            if (settingKey === 'default_lora_root') {
+                const payload = {};
+                payload[settingKey] = value;
+                
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-            if (!response.ok) {
-                throw new Error('Failed to save setting');
+                if (!response.ok) {
+                    throw new Error('Failed to save setting');
+                }
+                
+                showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
             }
             
-            showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
+            // Apply frontend settings immediately
+            this.applyFrontendSettings();
+            
+            // Recalculate layout when display density changes
+            if (settingKey === 'display_density' && state.virtualScroller) {
+                state.virtualScroller.calculateLayout();
+                
+                let densityName = "Default";
+                if (value === 'medium') densityName = "Medium";
+                if (value === 'compact') densityName = "Compact";
+                
+                showToast(`Display Density set to ${densityName}`, 'success');
+            }
             
         } catch (error) {
             showToast('Failed to save setting: ' + error.message, 'error');
@@ -419,8 +450,17 @@ export class SettingsManager {
             videoParent.replaceChild(videoClone, video);
         });
         
-        // For show_only_sfw, there's no immediate action needed as it affects content loading
-        // The setting will take effect on next reload
+        // Apply display density class to grid
+        const grid = document.querySelector('.card-grid');
+        if (grid) {
+            const density = state.global.settings.displayDensity || 'default';
+            
+            // Remove all density classes first
+            grid.classList.remove('default-density', 'medium-density', 'compact-density');
+            
+            // Add the appropriate density class
+            grid.classList.add(`${density}-density`);
+        }
     }
 }
 

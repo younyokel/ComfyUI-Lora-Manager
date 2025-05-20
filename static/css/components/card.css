@@ -86,23 +86,39 @@
     min-height: 0; /* Fix for potential flexbox sizing issue in Firefox */
 }
 
+/* Smaller text for medium density */
+.medium-density .model-name {
+    font-size: 0.95em;
+    max-height: 2.6em;
+}
+
+.medium-density .base-model-label {
+    font-size: 0.85em;
+    max-width: 120px;
+}
+
+.medium-density .card-actions i {
+    font-size: 0.98em;
+    padding: 4px;
+}
+
 /* Smaller text for compact mode */
-.compact-mode .model-name {
+.compact-density .model-name {
     font-size: 0.9em;
     max-height: 2.4em;
 }
 
-.compact-mode .base-model-label {
+.compact-density .base-model-label {
     font-size: 0.8em;
     max-width: 110px;
 }
 
-.compact-mode .card-actions i {
+.compact-density .card-actions i {
     font-size: 0.95em;
     padding: 3px;
 }
 
-.compact-mode .model-info {
+.compact-density .model-info {
     padding-bottom: 2px;
 }
 

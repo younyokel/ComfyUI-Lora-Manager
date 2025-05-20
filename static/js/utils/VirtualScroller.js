@@ -88,22 +88,40 @@ export class VirtualScroller {
         // Calculate available content width (excluding padding)
         const availableContentWidth = containerWidth - paddingLeft - paddingRight;
         
-        // Get compact mode setting
-        const compactMode = state.global.settings?.compactMode || false;
+        // Get display density setting
+        const displayDensity = state.global.settings?.displayDensity || 'default';
         
         // Set exact column counts and grid widths to match CSS container widths
         let maxColumns, maxGridWidth;
         
-        // Match exact column counts and CSS container width values
+        // Match exact column counts and CSS container width values based on density
         if (window.innerWidth >= 3000) { // 4K
-            maxColumns = compactMode ? 10 : 8;
+            if (displayDensity === 'default') {
+                maxColumns = 8;
+            } else if (displayDensity === 'medium') {
+                maxColumns = 9;
+            } else { // compact
+                maxColumns = 10;
+            }
             maxGridWidth = 2400; // Match exact CSS container width for 4K
         } else if (window.innerWidth >= 2000) { // 2K/1440p
-            maxColumns = compactMode ? 8 : 6;
+            if (displayDensity === 'default') {
+                maxColumns = 6;
+            } else if (displayDensity === 'medium') {
+                maxColumns = 7;
+            } else { // compact
+                maxColumns = 8;
+            }
             maxGridWidth = 1800; // Match exact CSS container width for 2K
         } else {
             // 1080p
-            maxColumns = compactMode ? 7 : 5;
+            if (displayDensity === 'default') {
+                maxColumns = 5;
+            } else if (displayDensity === 'medium') {
+                maxColumns = 6;
+            } else { // compact
+                maxColumns = 7;
+            }
             maxGridWidth = 1400; // Match exact CSS container width for 1080p
         }
         
@@ -145,7 +163,7 @@ export class VirtualScroller {
             leftOffset: this.leftOffset,
             paddingLeft,
             paddingRight,
-            compactMode,
+            displayDensity,
             maxColumns,
             baseCardWidth,
             rowGap: this.rowGap
@@ -154,12 +172,9 @@ export class VirtualScroller {
         // Update grid element max-width to match available width
         this.gridElement.style.maxWidth = `${actualGridWidth}px`;
         
-        // Add or remove compact-mode class for style adjustments
-        if (compactMode) {
-            this.gridElement.classList.add('compact-mode');
-        } else {
-            this.gridElement.classList.remove('compact-mode');
-        }
+        // Add or remove density classes for style adjustments
+        this.gridElement.classList.remove('default-density', 'medium-density', 'compact-density');
+        this.gridElement.classList.add(`${displayDensity}-density`);
         
         // Update spacer height
         this.updateSpacerHeight();

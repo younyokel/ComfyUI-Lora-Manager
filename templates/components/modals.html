@@ -161,18 +161,24 @@
                 <div class="setting-item">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <label for="compactMode">Compact Mode</label>
+                            <label for="displayDensity">Display Density</label>
                         </div>
-                        <div class="setting-control">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="compactMode" 
-                                       onchange="settingsManager.saveToggleSetting('compactMode', 'compact_mode')">
-                                <span class="toggle-slider"></span>
-                            </label>
+                        <div class="setting-control select-control">
+                            <select id="displayDensity" onchange="settingsManager.saveSelectSetting('displayDensity', 'display_density')">
+                                <option value="default">Default</option>
+                                <option value="medium">Medium</option>
+                                <option value="compact">Compact</option>
+                            </select>
                         </div>
                     </div>
                     <div class="input-help">
-                        Display more cards per row (7 on 1080p, 8 on 2K, 10 on 4K). <span class="warning-text">Warning: May cause performance issues (lag and lower FPS) on systems with limited resources.</span>
+                        Choose how many cards to display per row:
+                        <ul class="density-description">
+                            <li><strong>Default:</strong> 5 (1080p), 6 (2K), 8 (4K)</li>
+                            <li><strong>Medium:</strong> 6 (1080p), 7 (2K), 9 (4K)</li>
+                            <li><strong>Compact:</strong> 7 (1080p), 8 (2K), 10 (4K)</li>
+                        </ul>
+                        <span class="warning-text">Warning: Higher densities may cause performance issues on systems with limited resources.</span>
                     </div>
                 </div>
             </div>
