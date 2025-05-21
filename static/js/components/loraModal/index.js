@@ -24,6 +24,7 @@ import { updateLoraCard } from '../../utils/cardUpdater.js';
  * @param {Object} lora - LoRA模型数据
  */
 export function showLoraModal(lora) {
+    console.log('Lora data:', lora);
     const escapedWords = lora.civitai?.trainedWords?.length ? 
         lora.civitai.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
 
@@ -37,6 +38,20 @@ export function showLoraModal(lora) {
                         <i class="fas fa-pencil-alt"></i>
                     </button>
                 </div>
+                
+                ${lora.civitai?.creator ? `
+                <div class="creator-info">
+                    ${lora.civitai.creator.image ? 
+                      `<div class="creator-avatar">
+                         <img src="${lora.civitai.creator.image}" alt="${lora.civitai.creator.username}" onerror="this.onerror=null; this.src='static/icons/user-placeholder.png';">
+                       </div>` : 
+                      `<div class="creator-avatar creator-placeholder">
+                         <i class="fas fa-user"></i>
+                       </div>`
+                    }
+                    <span class="creator-username">${lora.civitai.creator.username}</span>
+                </div>` : ''}
+                
                 ${renderCompactTags(lora.tags || [])}
             </header>
 

@@ -204,7 +204,7 @@ class ModelRouteUtils:
         fields = [
             "id", "modelId", "name", "createdAt", "updatedAt", 
             "publishedAt", "trainedWords", "baseModel", "description",
-            "model", "images"
+            "model", "images", "creator"
         ]
         return {k: data[k] for k in fields if k in data}
 

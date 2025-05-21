@@ -32,6 +32,20 @@ export function showCheckpointModal(checkpoint) {
                         <i class="fas fa-pencil-alt"></i>
                     </button>
                 </div>
+
+                ${checkpoint.civitai?.creator ? `
+                <div class="creator-info">
+                    ${checkpoint.civitai.creator.image ? 
+                        `<div class="creator-avatar">
+                            <img src="${checkpoint.civitai.creator.image}" alt="${checkpoint.civitai.creator.username}" onerror="this.onerror=null; this.src='static/icons/user-placeholder.png';">
+                        </div>` : 
+                        `<div class="creator-avatar creator-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>`
+                    }
+                    <span class="creator-username">${checkpoint.civitai.creator.username}</span>
+                </div>` : ''}
+
                 ${renderCompactTags(checkpoint.tags || [])}
             </header>
 
