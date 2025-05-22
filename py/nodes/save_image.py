@@ -224,7 +224,7 @@ class SaveImage:
         if lora_hashes:
             lora_hash_parts = []
             for lora_name, hash_value in lora_hashes.items():
-                lora_hash_parts.append(f"{lora_name}: {hash_value}")
+                lora_hash_parts.append(f"{lora_name}: {hash_value[:10]}")
             
             if lora_hash_parts:
                 params.append(f"Lora hashes: \"{', '.join(lora_hash_parts)}\"")
@@ -379,27 +379,22 @@ class SaveImage:
                             print(f"Error adding EXIF data: {e}")
                     img.save(file_path, format="JPEG", **save_kwargs)
                 elif file_format == "webp":
-                    # For WebP, use exif data in a ComfyUI-compatible format
                     try:
-                        # Get exif from image
-                        exif = img.getexif()
-                        
-                        # Add metadata if available
+                        # For WebP, use piexif for metadata
+                        exif_dict = {}
+
                         if metadata:
-                            exif[piexif.ExifIFD.UserComment] = b'UNICODE\0' + metadata.encode('utf-16be')
+                            exif_dict['Exif'] = {piexif.ExifIFD.UserComment: b'UNICODE\0' + metadata.encode('utf-16be')}
                         
-                        # Add workflow if embed_workflow is enabled
+                        # Add workflow if needed
                         if embed_workflow and extra_pnginfo is not None:
-                            # Format the workflow with "Workflow:" prefix for ComfyUI compatibility
-                            workflow_json = json.dumps(extra_pnginfo["workflow"])
-                            # Store workflow in ImageDescription tag (0x010e)
-                            exif[piexif.ImageIFD.ImageDescription] = "Workflow:" + workflow_json
-                        
-                        # Update save_kwargs with exif data
-                        save_kwargs["exif"] = exif.tobytes()
-                        
+                            workflow_json = json.dumps(extra_pnginfo["workflow"]) 
+                            exif_dict['0th'] = {piexif.ImageIFD.ImageDescription: "Workflow:" + workflow_json}
+                            
+                        exif_bytes = piexif.dump(exif_dict)
+                        save_kwargs["exif"] = exif_bytes
                     except Exception as e:
-                        print(f"Error adding EXIF/workflow data to WebP: {e}")
+                        print(f"Error adding EXIF data: {e}")
                     
                     img.save(file_path, format="WEBP", **save_kwargs)
                 
