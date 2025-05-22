@@ -238,7 +238,6 @@ class MetadataProcessor:
         
         # Find the primary KSampler node
         primary_sampler_id, primary_sampler = MetadataProcessor.find_primary_sampler(metadata, id)
-        print(f"Primary sampler ID: {primary_sampler_id}, downstream ID: {id}")
         
         # Directly get checkpoint from metadata instead of tracing
         checkpoint = MetadataProcessor.find_primary_checkpoint(metadata)
