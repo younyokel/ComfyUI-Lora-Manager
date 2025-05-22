@@ -673,11 +673,6 @@
     opacity: 0.9;
 }
 
-/* Model name field styles - complete replacement */
-.model-name-field {
-    display: none;
-}
-
 /* New Model Name Header Styles */
 .model-name-header {
     display: flex;
@@ -1330,8 +1325,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: var(--space-1);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-1);
     padding: 6px 10px;
     background: rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(0, 0, 0, 0.1);
