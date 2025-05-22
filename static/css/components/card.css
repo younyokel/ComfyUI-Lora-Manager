@@ -466,7 +466,7 @@
     display: block;
     position: relative;
     margin: 0 auto;
-    padding: 6px 0; /* Add top/bottom padding equivalent to card padding */
+    padding: 4px 0; /* Add top/bottom padding equivalent to card padding */
     height: auto;
     width: 100%;
     max-width: 1400px; /* Keep the max-width from original grid */

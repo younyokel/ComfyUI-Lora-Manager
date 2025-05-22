@@ -15,6 +15,10 @@ export class VirtualScroller {
         this.itemAspectRatio = 896/1152; // Aspect ratio of cards
         this.rowGap = options.rowGap || 20; // Add vertical gap between rows (default 20px)
         
+        // Add container padding properties
+        this.containerPaddingTop = options.containerPaddingTop || 4; // Default top padding from CSS
+        this.containerPaddingBottom = options.containerPaddingBottom || 4; // Default bottom padding from CSS
+        
         // Add data windowing enable/disable flag
         this.enableDataWindowing = options.enableDataWindowing !== undefined ? options.enableDataWindowing : false;
 
@@ -73,6 +77,10 @@ export class VirtualScroller {
         // The grid will be used for the actual visible items
         this.gridElement.style.position = 'relative';
         this.gridElement.style.minHeight = '0';
+        
+        // Apply padding directly to ensure consistency
+        this.gridElement.style.paddingTop = `${this.containerPaddingTop}px`;
+        this.gridElement.style.paddingBottom = `${this.containerPaddingBottom}px`;
         
         // Place the spacer inside the grid container
         this.gridElement.appendChild(this.spacerElement);
@@ -336,8 +344,11 @@ export class VirtualScroller {
         // Add row gaps to the total height calculation
         const totalHeight = totalRows * this.itemHeight + (totalRows - 1) * this.rowGap;
         
+        // Include container padding in the total height
+        const spacerHeight = totalHeight + this.containerPaddingTop + this.containerPaddingBottom;
+        
         // Update spacer height to represent all items
-        this.spacerElement.style.height = `${totalHeight}px`;
+        this.spacerElement.style.height = `${spacerHeight}px`;
     }
 
     getVisibleRange() {
@@ -465,7 +476,8 @@ export class VirtualScroller {
         const col = index % this.columnsCount;
         
         // Calculate precise positions with row gap included
-        const topPos = row * (this.itemHeight + this.rowGap);
+        // Add the top padding to account for container padding
+        const topPos = this.containerPaddingTop + (row * (this.itemHeight + this.rowGap));
         
         // Position correctly with leftOffset (no need to add padding as absolute
         // positioning is already relative to the padding edge of the container)

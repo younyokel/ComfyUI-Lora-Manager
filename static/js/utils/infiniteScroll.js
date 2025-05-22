@@ -122,6 +122,8 @@ async function initializeVirtualScroll(pageType) {
             fetchItemsFn: fetchDataFn,
             pageSize: 100,
             rowGap: 20,
+            containerPaddingTop: 4,
+            containerPaddingBottom: 4,
             enableDataWindowing: false // Explicitly set to false to disable data windowing
         });
         
