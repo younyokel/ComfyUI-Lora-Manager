@@ -38,6 +38,14 @@ export class DownloadManager {
             this.cleanupFolderBrowser();
         });
         this.resetSteps();
+        
+        // Auto-focus on the URL input
+        setTimeout(() => {
+            const urlInput = document.getElementById('loraUrl');
+            if (urlInput) {
+                urlInput.focus();
+            }
+        }, 100); // Small delay to ensure the modal is fully displayed
     }
 
     resetSteps() {
@@ -181,6 +189,11 @@ export class DownloadManager {
                 </div>
             `;
         }).join('');
+        
+        // Auto-select the version if there's only one
+        if (this.versions.length === 1 && !this.currentVersion) {
+            this.selectVersion(this.versions[0].id.toString());
+        }
         
         // Update Next button state based on initial selection
         this.updateNextButtonState();
