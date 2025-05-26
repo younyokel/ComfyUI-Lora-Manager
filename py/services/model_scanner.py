@@ -743,25 +743,40 @@ class ModelScanner:
             
             shutil.move(real_source, real_target)
             
-            source_metadata = os.path.join(source_dir, f"{base_name}.metadata.json")
+            # Move all associated files with the same base name
+            source_metadata = None
+            moved_metadata_path = None
+            
+            # Find all files with the same base name in the source directory
+            files_to_move = []
+            try:
+                for file in os.listdir(source_dir):
+                    if file.startswith(base_name + ".") and file != os.path.basename(source_path):
+                        source_file_path = os.path.join(source_dir, file)
+                        # Store metadata file path for special handling
+                        if file == f"{base_name}.metadata.json":
+                            source_metadata = source_file_path
+                            moved_metadata_path = os.path.join(target_path, file)
+                        else:
+                            files_to_move.append((source_file_path, os.path.join(target_path, file)))
+            except Exception as e:
+                logger.error(f"Error listing files in {source_dir}: {e}")
+            
+            # Move all associated files
             metadata = None
-            if os.path.exists(source_metadata):
-                target_metadata = os.path.join(target_path, f"{base_name}.metadata.json")
-                shutil.move(source_metadata, target_metadata)
-                metadata = await self._update_metadata_paths(target_metadata, target_file)
+            for source_file, target_file_path in files_to_move:
+                try:
+                    shutil.move(source_file, target_file_path)
+                except Exception as e:
+                    logger.error(f"Error moving associated file {source_file}: {e}")
             
-            # Move civitai.info file if exists
-            source_civitai = os.path.join(source_dir, f"{base_name}.civitai.info")
-            if os.path.exists(source_civitai):
-                target_civitai = os.path.join(target_path, f"{base_name}.civitai.info")
-                shutil.move(source_civitai, target_civitai)
-            
-            for ext in PREVIEW_EXTENSIONS:
-                source_preview = os.path.join(source_dir, f"{base_name}{ext}")
-                if os.path.exists(source_preview):
-                    target_preview = os.path.join(target_path, f"{base_name}{ext}")
-                    shutil.move(source_preview, target_preview)
-                    break
+            # Handle metadata file specially to update paths
+            if source_metadata and os.path.exists(source_metadata):
+                try:
+                    shutil.move(source_metadata, moved_metadata_path)
+                    metadata = await self._update_metadata_paths(moved_metadata_path, target_file)
+                except Exception as e:
+                    logger.error(f"Error moving metadata file: {e}")
             
             await self.update_single_model_cache(source_path, target_file, metadata)
             
