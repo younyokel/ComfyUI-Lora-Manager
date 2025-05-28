@@ -11,3 +11,4 @@ toml
 numpy
 torch
 natsort
+msgpack
