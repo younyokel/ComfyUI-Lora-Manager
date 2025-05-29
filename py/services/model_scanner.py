@@ -147,11 +147,9 @@ class ModelScanner:
         if set(stored_dirs.keys()) != set(current_dirs.keys()):
             return False
             
-        # Check if any directory's modification time has changed
-        for dir_path, stored_time in stored_dirs.items():
-            current_time = current_dirs.get(dir_path)
-            if current_time is None or current_time > stored_time:
-                return False
+        # Remove the modification time check to make cache validation less strict
+        # This allows the cache to be valid even when files have changed
+        # Users can explicitly refresh the cache when needed
                 
         return True
         
