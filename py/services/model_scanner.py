@@ -475,17 +475,23 @@ class ModelScanner:
         # If force refresh is requested, initialize the cache directly
         if force_refresh:
             # If rebuild_cache is True, try to reload from disk before reconciliation
-            if rebuild_cache and self._cache is not None:
+            if rebuild_cache:
                 logger.info(f"{self.model_type.capitalize()} Scanner: Attempting to rebuild cache from disk...")
                 cache_loaded = await self._load_cache_from_disk()
                 if cache_loaded:
                     logger.info(f"{self.model_type.capitalize()} Scanner: Successfully reloaded cache from disk")
                 else:
-                    logger.info(f"{self.model_type.capitalize()} Scanner: Could not reload cache from disk, proceeding with normal refresh")
-
+                    logger.info(f"{self.model_type.capitalize()} Scanner: Could not reload cache from disk, proceeding with complete rebuild")
+                    # If loading from disk failed, do a complete rebuild and save to disk
+                    await self._initialize_cache()
+                    await self._save_cache_to_disk()
+                    return self._cache
+            
             if self._cache is None:
                 # For initial creation, do a full initialization
                 await self._initialize_cache()
+                # Save the newly built cache
+                await self._save_cache_to_disk()
             else:
                 # For subsequent refreshes, use fast reconciliation
                 await self._reconcile_cache()
