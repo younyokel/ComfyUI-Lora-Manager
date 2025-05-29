@@ -4,14 +4,13 @@ import asyncio
 import json
 import time
 import aiohttp
-import shutil
+import re
 from server import PromptServer # type: ignore
 from aiohttp import web
 from ..services.settings_manager import settings
 from ..utils.usage_stats import UsageStats
 from ..services.service_registry import ServiceRegistry
-from ..utils.exif_utils import ExifUtils
-from ..utils.constants import EXAMPLE_IMAGE_WIDTH, SUPPORTED_MEDIA_EXTENSIONS
+from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
 from ..services.civitai_client import CivitaiClient
 from ..utils.routes_common import ModelRouteUtils
 
@@ -408,6 +407,28 @@ class MiscRoutes:
             return False
     
     @staticmethod
+    def _get_civitai_optimized_url(image_url):
+        """Convert a Civitai image URL to its optimized WebP version
+        
+        Args:
+            image_url: Original Civitai image URL
+            
+        Returns:
+            str: URL to optimized WebP version
+        """
+        # Match the base part of Civitai URLs
+        base_pattern = r'(https://image\.civitai\.com/[^/]+/[^/]+)'
+        match = re.match(base_pattern, image_url)
+        
+        if match:
+            base_url = match.group(1)
+            # Create the optimized WebP URL
+            return f"{base_url}/optimized=true/image.webp"
+        
+        # Return original URL if it doesn't match the expected format
+        return image_url
+    
+    @staticmethod
     async def _process_model_images(model_hash, model_name, model_images, model_dir, optimize, independent_session, delay):
         """Process and download images for a single model
         
@@ -446,6 +467,13 @@ class MiscRoutes:
             
             save_filename = f"image_{i}{image_ext}"
             
+            # If optimizing images and this is a Civitai image, use their pre-optimized WebP version
+            if is_image and optimize and 'civitai.com' in image_url:
+                # Transform URL to use Civitai's optimized WebP version
+                image_url = MiscRoutes._get_civitai_optimized_url(image_url)
+                # Update filename to use .webp extension
+                save_filename = f"image_{i}.webp"
+            
             # Check if already downloaded
             save_path = os.path.join(model_dir, save_filename)
             if os.path.exists(save_path):
@@ -459,31 +487,10 @@ class MiscRoutes:
                 # Direct download using the independent session
                 async with independent_session.get(image_url, timeout=60) as response:
                     if response.status == 200:
-                        if is_image and optimize:
-                            # For images, optimize if requested
-                            image_data = await response.read()
-                            optimized_data, ext = ExifUtils.optimize_image(
-                                image_data, 
-                                target_width=EXAMPLE_IMAGE_WIDTH, 
-                                format='webp', 
-                                quality=85, 
-                                preserve_metadata=False
-                            )
-                            
-                            # Update save filename if format changed
-                            if ext == '.webp':
-                                save_filename = os.path.splitext(save_filename)[0] + '.webp'
-                                save_path = os.path.join(model_dir, save_filename)
-                            
-                            # Save the optimized image
-                            with open(save_path, 'wb') as f:
-                                f.write(optimized_data)
-                        else:
-                            # For videos or unoptimized images, save directly
-                            with open(save_path, 'wb') as f:
-                                async for chunk in response.content.iter_chunked(8192):
-                                    if chunk:
-                                        f.write(chunk)
+                        with open(save_path, 'wb') as f:
+                            async for chunk in response.content.iter_chunked(8192):
+                                if chunk:
+                                    f.write(chunk)
                     elif response.status == 404:
                         error_msg = f"Failed to download file: {image_url}, status code: 404 - Model metadata might be stale"
                         logger.warning(error_msg)
@@ -559,35 +566,11 @@ class MiscRoutes:
                         logger.debug(f"File already exists in output: {save_path}")
                         continue
                     
-                    # Handle image processing based on file type and optimize setting
-                    is_image = local_ext in SUPPORTED_MEDIA_EXTENSIONS['images']
-                    
-                    if is_image and optimize:
-                        # Optimize the image
-                        with open(local_image_path, 'rb') as img_file:
-                            image_data = img_file.read()
-                        
-                        optimized_data, ext = ExifUtils.optimize_image(
-                            image_data, 
-                            target_width=EXAMPLE_IMAGE_WIDTH, 
-                            format='webp', 
-                            quality=85, 
-                            preserve_metadata=False
-                        )
-                        
-                        # Update save filename if format changed
-                        if ext == '.webp':
-                            save_filename = os.path.splitext(save_filename)[0] + '.webp'
-                            save_path = os.path.join(model_dir, save_filename)
-                        
-                        # Save the optimized image
-                        with open(save_path, 'wb') as f:
-                            f.write(optimized_data)
-                    else:
-                        # For videos or unoptimized images, copy directly
-                        with open(local_image_path, 'rb') as src_file:
-                            with open(save_path, 'wb') as dst_file:
-                                dst_file.write(src_file.read())
+                    # For local files, we just copy them without optimization
+                    # since we don't want to modify user files
+                    with open(local_image_path, 'rb') as src_file:
+                        with open(save_path, 'wb') as dst_file:
+                            dst_file.write(src_file.read())
                 
                 return True
             return False
