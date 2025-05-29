@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 import aiohttp
+import shutil
 from server import PromptServer # type: ignore
 from aiohttp import web
 from ..services.settings_manager import settings
@@ -39,6 +40,9 @@ class MiscRoutes:
     def setup_routes(app):
         """Register miscellaneous routes"""
         app.router.add_post('/api/settings', MiscRoutes.update_settings)
+        
+        # Add new route for clearing cache
+        app.router.add_post('/api/clear-cache', MiscRoutes.clear_cache)
 
         # Usage stats routes
         app.router.add_post('/api/update-usage-stats', MiscRoutes.update_usage_stats)
@@ -53,6 +57,55 @@ class MiscRoutes:
         # Lora code update endpoint
         app.router.add_post('/api/update-lora-code', MiscRoutes.update_lora_code)
     
+    @staticmethod
+    async def clear_cache(request):
+        """Clear all cache files from the cache folder"""
+        try:
+            # Get the cache folder path (relative to project directory)
+            project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            cache_folder = os.path.join(project_dir, 'cache')
+            
+            # Check if cache folder exists
+            if not os.path.exists(cache_folder):
+                logger.info("Cache folder does not exist, nothing to clear")
+                return web.json_response({'success': True, 'message': 'No cache folder found'})
+            
+            # Get list of cache files before deleting for reporting
+            cache_files = [f for f in os.listdir(cache_folder) if os.path.isfile(os.path.join(cache_folder, f))]
+            deleted_files = []
+            
+            # Delete each .msgpack file in the cache folder
+            for filename in cache_files:
+                if filename.endswith('.msgpack'):
+                    file_path = os.path.join(cache_folder, filename)
+                    try:
+                        os.remove(file_path)
+                        deleted_files.append(filename)
+                        logger.info(f"Deleted cache file: {filename}")
+                    except Exception as e:
+                        logger.error(f"Failed to delete {filename}: {e}")
+                        return web.json_response({
+                            'success': False,
+                            'error': f"Failed to delete {filename}: {str(e)}"
+                        }, status=500)
+            
+            # If we want to completely remove the cache folder too (optional, 
+            # but we'll keep the folder structure in place here)
+            # shutil.rmtree(cache_folder)
+            
+            return web.json_response({
+                'success': True,
+                'message': f"Successfully cleared {len(deleted_files)} cache files",
+                'deleted_files': deleted_files
+            })
+            
+        except Exception as e:
+            logger.error(f"Error clearing cache files: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
     @staticmethod
     async def update_settings(request):
         """Update application settings"""

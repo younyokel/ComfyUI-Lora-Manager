@@ -39,6 +39,21 @@
     </div>
 </div>
 
+<!-- Cache Clear Confirmation Modal -->
+<div id="clearCacheModal" class="modal delete-modal">
+    <div class="modal-content delete-modal-content">
+        <h2>Clear Cache Files</h2>
+        <p class="delete-message">Are you sure you want to clear all cache files?</p>
+        <div class="delete-model-info">
+            <p>This will remove all cached model data. The system will need to rebuild the cache on next startup, which may take some time depending on your model collection size.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="modalManager.closeModal('clearCacheModal')">Cancel</button>
+            <button class="delete-btn" onclick="settingsManager.executeClearCache()">Clear Cache</button>
+        </div>
+    </div>
+</div>
+
 <!-- Settings Modal -->
 <div id="settingsModal" class="modal">
     <div class="modal-content settings-modal">
@@ -179,6 +194,29 @@
                             <li><strong>Compact:</strong> 7 (1080p), 8 (2K), 10 (4K)</li>
                         </ul>
                         <span class="warning-text">Warning: Higher densities may cause performance issues on systems with limited resources.</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Cache Management Section -->
+            <div class="settings-section">
+                <h3>Cache Management</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label>Clear Cache Files</label>
+                        </div>
+                        <div class="setting-control">
+                            <button id="clearCacheBtn" class="secondary-btn" onclick="settingsManager.confirmClearCache()">
+                                <i class="fas fa-trash"></i>
+                                <span>Clear Cache</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Removes cached model data. System will rebuild cache on next startup or when triggered manually.
+                        <span class="warning-text">May cause temporary performance impact during rebuild.</span>
                     </div>
                 </div>
             </div>

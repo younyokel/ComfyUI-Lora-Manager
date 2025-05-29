@@ -341,6 +341,37 @@ export class SettingsManager {
         }
     }
 
+    confirmClearCache() {
+        // Show confirmation modal
+        modalManager.showModal('clearCacheModal');
+    }
+
+    async executeClearCache() {
+        try {
+            // Call the API endpoint to clear cache files
+            const response = await fetch('/api/clear-cache', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Cache files have been cleared successfully. Cache will rebuild on next action.', 'success');
+            } else {
+                showToast(`Failed to clear cache: ${result.error}`, 'error');
+            }
+            
+            // Close the confirmation modal
+            modalManager.closeModal('clearCacheModal');
+        } catch (error) {
+            showToast(`Error clearing cache: ${error.message}`, 'error');
+            modalManager.closeModal('clearCacheModal');
+        }
+    }
+
     async reloadContent() {
         if (this.currentPage === 'loras') {
             // Reload the loras without updating folders

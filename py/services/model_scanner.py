@@ -103,7 +103,7 @@ class ModelScanner:
             else:
                 os.rename(temp_path, cache_path)
                 
-            logger.info(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
+            logger.debug(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
             return True
         except Exception as e:
             logger.error(f"Error saving {self.model_type} cache to disk: {e}")
