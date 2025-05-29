@@ -894,6 +894,44 @@ class ModelScanner:
                 models_list.append(result)
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}")
+
+    async def add_model_to_cache(self, metadata_dict: Dict, folder: str = '') -> bool:
+        """Add a model to the cache and save to disk
+        
+        Args:
+            metadata_dict: The model metadata dictionary
+            folder: The relative folder path for the model
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if self._cache is None:
+                await self.get_cached_data()
+                
+            # Update folder in metadata
+            metadata_dict['folder'] = folder
+            
+            # Add to cache
+            self._cache.raw_data.append(metadata_dict)
+            
+            # Resort cache data
+            await self._cache.resort()
+            
+            # Update folders list
+            all_folders = set(self._cache.folders)
+            all_folders.add(folder)
+            self._cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
+            
+            # Update the hash index
+            self._hash_index.add_entry(metadata_dict['sha256'], metadata_dict['file_path'])
+                
+            # Save to disk
+            await self._save_cache_to_disk()
+            return True
+        except Exception as e:
+            logger.error(f"Error adding model to cache: {e}")
+            return False
     
     async def move_model(self, source_path: str, target_path: str) -> bool:
         """Move a model and its associated files to a new location"""

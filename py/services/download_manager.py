@@ -2,8 +2,7 @@ import logging
 import os
 import json
 import asyncio
-from typing import Optional, Dict, Any
-from .civitai_client import CivitaiClient
+from typing import Dict
 from ..utils.models import LoraMetadata, CheckpointMetadata
 from ..utils.constants import CARD_PREVIEW_WIDTH
 from ..utils.exif_utils import ExifUtils
@@ -281,17 +280,11 @@ class DownloadManager:
                 scanner = await self._get_lora_scanner()
                 logger.info(f"Updating lora cache for {save_path}")
                 
-            cache = await scanner.get_cached_data()
+            # Convert metadata to dictionary
             metadata_dict = metadata.to_dict()
-            metadata_dict['folder'] = relative_path
-            cache.raw_data.append(metadata_dict)
-            await cache.resort()
-            all_folders = set(cache.folders)
-            all_folders.add(relative_path)
-            cache.folders = sorted(list(all_folders), key=lambda x: x.lower())
-            
-            # Update the hash index with the new model entry
-            scanner._hash_index.add_entry(metadata_dict['sha256'], metadata_dict['file_path'])
+
+            # Add model to cache and save to disk in a single operation
+            await scanner.add_model_to_cache(metadata_dict, relative_path)
 
             # Report 100% completion
             if progress_callback:
