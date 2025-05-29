@@ -103,7 +103,7 @@ class ModelScanner:
             else:
                 os.rename(temp_path, cache_path)
                 
-            logger.debug(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
+            logger.info(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
             return True
         except Exception as e:
             logger.error(f"Error saving {self.model_type} cache to disk: {e}")
@@ -1147,4 +1147,8 @@ class ModelScanner:
         if self._cache is None:
             return False
 
-        return await self._cache.update_preview_url(file_path, preview_url)
+        updated = await self._cache.update_preview_url(file_path, preview_url)
+        if updated:
+            # Save updated cache to disk
+            await self._save_cache_to_disk()
+        return updated
