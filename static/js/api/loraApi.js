@@ -143,11 +143,12 @@ export async function resetAndReload(updateFolders = false) {
     }
 }
 
-export async function refreshLoras() {
+export async function refreshLoras(fullRebuild = false) {
     return baseRefreshModels({
         modelType: 'lora',
         scanEndpoint: '/api/loras/scan',
-        resetAndReloadFunction: resetAndReload
+        resetAndReloadFunction: resetAndReload,
+        fullRebuild: fullRebuild
     });
 }
 

@@ -83,8 +83,11 @@ export class PageControls {
         // Refresh button handler
         const refreshBtn = document.querySelector('[data-action="refresh"]');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshModels());
+            refreshBtn.addEventListener('click', () => this.refreshModels(false)); // Regular refresh (incremental)
         }
+        
+        // Initialize dropdown functionality
+        this.initDropdowns();
         
         // Toggle folders button
         const toggleFoldersBtn = document.querySelector('.toggle-folders-btn');
@@ -100,6 +103,61 @@ export class PageControls {
         
         // Page-specific event listeners
         this.initPageSpecificListeners();
+    }
+    
+    /**
+     * Initialize dropdown functionality
+     */
+    initDropdowns() {
+        // Handle dropdown toggles
+        const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+        dropdownToggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering parent button
+                const dropdownGroup = toggle.closest('.dropdown-group');
+                
+                // Close all other open dropdowns first
+                document.querySelectorAll('.dropdown-group.active').forEach(group => {
+                    if (group !== dropdownGroup) {
+                        group.classList.remove('active');
+                    }
+                });
+                
+                // Toggle current dropdown
+                dropdownGroup.classList.toggle('active');
+            });
+        });
+        
+        // Handle quick refresh option
+        const quickRefreshOption = document.querySelector('[data-action="quick-refresh"]');
+        if (quickRefreshOption) {
+            quickRefreshOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.refreshModels(false);
+                // Close the dropdown
+                document.querySelector('.dropdown-group.active')?.classList.remove('active');
+            });
+        }
+        
+        // Handle full rebuild option
+        const fullRebuildOption = document.querySelector('[data-action="full-rebuild"]');
+        if (fullRebuildOption) {
+            fullRebuildOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.refreshModels(true);
+                // Close the dropdown
+                document.querySelector('.dropdown-group.active')?.classList.remove('active');
+            });
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown-group')) {
+                document.querySelectorAll('.dropdown-group.active').forEach(group => {
+                    group.classList.remove('active');
+                });
+            }
+        });
     }
     
     /**
@@ -327,18 +385,19 @@ export class PageControls {
     
     /**
      * Refresh models list
+     * @param {boolean} fullRebuild - Whether to perform a full rebuild
      */
-    async refreshModels() {
+    async refreshModels(fullRebuild = false) {
         if (!this.api) {
             console.error('API methods not registered');
             return;
         }
 
         try {
-            await this.api.refreshModels();
+            await this.api.refreshModels(fullRebuild);
         } catch (error) {
-            console.error(`Error refreshing ${this.pageType}:`, error);
-            showToast(`Failed to refresh ${this.pageType}: ${error.message}`, 'error');
+            console.error(`Error ${fullRebuild ? 'rebuilding' : 'refreshing'} ${this.pageType}:`, error);
+            showToast(`Failed to ${fullRebuild ? 'rebuild' : 'refresh'} ${this.pageType}: ${error.message}`, 'error');
         }
     }
     

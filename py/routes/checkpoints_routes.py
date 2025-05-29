@@ -420,7 +420,10 @@ class CheckpointsRoutes:
     async def scan_checkpoints(self, request):
         """Force a rescan of checkpoint files"""
         try:
-            await self.scanner.get_cached_data(force_refresh=True)
+            # Get the full_rebuild parameter and convert to bool, default to False
+            full_rebuild = request.query.get('full_rebuild', 'false').lower() == 'true'
+            
+            await self.scanner.get_cached_data(force_refresh=True, rebuild_cache=full_rebuild)
             return web.json_response({"status": "success", "message": "Checkpoint scan completed"})
         except Exception as e:
             logger.error(f"Error in scan_checkpoints: {e}", exc_info=True)

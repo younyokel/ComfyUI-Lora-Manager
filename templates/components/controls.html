@@ -15,8 +15,19 @@
                 <option value="date">Date</option>
                 </select>
             </div>
-            <div title="Refresh model list" class="control-group">
-                <button data-action="refresh"><i class="fas fa-sync"></i> Refresh</button>
+            <div title="Refresh model list" class="control-group dropdown-group">
+                <button data-action="refresh" class="dropdown-main"><i class="fas fa-sync"></i> Refresh</button>
+                <button class="dropdown-toggle" aria-label="Show refresh options">
+                    <i class="fas fa-caret-down"></i>
+                </button>
+                <div class="dropdown-menu">
+                    <div class="dropdown-item" data-action="quick-refresh">
+                        <i class="fas fa-bolt"></i> Quick Refresh (incremental)
+                    </div>
+                    <div class="dropdown-item" data-action="full-rebuild">
+                        <i class="fas fa-tools"></i> Full Rebuild (complete)
+                    </div>
+                </div>
             </div>
             
             <div class="control-group">

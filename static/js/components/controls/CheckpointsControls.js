@@ -33,8 +33,8 @@ export class CheckpointsControls extends PageControls {
                 return await resetAndReload(updateFolders);
             },
             
-            refreshModels: async () => {
-                return await refreshCheckpoints();
+            refreshModels: async (fullRebuild = false) => {
+                return await refreshCheckpoints(fullRebuild);
             },
             
             // Add fetch from Civitai functionality for checkpoints

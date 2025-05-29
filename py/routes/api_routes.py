@@ -106,8 +106,11 @@ class ApiRoutes:
     
     async def scan_loras(self, request: web.Request) -> web.Response:
         """Force a rescan of LoRA files"""
-        try:                
-            await self.scanner.get_cached_data(force_refresh=True)
+        try:
+            # Get full_rebuild parameter from query string, default to false
+            full_rebuild = request.query.get('full_rebuild', 'false').lower() == 'true'
+                
+            await self.scanner.get_cached_data(force_refresh=True, rebuild_cache=full_rebuild)
             return web.json_response({"status": "success", "message": "LoRA scan completed"})
         except Exception as e:
             logger.error(f"Error in scan_loras: {e}", exc_info=True)

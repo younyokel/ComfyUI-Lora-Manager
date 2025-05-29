@@ -36,8 +36,8 @@ export class LorasControls extends PageControls {
                 return await resetAndReload(updateFolders);
             },
             
-            refreshModels: async () => {
-                return await refreshLoras();
+            refreshModels: async (fullRebuild = false) => {
+                return await refreshLoras(fullRebuild);
             },
             
             // LoRA-specific API functions

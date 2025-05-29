@@ -76,11 +76,12 @@ export async function resetAndReload(updateFolders = false) {
 }
 
 // Refresh checkpoints
-export async function refreshCheckpoints() {
+export async function refreshCheckpoints(fullRebuild = false) {
     return baseRefreshModels({
         modelType: 'checkpoint',
         scanEndpoint: '/api/checkpoints/scan',
-        resetAndReloadFunction: resetAndReload
+        resetAndReloadFunction: resetAndReload,
+        fullRebuild: fullRebuild
     });
 }
 

@@ -499,13 +499,18 @@ export async function refreshModels(options = {}) {
     const { 
         modelType = 'lora',
         scanEndpoint = '/api/loras/scan',
-        resetAndReloadFunction
+        resetAndReloadFunction,
+        fullRebuild = false // New parameter with default value false
     } = options;
     
     try {
-        state.loadingManager.showSimpleLoading(`Refreshing ${modelType}s...`);
+        state.loadingManager.showSimpleLoading(`${fullRebuild ? 'Full rebuild' : 'Refreshing'} ${modelType}s...`);
         
-        const response = await fetch(scanEndpoint);
+        // Add fullRebuild parameter to the request
+        const url = new URL(scanEndpoint, window.location.origin);
+        url.searchParams.append('full_rebuild', fullRebuild);
+        
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`Failed to refresh ${modelType}s: ${response.status} ${response.statusText}`);
@@ -515,10 +520,10 @@ export async function refreshModels(options = {}) {
             await resetAndReloadFunction(true); // update folders
         }
         
-        showToast(`Refresh complete`, 'success');
+        showToast(`${fullRebuild ? 'Full rebuild' : 'Refresh'} complete`, 'success');
     } catch (error) {
         console.error(`Refresh failed:`, error);
-        showToast(`Failed to refresh ${modelType}s`, 'error');
+        showToast(`Failed to ${fullRebuild ? 'rebuild' : 'refresh'} ${modelType}s`, 'error');
     } finally {
         state.loadingManager.hide();
         state.loadingManager.restoreProgressBar();
