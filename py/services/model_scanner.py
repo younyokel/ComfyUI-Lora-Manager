@@ -455,8 +455,13 @@ class ModelScanner:
             # Clean up the event loop
             loop.close()
 
-    async def get_cached_data(self, force_refresh: bool = False) -> ModelCache:
-        """Get cached model data, refresh if needed"""
+    async def get_cached_data(self, force_refresh: bool = False, rebuild_cache: bool = False) -> ModelCache:
+        """Get cached model data, refresh if needed
+        
+        Args:
+            force_refresh: Whether to refresh the cache
+            rebuild_cache: Whether to completely rebuild the cache by reloading from disk first
+        """
         # If cache is not initialized, return an empty cache
         # Actual initialization should be done via initialize_in_background
         if self._cache is None and not force_refresh:
@@ -468,7 +473,16 @@ class ModelScanner:
             )
 
         # If force refresh is requested, initialize the cache directly
-        if (force_refresh):
+        if force_refresh:
+            # If rebuild_cache is True, try to reload from disk before reconciliation
+            if rebuild_cache and self._cache is not None:
+                logger.info(f"{self.model_type.capitalize()} Scanner: Attempting to rebuild cache from disk...")
+                cache_loaded = await self._load_cache_from_disk()
+                if cache_loaded:
+                    logger.info(f"{self.model_type.capitalize()} Scanner: Successfully reloaded cache from disk")
+                else:
+                    logger.info(f"{self.model_type.capitalize()} Scanner: Could not reload cache from disk, proceeding with normal refresh")
+
             if self._cache is None:
                 # For initial creation, do a full initialization
                 await self._initialize_cache()
