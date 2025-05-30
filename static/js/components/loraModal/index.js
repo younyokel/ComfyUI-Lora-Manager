@@ -33,7 +33,7 @@ export function showLoraModal(lora) {
             <button class="close" onclick="modalManager.closeModal('loraModal')">&times;</button>
             <header class="modal-header">
                 <div class="model-name-header">
-                    <h2 class="model-name-content" contenteditable="true" spellcheck="false">${lora.model_name}</h2>
+                    <h2 class="model-name-content">${lora.model_name}</h2>
                     <button class="edit-model-name-btn" title="Edit model name">
                         <i class="fas fa-pencil-alt"></i>
                     </button>

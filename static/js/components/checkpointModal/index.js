@@ -27,7 +27,7 @@ export function showCheckpointModal(checkpoint) {
             <button class="close" onclick="modalManager.closeModal('checkpointModal')">&times;</button>
             <header class="modal-header">
                 <div class="model-name-header">
-                    <h2 class="model-name-content" contenteditable="true" spellcheck="false">${checkpoint.model_name || 'Checkpoint Details'}</h2>
+                    <h2 class="model-name-content">${checkpoint.model_name || 'Checkpoint Details'}</h2>
                     <button class="edit-model-name-btn" title="Edit model name">
                         <i class="fas fa-pencil-alt"></i>
                     </button>

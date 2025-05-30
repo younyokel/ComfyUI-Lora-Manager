@@ -120,22 +120,30 @@ export async function refreshSingleCheckpointMetadata(filePath) {
  * @returns {Promise} - Promise that resolves with the server response
  */
 export async function saveModelMetadata(filePath, data) {
-    const response = await fetch('/api/checkpoints/save-metadata', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            file_path: filePath,
-            ...data
-        })
-    });
+    try {
+        // Show loading indicator
+        state.loadingManager.showSimpleLoading('Saving metadata...');
+        
+        const response = await fetch('/api/checkpoints/save-metadata', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_path: filePath,
+                ...data
+            })
+        });
 
-    if (!response.ok) {
-        throw new Error('Failed to save metadata');
+        if (!response.ok) {
+            throw new Error('Failed to save metadata');
+        }
+        
+        return response.json();
+    } finally {
+        // Always hide the loading indicator when done
+        state.loadingManager.hide();
     }
-    
-    return response.json();
 }
 
 /**

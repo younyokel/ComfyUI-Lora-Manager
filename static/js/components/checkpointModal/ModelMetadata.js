@@ -17,6 +17,9 @@ export function setupModelNameEditing(filePath) {
     
     if (!modelNameContent || !editBtn) return;
     
+    // Store the file path in a data attribute for later use
+    modelNameContent.dataset.filePath = filePath;
+    
     // Show edit button on hover
     const modelNameHeader = document.querySelector('.model-name-header');
     modelNameHeader.addEventListener('mouseenter', () => {
@@ -24,14 +27,17 @@ export function setupModelNameEditing(filePath) {
     });
     
     modelNameHeader.addEventListener('mouseleave', () => {
-        if (!modelNameContent.getAttribute('data-editing')) {
+        if (!modelNameHeader.classList.contains('editing')) {
             editBtn.classList.remove('visible');
         }
     });
     
     // Handle edit button click
     editBtn.addEventListener('click', () => {
-        modelNameContent.setAttribute('data-editing', 'true');
+        modelNameHeader.classList.add('editing');
+        modelNameContent.setAttribute('contenteditable', 'true');
+        // Store original value for comparison later
+        modelNameContent.dataset.originalValue = modelNameContent.textContent.trim();
         modelNameContent.focus();
         
         // Place cursor at the end
@@ -47,33 +53,25 @@ export function setupModelNameEditing(filePath) {
         editBtn.classList.add('visible');
     });
     
-    // Handle focus out
-    modelNameContent.addEventListener('blur', function() {
-        this.removeAttribute('data-editing');
-        editBtn.classList.remove('visible');
-        
-        if (this.textContent.trim() === '') {
-            // Restore original model name if empty
-            // Use the passed filePath to find the card
-            const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
-            if (checkpointCard) {
-                this.textContent = checkpointCard.dataset.model_name;
-            }
-        }
-    });
-    
-    // Handle enter key
+    // Handle keyboard events in edit mode
     modelNameContent.addEventListener('keydown', function(e) {
+        if (!this.getAttribute('contenteditable')) return;
+        
         if (e.key === 'Enter') {
             e.preventDefault();
-            // Use the passed filePath
-            saveModelName(filePath);
-            this.blur();
+            this.blur(); // Trigger save on Enter
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            // Restore original value
+            this.textContent = this.dataset.originalValue;
+            exitEditMode();
         }
     });
     
     // Limit model name length
     modelNameContent.addEventListener('input', function() {
+        if (!this.getAttribute('contenteditable')) return;
+        
         if (this.textContent.length > 100) {
             this.textContent = this.textContent.substring(0, 100);
             // Place cursor at the end
@@ -87,44 +85,59 @@ export function setupModelNameEditing(filePath) {
             showToast('Model name is limited to 100 characters', 'warning');
         }
     });
-}
-
-/**
- * Save model name
- * @param {string} filePath - File path
- */
-async function saveModelName(filePath) {
-    const modelNameElement = document.querySelector('.model-name-content');
-    const newModelName = modelNameElement.textContent.trim();
     
-    // Validate model name
-    if (!newModelName) {
-        showToast('Model name cannot be empty', 'error');
-        return;
-    }
+    // Handle focus out - save changes
+    modelNameContent.addEventListener('blur', async function() {
+        if (!this.getAttribute('contenteditable')) return;
+        
+        const newModelName = this.textContent.trim();
+        const originalValue = this.dataset.originalValue;
+        
+        // Basic validation
+        if (!newModelName) {
+            // Restore original value if empty
+            this.textContent = originalValue;
+            showToast('Model name cannot be empty', 'error');
+            exitEditMode();
+            return;
+        }
+        
+        if (newModelName === originalValue) {
+            // No changes, just exit edit mode
+            exitEditMode();
+            return;
+        }
+        
+        try {
+            // Get the file path from the dataset
+            const filePath = this.dataset.filePath;
+            
+            await saveModelMetadata(filePath, { model_name: newModelName });
+            
+            // Update the corresponding checkpoint card's dataset and display
+            updateCheckpointCard(filePath, { model_name: newModelName });
+            
+            // BUGFIX: Directly update the card's dataset.name attribute to ensure
+            // it's correctly read when reopening the modal
+            const checkpointCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+            if (checkpointCard) {
+                checkpointCard.dataset.name = newModelName;
+            }
+            
+            showToast('Model name updated successfully', 'success');
+        } catch (error) {
+            console.error('Error updating model name:', error);
+            this.textContent = originalValue; // Restore original model name
+            showToast('Failed to update model name', 'error');
+        } finally {
+            exitEditMode();
+        }
+    });
     
-    // Check if model name is too long
-    if (newModelName.length > 100) {
-        showToast('Model name is too long (maximum 100 characters)', 'error');
-        // Truncate the displayed text
-        modelNameElement.textContent = newModelName.substring(0, 100);
-        return;
-    }
-    
-    try {
-        await saveModelMetadata(filePath, { model_name: newModelName });
-        
-        // Update the card with the new model name
-        updateCheckpointCard(filePath, { name: newModelName });
-        
-        showToast('Model name updated successfully', 'success');
-        
-        // No need to reload the entire page
-        // setTimeout(() => {
-        //     window.location.reload();
-        // }, 1500);
-    } catch (error) {
-        showToast('Failed to update model name', 'error');
+    function exitEditMode() {
+        modelNameContent.removeAttribute('contenteditable');
+        modelNameHeader.classList.remove('editing');
+        editBtn.classList.remove('visible');
     }
 }
 
@@ -137,6 +150,9 @@ export function setupBaseModelEditing(filePath) {
     const editBtn = document.querySelector('.edit-base-model-btn');
     
     if (!baseModelContent || !editBtn) return;
+    
+    // Store the file path in a data attribute for later use
+    baseModelContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const baseModelDisplay = document.querySelector('.base-model-display');
@@ -302,6 +318,9 @@ export function setupFileNameEditing(filePath) {
     const editBtn = document.querySelector('.edit-file-name-btn');
     
     if (!fileNameContent || !editBtn) return;
+    
+    // Store the original file path
+    fileNameContent.dataset.filePath = filePath;
     
     // Show edit button on hover
     const fileNameWrapper = document.querySelector('.file-name-wrapper');
