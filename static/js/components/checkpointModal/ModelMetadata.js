@@ -5,7 +5,7 @@
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
 import { updateCheckpointCard } from '../../utils/cardUpdater.js';
-import { saveModelMetadata } from '../../api/checkpointApi.js';
+import { saveModelMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
 
 /**
  * Set up model name editing functionality
@@ -419,19 +419,8 @@ export function setupFileNameEditing(filePath) {
         
         try {
             // Use the passed filePath (which includes the original filename)
-            // Call API to rename the file
-            const response = await fetch('/api/rename_checkpoint', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    file_path: filePath, // Use the full original path
-                    new_file_name: newFileName
-                })
-            });
-            
-            const result = await response.json();
+            // Call API to rename the file using the new function from checkpointApi.js
+            const result = await renameCheckpointFile(filePath, newFileName);
             
             if (result.success) {
                 showToast('File name updated successfully', 'success');

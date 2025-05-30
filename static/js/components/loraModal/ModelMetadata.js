@@ -5,7 +5,7 @@
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
 import { updateLoraCard } from '../../utils/cardUpdater.js';
-import { saveModelMetadata } from '../../api/loraApi.js';
+import { saveModelMetadata, renameLoraFile } from '../../api/loraApi.js';
 
 /**
  * 设置模型名称编辑功能
@@ -459,19 +459,8 @@ export function setupFileNameEditing(filePath) {
             // Get the file path from the dataset
             const filePath = this.dataset.filePath;
                 
-            // Call API to rename the file
-            const response = await fetch('/api/rename_lora', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    file_path: filePath,
-                    new_file_name: newFileName
-                })
-            });
-            
-            const result = await response.json();
+            // Call API to rename the file using the new function from loraApi.js
+            const result = await renameLoraFile(filePath, newFileName);
             
             if (result.success) {
                 showToast('File name updated successfully', 'success');

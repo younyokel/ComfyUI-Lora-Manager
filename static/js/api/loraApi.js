@@ -182,3 +182,39 @@ export async function fetchModelDescription(modelId, filePath) {
         throw error;
     }
 }
+
+/**
+ * Rename a LoRA file
+ * @param {string} filePath - Current file path
+ * @param {string} newFileName - New file name (without path)
+ * @returns {Promise<Object>} - Promise that resolves with the server response
+ */
+export async function renameLoraFile(filePath, newFileName) {
+    try {
+        // Show loading indicator
+        state.loadingManager.showSimpleLoading('Renaming LoRA file...');
+        
+        const response = await fetch('/api/rename_lora', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_path: filePath,
+                new_file_name: newFileName
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error renaming LoRA file:', error);
+        throw error;
+    } finally {
+        // Hide loading indicator
+        state.loadingManager.hide();
+    }
+}
