@@ -22,6 +22,17 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.16
+* **Dramatic Startup Speed Improvement** - Added cache serialization mechanism for significantly faster loading times, especially beneficial for large model collections
+* **Enhanced Refresh Options** - Extended functionality with "Full Rebuild (complete)" option alongside "Quick Refresh (incremental)" to fix potential memory cache issues without requiring application restart
+* **Customizable Display Density** - Replaced compact mode with adjustable display density settings for personalized layout customization
+* **Model Creator Information** - Added creator details to model information panels for better attribution
+* **Improved WebP Support** - Enhanced Save Image node with workflow embedding capability for WebP format images
+* **Direct Example Access** - Added "Open Example Images Folder" button to card interfaces for convenient browsing of downloaded model examples
+* **Enhanced Compatibility** - Full ComfyUI Desktop support for "Send lora or recipe to workflow" functionality
+* **Cache Management** - Added settings to clear existing cache files when needed
+* **Bug Fixes & Stability** - Various improvements for overall reliability and performance
+
 ### v0.8.15
 * **Enhanced One-Click Integration** - Replaced copy button with direct send button allowing LoRAs/recipes to be sent directly to your current ComfyUI workflow without needing to paste
 * **Flexible Workflow Integration** - Click to append LoRAs/recipes to existing loader nodes or Shift+click to replace content, with additional right-click menu options for "Send to Workflow (Append)" or "Send to Workflow (Replace)"
@@ -56,71 +67,6 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 * **Portable Edition** - New one-click portable version for easy startup and updates in standalone mode
 * **Enhanced Metadata Collection** - Added support for SamplerCustomAdvanced node in the metadata collector module
 * **Improved UI Organization** - Optimized Lora Loader node height to display up to 5 LoRAs at once with scrolling capability for larger collections
-
-### v0.8.9
-* **Favorites System** - New functionality to bookmark your favorite LoRAs and checkpoints for quick access and better organization
-* **Enhanced UI Controls** - Increased model card button sizes for improved usability and easier interaction
-* **Smoother Page Transitions** - Optimized interface switching between pages, eliminating flash issues particularly noticeable in dark theme
-* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
-
-### v0.8.8
-* **Real-time TriggerWord Updates** - Enhanced TriggerWord Toggle node to instantly update when connected Lora Loader or Lora Stacker nodes change, without requiring workflow execution
-* **Optimized Metadata Recovery** - Improved utilization of existing .civitai.info files for faster initialization and preservation of metadata from models deleted from CivitAI
-* **Migration Acceleration** - Further speed improvements for users transitioning from A1111/Forge environments
-* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
-
-### v0.8.7
-* **Enhanced Context Menu** - Added comprehensive context menu functionality to Recipes and Checkpoints pages for improved workflow
-* **Interactive LoRA Strength Control** - Implemented drag functionality in LoRA Loader for intuitive strength adjustment
-* **Metadata Collector Overhaul** - Rebuilt metadata collection system with optimized architecture for better performance
-* **Improved Save Image Node** - Enhanced metadata capture and image saving performance with the new metadata collector
-* **Streamlined Recipe Saving** - Optimized Save Recipe functionality to work independently without requiring Preview Image nodes
-* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
-
-### v0.8.6 Major Update
-* **Checkpoint Management** - Added comprehensive management for model checkpoints including scanning, searching, filtering, and deletion
-* **Enhanced Metadata Support** - New capabilities for retrieving and managing checkpoint metadata with improved operations
-* **Improved Initial Loading** - Optimized cache initialization with visual progress indicators for better user experience
-
-### v0.8.5
-* **Enhanced LoRA & Recipe Connectivity** - Added Recipes tab in LoRA details to see all recipes using a specific LoRA
-* **Improved Navigation** - New shortcuts to jump between related LoRAs and Recipes with one-click navigation
-* **Video Preview Controls** - Added "Autoplay Videos on Hover" setting to optimize performance and reduce resource usage
-* **UI Experience Refinements** - Smoother transitions between related content pages
-
-### v0.8.4
-* **Node Layout Improvements** - Fixed layout issues with LoRA Loader and Trigger Words Toggle nodes in newer ComfyUI frontend versions
-* **Recipe LoRA Reconnection** - Added ability to reconnect deleted LoRAs in recipes by clicking the "deleted" badge in recipe details
-* **Bug Fixes & Stability** - Resolved various issues for improved reliability
-
-### v0.8.3
-* **Enhanced Workflow Parser** - Rebuilt workflow analysis engine with improved support for ComfyUI core nodes and easier extensibility
-* **Improved Recipe System** - Refined the experimental Save Recipe functionality with better workflow integration
-* **New Save Image Node** - Added experimental node with metadata support for perfect CivitAI compatibility
-  * Supports dynamic filename prefixes with variables [1](https://github.com/nkchocoai/ComfyUI-SaveImageWithMetaData?tab=readme-ov-file#filename_prefix)
-* **Default LoRA Root Setting** - Added configuration option for setting your preferred LoRA directory
-
-### v0.8.2  
-* **Faster Initialization for Forge Users** - Improved first-run efficiency by utilizing existing `.json` and `.civitai.info` files from Forge’s CivitAI helper extension, making migration smoother.  
-* **LoRA Filename Editing** - Added support for renaming LoRA files directly within LoRA Manager.  
-* **Recipe Editing** - Users can now edit recipe names and tags.  
-* **Retain Deleted LoRAs in Recipes** - Deleted LoRAs will remain listed in recipes, allowing future functionality to reconnect them once re-obtained.  
-* **Download Missing LoRAs from Recipes** - Easily fetch missing LoRAs associated with a recipe.
-
-### v0.8.1
-* **Base Model Correction** - Added support for modifying base model associations to fix incorrect metadata for non-CivitAI LoRAs
-* **LoRA Loader Flexibility** - Made CLIP input optional for model-only workflows like Hunyuan video generation
-* **Expanded Recipe Support** - Added compatibility with 3 additional recipe metadata formats
-* **Enhanced Showcase Images** - Generation parameters now displayed alongside LoRA preview images
-* **UI Improvements & Bug Fixes** - Various interface refinements and stability enhancements
-
-### v0.8.0
-* **Introduced LoRA Recipes** - Create, import, save, and share your favorite LoRA combinations
-* **Recipe Management System** - Easily browse, search, and organize your LoRA recipes
-* **Workflow Integration** - Save recipes directly from your workflow with generation parameters preserved
-* **Simplified Workflow Application** - Quickly apply saved recipes to new projects
-* **Enhanced UI & UX** - Improved interface design and user experience
-* **Bug Fixes & Stability** - Resolved various issues and enhanced overall performance
 
 [View Update History](./update_logs.md)
 
