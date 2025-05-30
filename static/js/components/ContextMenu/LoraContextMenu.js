@@ -3,7 +3,7 @@ import { refreshSingleLoraMetadata, saveModelMetadata } from '../../api/loraApi.
 import { showToast, getNSFWLevelName, copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
-import { showExcludeModal } from '../../utils/modalUtils.js';
+import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
 
 export class LoraContextMenu extends BaseContextMenu {
     constructor() {
@@ -50,7 +50,8 @@ export class LoraContextMenu extends BaseContextMenu {
                 this.currentCard.querySelector('.fa-image')?.click();
                 break;
             case 'delete':
-                this.currentCard.querySelector('.fa-trash')?.click();
+                // Call showDeleteModal directly instead of clicking the trash button
+                showDeleteModal(this.currentCard.dataset.filepath);
                 break;
             case 'move':
                 moveManager.showMoveModal(this.currentCard.dataset.filepath);

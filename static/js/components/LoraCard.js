@@ -57,9 +57,9 @@ function handleLoraCardEvent(event) {
         return;
     }
     
-    if (event.target.closest('.fa-trash')) {
+    if (event.target.closest('.fa-copy')) {
         event.stopPropagation();
-        showDeleteModal(card.dataset.filepath);
+        copyLoraSyntax(card);
         return;
     }
     
@@ -182,6 +182,15 @@ async function sendLoraToComfyUI(card, replaceMode) {
     sendLoraToWorkflow(loraSyntax, replaceMode, 'lora');
 }
 
+// Add function to copy lora syntax
+function copyLoraSyntax(card) {
+    const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
+    const strength = usageTips.strength || 1;
+    const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+    
+    copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
+}
+
 export function createLoraCard(lora) {
     const card = document.createElement('div');
     card.className = 'lora-card';
@@ -273,8 +282,8 @@ export function createLoraCard(lora) {
                     <i class="fas fa-paper-plane" 
                        title="Send to ComfyUI (Click: Append, Shift+Click: Replace)">
                     </i>
-                    <i class="fas fa-trash" 
-                       title="Delete Model">
+                    <i class="fas fa-copy" 
+                       title="Copy LoRA Syntax">
                     </i>
                 </div>
             </div>
