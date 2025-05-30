@@ -5,6 +5,8 @@ import json
 import time
 import aiohttp
 import re
+import subprocess
+import sys
 from server import PromptServer # type: ignore
 from aiohttp import web
 from ..services.settings_manager import settings
@@ -55,7 +57,10 @@ class MiscRoutes:
         
         # Lora code update endpoint
         app.router.add_post('/api/update-lora-code', MiscRoutes.update_lora_code)
-    
+        
+        # Add new route for opening example images folder
+        app.router.add_post('/api/open-example-images-folder', MiscRoutes.open_example_images_folder)
+
     @staticmethod
     async def clear_cache(request):
         """Clear all cache files from the cache folder"""
@@ -860,6 +865,66 @@ class MiscRoutes:
             
         except Exception as e:
             logger.error(f"Failed to update lora code: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    @staticmethod
+    async def open_example_images_folder(request):
+        """
+        Open the example images folder for a specific model
+        
+        Expects a JSON body with:
+        {
+            "model_hash": "sha256_hash"  # SHA256 hash of the model
+        }
+        """
+        try:
+            # Parse the request body
+            data = await request.json()
+            model_hash = data.get('model_hash')
+            
+            if not model_hash:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing model_hash parameter'
+                }, status=400)
+            
+            # Get the example images path from settings
+            example_images_path = settings.get('example_images_path')
+            if not example_images_path:
+                return web.json_response({
+                    'success': False,
+                    'error': 'No example images path configured. Please set it in the settings panel first.'
+                }, status=400)
+            
+            # Construct the folder path for this model
+            model_folder = os.path.join(example_images_path, model_hash)
+            
+            # Check if the folder exists
+            if not os.path.exists(model_folder):
+                return web.json_response({
+                    'success': False,
+                    'error': 'No example images found for this model. Download example images first.'
+                }, status=404)
+            
+            # Open the folder in the file explorer
+            if os.name == 'nt':  # Windows
+                os.startfile(model_folder)
+            elif os.name == 'posix':  # macOS and Linux
+                if sys.platform == 'darwin':  # macOS
+                    subprocess.Popen(['open', model_folder])
+                else:  # Linux
+                    subprocess.Popen(['xdg-open', model_folder])
+            
+            return web.json_response({
+                'success': True,
+                'message': f'Opened example images folder for model {model_hash}'
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to open example images folder: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)

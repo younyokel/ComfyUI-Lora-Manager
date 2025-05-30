@@ -1,4 +1,4 @@
-import { showToast, openCivitai, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpers.js';
+import { showToast, openCivitai, copyToClipboard, sendLoraToWorkflow, openExampleImagesFolder } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
@@ -66,6 +66,12 @@ function handleLoraCardEvent(event) {
     if (event.target.closest('.fa-image')) {
         event.stopPropagation();
         replacePreview(card.dataset.filepath);
+        return;
+    }
+    
+    if (event.target.closest('.fa-folder-open')) {
+        event.stopPropagation();
+        openExampleImagesFolder(card.dataset.sha256);
         return;
     }
     
@@ -300,14 +306,14 @@ export function createLoraCard(lora) {
                     <span class="model-name">${lora.model_name}</span>
                 </div>
                 <div class="card-actions">
-                    <i class="fas fa-image" 
-                       title="Replace Preview Image">
+                    <i class="fas fa-folder-open" 
+                       title="Open Example Images Folder">
                     </i>
                 </div>
             </div>
         </div>
     `;
-
+    
     // Add a special class for virtual scroll positioning if needed
     if (state.virtualScroller) {
         card.classList.add('virtual-scroll-item');

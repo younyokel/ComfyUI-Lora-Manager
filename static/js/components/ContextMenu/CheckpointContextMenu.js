@@ -1,6 +1,6 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
-import { refreshSingleCheckpointMetadata, saveModelMetadata } from '../../api/checkpointApi.js';
-import { showToast, getNSFWLevelName } from '../../utils/uiHelpers.js';
+import { refreshSingleCheckpointMetadata, saveModelMetadata, replaceCheckpointPreview } from '../../api/checkpointApi.js';
+import { showToast, getNSFWLevelName, openExampleImagesFolder } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
 import { showExcludeModal } from '../../utils/modalUtils.js';
@@ -23,10 +23,12 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 this.currentCard.click();
                 break;
             case 'preview':
-                // Replace checkpoint preview
-                if (this.currentCard.querySelector('.fa-image')) {
-                    this.currentCard.querySelector('.fa-image').click();
-                }
+                // Open example images folder instead of replacing preview
+                openExampleImagesFolder(this.currentCard.dataset.sha256);
+                break;
+            case 'replace-preview':
+                // Add new action for replacing preview images
+                replaceCheckpointPreview(this.currentCard.dataset.filepath);
                 break;
             case 'civitai':
                 // Open civitai page

@@ -1,4 +1,4 @@
-import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard, openExampleImagesFolder } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { showCheckpointModal } from './checkpointModal/index.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
@@ -115,8 +115,8 @@ export function createCheckpointCard(checkpoint) {
                     <span class="model-name">${checkpoint.model_name}</span>
                 </div>
                 <div class="card-actions">
-                    <i class="fas fa-image" 
-                       title="Replace Preview Image">
+                    <i class="fas fa-folder-open" 
+                       title="Open Example Images Folder">
                     </i>
                 </div>
             </div>
@@ -270,6 +270,12 @@ export function createCheckpointCard(checkpoint) {
     card.querySelector('.fa-image')?.addEventListener('click', e => {
         e.stopPropagation();
         replaceCheckpointPreview(checkpoint.file_path);
+    });
+
+    // Open example images folder button click event
+    card.querySelector('.fa-folder-open')?.addEventListener('click', e => {
+        e.stopPropagation();
+        openExampleImagesFolder(checkpoint.sha256);
     });
 
     // Add autoplayOnHover handlers for video elements if needed

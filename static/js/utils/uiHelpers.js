@@ -420,3 +420,35 @@ export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntax
     return false;
   }
 }
+
+/**
+ * Opens the example images folder for a specific model
+ * @param {string} modelHash - The SHA256 hash of the model
+ */
+export async function openExampleImagesFolder(modelHash) {
+  try {
+    const response = await fetch('/api/open-example-images-folder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model_hash: modelHash
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showToast('Opening example images folder', 'success');
+      return true;
+    } else {
+      showToast(result.error || 'Failed to open example images folder', 'error');
+      return false;
+    }
+  } catch (error) {
+    console.error('Failed to open example images folder:', error);
+    showToast('Failed to open example images folder', 'error');
+    return false;
+  }
+}

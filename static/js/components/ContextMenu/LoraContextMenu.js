@@ -1,6 +1,6 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
-import { refreshSingleLoraMetadata, saveModelMetadata } from '../../api/loraApi.js';
-import { showToast, getNSFWLevelName, copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
+import { refreshSingleLoraMetadata, saveModelMetadata, replacePreview } from '../../api/loraApi.js';
+import { showToast, getNSFWLevelName, copyToClipboard, sendLoraToWorkflow, openExampleImagesFolder } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
 import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
@@ -47,7 +47,12 @@ export class LoraContextMenu extends BaseContextMenu {
                 this.sendLoraToWorkflow(true);
                 break;
             case 'preview':
-                this.currentCard.querySelector('.fa-image')?.click();
+                // Open example images folder instead of showing preview image dialog
+                openExampleImagesFolder(this.currentCard.dataset.sha256);
+                break;
+            case 'replace-preview':
+                // Add a new action for replacing preview images
+                replacePreview(this.currentCard.dataset.filepath);
                 break;
             case 'delete':
                 // Call showDeleteModal directly instead of clicking the trash button
