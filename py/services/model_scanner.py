@@ -66,6 +66,27 @@ class ModelScanner:
         cache_filename = f"lm_{self.model_type}_cache.msgpack"
         return os.path.join(cache_dir, cache_filename)
 
+    def _prepare_for_msgpack(self, data):
+        """Preprocess data to accommodate MessagePack serialization limitations
+        
+        Converts integers exceeding safe range to strings
+        
+        Args:
+            data: Any type of data structure
+            
+        Returns:
+            Preprocessed data structure with large integers converted to strings
+        """
+        if isinstance(data, dict):
+            return {k: self._prepare_for_msgpack(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._prepare_for_msgpack(item) for item in data]
+        elif isinstance(data, int) and (data > 9007199254740991 or data < -9007199254740991):
+            # Convert integers exceeding JavaScript's safe integer range (2^53-1) to strings
+            return str(data)
+        else:
+            return data
+
     async def _save_cache_to_disk(self) -> bool:
         """Save cache data to disk using MessagePack"""
         if self._cache is None or not self._cache.raw_data:
@@ -92,10 +113,13 @@ class ModelScanner:
                 "dirs_last_modified": self._get_dirs_last_modified()
             }
             
+            # Preprocess data to handle large integers
+            processed_cache_data = self._prepare_for_msgpack(cache_data)
+            
             # Write to temporary file first (atomic operation)
             temp_path = f"{cache_path}.tmp"
             with open(temp_path, 'wb') as f:
-                msgpack.pack(cache_data, f)
+                msgpack.pack(processed_cache_data, f)
                 
             # Replace the old file with the new one
             if os.path.exists(cache_path):
