@@ -4,7 +4,7 @@ import { api } from "../../scripts/api.js";
 
 // Register the extension
 app.registerExtension({
-    name: "ComfyUI-Lora-Manager.UsageStats",
+    name: "Lora-Manager.UsageStats",
     
     init() {
         // Listen for successful executions
