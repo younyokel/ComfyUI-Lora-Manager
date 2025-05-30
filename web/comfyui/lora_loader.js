@@ -49,12 +49,42 @@ app.registerExtension({
     
     // Handle lora code updates from Python
     handleLoraCodeUpdate(id, loraCode, mode) {
+        // Handle broadcast mode (for Desktop/non-browser support)
+        if (id === -1) {
+            // Find all Lora Loader nodes in the current graph
+            const loraLoaderNodes = [];
+            for (const nodeId in app.graph._nodes_by_id) {
+                const node = app.graph._nodes_by_id[nodeId];
+                if (node.comfyClass === "Lora Loader (LoraManager)") {
+                    loraLoaderNodes.push(node);
+                }
+            }
+            
+            // Update each Lora Loader node found
+            if (loraLoaderNodes.length > 0) {
+                loraLoaderNodes.forEach(node => {
+                    this.updateNodeLoraCode(node, loraCode, mode);
+                });
+                console.log(`Updated ${loraLoaderNodes.length} Lora Loader nodes in broadcast mode`);
+            } else {
+                console.warn("No Lora Loader nodes found in the workflow for broadcast update");
+            }
+            
+            return;
+        }
+        
+        // Standard mode - update a specific node
         const node = app.graph.getNodeById(+id);
         if (!node || node.comfyClass !== "Lora Loader (LoraManager)") {
             console.warn("Node not found or not a LoraLoader:", id);
             return;
         }
         
+        this.updateNodeLoraCode(node, loraCode, mode);
+    },
+    
+    // Helper method to update a single node's lora code
+    updateNodeLoraCode(node, loraCode, mode) {
         // Update the input widget with new lora code
         const inputWidget = node.widgets[0];
         if (!inputWidget) return;

@@ -818,7 +818,7 @@ class MiscRoutes:
         
         Expects a JSON body with:
         {
-            "node_ids": [123, 456], # List of node IDs to update
+            "node_ids": [123, 456], # Optional - List of node IDs to update (for browser mode)
             "lora_code": "<lora:modelname:1.0>", # The Lora code to send
             "mode": "append" # or "replace" - whether to append or replace existing code
         }
@@ -826,37 +826,59 @@ class MiscRoutes:
         try:
             # Parse the request body
             data = await request.json()
-            node_ids = data.get('node_ids', [])
+            node_ids = data.get('node_ids')
             lora_code = data.get('lora_code', '')
             mode = data.get('mode', 'append')
             
-            if not node_ids or not lora_code:
+            if not lora_code:
                 return web.json_response({
                     'success': False,
-                    'error': 'Missing node_ids or lora_code parameter'
+                    'error': 'Missing lora_code parameter'
                 }, status=400)
             
-            # Send the lora code update to each node
             results = []
-            for node_id in node_ids:
+            
+            # Desktop mode: no specific node_ids provided
+            if node_ids is None:
                 try:
-                    # Send the message to the frontend
+                    # Send broadcast message with id=-1 to all Lora Loader nodes
                     PromptServer.instance.send_sync("lora_code_update", {
-                        "id": node_id,
+                        "id": -1,
                         "lora_code": lora_code,
                         "mode": mode
                     })
                     results.append({
-                        'node_id': node_id,
+                        'node_id': 'broadcast',
                         'success': True
                     })
                 except Exception as e:
-                    logger.error(f"Error sending lora code to node {node_id}: {e}")
+                    logger.error(f"Error broadcasting lora code: {e}")
                     results.append({
-                        'node_id': node_id,
+                        'node_id': 'broadcast',
                         'success': False,
                         'error': str(e)
                     })
+            else:
+                # Browser mode: send to specific nodes
+                for node_id in node_ids:
+                    try:
+                        # Send the message to the frontend
+                        PromptServer.instance.send_sync("lora_code_update", {
+                            "id": node_id,
+                            "lora_code": lora_code,
+                            "mode": mode
+                        })
+                        results.append({
+                            'node_id': node_id,
+                            'success': True
+                        })
+                    except Exception as e:
+                        logger.error(f"Error sending lora code to node {node_id}: {e}")
+                        results.append({
+                            'node_id': node_id,
+                            'success': False,
+                            'error': str(e)
+                        })
             
             return web.json_response({
                 'success': True,

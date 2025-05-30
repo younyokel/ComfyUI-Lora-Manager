@@ -362,29 +362,31 @@ export function getNSFWLevelName(level) {
  */
 export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntaxType = 'lora') {
   try {
+    let loraNodes = [];
+    let isDesktopMode = false;
+    
     // Get the current workflow from localStorage
     const workflowData = localStorage.getItem('workflow');
-    if (!workflowData) {
-      showToast('No active workflow found', 'error');
-      return false;
-    }
-    
-    // Parse the workflow JSON
-    const workflow = JSON.parse(workflowData);
-    
-    // Find all Lora Loader (LoraManager) nodes
-    const loraNodes = [];
-    if (workflow.nodes && Array.isArray(workflow.nodes)) {
-      for (const node of workflow.nodes) {
-        if (node.type === "Lora Loader (LoraManager)") {
-          loraNodes.push(node.id);
+    if (workflowData) {
+      // Web browser mode - extract node IDs from workflow
+      const workflow = JSON.parse(workflowData);
+      
+      // Find all Lora Loader (LoraManager) nodes
+      if (workflow.nodes && Array.isArray(workflow.nodes)) {
+        for (const node of workflow.nodes) {
+          if (node.type === "Lora Loader (LoraManager)") {
+            loraNodes.push(node.id);
+          }
         }
       }
-    }
-    
-    if (loraNodes.length === 0) {
-      showToast('No Lora Loader nodes found in the workflow', 'warning');
-      return false;
+      
+      if (loraNodes.length === 0) {
+        showToast('No Lora Loader nodes found in the workflow', 'warning');
+        return false;
+      }
+    } else {
+      // ComfyUI Desktop mode - don't specify node IDs and let backend handle it
+      isDesktopMode = true;
     }
     
     // Call the backend API to update the lora code
@@ -394,7 +396,7 @@ export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntax
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        node_ids: loraNodes,
+        node_ids: isDesktopMode ? undefined : loraNodes,
         lora_code: loraSyntax,
         mode: replaceMode ? 'replace' : 'append'
       })
