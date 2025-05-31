@@ -3,6 +3,7 @@ export class ModalManager {
         this.modals = new Map();
         this.scrollPosition = 0;
         this.currentOpenModal = null; // Track currently open modal
+        this.mouseDownOnBackground = false; // Track if mousedown happened on modal background
     }
 
     initialize() {
@@ -201,10 +202,27 @@ export class ModalManager {
 
         // Add click outside handler if specified in config
         if (config.closeOnOutsideClick) {
-            config.element.addEventListener('click', (e) => {
+            // Track mousedown on modal background
+            config.element.addEventListener('mousedown', (e) => {
                 if (e.target === config.element) {
+                    this.mouseDownOnBackground = true;
+                } else {
+                    this.mouseDownOnBackground = false;
+                }
+            });
+            
+            // Only close if mouseup is also on the background
+            config.element.addEventListener('mouseup', (e) => {
+                if (e.target === config.element && this.mouseDownOnBackground) {
                     this.closeModal(id);
                 }
+                // Reset flag regardless of target
+                this.mouseDownOnBackground = false;
+            });
+            
+            // Cancel the flag if mouse leaves the document entirely
+            document.addEventListener('mouseleave', () => {
+                this.mouseDownOnBackground = false;
             });
         }
     }
