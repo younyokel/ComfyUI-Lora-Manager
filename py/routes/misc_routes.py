@@ -182,10 +182,14 @@ class MiscRoutes:
             usage_stats = UsageStats()
             stats = await usage_stats.get_stats()
             
-            return web.json_response({
+            # Add version information to help clients handle format changes
+            stats_response = {
                 'success': True,
-                'data': stats
-            })
+                'data': stats,
+                'format_version': 2  # Indicate this is the new format with history
+            }
+            
+            return web.json_response(stats_response)
             
         except Exception as e:
             logger.error(f"Failed to get usage stats: {e}", exc_info=True)

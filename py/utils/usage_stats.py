@@ -4,6 +4,8 @@ import sys
 import time
 import asyncio
 import logging
+import datetime
+import shutil
 from typing import Dict, Set
 
 from ..config import config
@@ -26,6 +28,7 @@ class UsageStats:
     
     # Default stats file name
     STATS_FILENAME = "lora_manager_stats.json"
+    BACKUP_SUFFIX = ".backup"
     
     def __new__(cls):
         if cls._instance is None:
@@ -39,8 +42,8 @@ class UsageStats:
             
         # Initialize stats storage
         self.stats = {
-            "checkpoints": {},  # sha256 -> count
-            "loras": {},        # sha256 -> count
+            "checkpoints": {},  # sha256 -> { total: count, history: { date: count } }
+            "loras": {},        # sha256 -> { total: count, history: { date: count } }
             "total_executions": 0,
             "last_save_time": 0
         }
@@ -70,6 +73,68 @@ class UsageStats:
         # Use the first lora root
         return os.path.join(config.loras_roots[0], self.STATS_FILENAME)
     
+    def _backup_old_stats(self):
+        """Backup the old stats file before conversion"""
+        if os.path.exists(self._stats_file_path):
+            backup_path = f"{self._stats_file_path}{self.BACKUP_SUFFIX}"
+            try:
+                shutil.copy2(self._stats_file_path, backup_path)
+                logger.info(f"Backed up old stats file to {backup_path}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to backup stats file: {e}")
+        return False
+
+    def _convert_old_format(self, old_stats):
+        """Convert old stats format to new format with history"""
+        new_stats = {
+            "checkpoints": {},
+            "loras": {},
+            "total_executions": old_stats.get("total_executions", 0),
+            "last_save_time": old_stats.get("last_save_time", time.time())
+        }
+        
+        # Get today's date in YYYY-MM-DD format
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        # Convert checkpoint stats
+        if "checkpoints" in old_stats and isinstance(old_stats["checkpoints"], dict):
+            for hash_id, count in old_stats["checkpoints"].items():
+                new_stats["checkpoints"][hash_id] = {
+                    "total": count,
+                    "history": {
+                        today: count
+                    }
+                }
+        
+        # Convert lora stats
+        if "loras" in old_stats and isinstance(old_stats["loras"], dict):
+            for hash_id, count in old_stats["loras"].items():
+                new_stats["loras"][hash_id] = {
+                    "total": count,
+                    "history": {
+                        today: count
+                    }
+                }
+        
+        logger.info("Successfully converted stats from old format to new format with history")
+        return new_stats
+    
+    def _is_old_format(self, stats):
+        """Check if the stats are in the old format (direct count values)"""
+        # Check if any lora or checkpoint entry is a direct number instead of an object
+        if "loras" in stats and isinstance(stats["loras"], dict):
+            for hash_id, data in stats["loras"].items():
+                if isinstance(data, (int, float)):
+                    return True
+                
+        if "checkpoints" in stats and isinstance(stats["checkpoints"], dict):
+            for hash_id, data in stats["checkpoints"].items():
+                if isinstance(data, (int, float)):
+                    return True
+        
+        return False
+    
     def _load_stats(self):
         """Load existing statistics from file"""
         try:
@@ -77,18 +142,27 @@ class UsageStats:
                 with open(self._stats_file_path, 'r', encoding='utf-8') as f:
                     loaded_stats = json.load(f)
                 
-                # Update our stats with loaded data
-                if isinstance(loaded_stats, dict):
-                    # Update individual sections to maintain structure
-                    if "checkpoints" in loaded_stats and isinstance(loaded_stats["checkpoints"], dict):
-                        self.stats["checkpoints"] = loaded_stats["checkpoints"]
-                    
-                    if "loras" in loaded_stats and isinstance(loaded_stats["loras"], dict):
-                        self.stats["loras"] = loaded_stats["loras"]
-                    
-                    if "total_executions" in loaded_stats:
-                        self.stats["total_executions"] = loaded_stats["total_executions"]
-                    
+                # Check if old format and needs conversion
+                if self._is_old_format(loaded_stats):
+                    logger.info("Detected old stats format, performing conversion")
+                    self._backup_old_stats()
+                    self.stats = self._convert_old_format(loaded_stats)
+                else:
+                    # Update our stats with loaded data (already in new format)
+                    if isinstance(loaded_stats, dict):
+                        # Update individual sections to maintain structure
+                        if "checkpoints" in loaded_stats and isinstance(loaded_stats["checkpoints"], dict):
+                            self.stats["checkpoints"] = loaded_stats["checkpoints"]
+                        
+                        if "loras" in loaded_stats and isinstance(loaded_stats["loras"], dict):
+                            self.stats["loras"] = loaded_stats["loras"]
+                        
+                        if "total_executions" in loaded_stats:
+                            self.stats["total_executions"] = loaded_stats["total_executions"]
+                        
+                        if "last_save_time" in loaded_stats:
+                            self.stats["last_save_time"] = loaded_stats["last_save_time"]
+                
                 logger.info(f"Loaded usage statistics from {self._stats_file_path}")
         except Exception as e:
             logger.error(f"Error loading usage statistics: {e}")
@@ -174,15 +248,18 @@ class UsageStats:
         # Increment total executions count
         self.stats["total_executions"] += 1
         
+        # Get today's date in YYYY-MM-DD format
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        
         # Process checkpoints
         if MODELS in metadata and isinstance(metadata[MODELS], dict):
-            await self._process_checkpoints(metadata[MODELS])
+            await self._process_checkpoints(metadata[MODELS], today)
         
         # Process loras
         if LORAS in metadata and isinstance(metadata[LORAS], dict):
-            await self._process_loras(metadata[LORAS])
+            await self._process_loras(metadata[LORAS], today)
     
-    async def _process_checkpoints(self, models_data):
+    async def _process_checkpoints(self, models_data, today_date):
         """Process checkpoint models from metadata"""
         try:
             # Get checkpoint scanner service
@@ -208,12 +285,24 @@ class UsageStats:
                     # Get hash for this checkpoint
                     model_hash = checkpoint_scanner.get_hash_by_filename(model_filename)
                     if model_hash:
-                        # Update stats for this checkpoint
-                        self.stats["checkpoints"][model_hash] = self.stats["checkpoints"].get(model_hash, 0) + 1
+                        # Update stats for this checkpoint with date tracking
+                        if model_hash not in self.stats["checkpoints"]:
+                            self.stats["checkpoints"][model_hash] = {
+                                "total": 0,
+                                "history": {}
+                            }
+                        
+                        # Increment total count
+                        self.stats["checkpoints"][model_hash]["total"] += 1
+                        
+                        # Increment today's count
+                        if today_date not in self.stats["checkpoints"][model_hash]["history"]:
+                            self.stats["checkpoints"][model_hash]["history"][today_date] = 0
+                        self.stats["checkpoints"][model_hash]["history"][today_date] += 1
         except Exception as e:
             logger.error(f"Error processing checkpoint usage: {e}", exc_info=True)
     
-    async def _process_loras(self, loras_data):
+    async def _process_loras(self, loras_data, today_date):
         """Process LoRA models from metadata"""
         try:
             # Get LoRA scanner service
@@ -239,8 +328,20 @@ class UsageStats:
                     # Get hash for this LoRA
                     lora_hash = lora_scanner.get_hash_by_filename(lora_name)
                     if lora_hash:
-                        # Update stats for this LoRA
-                        self.stats["loras"][lora_hash] = self.stats["loras"].get(lora_hash, 0) + 1
+                        # Update stats for this LoRA with date tracking
+                        if lora_hash not in self.stats["loras"]:
+                            self.stats["loras"][lora_hash] = {
+                                "total": 0,
+                                "history": {}
+                            }
+                        
+                        # Increment total count
+                        self.stats["loras"][lora_hash]["total"] += 1
+                        
+                        # Increment today's count
+                        if today_date not in self.stats["loras"][lora_hash]["history"]:
+                            self.stats["loras"][lora_hash]["history"][today_date] = 0
+                        self.stats["loras"][lora_hash]["history"][today_date] += 1
         except Exception as e:
             logger.error(f"Error processing LoRA usage: {e}", exc_info=True)
     
@@ -251,9 +352,11 @@ class UsageStats:
     async def get_model_usage_count(self, model_type, sha256):
         """Get usage count for a specific model by hash"""
         if model_type == "checkpoint":
-            return self.stats["checkpoints"].get(sha256, 0)
+            if sha256 in self.stats["checkpoints"]:
+                return self.stats["checkpoints"][sha256]["total"]
         elif model_type == "lora":
-            return self.stats["loras"].get(sha256, 0)
+            if sha256 in self.stats["loras"]:
+                return self.stats["loras"][sha256]["total"]
         return 0
     
     async def process_execution(self, prompt_id):
