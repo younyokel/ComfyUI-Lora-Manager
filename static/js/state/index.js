@@ -44,6 +44,7 @@ export const state = {
             selectedLoras: new Set(),
             loraMetadataCache: new Map(),
             showFavoritesOnly: false,
+            duplicatesMode: false,
         },
         
         recipes: {
@@ -86,6 +87,7 @@ export const state = {
                 tags: []
             },
             showFavoritesOnly: false,
+            duplicatesMode: false,
         }
     },
     

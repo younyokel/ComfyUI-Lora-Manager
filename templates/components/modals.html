@@ -24,7 +24,7 @@
     </div>
 </div>
 
-<!-- Duplicate Delete Confirmation Modal -->
+<!-- Recipes Duplicate Delete Confirmation Modal -->
 <div id="duplicateDeleteModal" class="modal delete-modal">
     <div class="modal-content delete-modal-content">
         <h2>Delete Duplicate Recipes</h2>
@@ -35,6 +35,21 @@
         <div class="modal-actions">
             <button class="cancel-btn" onclick="modalManager.closeModal('duplicateDeleteModal')">Cancel</button>
             <button class="delete-btn" onclick="recipeManager.confirmDeleteDuplicates()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Models Duplicate Delete Confirmation Modal -->
+<div id="modelDuplicateDeleteModal" class="modal delete-modal">
+    <div class="modal-content delete-modal-content">
+        <h2>Delete Duplicate Models</h2>
+        <p class="delete-message">Are you sure you want to delete the selected duplicate models?</p>
+        <div class="delete-model-info">
+            <p><span id="modelDuplicateDeleteCount">0</span> models will be permanently deleted.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="modalManager.closeModal('modelDuplicateDeleteModal')">Cancel</button>
+            <button class="delete-btn" onclick="modelDuplicatesManager.confirmDeleteDuplicates()">Delete</button>
         </div>
     </div>
 </div>

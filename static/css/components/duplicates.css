@@ -2,16 +2,18 @@
 
 /* Duplicates banner */
 .duplicates-banner {
-    position: relative; /* Changed from sticky to relative */
+    position: sticky; /* Keep the sticky position */
+    top: var(--space-1);
     width: 100%;
-    background-color: var(--card-bg);
+    background-color: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.1); /* Use accent color with low opacity */
     color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
+    border-top: 1px solid oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.3); /* Add top border with accent color */
+    border-bottom: 1px solid oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.4); /* Make bottom border stronger */
     z-index: var(--z-overlay);
-    padding: 12px 0; /* Removed horizontal padding */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 12px 0;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); /* Stronger shadow */
     transition: all 0.3s ease;
-    margin-bottom: 20px; /* Add margin to create space below the banner */
+    margin-bottom: 20px;
 }
 
 .duplicates-banner .banner-content {
@@ -38,7 +40,7 @@
 
 .duplicates-banner i.fa-exclamation-triangle {
     font-size: 18px;
-    color: oklch(var(--lora-warning));
+    color: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
 }
 
 .duplicates-banner .banner-actions {
@@ -66,7 +68,7 @@
 }
 
 .duplicates-banner button:hover {
-    border-color: var(--lora-accent);
+    border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
     background: var(--bg-color);
     transform: translateY(-1px);
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
@@ -91,23 +93,25 @@
 /* Duplicate groups */
 .duplicate-group {
     position: relative;
-    border: 2px solid oklch(var(--lora-warning));
+    border: 2px solid oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
     border-radius: var(--border-radius-base);
     padding: 16px;
     margin-bottom: 24px;
     background: var(--card-bg);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); /* Add subtle shadow to groups */
 }
 
 .duplicate-group-header {
     background-color: var(--bg-color);
     color: var(--text-color);
     border: 1px solid var(--border-color);
-    padding: 8px 16px;
+    padding: 10px 16px; /* Slightly increased padding */
     border-radius: var(--border-radius-xs);
     margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-left: 4px solid oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h)); /* Add accent border on the left */
 }
 
 .duplicate-group-header span:last-child {
@@ -135,7 +139,7 @@
 }
 
 .duplicate-group-header button:hover {
-    border-color: var(--lora-accent);
+    border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
     background: var(--bg-color);
     transform: translateY(-1px);
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
@@ -190,7 +194,7 @@
 }
 
 .group-toggle-btn:hover {
-    border-color: var(--lora-accent);
+    border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
     transform: translateY(-1px);
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
 }
@@ -202,16 +206,16 @@
 }
 
 .lora-card.duplicate:hover {
-    border-color: var(--lora-accent);
+    border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
 }
 
 .lora-card.duplicate.latest {
     border-style: solid;
-    border-color: oklch(var(--lora-warning));
+    border-color: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
 }
 
 .lora-card.duplicate-selected {
-    border: 2px solid oklch(var(--lora-accent));
+    border: 2px solid oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h));
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -231,12 +235,50 @@
     position: absolute;
     top: 10px;
     left: 10px;
-    background: oklch(var(--lora-accent));
+    background: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h));
     color: white;
     font-size: 12px;
     padding: 2px 6px;
     border-radius: var(--border-radius-xs);
     z-index: 5;
+}
+
+/* Model tooltip for duplicates mode */
+.model-tooltip {
+    position: absolute;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    padding: 10px;
+    z-index: 1000;
+    max-width: 350px;
+    min-width: 250px;
+    color: var(--text-color);
+    font-size: 0.9em;
+    pointer-events: none; /* Don't block mouse events */
+}
+
+.model-tooltip .tooltip-header {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.model-tooltip .tooltip-info div {
+    margin-bottom: 4px;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.model-tooltip .tooltip-info div strong {
+    margin-right: 5px;
+    min-width: 70px;
 }
 
 /* Responsive adjustments */
@@ -269,4 +311,14 @@
         margin-left: 0;
         flex: 1;
     }
+}
+
+/* In dark mode, add additional distinction */
+html[data-theme="dark"] .duplicates-banner {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4); /* Stronger shadow in dark mode */
+    background-color: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.15); /* Slightly stronger background in dark mode */
+}
+
+html[data-theme="dark"] .duplicate-group {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); /* Stronger shadow in dark mode */
 }

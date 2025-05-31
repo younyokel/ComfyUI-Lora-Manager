@@ -24,7 +24,6 @@ import { updateLoraCard } from '../../utils/cardUpdater.js';
  * @param {Object} lora - LoRA模型数据
  */
 export function showLoraModal(lora) {
-    console.log('Lora data:', lora);
     const escapedWords = lora.civitai?.trainedWords?.length ? 
         lora.civitai.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
 

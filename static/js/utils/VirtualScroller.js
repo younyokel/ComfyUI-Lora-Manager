@@ -87,6 +87,11 @@ export class VirtualScroller {
     }
 
     calculateLayout() {
+        const pageState = getCurrentPageState();
+        if (pageState.duplicatesMode) {
+            return false
+        }
+
         // Get container width and style information
         const containerWidth = this.containerElement.clientWidth;
         const containerStyle = getComputedStyle(this.containerElement);

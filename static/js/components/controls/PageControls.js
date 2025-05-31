@@ -175,6 +175,12 @@ export class PageControls {
             downloadButton.addEventListener('click', () => this.showDownloadModal());
         }
         
+        // Find duplicates button - available for both loras and checkpoints
+        const duplicatesButton = document.querySelector('[data-action="find-duplicates"]');
+        if (duplicatesButton) {
+            duplicatesButton.addEventListener('click', () => this.findDuplicates());
+        }
+        
         if (this.pageType === 'loras') {
             // Bulk operations button - LoRAs only
             const bulkButton = document.querySelector('[data-action="bulk"]');
@@ -498,5 +504,16 @@ export class PageControls {
         
         // Reload models with new filter
         await this.resetAndReload(true);
+    }
+    
+    /**
+     * Find duplicate models
+     */
+    findDuplicates() {
+        if (window.modelDuplicatesManager) {
+            window.modelDuplicatesManager.findDuplicates();
+        } else {
+            console.error('Model duplicates manager not available');
+        }
     }
 }

@@ -62,7 +62,7 @@ class ModelRouteUtils:
         # Update preview if needed
         if not local_metadata.get('preview_url') or not os.path.exists(local_metadata['preview_url']):
             first_preview = next((img for img in civitai_metadata.get('images', [])), None)
-            if first_preview:
+            if (first_preview):
                 # Determine if content is video or image
                 is_video = first_preview['type'] == 'video'
                 
@@ -571,3 +571,42 @@ class ModelRouteUtils:
             
             logger.error(f"Error downloading {model_type}: {error_message}")
             return web.Response(status=500, text=error_message)
+
+    @staticmethod
+    async def handle_bulk_delete_models(request: web.Request, scanner) -> web.Response:
+        """Handle bulk deletion of models
+        
+        Args:
+            request: The aiohttp request
+            scanner: The model scanner instance with cache management methods
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            data = await request.json()
+            file_paths = data.get('file_paths', [])
+            
+            if not file_paths:
+                return web.json_response({
+                    'success': False, 
+                    'error': 'No file paths provided for deletion'
+                }, status=400)
+            
+            # Use the scanner's bulk delete method to handle all cache and file operations
+            result = await scanner.bulk_delete_models(file_paths)
+            
+            return web.json_response({
+                'success': result.get('success', False),
+                'total_deleted': result.get('total_deleted', 0),
+                'total_attempted': result.get('total_attempted', len(file_paths)),
+                'results': result.get('results', [])
+            })
+            
+        except Exception as e:
+            logger.error(f"Error in bulk delete: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    

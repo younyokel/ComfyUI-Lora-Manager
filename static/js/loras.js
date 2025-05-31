@@ -9,6 +9,7 @@ import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
+import { ModelDuplicatesManager } from './components/ModelDuplicatesManager.js';
 
 // Initialize the LoRA page
 class LoraPageManager {
@@ -22,6 +23,9 @@ class LoraPageManager {
         
         // Initialize page controls
         this.pageControls = createPageControls('loras');
+        
+        // Initialize the ModelDuplicatesManager
+        this.duplicatesManager = new ModelDuplicatesManager(this);
         
         // Expose necessary functions to the page that still need global access
         // These will be refactored in future updates
@@ -49,6 +53,9 @@ class LoraPageManager {
         window.copyAllLorasSyntax = () => bulkManager.copyAllLorasSyntax();
         window.updateSelectedCount = () => bulkManager.updateSelectedCount();
         window.bulkManager = bulkManager;
+        
+        // Expose duplicates manager
+        window.modelDuplicatesManager = this.duplicatesManager;
     }
     
     async initialize() {

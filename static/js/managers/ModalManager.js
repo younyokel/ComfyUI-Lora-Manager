@@ -170,6 +170,18 @@ export class ModalManager {
                 }
             });
         }
+
+        // Add modelDuplicateDeleteModal registration
+        const modelDuplicateDeleteModal = document.getElementById('modelDuplicateDeleteModal');
+        if (modelDuplicateDeleteModal) {
+            this.registerModal('modelDuplicateDeleteModal', {
+                element: modelDuplicateDeleteModal,
+                onClose: () => {
+                    this.getModal('modelDuplicateDeleteModal').element.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
         
         // Add clearCacheModal registration
         const clearCacheModal = document.getElementById('clearCacheModal');
@@ -263,7 +275,7 @@ export class ModalManager {
         // Store current scroll position before showing modal
         this.scrollPosition = window.scrollY;
 
-        if (id === 'deleteModal' || id === 'excludeModal' || id === 'duplicateDeleteModal' || id === 'clearCacheModal') {
+        if (id === 'deleteModal' || id === 'excludeModal' || id === 'duplicateDeleteModal' || id === 'modelDuplicateDeleteModal' || id === 'clearCacheModal') {
             modal.element.classList.add('show');
         } else {
             modal.element.style.display = 'block';

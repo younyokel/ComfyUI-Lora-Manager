@@ -1,5 +1,5 @@
 import { showToast, openCivitai, copyToClipboard, sendLoraToWorkflow, openExampleImagesFolder } from '../utils/uiHelpers.js';
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
@@ -76,9 +76,13 @@ function handleLoraCardEvent(event) {
     }
     
     // If no specific element was clicked, handle the card click (show modal or toggle selection)
+    const pageState = getCurrentPageState();
     if (state.bulkMode) {
         // Toggle selection using the bulk manager
         bulkManager.toggleCardSelection(card);
+    } else if (pageState && pageState.duplicatesMode) {
+        // In duplicates mode, don't open modal when clicking cards
+        return;
     } else {
         // Normal behavior - show modal
         const loraMeta = {

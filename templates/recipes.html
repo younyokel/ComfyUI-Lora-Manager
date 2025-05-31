@@ -46,7 +46,7 @@
             </div>
             <!-- Add duplicate detection button -->
             <div title="Find duplicate recipes" class="control-group">
-                <button onclick="recipeManager.findDuplicateRecipes()"><i class="fas fa-clone"></i> Find Duplicates</button>
+                <button onclick="recipeManager.findDuplicateRecipes()"><i class="fas fa-clone"></i> Duplicates</button>
             </div>
             <!-- Custom filter indicator button (hidden by default) -->
             <div id="customFilterIndicator" class="control-group hidden">
@@ -68,7 +68,7 @@
               Keep Latest Versions
             </button>
             <button class="btn-delete-selected disabled" onclick="recipeManager.deleteSelectedDuplicates()">
-              Delete Selected (<span id="selectedCount">0</span>)
+              Delete Selected (<span id="duplicatesSelectedCount">0</span>)
             </button>
             <button class="btn-exit" onclick="recipeManager.exitDuplicateMode()">
               <i class="fas fa-times"></i>

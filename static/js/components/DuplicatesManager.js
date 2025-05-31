@@ -14,8 +14,6 @@ export class DuplicatesManager {
     
     async findDuplicates() {
         try {
-            document.body.classList.add('loading');
-            
             const response = await fetch('/api/recipes/find-duplicates');
             if (!response.ok) {
                 throw new Error('Failed to find duplicates');
@@ -39,8 +37,6 @@ export class DuplicatesManager {
             console.error('Error finding duplicates:', error);
             showToast('Failed to find duplicates: ' + error.message, 'error');
             return false;
-        } finally {
-            document.body.classList.remove('loading');
         }
     }
     
@@ -234,7 +230,7 @@ export class DuplicatesManager {
     }
     
     updateSelectedCount() {
-        const selectedCountEl = document.getElementById('selectedCount');
+        const selectedCountEl = document.getElementById('duplicatesSelectedCount');
         if (selectedCountEl) {
             selectedCountEl.textContent = this.selectedForDeletion.size;
         }
@@ -358,9 +354,7 @@ export class DuplicatesManager {
     
     // Add new method to execute deletion after confirmation
     async confirmDeleteDuplicates() {
-        try {
-            document.body.classList.add('loading');
-            
+        try {           
             // Close the modal
             modalManager.closeModal('duplicateDeleteModal');
             
@@ -395,8 +389,6 @@ export class DuplicatesManager {
         } catch (error) {
             console.error('Error deleting recipes:', error);
             showToast('Failed to delete recipes: ' + error.message, 'error');
-        } finally {
-            document.body.classList.remove('loading');
         }
     }
 }

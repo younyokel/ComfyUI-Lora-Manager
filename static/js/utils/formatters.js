@@ -10,3 +10,14 @@ export function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
 }
+
+/**
+ * Convert timestamp to human readable date string
+ * @param {number} modified - Timestamp in seconds
+ * @returns {string} Formatted date string
+ */
+export function formatDate(modified) {
+    if (!modified) return '';
+    const date = new Date(modified * 1000);
+    return date.toLocaleString();
+}

@@ -84,6 +84,9 @@ class ApiRoutes:
         app.router.add_get('/api/loras/find-duplicates', routes.find_duplicate_loras)
         app.router.add_get('/api/loras/find-filename-conflicts', routes.find_filename_conflicts)
 
+        # Add new endpoint for bulk deleting loras
+        app.router.add_post('/api/loras/bulk-delete', routes.bulk_delete_loras)
+
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
         if self.scanner is None:
@@ -1266,4 +1269,19 @@ class ApiRoutes:
             return web.json_response({
                 "success": False,
                 "error": str(e)
+            }, status=500)
+
+    async def bulk_delete_loras(self, request: web.Request) -> web.Response:
+        """Handle bulk deletion of lora models"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+            
+            return await ModelRouteUtils.handle_bulk_delete_models(request, self.scanner)
+                
+        except Exception as e:
+            logger.error(f"Error in bulk delete loras: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)

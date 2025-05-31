@@ -2,7 +2,7 @@ from typing import Dict, Optional, Set, List
 import os
 
 class ModelHashIndex:
-    """Index for looking up models by hash or path"""
+    """Index for looking up models by hash or filename"""
     
     def __init__(self):
         self._hash_to_path: Dict[str, str] = {}
@@ -66,36 +66,123 @@ class ModelHashIndex:
     def remove_by_path(self, file_path: str) -> None:
         """Remove entry by file path"""
         filename = self._get_filename_from_path(file_path)
-        if filename in self._filename_to_hash:
-            hash_val = self._filename_to_hash[filename]
-            if hash_val in self._hash_to_path:
-                del self._hash_to_path[hash_val]
-            del self._filename_to_hash[filename]
+        hash_val = None
+        
+        # Find the hash for this file path
+        for h, p in self._hash_to_path.items():
+            if p == file_path:
+                hash_val = h
+                break
+        
+        # If we didn't find a hash, nothing to do
+        if not hash_val:
+            return
+        
+        # Update duplicates tracking for hash
+        if hash_val in self._duplicate_hashes:
+            # Remove the current path from duplicates
+            self._duplicate_hashes[hash_val] = [p for p in self._duplicate_hashes[hash_val] if p != file_path]
             
-            # Also clean up from duplicates tracking
-            if filename in self._duplicate_filenames:
-                self._duplicate_filenames[filename] = [p for p in self._duplicate_filenames[filename] if p != file_path]
-                if not self._duplicate_filenames[filename]:
-                    del self._duplicate_filenames[filename]
-            
-            if hash_val in self._duplicate_hashes:
-                self._duplicate_hashes[hash_val] = [p for p in self._duplicate_hashes[hash_val] if p != file_path]
-                if not self._duplicate_hashes[hash_val]:
+            # Update or remove hash mapping based on remaining duplicates
+            if len(self._duplicate_hashes[hash_val]) > 0:
+                # Replace with one of the remaining paths
+                new_path = self._duplicate_hashes[hash_val][0]
+                new_filename = self._get_filename_from_path(new_path)
+                
+                # Update hash-to-path mapping
+                self._hash_to_path[hash_val] = new_path
+                
+                # IMPORTANT: Update filename-to-hash mapping for consistency
+                # Remove old filename mapping if it points to this hash
+                if filename in self._filename_to_hash and self._filename_to_hash[filename] == hash_val:
+                    del self._filename_to_hash[filename]
+                
+                # Add new filename mapping
+                self._filename_to_hash[new_filename] = hash_val
+                
+                # If only one duplicate left, remove from duplicates tracking
+                if len(self._duplicate_hashes[hash_val]) == 1:
                     del self._duplicate_hashes[hash_val]
+            else:
+                # No duplicates left, remove hash entry completely
+                del self._duplicate_hashes[hash_val]
+                del self._hash_to_path[hash_val]
+                
+                # Remove corresponding filename entry if it points to this hash
+                if filename in self._filename_to_hash and self._filename_to_hash[filename] == hash_val:
+                    del self._filename_to_hash[filename]
+        else:
+            # No duplicates, simply remove the hash entry
+            del self._hash_to_path[hash_val]
+            
+            # Remove corresponding filename entry if it points to this hash
+            if filename in self._filename_to_hash and self._filename_to_hash[filename] == hash_val:
+                del self._filename_to_hash[filename]
+        
+        # Update duplicates tracking for filename
+        if filename in self._duplicate_filenames:
+            # Remove the current path from duplicates
+            self._duplicate_filenames[filename] = [p for p in self._duplicate_filenames[filename] if p != file_path]
+            
+            # Update or remove filename mapping based on remaining duplicates
+            if len(self._duplicate_filenames[filename]) > 0:
+                # Get the hash for the first remaining duplicate path
+                first_dup_path = self._duplicate_filenames[filename][0]
+                first_dup_hash = None
+                for h, p in self._hash_to_path.items():
+                    if p == first_dup_path:
+                        first_dup_hash = h
+                        break
+                
+                # Update the filename to hash mapping if we found a hash
+                if first_dup_hash:
+                    self._filename_to_hash[filename] = first_dup_hash
+                
+                # If only one duplicate left, remove from duplicates tracking
+                if len(self._duplicate_filenames[filename]) == 1:
+                    del self._duplicate_filenames[filename]
+            else:
+                # No duplicates left, remove filename entry completely
+                del self._duplicate_filenames[filename]
+                if filename in self._filename_to_hash:
+                    del self._filename_to_hash[filename]
     
     def remove_by_hash(self, sha256: str) -> None:
         """Remove entry by hash"""
         sha256 = sha256.lower()
-        if sha256 in self._hash_to_path:
-            path = self._hash_to_path[sha256]
-            filename = self._get_filename_from_path(path)
-            if filename in self._filename_to_hash:
-                del self._filename_to_hash[filename]
-            del self._hash_to_path[sha256]
+        if sha256 not in self._hash_to_path:
+            return
+        
+        # Get the path and filename
+        path = self._hash_to_path[sha256]
+        filename = self._get_filename_from_path(path)
+        
+        # Get all paths for this hash (including duplicates)
+        paths_to_remove = [path]
+        if sha256 in self._duplicate_hashes:
+            paths_to_remove.extend(self._duplicate_hashes[sha256])
+            del self._duplicate_hashes[sha256]
+        
+        # Remove hash-to-path mapping
+        del self._hash_to_path[sha256]
+        
+        # Update filename-to-hash and duplicate filenames for all paths
+        for path_to_remove in paths_to_remove:
+            fname = self._get_filename_from_path(path_to_remove)
             
-            # Clean up from duplicates tracking
-            if sha256 in self._duplicate_hashes:
-                del self._duplicate_hashes[sha256]
+            # If this filename maps to the hash we're removing, remove it
+            if fname in self._filename_to_hash and self._filename_to_hash[fname] == sha256:
+                del self._filename_to_hash[fname]
+            
+            # Update duplicate filenames tracking
+            if fname in self._duplicate_filenames:
+                self._duplicate_filenames[fname] = [p for p in self._duplicate_filenames[fname] if p != path_to_remove]
+                
+                if not self._duplicate_filenames[fname]:
+                    del self._duplicate_filenames[fname]
+                elif len(self._duplicate_filenames[fname]) == 1:
+                    # If only one entry remains, it's no longer a duplicate
+                    del self._duplicate_filenames[fname]
     
     def has_hash(self, sha256: str) -> bool:
         """Check if hash exists in index"""

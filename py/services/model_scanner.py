@@ -133,6 +133,7 @@ class ModelScanner:
                 os.rename(temp_path, cache_path)
                 
             logger.info(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
+            logger.info(f"Hash index stats - hash_to_path: {len(self._hash_index._hash_to_path)}, filename_to_hash: {len(self._hash_index._filename_to_hash)}, duplicate_hashes: {len(self._hash_index._duplicate_hashes)}, duplicate_filenames: {len(self._hash_index._duplicate_filenames)}")
             return True
         except Exception as e:
             logger.error(f"Error saving {self.model_type} cache to disk: {e}")
@@ -1219,3 +1220,166 @@ class ModelScanner:
             # Save updated cache to disk
             await self._save_cache_to_disk()
         return updated
+
+    async def bulk_delete_models(self, file_paths: List[str]) -> Dict:
+        """Delete multiple models and update cache in a batch operation
+        
+        Args:
+            file_paths: List of file paths to delete
+            
+        Returns:
+            Dict containing results of the operation
+        """
+        try:
+            if not file_paths:
+                return {
+                    'success': False,
+                    'error': 'No file paths provided for deletion',
+                    'results': []
+                }
+            
+            # Get the file monitor
+            file_monitor = getattr(self, 'file_monitor', None)
+            
+            # Keep track of success and failures
+            results = []
+            total_deleted = 0
+            cache_updated = False
+            
+            # Get cache data
+            cache = await self.get_cached_data()
+            
+            # Track deleted models to update cache once
+            deleted_models = []
+            
+            for file_path in file_paths:
+                try:
+                    target_dir = os.path.dirname(file_path)
+                    file_name = os.path.splitext(os.path.basename(file_path))[0]
+                    
+                    # Delete all associated files for the model
+                    from ..utils.routes_common import ModelRouteUtils
+                    deleted_files = await ModelRouteUtils.delete_model_files(
+                        target_dir, 
+                        file_name,
+                        file_monitor
+                    )
+                    
+                    if deleted_files:
+                        deleted_models.append(file_path)
+                        results.append({
+                            'file_path': file_path,
+                            'success': True,
+                            'deleted_files': deleted_files
+                        })
+                        total_deleted += 1
+                    else:
+                        results.append({
+                            'file_path': file_path,
+                            'success': False,
+                            'error': 'No files deleted'
+                        })
+                except Exception as e:
+                    logger.error(f"Error deleting file {file_path}: {e}")
+                    results.append({
+                        'file_path': file_path,
+                        'success': False,
+                        'error': str(e)
+                    })
+            
+            # Batch update cache if any models were deleted
+            if deleted_models:
+                # Update the cache in a batch operation
+                cache_updated = await self._batch_update_cache_for_deleted_models(deleted_models)
+                
+            return {
+                'success': True,
+                'total_deleted': total_deleted,
+                'total_attempted': len(file_paths),
+                'cache_updated': cache_updated,
+                'results': results
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in bulk delete: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'results': []
+            }
+    
+    async def _batch_update_cache_for_deleted_models(self, file_paths: List[str]) -> bool:
+        """Update cache after multiple models have been deleted
+        
+        Args:
+            file_paths: List of file paths that were deleted
+            
+        Returns:
+            bool: True if cache was updated and saved successfully
+        """
+        if not file_paths or self._cache is None:
+            return False
+            
+        try:
+            # Get all models that need to be removed from cache
+            models_to_remove = [item for item in self._cache.raw_data if item['file_path'] in file_paths]
+            
+            if not models_to_remove:
+                return False
+                
+            # Update tag counts
+            for model in models_to_remove:
+                for tag in model.get('tags', []):
+                    if tag in self._tags_count:
+                        self._tags_count[tag] = max(0, self._tags_count[tag] - 1)
+                        if self._tags_count[tag] == 0:
+                            del self._tags_count[tag]
+            
+            # Update hash index
+            for model in models_to_remove:
+                file_path = model['file_path']
+                if hasattr(self, '_hash_index') and self._hash_index:
+                    # Get the hash and filename before removal for duplicate checking
+                    file_name = os.path.splitext(os.path.basename(file_path))[0]
+                    hash_val = model.get('sha256', '').lower()
+                    
+                    # Remove from hash index
+                    self._hash_index.remove_by_path(file_path)
+                    
+                    # Check and clean up duplicates
+                    self._cleanup_duplicates_after_removal(hash_val, file_name)
+            
+            # Update cache data
+            self._cache.raw_data = [item for item in self._cache.raw_data if item['file_path'] not in file_paths]
+            
+            # Resort cache
+            await self._cache.resort()
+            
+            # Save updated cache to disk
+            await self._save_cache_to_disk()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating cache after bulk delete: {e}", exc_info=True)
+            return False
+    
+    def _cleanup_duplicates_after_removal(self, hash_val: str, file_name: str) -> None:
+        """Clean up duplicate entries in hash index after removing a model
+        
+        Args:
+            hash_val: SHA256 hash of the removed model
+            file_name: File name of the removed model without extension
+        """
+        if not hash_val or not file_name or not hasattr(self, '_hash_index'):
+            return
+            
+        # Clean up hash duplicates if only 0 or 1 entries remain
+        if hash_val in self._hash_index._duplicate_hashes:
+            if len(self._hash_index._duplicate_hashes[hash_val]) <= 1:
+                del self._hash_index._duplicate_hashes[hash_val]
+        
+        # Clean up filename duplicates if only 0 or 1 entries remain
+        if file_name in self._hash_index._duplicate_filenames:
+            if len(self._hash_index._duplicate_filenames[file_name]) <= 1:
+                del self._hash_index._duplicate_filenames[file_name]
