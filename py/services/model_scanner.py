@@ -19,7 +19,10 @@ from .websocket_manager import ws_manager
 logger = logging.getLogger(__name__)
 
 # Define cache version to handle future format changes
-CACHE_VERSION = 1
+# Version history:
+# 1 - Initial version
+# 2 - Added duplicate_filenames and duplicate_hashes tracking
+CACHE_VERSION = 2
 
 class ModelScanner:
     """Base service for scanning and managing model files"""
@@ -107,7 +110,9 @@ class ModelScanner:
                 "raw_data": self._cache.raw_data,
                 "hash_index": {
                     "hash_to_path": self._hash_index._hash_to_path,
-                    "filename_to_hash": self._hash_index._filename_to_hash  # Fix: changed from path_to_hash to filename_to_hash
+                    "filename_to_hash": self._hash_index._filename_to_hash,  # Fix: changed from path_to_hash to filename_to_hash
+                    "duplicate_hashes": self._hash_index._duplicate_hashes,
+                    "duplicate_filenames": self._hash_index._duplicate_filenames
                 },
                 "tags_count": self._tags_count,
                 "dirs_last_modified": self._get_dirs_last_modified()
@@ -205,6 +210,8 @@ class ModelScanner:
             hash_index_data = cache_data.get("hash_index", {})
             self._hash_index._hash_to_path = hash_index_data.get("hash_to_path", {})
             self._hash_index._filename_to_hash = hash_index_data.get("filename_to_hash", {})  # Fix: changed from path_to_hash to filename_to_hash
+            self._hash_index._duplicate_hashes = hash_index_data.get("duplicate_hashes", {})
+            self._hash_index._duplicate_filenames = hash_index_data.get("duplicate_filenames", {})
             
             # Load tags count
             self._tags_count = cache_data.get("tags_count", {})

@@ -80,6 +80,10 @@ class ApiRoutes:
         # Add update check routes
         UpdateRoutes.setup_routes(app)
 
+        # Add new endpoints for finding duplicates
+        app.router.add_get('/api/loras/find-duplicates', routes.find_duplicate_loras)
+        app.router.add_get('/api/loras/find-filename-conflicts', routes.find_filename_conflicts)
+
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
         if self.scanner is None:
@@ -1168,4 +1172,98 @@ class ApiRoutes:
             return web.json_response({
                 'success': False,
                 'error': str(e)
+            }, status=500)
+
+    async def find_duplicate_loras(self, request: web.Request) -> web.Response:
+        """Find loras with duplicate SHA256 hashes"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            # Get duplicate hashes from hash index
+            duplicates = self.scanner._hash_index.get_duplicate_hashes()
+            
+            # Format the response
+            result = []
+            cache = await self.scanner.get_cached_data()
+            
+            for sha256, paths in duplicates.items():
+                group = {
+                    "hash": sha256,
+                    "models": []
+                }
+                # Find matching models for each duplicate path
+                for path in paths:
+                    model = next((m for m in cache.raw_data if m['file_path'] == path), None)
+                    if model:
+                        group["models"].append(self._format_lora_response(model))
+                
+                # Add the primary model too
+                primary_path = self.scanner._hash_index.get_path(sha256)
+                if primary_path and primary_path not in paths:
+                    primary_model = next((m for m in cache.raw_data if m['file_path'] == primary_path), None)
+                    if primary_model:
+                        group["models"].insert(0, self._format_lora_response(primary_model))
+                
+                if group["models"]:  # Only include if we found models
+                    result.append(group)
+                
+            return web.json_response({
+                "success": True,
+                "duplicates": result,
+                "count": len(result)
+            })
+        except Exception as e:
+            logger.error(f"Error finding duplicate loras: {e}", exc_info=True)
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
+    async def find_filename_conflicts(self, request: web.Request) -> web.Response:
+        """Find loras with conflicting filenames"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_lora_scanner()
+                
+            # Get duplicate filenames from hash index
+            duplicates = self.scanner._hash_index.get_duplicate_filenames()
+            
+            # Format the response
+            result = []
+            cache = await self.scanner.get_cached_data()
+            
+            for filename, paths in duplicates.items():
+                group = {
+                    "filename": filename,
+                    "models": []
+                }
+                # Find matching models for each path
+                for path in paths:
+                    model = next((m for m in cache.raw_data if m['file_path'] == path), None)
+                    if model:
+                        group["models"].append(self._format_lora_response(model))
+                
+                # Find the model from the main index too
+                hash_val = self.scanner._hash_index.get_hash_by_filename(filename)
+                if hash_val:
+                    main_path = self.scanner._hash_index.get_path(hash_val)
+                    if main_path and main_path not in paths:
+                        main_model = next((m for m in cache.raw_data if m['file_path'] == main_path), None)
+                        if main_model:
+                            group["models"].insert(0, self._format_lora_response(main_model))
+                
+                if group["models"]:  # Only include if we found models
+                    result.append(group)
+                
+            return web.json_response({
+                "success": True,
+                "conflicts": result,
+                "count": len(result)
+            })
+        except Exception as e:
+            logger.error(f"Error finding filename conflicts: {e}", exc_info=True)
+            return web.json_response({
+                "success": False,
+                "error": str(e)
             }, status=500)

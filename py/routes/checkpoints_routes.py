@@ -58,6 +58,10 @@ class CheckpointsRoutes:
         # Add new WebSocket endpoint for checkpoint progress
         app.router.add_get('/ws/checkpoint-progress', ws_manager.handle_checkpoint_connection)
 
+        # Add new routes for finding duplicates and filename conflicts
+        app.router.add_get('/api/checkpoints/find-duplicates', self.find_duplicate_checkpoints)
+        app.router.add_get('/api/checkpoints/find-filename-conflicts', self.find_filename_conflicts)
+
     async def get_checkpoints(self, request):
         """Get paginated checkpoint data"""
         try:
@@ -695,3 +699,97 @@ class CheckpointsRoutes:
         except Exception as e:
             logger.error(f"Error fetching checkpoint model versions: {e}")
             return web.Response(status=500, text=str(e))
+
+    async def find_duplicate_checkpoints(self, request: web.Request) -> web.Response:
+        """Find checkpoints with duplicate SHA256 hashes"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_checkpoint_scanner()
+                
+            # Get duplicate hashes from hash index
+            duplicates = self.scanner._hash_index.get_duplicate_hashes()
+            
+            # Format the response
+            result = []
+            cache = await self.scanner.get_cached_data()
+            
+            for sha256, paths in duplicates.items():
+                group = {
+                    "hash": sha256,
+                    "models": []
+                }
+                # Find matching models for each path
+                for path in paths:
+                    model = next((m for m in cache.raw_data if m['file_path'] == path), None)
+                    if model:
+                        group["models"].append(self._format_checkpoint_response(model))
+                
+                # Add the primary model too
+                primary_path = self.scanner._hash_index.get_path(sha256)
+                if primary_path and primary_path not in paths:
+                    primary_model = next((m for m in cache.raw_data if m['file_path'] == primary_path), None)
+                    if primary_model:
+                        group["models"].insert(0, self._format_checkpoint_response(primary_model))
+                
+                if group["models"]:
+                    result.append(group)
+                
+            return web.json_response({
+                "success": True,
+                "duplicates": result,
+                "count": len(result)
+            })
+        except Exception as e:
+            logger.error(f"Error finding duplicate checkpoints: {e}", exc_info=True)
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
+    async def find_filename_conflicts(self, request: web.Request) -> web.Response:
+        """Find checkpoints with conflicting filenames"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_checkpoint_scanner()
+                
+            # Get duplicate filenames from hash index
+            duplicates = self.scanner._hash_index.get_duplicate_filenames()
+            
+            # Format the response
+            result = []
+            cache = await self.scanner.get_cached_data()
+            
+            for filename, paths in duplicates.items():
+                group = {
+                    "filename": filename,
+                    "models": []
+                }
+                # Find matching models for each path
+                for path in paths:
+                    model = next((m for m in cache.raw_data if m['file_path'] == path), None)
+                    if model:
+                        group["models"].append(self._format_checkpoint_response(model))
+                
+                # Find the model from the main index too
+                hash_val = self.scanner._hash_index.get_hash_by_filename(filename)
+                if hash_val:
+                    main_path = self.scanner._hash_index.get_path(hash_val)
+                    if main_path and main_path not in paths:
+                        main_model = next((m for m in cache.raw_data if m['file_path'] == main_path), None)
+                        if main_model:
+                            group["models"].insert(0, self._format_checkpoint_response(main_model))
+                
+                if group["models"]:
+                    result.append(group)
+                
+            return web.json_response({
+                "success": True,
+                "conflicts": result,
+                "count": len(result)
+            })
+        except Exception as e:
+            logger.error(f"Error finding filename conflicts: {e}", exc_info=True)
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
