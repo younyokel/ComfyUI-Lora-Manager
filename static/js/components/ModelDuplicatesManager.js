@@ -14,6 +14,52 @@ export class ModelDuplicatesManager {
         // Bind methods
         this.renderModelCard = this.renderModelCard.bind(this);
         this.renderTooltip = this.renderTooltip.bind(this);
+        this.checkDuplicatesCount = this.checkDuplicatesCount.bind(this);
+        
+        // Check for duplicates on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', this.checkDuplicatesCount);
+        } else {
+            this.checkDuplicatesCount();
+        }
+    }
+    
+    // Method to check for duplicates count using existing endpoint
+    async checkDuplicatesCount() {
+        try {
+            const endpoint = `/api/${this.modelType}/find-duplicates`;
+            const response = await fetch(endpoint);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to get duplicates count: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const duplicatesCount = (data.duplicates || []).length;
+                this.updateDuplicatesBadge(duplicatesCount);
+            } else {
+                this.updateDuplicatesBadge(0);
+            }
+        } catch (error) {
+            console.error('Error checking duplicates count:', error);
+            this.updateDuplicatesBadge(0);
+        }
+    }
+    
+    // Method to update the badge
+    updateDuplicatesBadge(count) {
+        const badge = document.getElementById('duplicatesBadge');
+        if (!badge) return;
+        
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.add('pulse');
+        } else {
+            badge.textContent = '';
+            badge.classList.remove('pulse');
+        }
     }
     
     async findDuplicates() {
@@ -32,6 +78,9 @@ export class ModelDuplicatesManager {
             }
             
             this.duplicateGroups = data.duplicates || [];
+            
+            // Update the badge with the current count
+            this.updateDuplicatesBadge(this.duplicateGroups.length);
             
             if (this.duplicateGroups.length === 0) {
                 showToast('No duplicate models found', 'info');
@@ -86,6 +135,9 @@ export class ModelDuplicatesManager {
         // Update state
         const pageState = getCurrentPageState();
         pageState.duplicatesMode = false;
+        
+        // Check duplicates count again to update badge
+        this.checkDuplicatesCount();
         
         // Instead of trying to restore the virtual scroller,
         // simply redirect to reload the page
@@ -402,6 +454,8 @@ export class ModelDuplicatesManager {
             
             // Exit duplicate mode if deletions were successful
             if (data.total_deleted > 0) {
+                // Check duplicates count after deletion
+                this.checkDuplicatesCount();
                 this.exitDuplicateMode();
             }
             
@@ -409,5 +463,11 @@ export class ModelDuplicatesManager {
             console.error('Error deleting models:', error);
             showToast('Failed to delete models: ' + error.message, 'error');
         }
+    }
+    
+    // Public method to update the badge after refresh
+    updateDuplicatesBadgeAfterRefresh() {
+        // Use this method after refresh operations
+        this.checkDuplicatesCount();
     }
 }

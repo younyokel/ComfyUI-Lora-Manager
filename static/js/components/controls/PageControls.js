@@ -405,6 +405,11 @@ export class PageControls {
             console.error(`Error ${fullRebuild ? 'rebuilding' : 'refreshing'} ${this.pageType}:`, error);
             showToast(`Failed to ${fullRebuild ? 'rebuild' : 'refresh'} ${this.pageType}: ${error.message}`, 'error');
         }
+
+        if (window.modelDuplicatesManager) {
+            // Update duplicates badge after refresh
+            window.modelDuplicatesManager.updateDuplicatesBadgeAfterRefresh();
+        }
     }
     
     /**

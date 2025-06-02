@@ -281,6 +281,47 @@
     min-width: 70px;
 }
 
+/* Badge Styles */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px; /* Reduced from 20px */
+    height: 16px; /* Reduced from 20px */
+    border-radius: 8px; /* Adjusted for smaller size */
+    background-color: var(--lora-error);
+    color: white;
+    font-size: 10px; /* Smaller font size */
+    font-weight: bold;
+    padding: 0 4px; /* Reduced padding */
+    position: absolute;
+    top: -8px; /* Moved closer to button */
+    right: -8px; /* Moved closer to button */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); /* Softer shadow */
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.badge:empty {
+    display: none;
+}
+
+/* Make the pulse animation more subtle */
+.badge.pulse {
+    animation: badge-pulse 2s infinite; /* Slower animation */
+}
+
+@keyframes badge-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1); /* Less expansion */
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .duplicates-banner .banner-content {
