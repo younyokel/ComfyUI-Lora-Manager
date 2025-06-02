@@ -15,6 +15,7 @@ from ..services.service_registry import ServiceRegistry
 from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
 from ..services.civitai_client import CivitaiClient
 from ..utils.routes_common import ModelRouteUtils
+from ..utils.lora_metadata import extract_trained_words
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,9 @@ class MiscRoutes:
         
         # Add new route for opening example images folder
         app.router.add_post('/api/open-example-images-folder', MiscRoutes.open_example_images_folder)
+
+        # Add new route for getting trained words
+        app.router.add_get('/api/trained-words', MiscRoutes.get_trained_words)
 
     @staticmethod
     async def clear_cache(request):
@@ -951,6 +955,53 @@ class MiscRoutes:
             
         except Exception as e:
             logger.error(f"Failed to open example images folder: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    @staticmethod
+    async def get_trained_words(request):
+        """
+        Get trained words from a safetensors file, sorted by frequency
+        
+        Expects a query parameter:
+        file_path: Path to the safetensors file
+        """
+        try:
+            # Get file path from query parameters
+            file_path = request.query.get('file_path')
+            
+            if not file_path:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing file_path parameter'
+                }, status=400)
+            
+            # Check if file exists and is a safetensors file
+            if not os.path.exists(file_path):
+                return web.json_response({
+                    'success': False,
+                    'error': f"File not found: {file_path}"
+                }, status=404)
+                
+            if not file_path.lower().endswith('.safetensors'):
+                return web.json_response({
+                    'success': False,
+                    'error': 'File is not a safetensors file'
+                }, status=400)
+            
+            # Extract trained words
+            trained_words = await extract_trained_words(file_path)
+            
+            # Return result
+            return web.json_response({
+                'success': True,
+                'trained_words': trained_words
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to get trained words: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)
