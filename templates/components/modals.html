@@ -69,6 +69,21 @@
     </div>
 </div>
 
+<!-- Bulk Delete Confirmation Modal -->
+<div id="bulkDeleteModal" class="modal delete-modal">
+    <div class="modal-content delete-modal-content">
+        <h2>Delete Multiple Models</h2>
+        <p class="delete-message">Are you sure you want to delete all selected models and their associated files?</p>
+        <div class="delete-model-info">
+            <p><span id="bulkDeleteCount">0</span> models will be permanently deleted.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="modalManager.closeModal('bulkDeleteModal')">Cancel</button>
+            <button class="delete-btn" onclick="bulkManager.confirmBulkDelete()">Delete All</button>
+        </div>
+    </div>
+</div>
+
 <!-- Settings Modal -->
 <div id="settingsModal" class="modal">
     <div class="modal-content settings-modal">

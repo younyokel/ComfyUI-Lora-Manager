@@ -1,6 +1,7 @@
 import { state } from '../state/index.js';
-import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
+import { showToast, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpers.js';
 import { updateCardsForBulkMode } from '../components/LoraCard.js';
+import { modalManager } from './ModalManager.js';
 
 export class BulkManager {
     constructor() {
@@ -208,6 +209,131 @@ export class BulkManager {
         await copyToClipboard(loraSyntaxes.join(', '), `Copied ${loraSyntaxes.length} LoRA syntaxes to clipboard`);
     }
     
+    // Add method to send all selected loras to workflow
+    async sendAllLorasToWorkflow() {
+        if (state.selectedLoras.size === 0) {
+            showToast('No LoRAs selected', 'warning');
+            return;
+        }
+        
+        const loraSyntaxes = [];
+        const missingLoras = [];
+        
+        // Process all selected loras using our metadata cache
+        for (const filepath of state.selectedLoras) {
+            const metadata = state.loraMetadataCache.get(filepath);
+            
+            if (metadata) {
+                const usageTips = JSON.parse(metadata.usageTips || '{}');
+                const strength = usageTips.strength || 1;
+                loraSyntaxes.push(`<lora:${metadata.fileName}:${strength}>`);
+            } else {
+                // If we don't have metadata, this is an error case
+                missingLoras.push(filepath);
+            }
+        }
+        
+        // Handle any loras with missing metadata
+        if (missingLoras.length > 0) {
+            console.warn('Missing metadata for some selected loras:', missingLoras);
+            showToast(`Missing data for ${missingLoras.length} LoRAs`, 'warning');
+        }
+        
+        if (loraSyntaxes.length === 0) {
+            showToast('No valid LoRAs to send', 'error');
+            return;
+        }
+        
+        // Send the loras to the workflow
+        await sendLoraToWorkflow(loraSyntaxes.join(', '), false, 'lora');
+    }
+    
+    // Show the bulk delete confirmation modal
+    showBulkDeleteModal() {
+        if (state.selectedLoras.size === 0) {
+            showToast('No LoRAs selected', 'warning');
+            return;
+        }
+        
+        // Update the count in the modal
+        const countElement = document.getElementById('bulkDeleteCount');
+        if (countElement) {
+            countElement.textContent = state.selectedLoras.size;
+        }
+        
+        // Show the modal
+        modalManager.showModal('bulkDeleteModal');
+    }
+    
+    // Confirm bulk delete action
+    async confirmBulkDelete() {
+        if (state.selectedLoras.size === 0) {
+            showToast('No LoRAs selected', 'warning');
+            modalManager.closeModal('bulkDeleteModal');
+            return;
+        }
+        
+        // Close the modal first before showing loading indicator
+        modalManager.closeModal('bulkDeleteModal');
+        
+        try {
+            // Show loading indicator
+            state.loadingManager.showSimpleLoading('Deleting models...');
+            
+            // Gather all file paths for deletion
+            const filePaths = Array.from(state.selectedLoras);
+            
+            // Call the backend API
+            const response = await fetch('/api/loras/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    file_paths: filePaths
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(`Successfully deleted ${result.deleted_count} models`, 'success');
+                
+                // If virtual scroller exists, update the UI without page reload
+                if (state.virtualScroller) {
+                    // Remove each deleted item from the virtual scroller
+                    filePaths.forEach(path => {
+                        state.virtualScroller.removeItemByFilePath(path);
+                    });
+                    
+                    // Clear the selection
+                    this.clearSelection();
+                } else {
+                    // Clear the selection
+                    this.clearSelection();
+                    
+                    // Fall back to page reload for non-virtual scroll mode
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+
+                if (window.modelDuplicatesManager) {
+                    // Update duplicates badge after refresh
+                    window.modelDuplicatesManager.updateDuplicatesBadgeAfterRefresh();
+                }
+            } else {
+                showToast(`Error: ${result.error || 'Failed to delete models'}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error during bulk delete:', error);
+            showToast('Failed to delete models', 'error');
+        } finally {
+            // Hide loading indicator
+            state.loadingManager.hide();
+        }
+    }
+
     // Create and show the thumbnail strip of selected LoRAs
     toggleThumbnailStrip() {
         // If no items are selected, do nothing

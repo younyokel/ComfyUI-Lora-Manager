@@ -60,6 +60,18 @@
     border-color: var(--lora-accent);
 }
 
+/* Danger button style - updated to use proper theme variables */
+.bulk-operations-actions button.danger-btn {
+    background: oklch(70% 0.2 29); /* Light red background that works in both themes */
+    color: oklch(98% 0.01 0); /* Almost white text for good contrast */
+    border-color: var(--lora-error);
+}
+
+.bulk-operations-actions button.danger-btn:hover {
+    background: var(--lora-error);
+    color: oklch(100% 0 0); /* Pure white text on hover for maximum contrast */
+}
+
 /* Style for selected cards */
 .lora-card.selected {
     box-shadow: 0 0 0 2px var(--lora-accent);

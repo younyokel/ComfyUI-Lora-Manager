@@ -107,11 +107,17 @@
             0 selected <i class="fas fa-caret-down dropdown-caret"></i>
         </span>
         <div class="bulk-operations-actions">
+            <button onclick="bulkManager.sendAllLorasToWorkflow()" title="Send all selected LoRAs to workflow">
+                <i class="fas fa-arrow-right"></i> Send to Workflow
+            </button>
             <button onclick="bulkManager.copyAllLorasSyntax()" title="Copy all selected LoRAs syntax">
                 <i class="fas fa-copy"></i> Copy All
             </button>
             <button onclick="moveManager.showMoveModal('bulk')" title="Move selected LoRAs to folder">
                 <i class="fas fa-folder-open"></i> Move All
+            </button>
+            <button onclick="bulkManager.showBulkDeleteModal()" title="Delete selected LoRAs" class="danger-btn">
+                <i class="fas fa-trash"></i> Delete All
             </button>
             <button onclick="bulkManager.clearSelection()" title="Clear selection">
                 <i class="fas fa-times"></i> Clear

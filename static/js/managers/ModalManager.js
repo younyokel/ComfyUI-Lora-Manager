@@ -195,6 +195,18 @@ export class ModalManager {
             });
         }
         
+        // Add bulkDeleteModal registration
+        const bulkDeleteModal = document.getElementById('bulkDeleteModal');
+        if (bulkDeleteModal) {
+            this.registerModal('bulkDeleteModal', {
+                element: bulkDeleteModal,
+                onClose: () => {
+                    this.getModal('bulkDeleteModal').element.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
+        
         // Set up event listeners for modal toggles
         const supportToggle = document.getElementById('supportToggleBtn');
         if (supportToggle) {
@@ -275,10 +287,17 @@ export class ModalManager {
         // Store current scroll position before showing modal
         this.scrollPosition = window.scrollY;
 
-        if (id === 'deleteModal' || id === 'excludeModal' || id === 'duplicateDeleteModal' || id === 'modelDuplicateDeleteModal' || id === 'clearCacheModal') {
-            modal.element.classList.add('show');
+        if (
+          id === "deleteModal" ||
+          id === "excludeModal" ||
+          id === "duplicateDeleteModal" ||
+          id === "modelDuplicateDeleteModal" ||
+          id === "clearCacheModal" ||
+          id === "bulkDeleteModal"
+        ) {
+          modal.element.classList.add("show");
         } else {
-            modal.element.style.display = 'block';
+          modal.element.style.display = "block";
         }
 
         modal.isOpen = true;
