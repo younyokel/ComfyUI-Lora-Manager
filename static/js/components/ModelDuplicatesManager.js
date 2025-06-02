@@ -1,16 +1,15 @@
 // Model Duplicates Manager Component for LoRAs and Checkpoints
 import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
-import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 import { formatDate } from '../utils/formatters.js';
 
 export class ModelDuplicatesManager {
-    constructor(pageManager) {
+    constructor(pageManager, modelType = 'loras') {
         this.pageManager = pageManager;
         this.duplicateGroups = [];
         this.inDuplicateMode = false;
         this.selectedForDeletion = new Set();
-        this.modelType = 'loras'; // Default to loras, could be 'checkpoints'
+        this.modelType = modelType; // Use the provided modelType or default to 'loras'
         
         // Bind methods
         this.renderModelCard = this.renderModelCard.bind(this);
@@ -91,11 +90,11 @@ export class ModelDuplicatesManager {
         // Instead of trying to restore the virtual scroller,
         // simply redirect to reload the page
         // TODO: While this is a workaround rather than a deep fix, it's a pragmatic solution that will immediately resolve the issue for users. We can investigate the underlying cause more thoroughly later when there's time for more extensive debugging.
-        window.location.href = '/loras';
+        window.location.href = `/${this.modelType}`;
     }
     
     renderDuplicateGroups() {
-        const modelGrid = document.getElementById('loraGrid');
+        const modelGrid = document.getElementById(this.modelType === 'loras' ? 'loraGrid' : 'checkpointGrid');
         if (!modelGrid) return;
         
         // Clear existing content

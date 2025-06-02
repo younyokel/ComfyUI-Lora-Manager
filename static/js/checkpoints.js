@@ -16,7 +16,7 @@ class CheckpointsPageManager {
         window.checkpointDownloadManager = new CheckpointDownloadManager();
         
         // Initialize the ModelDuplicatesManager
-        this.duplicatesManager = new ModelDuplicatesManager(this);
+        this.duplicatesManager = new ModelDuplicatesManager(this, 'checkpoints');
         
         // Expose only necessary functions to global scope
         this._exposeRequiredGlobalFunctions();

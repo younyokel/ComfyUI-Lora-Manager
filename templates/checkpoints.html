@@ -31,6 +31,23 @@
 
 {% block content %}
     {% include 'components/controls.html' %}
+    
+    <!-- Duplicates banner (hidden by default) -->
+    <div id="duplicatesBanner" class="duplicates-banner" style="display: none;">
+        <div class="banner-content">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="duplicatesCount">Found 0 duplicate groups</span>
+          <div class="banner-actions">
+            <button class="btn-delete-selected disabled" onclick="modelDuplicatesManager.deleteSelectedDuplicates()">
+              Delete Selected (<span id="duplicatesSelectedCount">0</span>)
+            </button>
+            <button class="btn-exit" onclick="modelDuplicatesManager.exitDuplicateMode()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+    </div>
+    
     <!-- Checkpoint cards container -->
     <div class="card-grid" id="checkpointGrid">
         <!-- Cards will be dynamically inserted here -->

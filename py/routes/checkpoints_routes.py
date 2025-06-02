@@ -62,6 +62,9 @@ class CheckpointsRoutes:
         app.router.add_get('/api/checkpoints/find-duplicates', self.find_duplicate_checkpoints)
         app.router.add_get('/api/checkpoints/find-filename-conflicts', self.find_filename_conflicts)
 
+        # Add new endpoint for bulk deleting checkpoints
+        app.router.add_post('/api/checkpoints/bulk-delete', self.bulk_delete_checkpoints)
+
     async def get_checkpoints(self, request):
         """Get paginated checkpoint data"""
         try:
@@ -792,4 +795,19 @@ class CheckpointsRoutes:
             return web.json_response({
                 "success": False,
                 "error": str(e)
+            }, status=500)
+
+    async def bulk_delete_checkpoints(self, request: web.Request) -> web.Response:
+        """Handle bulk deletion of checkpoint models"""
+        try:
+            if self.scanner is None:
+                self.scanner = await ServiceRegistry.get_checkpoint_scanner()
+            
+            return await ModelRouteUtils.handle_bulk_delete_models(request, self.scanner)
+                
+        except Exception as e:
+            logger.error(f"Error in bulk delete checkpoints: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)

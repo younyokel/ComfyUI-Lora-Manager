@@ -133,7 +133,7 @@ class ModelScanner:
                 os.rename(temp_path, cache_path)
                 
             logger.info(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
-            logger.info(f"Hash index stats - hash_to_path: {len(self._hash_index._hash_to_path)}, filename_to_hash: {len(self._hash_index._filename_to_hash)}, duplicate_hashes: {len(self._hash_index._duplicate_hashes)}, duplicate_filenames: {len(self._hash_index._duplicate_filenames)}")
+            logger.debug(f"Hash index stats - hash_to_path: {len(self._hash_index._hash_to_path)}, filename_to_hash: {len(self._hash_index._filename_to_hash)}, duplicate_hashes: {len(self._hash_index._duplicate_hashes)}, duplicate_filenames: {len(self._hash_index._duplicate_filenames)}")
             return True
         except Exception as e:
             logger.error(f"Error saving {self.model_type} cache to disk: {e}")
