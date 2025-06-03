@@ -2,36 +2,19 @@
  * ShowcaseView.js
  * Handles showcase content (images, videos) display for checkpoint modal
  */
-import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
+import { 
+    showToast, 
+    copyToClipboard, 
+    getLocalExampleImageUrl,
+    initLazyLoading,
+    initNsfwBlurHandlers,
+    initMetadataPanelHandlers,
+    toggleShowcase,
+    setupShowcaseScroll,
+    scrollToTop 
+} from '../../utils/uiHelpers.js';
 import { state } from '../../state/index.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
-
-/**
- * Get the local URL for an example image if available
- * @param {Object} img - Image object
- * @param {number} index - Image index
- * @param {string} modelHash - Model hash
- * @returns {string|null} - Local URL or null if not available
- */
-function getLocalExampleImageUrl(img, index, modelHash) {
-    if (!modelHash) return null;
-    
-    // Get remote extension
-    const remoteExt = (img.url || '').split('?')[0].split('.').pop().toLowerCase();
-    
-    // If it's a video (mp4), use that extension
-    if (remoteExt === 'mp4') {
-        return `/example_images_static/${modelHash}/image_${index + 1}.mp4`;
-    }
-    
-    // For images, check if optimization is enabled (defaults to true) 
-    const optimizeImages = state.settings.optimizeExampleImages !== false;
-    
-    // Use .webp for images if optimization enabled, otherwise use original extension
-    const extension = optimizeImages ? 'webp' : remoteExt;
-    
-    return `/example_images_static/${modelHash}/image_${index + 1}.${extension}`;
-}
 
 /**
  * Render showcase content
@@ -82,9 +65,9 @@ export function renderShowcaseContent(images, modelHash) {
             ${hiddenNotification}
             <div class="carousel-container">
                 ${filteredImages.map((img, index) => {
-                    // Try to get local URL for the example image
-                    const localUrl = getLocalExampleImageUrl(img, index, modelHash);
-                    return generateMediaWrapper(img, localUrl);
+                    // Get URLs for the example image
+                    const urls = getLocalExampleImageUrl(img, index, modelHash);
+                    return generateMediaWrapper(img, urls);
                 }).join('')}
             </div>
         </div>
@@ -96,11 +79,8 @@ export function renderShowcaseContent(images, modelHash) {
  * @param {Object} media - Media object with image or video data
  * @returns {string} HTML content
  */
-function generateMediaWrapper(media, localUrl = null) {
-    // Calculate appropriate aspect ratio:
-    // 1. Keep original aspect ratio
-    // 2. Limit maximum height to 60% of viewport height
-    // 3. Ensure minimum height is 40% of container width
+function generateMediaWrapper(media, urls) {
+    // Calculate appropriate aspect ratio
     const aspectRatio = (media.height / media.width) * 100;
     const containerWidth = 800; // modal content maximum width
     const minHeightPercent = 40; 
@@ -149,10 +129,10 @@ function generateMediaWrapper(media, localUrl = null) {
     
     // Check if this is a video or image
     if (media.type === 'video') {
-        return generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl);
+        return generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, urls);
     }
     
-    return generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl);
+    return generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, urls);
 }
 
 /**
@@ -225,7 +205,7 @@ function generateMetadataPanel(hasParams, hasPrompts, prompt, negativePrompt, si
 /**
  * Generate video wrapper HTML
  */
-function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl = null) {
+function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, urls) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -235,10 +215,10 @@ function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metada
             ` : ''}
             <video controls autoplay muted loop crossorigin="anonymous" 
                 referrerpolicy="no-referrer" 
-                data-local-src="${localUrl || ''}"
+                data-local-src="${urls.primary || ''}"
                 data-remote-src="${media.url}"
                 class="lazy ${shouldBlur ? 'blurred' : ''}">
-                <source data-local-src="${localUrl || ''}" data-remote-src="${media.url}" type="video/mp4">
+                <source data-local-src="${urls.primary || ''}" data-remote-src="${media.url}" type="video/mp4">
                 Your browser does not support video playback
             </video>
             ${shouldBlur ? `
@@ -257,7 +237,7 @@ function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metada
 /**
  * Generate image wrapper HTML
  */
-function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl = null) {
+function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, urls) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -265,7 +245,8 @@ function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metada
                     <i class="fas fa-eye"></i>
                 </button>
             ` : ''}
-            <img data-local-src="${localUrl || ''}" 
+            <img data-local-src="${urls.primary || ''}" 
+                data-local-fallback-src="${urls.fallback || ''}"
                 data-remote-src="${media.url}"
                 alt="Preview" 
                 crossorigin="anonymous" 
@@ -286,410 +267,10 @@ function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metada
     `;
 }
 
-/**
- * Toggle showcase expansion
- */
-export function toggleShowcase(element) {
-    const carousel = element.nextElementSibling;
-    const isCollapsed = carousel.classList.contains('collapsed');
-    const indicator = element.querySelector('span');
-    const icon = element.querySelector('i');
-    
-    carousel.classList.toggle('collapsed');
-    
-    if (isCollapsed) {
-        const count = carousel.querySelectorAll('.media-wrapper').length;
-        indicator.textContent = `Scroll or click to hide examples`;
-        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
-        initLazyLoading(carousel);
-        
-        // Initialize NSFW content blur toggle handlers
-        initNsfwBlurHandlers(carousel);
-        
-        // Initialize metadata panel interaction handlers
-        initMetadataPanelHandlers(carousel);
-    } else {
-        const count = carousel.querySelectorAll('.media-wrapper').length;
-        indicator.textContent = `Scroll or click to show ${count} examples`;
-        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
-    }
-}
+// Use the shared setupShowcaseScroll function with the correct modal ID
+export { setupShowcaseScroll, scrollToTop, toggleShowcase };
 
-/**
- * Initialize metadata panel interaction handlers
- */
-function initMetadataPanelHandlers(container) {
-    const mediaWrappers = container.querySelectorAll('.media-wrapper');
-    
-    mediaWrappers.forEach(wrapper => {
-        // Get the metadata panel and media element (img or video)
-        const metadataPanel = wrapper.querySelector('.image-metadata-panel');
-        const mediaElement = wrapper.querySelector('img, video');
-        
-        if (!metadataPanel || !mediaElement) return;
-        
-        let isOverMetadataPanel = false;
-        
-        // Add event listeners to the wrapper for mouse tracking
-        wrapper.addEventListener('mousemove', (e) => {
-            // Get mouse position relative to wrapper
-            const rect = wrapper.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            // Get the actual displayed dimensions of the media element
-            const mediaRect = getRenderedMediaRect(mediaElement, rect.width, rect.height);
-            
-            // Check if mouse is over the actual media content
-            const isOverMedia = (
-                mouseX >= mediaRect.left && 
-                mouseX <= mediaRect.right && 
-                mouseY >= mediaRect.top && 
-                mouseY <= mediaRect.bottom
-            );
-            
-            // Show metadata panel when over media content or metadata panel itself
-            if (isOverMedia || isOverMetadataPanel) {
-                metadataPanel.classList.add('visible');
-            } else {
-                metadataPanel.classList.remove('visible');
-            }
-        });
-        
-        wrapper.addEventListener('mouseleave', () => {
-            // Only hide panel when mouse leaves the wrapper and not over the metadata panel
-            if (!isOverMetadataPanel) {
-                metadataPanel.classList.remove('visible');
-            }
-        });
-        
-        // Add mouse enter/leave events for the metadata panel itself
-        metadataPanel.addEventListener('mouseenter', () => {
-            isOverMetadataPanel = true;
-            metadataPanel.classList.add('visible');
-        });
-        
-        metadataPanel.addEventListener('mouseleave', () => {
-            isOverMetadataPanel = false;
-            // Only hide if mouse is not over the media
-            const rect = wrapper.getBoundingClientRect();
-            const mediaRect = getRenderedMediaRect(mediaElement, rect.width, rect.height);
-            const mouseX = event.clientX - rect.left;
-            const mouseY = event.clientY - rect.top;
-            
-            const isOverMedia = (
-                mouseX >= mediaRect.left && 
-                mouseX <= mediaRect.right && 
-                mouseY >= mediaRect.top && 
-                mouseY <= mediaRect.bottom
-            );
-            
-            if (!isOverMedia) {
-                metadataPanel.classList.remove('visible');
-            }
-        });
-        
-        // Prevent events from bubbling
-        metadataPanel.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-        
-        // Handle copy prompt buttons
-        const copyBtns = metadataPanel.querySelectorAll('.copy-prompt-btn');
-        copyBtns.forEach(copyBtn => {
-            const promptIndex = copyBtn.dataset.promptIndex;
-            const promptElement = wrapper.querySelector(`#prompt-${promptIndex}`);
-            
-            copyBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                
-                if (!promptElement) return;
-                
-                try {
-                    await copyToClipboard(promptElement.textContent, 'Prompt copied to clipboard');
-                } catch (err) {
-                    console.error('Copy failed:', err);
-                    showToast('Copy failed', 'error');
-                }
-            });
-        });
-        
-        // Prevent panel scroll from causing modal scroll
-        metadataPanel.addEventListener('wheel', (e) => {
-            const isAtTop = metadataPanel.scrollTop === 0;
-            const isAtBottom = metadataPanel.scrollHeight - metadataPanel.scrollTop === metadataPanel.clientHeight;
-            
-            // Only prevent default if scrolling would cause the panel to scroll
-            if ((e.deltaY < 0 && !isAtTop) || (e.deltaY > 0 && !isAtBottom)) {
-                e.stopPropagation();
-            }
-        }, { passive: true });
-    });
-}
-
-/**
- * Get the actual rendered rectangle of a media element with object-fit: contain
- * @param {HTMLElement} mediaElement - The img or video element
- * @param {number} containerWidth - Width of the container
- * @param {number} containerHeight - Height of the container
- * @returns {Object} - Rect with left, top, right, bottom coordinates
- */
-function getRenderedMediaRect(mediaElement, containerWidth, containerHeight) {
-    // Get natural dimensions of the media
-    const naturalWidth = mediaElement.naturalWidth || mediaElement.videoWidth || mediaElement.clientWidth;
-    const naturalHeight = mediaElement.naturalHeight || mediaElement.videoHeight || mediaElement.clientHeight;
-    
-    if (!naturalWidth || !naturalHeight) {
-        // Fallback if dimensions cannot be determined
-        return { left: 0, top: 0, right: containerWidth, bottom: containerHeight };
-    }
-    
-    // Calculate aspect ratios
-    const containerRatio = containerWidth / containerHeight;
-    const mediaRatio = naturalWidth / naturalHeight;
-    
-    let renderedWidth, renderedHeight, left = 0, top = 0;
-    
-    // Apply object-fit: contain logic
-    if (containerRatio > mediaRatio) {
-        // Container is wider than media - will have empty space on sides
-        renderedHeight = containerHeight;
-        renderedWidth = renderedHeight * mediaRatio;
-        left = (containerWidth - renderedWidth) / 2;
-    } else {
-        // Container is taller than media - will have empty space top/bottom
-        renderedWidth = containerWidth;
-        renderedHeight = renderedWidth / mediaRatio;
-        top = (containerHeight - renderedHeight) / 2;
-    }
-    
-    return {
-        left,
-        top,
-        right: left + renderedWidth,
-        bottom: top + renderedHeight
-    };
-}
-
-/**
- * Initialize blur toggle handlers
- */
-function initNsfwBlurHandlers(container) {
-    // Handle toggle blur buttons
-    const toggleButtons = container.querySelectorAll('.toggle-blur-btn');
-    toggleButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const wrapper = btn.closest('.media-wrapper');
-            const media = wrapper.querySelector('img, video');
-            const isBlurred = media.classList.toggle('blurred');
-            const icon = btn.querySelector('i');
-            
-            // Update the icon based on blur state
-            if (isBlurred) {
-                icon.className = 'fas fa-eye';
-            } else {
-                icon.className = 'fas fa-eye-slash';
-            }
-            
-            // Toggle the overlay visibility
-            const overlay = wrapper.querySelector('.nsfw-overlay');
-            if (overlay) {
-                overlay.style.display = isBlurred ? 'flex' : 'none';
-            }
-        });
-    });
-    
-    // Handle "Show" buttons in overlays
-    const showButtons = container.querySelectorAll('.show-content-btn');
-    showButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const wrapper = btn.closest('.media-wrapper');
-            const media = wrapper.querySelector('img, video');
-            media.classList.remove('blurred');
-            
-            // Update the toggle button icon
-            const toggleBtn = wrapper.querySelector('.toggle-blur-btn');
-            if (toggleBtn) {
-                toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
-            }
-            
-            // Hide the overlay
-            const overlay = wrapper.querySelector('.nsfw-overlay');
-            if (overlay) {
-                overlay.style.display = 'none';
-            }
-        });
-    });
-}
-
-/**
- * Initialize lazy loading for images and videos
- */
-function initLazyLoading(container) {
-    const lazyElements = container.querySelectorAll('.lazy');
-    
-    const lazyLoad = (element) => {
-        const localSrc = element.dataset.localSrc;
-        const remoteSrc = element.dataset.remoteSrc;
-        
-        // Check if element is an image or video
-        if (element.tagName.toLowerCase() === 'video') {
-            // Try local first, then remote
-            tryLocalOrFallbackToRemote(element, localSrc, remoteSrc);
-        } else {
-            // For images, we'll use an Image object to test if local file exists
-            tryLocalImageOrFallbackToRemote(element, localSrc, remoteSrc);
-        }
-        
-        element.classList.remove('lazy');
-    };
-    
-    // Try to load local image first, fall back to remote if local fails
-    const tryLocalImageOrFallbackToRemote = (imgElement, localSrc, remoteSrc) => {
-        // Only try local if we have a local path
-        if (localSrc) {
-            const testImg = new Image();
-            testImg.onload = () => {
-                // Local image loaded successfully
-                imgElement.src = localSrc;
-            };
-            testImg.onerror = () => {
-                // Local image failed, use remote
-                imgElement.src = remoteSrc;
-            };
-            // Start loading test image
-            testImg.src = localSrc;
-        } else {
-            // No local path, use remote directly
-            imgElement.src = remoteSrc;
-        }
-    };
-    
-    // Try to load local video first, fall back to remote if local fails
-    const tryLocalOrFallbackToRemote = (videoElement, localSrc, remoteSrc) => {
-        // Only try local if we have a local path
-        if (localSrc) {
-            // Try to fetch local file headers to see if it exists
-            fetch(localSrc, { method: 'HEAD' })
-                .then(response => {
-                    if (response.ok) {
-                        // Local video exists, use it
-                        videoElement.src = localSrc;
-                        videoElement.querySelector('source').src = localSrc;
-                    } else {
-                        // Local video doesn't exist, use remote
-                        videoElement.src = remoteSrc;
-                        videoElement.querySelector('source').src = remoteSrc;
-                    }
-                    videoElement.load();
-                })
-                .catch(() => {
-                    // Error fetching, use remote
-                    videoElement.src = remoteSrc;
-                    videoElement.querySelector('source').src = remoteSrc;
-                    videoElement.load();
-                });
-        } else {
-            // No local path, use remote directly
-            videoElement.src = remoteSrc;
-            videoElement.querySelector('source').src = remoteSrc;
-            videoElement.load();
-        }
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                lazyLoad(entry.target);
-                observer.unobserve(entry.target);
-            }
-        });
-    });
-
-    lazyElements.forEach(element => observer.observe(element));
-}
-
-/**
- * Set up showcase scroll functionality
- */
-export function setupShowcaseScroll() {
-    // Listen for wheel events
-    document.addEventListener('wheel', (event) => {
-        const modalContent = document.querySelector('#checkpointModal .modal-content');
-        if (!modalContent) return;
-        
-        const showcase = modalContent.querySelector('.showcase-section');
-        if (!showcase) return;
-        
-        const carousel = showcase.querySelector('.carousel');
-        const scrollIndicator = showcase.querySelector('.scroll-indicator');
-        
-        if (carousel?.classList.contains('collapsed') && event.deltaY > 0) {
-            const isNearBottom = modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight < 100;
-            
-            if (isNearBottom) {
-                toggleShowcase(scrollIndicator);
-                event.preventDefault();
-            }
-        }
-    }, { passive: false });
-    
-    // Use MutationObserver to set up back-to-top button when modal content is added
-    const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            if (mutation.type === 'childList' && mutation.addedNodes.length) {
-                const checkpointModal = document.getElementById('checkpointModal');
-                if (checkpointModal && checkpointModal.querySelector('.modal-content')) {
-                    setupBackToTopButton(checkpointModal.querySelector('.modal-content'));
-                }
-            }
-        }
-    });
-    
-    // Start observing the document body for changes
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    // Also try to set up the button immediately in case the modal is already open
-    const modalContent = document.querySelector('#checkpointModal .modal-content');
-    if (modalContent) {
-        setupBackToTopButton(modalContent);
-    }
-}
-
-/**
- * Set up back-to-top button
- */
-function setupBackToTopButton(modalContent) {
-    // Remove any existing scroll listeners to avoid duplicates
-    modalContent.onscroll = null;
-    
-    // Add new scroll listener
-    modalContent.addEventListener('scroll', () => {
-        const backToTopBtn = modalContent.querySelector('.back-to-top');
-        if (backToTopBtn) {
-            if (modalContent.scrollTop > 300) {
-                backToTopBtn.classList.add('visible');
-            } else {
-                backToTopBtn.classList.remove('visible');
-            }
-        }
-    });
-    
-    // Trigger a scroll event to check initial position
-    modalContent.dispatchEvent(new Event('scroll'));
-}
-
-/**
- * Scroll to top of modal content
- */
-export function scrollToTop(button) {
-    const modalContent = button.closest('.modal-content');
-    if (modalContent) {
-        modalContent.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    }
-}
+// Initialize the showcase scroll when this module is imported
+document.addEventListener('DOMContentLoaded', () => {
+    setupShowcaseScroll('checkpointModal');
+});
