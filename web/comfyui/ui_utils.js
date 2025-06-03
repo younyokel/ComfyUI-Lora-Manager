@@ -6,6 +6,10 @@ const extension = {
 app.registerExtension(extension);
 const config = {
     newTab: true,
+    newWindow: {
+        width: 1200,
+        height: 800,
+    }
 };
 
 const createWidget = ({ className, text, tooltip, includeIcon, svgMarkup }) => {
@@ -32,12 +36,18 @@ const createWidget = ({ className, text, tooltip, includeIcon, svgMarkup }) => {
     return button;
 };
 
-const onClick = () => {
+const onClick = (e) => {
     const loraManagerUrl = `${window.location.origin}/loras`;
-    if (config.newTab) {
-        window.open(loraManagerUrl, '_blank');
+    
+    // Check if Shift key is pressed to determine how to open
+    if (e.shiftKey) {
+        // Open in new window
+        const { width, height } = config.newWindow;
+        const windowFeatures = `width=${width},height=${height},resizable=yes,scrollbars=yes,status=yes`;
+        window.open(loraManagerUrl, '_blank', windowFeatures);
     } else {
-        window.location.href = loraManagerUrl;
+        // Default behavior: open in new tab
+        window.open(loraManagerUrl, '_blank');
     }
 };
 
@@ -53,7 +63,7 @@ const addWidgetMenuRight = (menuRight) => {
     const loraManagerButton = createWidget({
         className: 'comfyui-button comfyui-menu-mobile-collapse primary',
         text: '',
-        tooltip: 'Launch Lora Manager',
+        tooltip: 'Launch Lora Manager (Shift+Click to open in new window)',
         includeIcon: true,
         svgMarkup: getLoraManagerIcon(),
     });
@@ -70,7 +80,7 @@ const addWidgetMenu = (menu) => {
     const loraManagerButton = createWidget({
         className: 'comfy-lora-manager-button',
         text: 'Lora Manager',
-        tooltip: 'Launch Lora Manager',
+        tooltip: 'Launch Lora Manager (Shift+Click to open in new window)',
         includeIcon: false,
     });
 
