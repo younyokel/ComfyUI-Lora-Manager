@@ -91,19 +91,6 @@ export function showToast(message, type = 'info') {
     });
 }
 
-export function lazyLoadImages() {
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && entry.target.dataset.src) {
-                entry.target.src = entry.target.dataset.src;
-                observer.unobserve(entry.target);
-            }
-        });
-    });
-
-    document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img));
-}
-
 export function restoreFolderFilter() {
     const activeFolder = getStorageItem('activeFolder');
     const folderTag = activeFolder && document.querySelector(`.tag[data-folder="${activeFolder}"]`);

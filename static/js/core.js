@@ -6,7 +6,7 @@ import { updateService } from './managers/UpdateService.js';
 import { HeaderManager } from './components/Header.js';
 import { settingsManager } from './managers/SettingsManager.js';
 import { exampleImagesManager } from './managers/ExampleImagesManager.js';
-import { showToast, initTheme, initBackToTop, lazyLoadImages } from './utils/uiHelpers.js';
+import { showToast, initTheme, initBackToTop } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { migrateStorageItems } from './utils/storageHelpers.js';
 import { setupLoraCardEventDelegation } from './components/LoraCard.js';
@@ -61,9 +61,6 @@ export class AppCore {
     initializePageFeatures() {
         const pageType = this.getPageType();
         
-        // Initialize lazy loading for images on all pages
-        lazyLoadImages();
-        
         // Setup event delegation for lora cards if on the loras page
         if (pageType === 'loras') {
             setupLoraCardEventDelegation();
@@ -85,6 +82,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Create and export a singleton instance
 export const appCore = new AppCore();
-
-// Export common utilities for global use
-export { showToast, lazyLoadImages, initializeInfiniteScroll };

@@ -6,8 +6,8 @@ import { getCurrentPageState, state } from './state/index.js';
 import { getSessionItem, removeSessionItem } from './utils/storageHelpers.js';
 import { RecipeContextMenu } from './components/ContextMenu/index.js';
 import { DuplicatesManager } from './components/DuplicatesManager.js';
-import { initializeInfiniteScroll, refreshVirtualScroll } from './utils/infiniteScroll.js';
-import { resetAndReload, refreshRecipes } from './api/recipeApi.js';
+import { refreshVirtualScroll } from './utils/infiniteScroll.js';
+import { refreshRecipes } from './api/recipeApi.js';
 
 class RecipeManager {
     constructor() {
@@ -228,11 +228,6 @@ class RecipeManager {
         }
         
         this.duplicatesManager.exitDuplicateMode();
-        
-        // Use a small delay before initializing to ensure DOM is ready
-        setTimeout(() => {
-            initializeInfiniteScroll('recipes');
-        }, 100);
     }
 }
 
