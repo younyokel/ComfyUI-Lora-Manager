@@ -31,14 +31,33 @@ class SaveImage:
         return {
             "required": {
                 "images": ("IMAGE",),
-                "filename_prefix": ("STRING", {"default": "ComfyUI"}),
-                "file_format": (["png", "jpeg", "webp"],),
+                "filename_prefix": ("STRING", {
+                    "default": "ComfyUI", 
+                    "tooltip": "Base filename for saved images. Supports format patterns like %seed%, %width%, %height%, %model%, etc."
+                }),
+                "file_format": (["png", "jpeg", "webp"], {
+                    "tooltip": "Image format to save as. PNG preserves quality, JPEG is smaller, WebP balances size and quality."
+                }),
             },
             "optional": {
-                "lossless_webp": ("BOOLEAN", {"default": False}),
-                "quality": ("INT", {"default": 100, "min": 1, "max": 100}),
-                "embed_workflow": ("BOOLEAN", {"default": False}),
-                "add_counter_to_filename": ("BOOLEAN", {"default": True}),
+                "lossless_webp": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "When enabled, saves WebP images with lossless compression. Results in larger files but no quality loss."
+                }),
+                "quality": ("INT", {
+                    "default": 100, 
+                    "min": 1, 
+                    "max": 100,
+                    "tooltip": "Compression quality for JPEG and lossy WebP formats (1-100). Higher values mean better quality but larger files."
+                }),
+                "embed_workflow": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Embeds the complete workflow data into the image metadata. Only works with PNG and WebP formats."
+                }),
+                "add_counter_to_filename": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Adds an incremental counter to filenames to prevent overwriting previous images."
+                }),
             },
             "hidden": {
                 "id": "UNIQUE_ID",

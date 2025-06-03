@@ -16,12 +16,18 @@ class TriggerWordToggle:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "group_mode": ("BOOLEAN", {"default": True}),
-                "default_active": ("BOOLEAN", {"default": True}),  # New parameter to control default state
+                "group_mode": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "When enabled, treats each group of trigger words as a single toggleable unit."
+                }),
+                "default_active": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Sets the default initial state (active or inactive) when trigger words are added."
+                }),
             },
             "optional": FlexibleOptionalInputType(any_type),
             "hidden": {
-                "id": "UNIQUE_ID",  # 会被 ComfyUI 自动替换为唯一ID
+                "id": "UNIQUE_ID",
             },
         }
 
