@@ -7,7 +7,8 @@ from .parsers import (
     RecipeFormatParser,
     ComfyMetadataParser,
     MetaFormatParser,
-    AutomaticMetadataParser
+    AutomaticMetadataParser,
+    CivitaiApiMetadataParser
 )
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     'RecipeFormatParser',
     'ComfyMetadataParser',
     'MetaFormatParser',
-    'AutomaticMetadataParser'
+    'AutomaticMetadataParser',
+    'CivitaiApiMetadataParser'
 ]

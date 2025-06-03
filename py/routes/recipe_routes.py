@@ -254,6 +254,7 @@ class RecipeRoutes:
             content_type = request.headers.get('Content-Type', '')
             
             is_url_mode = False
+            metadata = None  # Initialize metadata variable
             
             if 'multipart/form-data' in content_type:
                 # Handle image upload
@@ -287,17 +288,63 @@ class RecipeRoutes:
                         "loras": []
                     }, status=400)
                 
-                # Download image from URL
-                temp_path = download_civitai_image(url)
+                # Check if this is a Civitai image URL
+                import re
+                civitai_image_match = re.match(r'https://civitai\.com/images/(\d+)', url)
                 
-                if not temp_path:
-                    return web.json_response({
-                        "error": "Failed to download image from URL",
-                        "loras": []
-                    }, status=400)
+                if civitai_image_match:
+                    # Extract image ID and fetch image info using get_image_info
+                    image_id = civitai_image_match.group(1)
+                    image_info = await self.civitai_client.get_image_info(image_id)
+                    
+                    if not image_info:
+                        return web.json_response({
+                            "error": "Failed to fetch image information from Civitai",
+                            "loras": []
+                        }, status=400)
+                    
+                    # Get image URL from response
+                    image_url = image_info.get('url')
+                    if not image_url:
+                        return web.json_response({
+                            "error": "No image URL found in Civitai response",
+                            "loras": []
+                        }, status=400)
+                    
+                    # Download image directly from URL
+                    session = await self.civitai_client.session
+                    # Create a temporary file to save the downloaded image
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                        temp_path = temp_file.name
+                    
+                    async with session.get(image_url) as response:
+                        if response.status != 200:
+                            return web.json_response({
+                                "error": f"Failed to download image from URL: HTTP {response.status}",
+                                "loras": []
+                            }, status=400)
+                        
+                        with open(temp_path, 'wb') as f:
+                            f.write(await response.read())
+                    
+                    # Use meta field from image_info as metadata
+                    if 'meta' in image_info:
+                        metadata = image_info['meta']
+                    
+                else:
+                    # Not a Civitai image URL, use the original download method
+                    temp_path = download_civitai_image(url)
+                    
+                    if not temp_path:
+                        return web.json_response({
+                            "error": "Failed to download image from URL",
+                            "loras": []
+                        }, status=400)
             
-            # Extract metadata from the image using ExifUtils
-            metadata = ExifUtils.extract_image_metadata(temp_path)
+            # If metadata wasn't obtained from Civitai API, extract it from the image
+            if metadata is None:
+                # Extract metadata from the image using ExifUtils
+                metadata = ExifUtils.extract_image_metadata(temp_path)
             
             # If no metadata found, return a more specific error
             if not metadata:

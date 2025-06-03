@@ -346,3 +346,34 @@ class CivitaiClient:
         except Exception as e:
             logger.error(f"Error getting hash from Civitai: {e}")
             return None
+
+    async def get_image_info(self, image_id: str) -> Optional[Dict]:
+        """Fetch image information from Civitai API
+        
+        Args:
+            image_id: The Civitai image ID
+            
+        Returns:
+            Optional[Dict]: The image data or None if not found
+        """
+        try:
+            session = await self._ensure_fresh_session()
+            headers = self._get_request_headers()
+            url = f"{self.base_url}/images?imageId={image_id}&nsfw=X"
+            
+            logger.debug(f"Fetching image info for ID: {image_id}")
+            async with session.get(url, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data and "items" in data and len(data["items"]) > 0:
+                        logger.debug(f"Successfully fetched image info for ID: {image_id}")
+                        return data["items"][0]
+                    logger.warning(f"No image found with ID: {image_id}")
+                    return None
+                
+                logger.error(f"Failed to fetch image info for ID: {image_id} (status {response.status})")
+                return None
+        except Exception as e:
+            error_msg = f"Error fetching image info: {e}"
+            logger.error(error_msg)
+            return None

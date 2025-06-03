@@ -58,8 +58,17 @@ export class ImportManager {
             this.stepManager.removeInjectedStyles();
         });
         
-        // Verify visibility
-        setTimeout(() => this.ensureModalVisible(), 50);
+        // Verify visibility and focus on URL input
+        setTimeout(() => {
+            this.ensureModalVisible();
+            
+            // Ensure URL option is selected and focus on the input
+            this.toggleImportMode('url');
+            const urlInput = document.getElementById('imageUrlInput');
+            if (urlInput) {
+                urlInput.focus();
+            }
+        }, 50);
     }
 
     resetSteps() {
