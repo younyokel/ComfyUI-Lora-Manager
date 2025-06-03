@@ -17,6 +17,7 @@ class TriggerWordToggle:
         return {
             "required": {
                 "group_mode": ("BOOLEAN", {"default": True}),
+                "default_active": ("BOOLEAN", {"default": True}),  # New parameter to control default state
             },
             "optional": FlexibleOptionalInputType(any_type),
             "hidden": {
@@ -41,7 +42,7 @@ class TriggerWordToggle:
         else:
             return data
 
-    def process_trigger_words(self, id, group_mode, **kwargs):
+    def process_trigger_words(self, id, group_mode, default_active, **kwargs):
         # Handle both old and new formats for trigger_words
         trigger_words_data = self._get_toggle_data(kwargs, 'trigger_words')
         trigger_words = trigger_words_data if isinstance(trigger_words_data, str) else ""

@@ -49,12 +49,12 @@ app.registerExtension({
 
                 // Restore saved value if exists
                 if (node.widgets_values && node.widgets_values.length > 0) {
-                    // 0 is group mode, 1 is input, 2 is tag widget, 3 is original message
-                    const savedValue = node.widgets_values[1];
+                    // 0 is group mode, 1 is default_active, 2 is input, 3 is tag widget, 4 is original message
+                    const savedValue = node.widgets_values[2];
                     if (savedValue) {
-                        result.widget.value = savedValue;
+                        result.widget.value = Array.isArray(savedValue) ? savedValue : [];
                     }
-                    const originalMessage = node.widgets_values[2];
+                    const originalMessage = node.widgets_values[3];
                     if (originalMessage) {
                         hiddenWidget.value = originalMessage;
                     }
@@ -62,8 +62,16 @@ app.registerExtension({
 
                 const groupModeWidget = node.widgets[0];
                 groupModeWidget.callback = (value) => {
-                    if (node.widgets[2].value) {
-                        this.updateTagsBasedOnMode(node, node.widgets[2].value, value);
+                    if (node.widgets[3].value) {
+                        this.updateTagsBasedOnMode(node, node.widgets[3].value, value);
+                    }
+                }
+
+                // Add callback for default_active widget
+                const defaultActiveWidget = node.widgets[1];
+                defaultActiveWidget.callback = (value) => {
+                    if (node.widgets[3].value) {
+                        this.updateTagsBasedOnMode(node, node.widgets[3].value, groupModeWidget.value);
                     }
                 }
             });
@@ -79,7 +87,7 @@ app.registerExtension({
         }
         
         // Store the original message for mode switching
-        node.widgets[2].value = message;
+        node.widgets[3].value = message;
 
         if (node.tagWidget) {
             // Parse tags based on current group mode
@@ -100,6 +108,9 @@ app.registerExtension({
             existingTagMap[tag.text] = tag.active;
         });
         
+        // Get default active state from the widget
+        const defaultActive = node.widgets[1] ? node.widgets[1].value : true;
+        
         let tagArray = [];
         
         if (groupMode) {
@@ -114,13 +125,15 @@ app.registerExtension({
                     .filter(group => group)
                     .map(group => ({
                         text: group,
-                        active: existingTagMap[group] !== undefined ? existingTagMap[group] : true
+                        // Use defaultActive only for new tags
+                        active: existingTagMap[group] !== undefined ? existingTagMap[group] : defaultActive
                     }));
             } else {
                 // If no ',,' delimiter, treat the entire message as one group
                 tagArray = [{
                     text: message.trim(),
-                    active: existingTagMap[message.trim()] !== undefined ? existingTagMap[message.trim()] : true
+                    // Use defaultActive only for new tags
+                    active: existingTagMap[message.trim()] !== undefined ? existingTagMap[message.trim()] : defaultActive
                 }];
             }
         } else {
@@ -131,7 +144,8 @@ app.registerExtension({
                 .filter(word => word)
                 .map(word => ({
                     text: word,
-                    active: existingTagMap[word] !== undefined ? existingTagMap[word] : true
+                    // Use defaultActive only for new tags
+                    active: existingTagMap[word] !== undefined ? existingTagMap[word] : defaultActive
                 }));
         }
         
