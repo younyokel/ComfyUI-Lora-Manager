@@ -32,6 +32,11 @@ export class SettingsManager {
             state.global.settings.compactMode = false;
         }
         
+        // Set default for optimizeExampleImages if undefined
+        if (state.global.settings.optimizeExampleImages === undefined) {
+            state.global.settings.optimizeExampleImages = true;
+        }
+        
         // Convert old boolean compactMode to new displayDensity string
         if (typeof state.global.settings.displayDensity === 'undefined') {
             if (state.global.settings.compactMode === true) {
@@ -96,6 +101,12 @@ export class SettingsManager {
         const displayDensitySelect = document.getElementById('displayDensity');
         if (displayDensitySelect) {
             displayDensitySelect.value = state.global.settings.displayDensity || 'default';
+        }
+
+        // Set optimize example images setting
+        const optimizeExampleImagesCheckbox = document.getElementById('optimizeExampleImages');
+        if (optimizeExampleImagesCheckbox) {
+            optimizeExampleImagesCheckbox.checked = state.global.settings.optimizeExampleImages || false;
         }
 
         // Load default lora root
@@ -182,7 +193,7 @@ export class SettingsManager {
         
         try {
             // For backend settings, make API call
-            if (['show_only_sfw', 'blur_mature_content', 'autoplay_on_hover'].includes(settingKey)) {
+            if (['show_only_sfw', 'blur_mature_content', 'autoplay_on_hover', 'optimize_example_images'].includes(settingKey)) {
                 const payload = {};
                 payload[settingKey] = value;
                 
@@ -391,6 +402,7 @@ export class SettingsManager {
         const showOnlySFW = document.getElementById('showOnlySFW').checked;
         const defaultLoraRoot = document.getElementById('defaultLoraRoot').value;
         const autoplayOnHover = document.getElementById('autoplayOnHover').checked;
+        const optimizeExampleImages = document.getElementById('optimizeExampleImages').checked;
         
         // Get backend settings
         const apiKey = document.getElementById('civitaiApiKey').value;
@@ -400,6 +412,7 @@ export class SettingsManager {
         state.global.settings.show_only_sfw = showOnlySFW;
         state.global.settings.default_loras_root = defaultLoraRoot;
         state.global.settings.autoplayOnHover = autoplayOnHover;
+        state.global.settings.optimizeExampleImages = optimizeExampleImages;
         
         // Save settings to localStorage
         setStorageItem('settings', state.global.settings);
@@ -413,7 +426,8 @@ export class SettingsManager {
                 },
                 body: JSON.stringify({
                     civitai_api_key: apiKey,
-                    show_only_sfw: showOnlySFW
+                    show_only_sfw: showOnlySFW,
+                    optimize_example_images: optimizeExampleImages
                 })
             });
 
