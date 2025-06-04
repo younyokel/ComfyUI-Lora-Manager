@@ -190,13 +190,13 @@ export function renderTriggerWords(words, filePath) {
                 <span class="no-trigger-words">No trigger word needed</span>
                 <div class="trigger-words-tags" style="display:none;"></div>
             </div>
-            <div class="add-trigger-word-form" style="display:none;">
-                <input type="text" class="new-trigger-word-input" placeholder="Type to add or click suggestions below">
-            </div>
             <div class="trigger-words-edit-controls" style="display:none;">
                 <button class="save-trigger-words-btn" title="Save changes">
                     <i class="fas fa-save"></i> Save
                 </button>
+            </div>
+            <div class="add-trigger-word-form" style="display:none;">
+                <input type="text" class="new-trigger-word-input" placeholder="Type to add or click suggestions below">
             </div>
         </div>
     `;
@@ -224,13 +224,13 @@ export function renderTriggerWords(words, filePath) {
                     `).join('')}
                 </div>
             </div>
-            <div class="add-trigger-word-form" style="display:none;">
-                <input type="text" class="new-trigger-word-input" placeholder="Type to add or click suggestions below">
-            </div>
             <div class="trigger-words-edit-controls" style="display:none;">
                 <button class="save-trigger-words-btn" title="Save changes">
                     <i class="fas fa-save"></i> Save
                 </button>
+            </div>
+            <div class="add-trigger-word-form" style="display:none;">
+                <input type="text" class="new-trigger-word-input" placeholder="Type to add or click suggestions below">
             </div>
         </div>
     `;
@@ -283,8 +283,18 @@ export function setupTriggerWordsEditMode() {
             // Disable click-to-copy and show delete buttons
             triggerWordTags.forEach(tag => {
                 tag.onclick = null;
-                tag.querySelector('.trigger-word-copy').style.display = 'none';
-                tag.querySelector('.delete-trigger-word-btn').style.display = 'block';
+                const copyIcon = tag.querySelector('.trigger-word-copy');
+                const deleteBtn = tag.querySelector('.delete-trigger-word-btn');
+                
+                if (copyIcon) copyIcon.style.display = 'none';
+                if (deleteBtn) {
+                    deleteBtn.style.display = 'block';
+                    
+                    // Re-attach event listener to ensure it works every time
+                    // First remove any existing listeners to avoid duplication
+                    deleteBtn.removeEventListener('click', deleteTriggerWord);
+                    deleteBtn.addEventListener('click', deleteTriggerWord);
+                }
             });
             
             // Load trained words and display dropdown when entering edit mode
@@ -324,8 +334,16 @@ export function setupTriggerWordsEditMode() {
             editControls.style.display = 'none';
             addForm.style.display = 'none';
             
-            // BUGFIX: Restore original trigger words when canceling edit
-            restoreOriginalTriggerWords(triggerWordsSection, originalTriggerWords);
+            // Check if we're exiting edit mode due to "Save" or "Cancel"
+            if (!this.dataset.skipRestore) {
+                // If canceling, restore original trigger words
+                restoreOriginalTriggerWords(triggerWordsSection, originalTriggerWords);
+            } else {
+                // If saving, reset UI state on current trigger words
+                resetTriggerWordsUIState(triggerWordsSection);
+                // Reset the skip restore flag
+                delete this.dataset.skipRestore;
+            }
             
             // If we have no trigger words, show the "No trigger word needed" text
             // and hide the empty tags container
@@ -363,14 +381,43 @@ export function setupTriggerWordsEditMode() {
     
     // Set up delete buttons
     document.querySelectorAll('.delete-trigger-word-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const tag = this.closest('.trigger-word-tag');
-            tag.remove();
-            
-            // Update status of items in the trained words dropdown
-            updateTrainedWordsDropdown();
-        });
+        // Remove any existing listeners to avoid duplication
+        btn.removeEventListener('click', deleteTriggerWord);
+        btn.addEventListener('click', deleteTriggerWord);
+    });
+}
+
+/**
+ * Delete trigger word event handler
+ * @param {Event} e - Click event
+ */
+function deleteTriggerWord(e) {
+    e.stopPropagation();
+    const tag = this.closest('.trigger-word-tag');
+    tag.remove();
+    
+    // Update status of items in the trained words dropdown
+    updateTrainedWordsDropdown();
+}
+
+/**
+ * Reset UI state for trigger words after saving
+ * @param {HTMLElement} section - The trigger words section
+ */
+function resetTriggerWordsUIState(section) {
+    const triggerWordTags = section.querySelectorAll('.trigger-word-tag');
+    
+    triggerWordTags.forEach(tag => {
+        const word = tag.dataset.word;
+        const copyIcon = tag.querySelector('.trigger-word-copy');
+        const deleteBtn = tag.querySelector('.delete-trigger-word-btn');
+        
+        // Restore click-to-copy functionality
+        tag.onclick = () => copyTriggerWord(word);
+        
+        // Show copy icon, hide delete button
+        if (copyIcon) copyIcon.style.display = '';
+        if (deleteBtn) deleteBtn.style.display = 'none';
     });
 }
 
@@ -485,11 +532,7 @@ function addNewTriggerWord(word) {
     
     // Add event listener to delete button
     const deleteBtn = newTag.querySelector('.delete-trigger-word-btn');
-    deleteBtn.addEventListener('click', function() {
-        newTag.remove();
-        // Update dropdown after removing
-        updateTrainedWordsDropdown();
-    });
+    deleteBtn.addEventListener('click', deleteTriggerWord);
     
     tagsContainer.appendChild(newTag);
     
@@ -558,8 +601,10 @@ function updateTrainedWordsDropdown() {
  * Save trigger words
  */
 async function saveTriggerWords() {
-    const filePath = document.querySelector('.edit-trigger-words-btn').dataset.filePath;
-    const triggerWordTags = document.querySelectorAll('.trigger-word-tag');
+    const editBtn = document.querySelector('.edit-trigger-words-btn');
+    const filePath = editBtn.dataset.filePath;
+    const triggerWordsSection = editBtn.closest('.trigger-words');
+    const triggerWordTags = triggerWordsSection.querySelectorAll('.trigger-word-tag');
     const words = Array.from(triggerWordTags).map(tag => tag.dataset.word);
     
     try {
@@ -568,9 +613,11 @@ async function saveTriggerWords() {
             civitai: { trainedWords: words }
         });
         
-        // Update UI
-        const editBtn = document.querySelector('.edit-trigger-words-btn');
-        editBtn.click(); // Exit edit mode
+        // Set flag to skip restoring original words when exiting edit mode
+        editBtn.dataset.skipRestore = "true";
+        
+        // Exit edit mode without restoring original trigger words
+        editBtn.click();
         
         // Update the LoRA card's dataset
         const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
@@ -595,8 +642,8 @@ async function saveTriggerWords() {
         }
         
         // If we saved an empty array and there's a no-trigger-words element, show it
-        const noTriggerWords = document.querySelector('.no-trigger-words');
-        const tagsContainer = document.querySelector('.trigger-words-tags');
+        const noTriggerWords = triggerWordsSection.querySelector('.no-trigger-words');
+        const tagsContainer = triggerWordsSection.querySelector('.trigger-words-tags');
         if (words.length === 0 && noTriggerWords) {
             noTriggerWords.style.display = '';
             if (tagsContainer) tagsContainer.style.display = 'none';
