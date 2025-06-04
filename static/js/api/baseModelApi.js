@@ -434,6 +434,8 @@ export function replaceModelPreview(filePath, modelType = 'lora') {
 // Delete a model (generic)
 export async function deleteModel(filePath, modelType = 'lora') {
     try {
+        state.loadingManager.showSimpleLoading(`Deleting ${modelType}...`);
+
         const endpoint = modelType === 'checkpoint' 
             ? '/api/checkpoints/delete' 
             : '/api/delete_model';
@@ -475,6 +477,8 @@ export async function deleteModel(filePath, modelType = 'lora') {
         console.error(`Error deleting ${modelType}:`, error);
         showToast(`Failed to delete ${modelType}: ${error.message}`, 'error');
         return false;
+    } finally {
+        state.loadingManager.hide();
     }
 }
 
@@ -662,6 +666,8 @@ export async function refreshSingleModelMetadata(filePath, modelType = 'lora') {
 // Generic function to exclude a model
 export async function excludeModel(filePath, modelType = 'lora') {
     try {
+        state.loadingManager.showSimpleLoading(`Excluding ${modelType}...`);
+
         const endpoint = modelType === 'checkpoint' 
             ? '/api/checkpoints/exclude' 
             : '/api/loras/exclude';
@@ -703,6 +709,8 @@ export async function excludeModel(filePath, modelType = 'lora') {
         console.error(`Error excluding ${modelType}:`, error);
         showToast(`Failed to exclude ${modelType}: ${error.message}`, 'error');
         return false;
+    } finally {
+        state.loadingManager.hide();
     }
 }
 

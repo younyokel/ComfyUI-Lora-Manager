@@ -37,6 +37,10 @@ export async function confirmDelete() {
         }
         
         closeDeleteModal();
+
+        if (window.modelDuplicatesManager) {
+            window.modelDuplicatesManager.updateDuplicatesBadgeAfterRefresh();
+        }
     } catch (error) {
         console.error('Error deleting model:', error);
         alert(`Error deleting model: ${error}`);
@@ -86,6 +90,10 @@ export async function confirmExclude() {
         }
         
         closeExcludeModal();
+
+        if (window.modelDuplicatesManager) {
+            window.modelDuplicatesManager.updateDuplicatesBadgeAfterRefresh();
+        }
     } catch (error) {
         console.error('Error excluding model:', error);
     }

@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 # Version history:
 # 1 - Initial version
 # 2 - Added duplicate_filenames and duplicate_hashes tracking
-CACHE_VERSION = 2
+# 3 - Added _excluded_models list to cache
+CACHE_VERSION = 3
 
 class ModelScanner:
     """Base service for scanning and managing model files"""
@@ -115,7 +116,8 @@ class ModelScanner:
                     "duplicate_filenames": self._hash_index._duplicate_filenames
                 },
                 "tags_count": self._tags_count,
-                "dirs_last_modified": self._get_dirs_last_modified()
+                "dirs_last_modified": self._get_dirs_last_modified(),
+                "excluded_models": self._excluded_models  # Add excluded_models to cache data
             }
             
             # Preprocess data to handle large integers
@@ -216,6 +218,9 @@ class ModelScanner:
             
             # Load tags count
             self._tags_count = cache_data.get("tags_count", {})
+            
+            # Load excluded models
+            self._excluded_models = cache_data.get("excluded_models", [])
             
             # Resort the cache
             await self._cache.resort()
