@@ -166,18 +166,21 @@ class ModelScanner:
     def _is_cache_valid(self, cache_data: Dict) -> bool:
         """Validate if the loaded cache is still valid"""
         if not cache_data or cache_data.get("version") != CACHE_VERSION:
+            logger.info(f"Cache invalid - version mismatch. Got: {cache_data.get('version')}, Expected: {CACHE_VERSION}")
             return False
             
         if cache_data.get("model_type") != self.model_type:
+            logger.info(f"Cache invalid - model type mismatch. Got: {cache_data.get('model_type')}, Expected: {self.model_type}")
             return False
             
         # Check if directories have changed
-        stored_dirs = cache_data.get("dirs_last_modified", {})
-        current_dirs = self._get_dirs_last_modified()
+        # stored_dirs = cache_data.get("dirs_last_modified", {})
+        # current_dirs = self._get_dirs_last_modified()
         
         # If directory structure has changed, cache is invalid
-        if set(stored_dirs.keys()) != set(current_dirs.keys()):
-            return False
+        # if set(stored_dirs.keys()) != set(current_dirs.keys()):
+        #     logger.info(f"Cache invalid - directory structure changed. Stored: {set(stored_dirs.keys())}, Current: {set(current_dirs.keys())}")
+        #     return False
             
         # Remove the modification time check to make cache validation less strict
         # This allows the cache to be valid even when files have changed
