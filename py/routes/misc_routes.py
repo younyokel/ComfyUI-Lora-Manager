@@ -569,9 +569,24 @@ class MiscRoutes:
             if local_images:
                 logger.info(f"Found {len(local_images)} local example images for {model_name}")
                 
-                for i, local_image_path in enumerate(local_images, 1):
-                    local_ext = os.path.splitext(local_image_path)[1].lower()
-                    save_filename = f"image_{i}{local_ext}"
+                for local_image_path in local_images:
+                    # Extract the index from the filename
+                    file_name = os.path.basename(local_image_path)
+                    example_prefix = f"{model_file_name}.example."
+                    
+                    try:
+                        # Extract the part after '.example.' and before file extension
+                        index_part = file_name[len(example_prefix):].split('.')[0]
+                        # Try to parse it as an integer
+                        index = int(index_part)
+                        local_ext = os.path.splitext(local_image_path)[1].lower()
+                        save_filename = f"image_{index}{local_ext}"
+                    except (ValueError, IndexError):
+                        # If we can't parse the index, fall back to a sequential number
+                        logger.warning(f"Could not extract index from {file_name}, using sequential numbering")
+                        local_ext = os.path.splitext(local_image_path)[1].lower()
+                        save_filename = f"image_{len(local_images)}{local_ext}"
+                    
                     save_path = os.path.join(model_dir, save_filename)
                     
                     # Skip if already exists in output directory
@@ -579,8 +594,7 @@ class MiscRoutes:
                         logger.debug(f"File already exists in output: {save_path}")
                         continue
                     
-                    # For local files, we just copy them without optimization
-                    # since we don't want to modify user files
+                    # Copy the file
                     with open(local_image_path, 'rb') as src_file:
                         with open(save_path, 'wb') as dst_file:
                             dst_file.write(src_file.read())
