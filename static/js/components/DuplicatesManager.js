@@ -2,7 +2,6 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { RecipeCard } from './RecipeCard.js';
 import { state, getCurrentPageState } from '../state/index.js';
-import { initializeInfiniteScroll } from '../utils/infiniteScroll.js';
 
 export class DuplicatesManager {
     constructor(recipeManager) {
@@ -96,14 +95,7 @@ export class DuplicatesManager {
         }
         
         // Re-enable virtual scrolling
-        if (state.virtualScroller) {
-            state.virtualScroller.enable();
-        } else {
-            // If virtual scroller doesn't exist, reinitialize it
-            setTimeout(() => {
-                initializeInfiniteScroll('recipes');
-            }, 100);
-        }
+        state.virtualScroller.enable();
     }
     
     renderDuplicateGroups() {

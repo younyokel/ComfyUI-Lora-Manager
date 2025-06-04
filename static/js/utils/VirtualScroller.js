@@ -766,8 +766,24 @@ export class VirtualScroller {
         // Reattach scroll event listener
         this.scrollContainer.addEventListener('scroll', this.scrollHandler);
         
-        // Show the spacer element
-        if (this.spacerElement) {
+        // Check if spacer element exists in the DOM, if not, recreate it
+        if (!this.spacerElement || !this.gridElement.contains(this.spacerElement)) {
+            console.log('Spacer element not found in DOM, recreating it');
+            
+            // Create a new spacer element
+            this.spacerElement = document.createElement('div');
+            this.spacerElement.className = 'virtual-scroll-spacer';
+            this.spacerElement.style.width = '100%';
+            this.spacerElement.style.height = '0px';
+            this.spacerElement.style.pointerEvents = 'none';
+            
+            // Append it to the grid
+            this.gridElement.appendChild(this.spacerElement);
+            
+            // Update the spacer height
+            this.updateSpacerHeight();
+        } else {
+            // Show the spacer element if it exists
             this.spacerElement.style.display = 'block';
         }
         
@@ -879,34 +895,6 @@ export class VirtualScroller {
             existingIndicator.remove();
         }
     }
-
-    // Create a more contained transition indicator - commented out as it's no longer needed
-    /*
-    showTransitionIndicator() {
-        const container = this.containerElement;
-        const indicator = document.createElement('div');
-        indicator.className = 'page-transition-indicator';
-        
-        // Get container position to properly position the indicator
-        const containerRect = container.getBoundingClientRect();
-        
-        // Style the indicator to match just the container area
-        indicator.style.position = 'fixed';
-        indicator.style.top = `${containerRect.top}px`;
-        indicator.style.left = `${containerRect.left}px`;
-        indicator.style.width = `${containerRect.width}px`;
-        indicator.style.height = `${containerRect.height}px`;
-        
-        document.body.appendChild(indicator);
-
-        // Remove after animation completes
-        setTimeout(() => {
-            if (indicator.parentNode) {
-                indicator.remove();
-            }
-        }, 500);
-    }
-    */
 
     scrollToTop() {
         this.removeExistingTransitionIndicator();

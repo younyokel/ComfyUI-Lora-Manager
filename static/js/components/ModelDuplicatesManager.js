@@ -136,13 +136,23 @@ export class ModelDuplicatesManager {
         const pageState = getCurrentPageState();
         pageState.duplicatesMode = false;
         
-        // Check duplicates count again to update badge
-        this.checkDuplicatesCount();
+        // Hide duplicates banner
+        const banner = document.getElementById('duplicatesBanner');
+        if (banner) {
+            banner.style.display = 'none';
+        }
         
-        // Instead of trying to restore the virtual scroller,
-        // simply redirect to reload the page
-        // TODO: While this is a workaround rather than a deep fix, it's a pragmatic solution that will immediately resolve the issue for users. We can investigate the underlying cause more thoroughly later when there's time for more extensive debugging.
-        window.location.href = `/${this.modelType}`;
+        // Remove duplicate-mode class from the body
+        document.body.classList.remove('duplicate-mode');
+        
+        // Clear the model grid first
+        const modelGrid = document.getElementById(this.modelType === 'loras' ? 'loraGrid' : 'checkpointGrid');
+        if (modelGrid) {
+            modelGrid.innerHTML = '';
+        }
+        
+        // Re-enable virtual scrolling
+        state.virtualScroller.enable();
     }
     
     renderDuplicateGroups() {
