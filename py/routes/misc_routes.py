@@ -1005,13 +1005,14 @@ class MiscRoutes:
                     'error': 'File is not a safetensors file'
                 }, status=400)
             
-            # Extract trained words
-            trained_words = await extract_trained_words(file_path)
+            # Extract trained words and class_tokens
+            trained_words, class_tokens = await extract_trained_words(file_path)
             
-            # Return result
+            # Return result with both trained words and class tokens
             return web.json_response({
                 'success': True,
-                'trained_words': trained_words
+                'trained_words': trained_words,
+                'class_tokens': class_tokens
             })
             
         except Exception as e:

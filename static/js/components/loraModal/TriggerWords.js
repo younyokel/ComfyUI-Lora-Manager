@@ -8,32 +8,36 @@ import { saveModelMetadata } from '../../api/loraApi.js';
 /**
  * Fetch trained words for a model
  * @param {string} filePath - Path to the model file
- * @returns {Promise<Array>} - Array of [word, frequency] pairs
+ * @returns {Promise<Object>} - Object with trained words and class tokens
  */
 async function fetchTrainedWords(filePath) {
     try {
         const response = await fetch(`/api/trained-words?file_path=${encodeURIComponent(filePath)}`);
         const data = await response.json();
         
-        if (data.success && data.trained_words) {
-            return data.trained_words; // Returns array of [word, frequency] pairs
+        if (data.success) {
+            return {
+                trainedWords: data.trained_words || [], // Returns array of [word, frequency] pairs
+                classTokens: data.class_tokens  // Can be null or a string
+            };
         } else {
             throw new Error(data.error || 'Failed to fetch trained words');
         }
     } catch (error) {
         console.error('Error fetching trained words:', error);
         showToast('Could not load trained words', 'error');
-        return [];
+        return { trainedWords: [], classTokens: null };
     }
 }
 
 /**
  * Create suggestion dropdown with trained words as tags
  * @param {Array} trainedWords - Array of [word, frequency] pairs
+ * @param {string|null} classTokens - Class tokens from training
  * @param {Array} existingWords - Already added trigger words
  * @returns {HTMLElement} - Dropdown element
  */
-function createSuggestionDropdown(trainedWords, existingWords = []) {
+function createSuggestionDropdown(trainedWords, classTokens, existingWords = []) {
     const dropdown = document.createElement('div');
     dropdown.className = 'trained-words-dropdown';
     
@@ -41,49 +45,56 @@ function createSuggestionDropdown(trainedWords, existingWords = []) {
     const header = document.createElement('div');
     header.className = 'trained-words-header';
     
-    if (!trainedWords || trainedWords.length === 0) {
+    // No suggestions case
+    if ((!trainedWords || trainedWords.length === 0) && !classTokens) {
         header.innerHTML = '<span>No suggestions available</span>';
         dropdown.appendChild(header);
-        dropdown.innerHTML += '<div class="no-trained-words">No trained words found in this model. You can manually enter trigger words.</div>';
+        dropdown.innerHTML += '<div class="no-trained-words">No trained words or class tokens found in this model. You can manually enter trigger words.</div>';
         return dropdown;
     }
     
-    // Sort by frequency (highest first)
-    trainedWords.sort((a, b) => b[1] - a[1]);
+    // Sort trained words by frequency (highest first) if available
+    if (trainedWords && trainedWords.length > 0) {
+        trainedWords.sort((a, b) => b[1] - a[1]);
+    }
     
-    header.innerHTML = `
-        <span>Suggestions from training data</span>
-        <small>${trainedWords.length} words found</small>
-    `;
-    dropdown.appendChild(header);
-    
-    // Create tag container
-    const container = document.createElement('div');
-    container.className = 'trained-words-container';
-    
-    // Add each trained word as a tag
-    trainedWords.forEach(([word, frequency]) => {
-        const isAdded = existingWords.includes(word);
+    // Add class tokens section if available
+    if (classTokens) {
+        // Add class tokens header
+        const classTokensHeader = document.createElement('div');
+        classTokensHeader.className = 'trained-words-header';
+        classTokensHeader.innerHTML = `
+            <span>Class Token</span>
+            <small>Add to your prompt for best results</small>
+        `;
+        dropdown.appendChild(classTokensHeader);
         
-        const item = document.createElement('div');
-        item.className = `trained-word-item ${isAdded ? 'already-added' : ''}`;
-        item.title = word; // Show full word on hover if truncated
-        item.innerHTML = `
-            <span class="trained-word-text">${word}</span>
+        // Add class tokens container
+        const classTokensContainer = document.createElement('div');
+        classTokensContainer.className = 'class-tokens-container';
+        
+        // Create a special item for the class token
+        const tokenItem = document.createElement('div');
+        tokenItem.className = `trained-word-item class-token-item ${existingWords.includes(classTokens) ? 'already-added' : ''}`;
+        tokenItem.title = `Class token: ${classTokens}`;
+        tokenItem.innerHTML = `
+            <span class="trained-word-text">${classTokens}</span>
             <div class="trained-word-meta">
-                <span class="trained-word-freq">${frequency}</span>
-                ${isAdded ? '<span class="added-indicator"><i class="fas fa-check"></i></span>' : ''}
+                <span class="token-badge">Class Token</span>
+                ${existingWords.includes(classTokens) ? 
+                    '<span class="added-indicator"><i class="fas fa-check"></i></span>' : ''}
             </div>
         `;
         
-        if (!isAdded) {
-            item.addEventListener('click', () => {
+        // Add click handler if not already added
+        if (!existingWords.includes(classTokens)) {
+            tokenItem.addEventListener('click', () => {
                 // Automatically add this word
-                addNewTriggerWord(word);
+                addNewTriggerWord(classTokens);
                 
                 // Also populate the input field for potential editing
                 const input = document.querySelector('.new-trigger-word-input');
-                if (input) input.value = word;
+                if (input) input.value = classTokens;
                 
                 // Focus on the input
                 if (input) input.focus();
@@ -93,10 +104,70 @@ function createSuggestionDropdown(trainedWords, existingWords = []) {
             });
         }
         
-        container.appendChild(item);
-    });
+        classTokensContainer.appendChild(tokenItem);
+        dropdown.appendChild(classTokensContainer);
+        
+        // Add separator if we also have trained words
+        if (trainedWords && trainedWords.length > 0) {
+            const separator = document.createElement('div');
+            separator.className = 'dropdown-separator';
+            dropdown.appendChild(separator);
+        }
+    }
     
-    dropdown.appendChild(container);
+    // Add trained words header if we have any
+    if (trainedWords && trainedWords.length > 0) {
+        header.innerHTML = `
+            <span>Word Suggestions</span>
+            <small>${trainedWords.length} words found</small>
+        `;
+        dropdown.appendChild(header);
+        
+        // Create tag container for trained words
+        const container = document.createElement('div');
+        container.className = 'trained-words-container';
+        
+        // Add each trained word as a tag
+        trainedWords.forEach(([word, frequency]) => {
+            const isAdded = existingWords.includes(word);
+            
+            const item = document.createElement('div');
+            item.className = `trained-word-item ${isAdded ? 'already-added' : ''}`;
+            item.title = word; // Show full word on hover if truncated
+            item.innerHTML = `
+                <span class="trained-word-text">${word}</span>
+                <div class="trained-word-meta">
+                    <span class="trained-word-freq">${frequency}</span>
+                    ${isAdded ? '<span class="added-indicator"><i class="fas fa-check"></i></span>' : ''}
+                </div>
+            `;
+            
+            if (!isAdded) {
+                item.addEventListener('click', () => {
+                    // Automatically add this word
+                    addNewTriggerWord(word);
+                    
+                    // Also populate the input field for potential editing
+                    const input = document.querySelector('.new-trigger-word-input');
+                    if (input) input.value = word;
+                    
+                    // Focus on the input
+                    if (input) input.focus();
+                    
+                    // Update dropdown without removing it
+                    updateTrainedWordsDropdown();
+                });
+            }
+            
+            container.appendChild(item);
+        });
+        
+        dropdown.appendChild(container);
+    } else if (!classTokens) {
+        // If we have neither class tokens nor trained words
+        dropdown.innerHTML += '<div class="no-trained-words">No word suggestions found in this model. You can manually enter trigger words.</div>';
+    }
+    
     return dropdown;
 }
 
@@ -171,6 +242,7 @@ export function renderTriggerWords(words, filePath) {
 export function setupTriggerWordsEditMode() {
     // Store trained words data
     let trainedWordsList = [];
+    let classTokensValue = null;
     let isTrainedWordsLoaded = false;
     // Store original trigger words for restoring on cancel
     let originalTriggerWords = [];
@@ -228,7 +300,9 @@ export function setupTriggerWordsEditMode() {
             
             // Asynchronously load trained words if not already loaded
             if (!isTrainedWordsLoaded) {
-                trainedWordsList = await fetchTrainedWords(filePath);
+                const result = await fetchTrainedWords(filePath);
+                trainedWordsList = result.trainedWords;
+                classTokensValue = result.classTokens;
                 isTrainedWordsLoaded = true;
             }
             
@@ -236,7 +310,7 @@ export function setupTriggerWordsEditMode() {
             loadingIndicator.remove();
             
             // Create and display suggestion dropdown
-            const dropdown = createSuggestionDropdown(trainedWordsList, existingWords);
+            const dropdown = createSuggestionDropdown(trainedWordsList, classTokensValue, existingWords);
             addForm.appendChild(dropdown);
             
             // Focus the input

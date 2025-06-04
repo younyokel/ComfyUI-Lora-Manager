@@ -1513,3 +1513,31 @@
     background: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.1);
     border-color: var(--lora-accent);
 }
+
+/* Class tokens styling */
+.class-tokens-container {
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.class-token-item {
+    background: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.1) !important;
+    border: 1px solid var(--lora-accent) !important;
+}
+
+.token-badge {
+    background: var(--lora-accent);
+    color: white;
+    font-size: 0.7em;
+    padding: 2px 5px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.dropdown-separator {
+    height: 1px;
+    background: var(--lora-border);
+    margin: 5px 10px;
+}
