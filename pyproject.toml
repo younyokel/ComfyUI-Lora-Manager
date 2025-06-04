@@ -25,4 +25,4 @@ Repository = "https://github.com/willmiao/ComfyUI-Lora-Manager"
 [tool.comfy]
 PublisherId = "willmiao"
 DisplayName = "ComfyUI-Lora-Manager"
-Icon = ""
+Icon = "https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/android-chrome-512x512.png?raw=true"
