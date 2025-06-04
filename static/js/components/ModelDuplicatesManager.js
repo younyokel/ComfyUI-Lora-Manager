@@ -16,6 +16,9 @@ export class ModelDuplicatesManager {
         this.renderTooltip = this.renderTooltip.bind(this);
         this.checkDuplicatesCount = this.checkDuplicatesCount.bind(this);
         
+        // Keep track of which controls need to be re-enabled
+        this.disabledControls = [];
+        
         // Check for duplicates on load
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', this.checkDuplicatesCount);
@@ -59,6 +62,15 @@ export class ModelDuplicatesManager {
         } else {
             badge.textContent = '';
             badge.classList.remove('pulse');
+        }
+    }
+    
+    // Toggle method to enter/exit duplicates mode
+    toggleDuplicateMode() {
+        if (this.inDuplicateMode) {
+            this.exitDuplicateMode();
+        } else {
+            this.findDuplicates();
         }
     }
     
@@ -126,6 +138,18 @@ export class ModelDuplicatesManager {
         
         // Update selected count
         this.updateSelectedCount();
+        
+        // Update Duplicates button to show active state
+        const duplicatesBtn = document.getElementById('findDuplicatesBtn');
+        if (duplicatesBtn) {
+            duplicatesBtn.classList.add('active');
+            duplicatesBtn.title = 'Exit Duplicates Mode';
+            // Change icon and text to indicate it's now an exit button
+            duplicatesBtn.innerHTML = '<i class="fas fa-times"></i> Exit Duplicates';
+        }
+        
+        // Disable all control buttons except the duplicates button
+        this.disableControlButtons();
     }
     
     exitDuplicateMode() {
@@ -153,6 +177,53 @@ export class ModelDuplicatesManager {
         
         // Re-enable virtual scrolling
         state.virtualScroller.enable();
+        
+        // Restore Duplicates button to its original state
+        const duplicatesBtn = document.getElementById('findDuplicatesBtn');
+        if (duplicatesBtn) {
+            duplicatesBtn.classList.remove('active');
+            duplicatesBtn.title = 'Find duplicate models';
+            duplicatesBtn.innerHTML = '<i class="fas fa-clone"></i> Duplicates <span id="duplicatesBadge" class="badge"></span>';
+            
+            // Restore badge
+            const newBadge = duplicatesBtn.querySelector('#duplicatesBadge');
+            const oldBadge = document.getElementById('duplicatesBadge');
+            if (oldBadge && oldBadge.textContent) {
+                newBadge.textContent = oldBadge.textContent;
+                newBadge.classList.add('pulse');
+            }
+        }
+        
+        // Re-enable all control buttons
+        this.enableControlButtons();
+
+        this.checkDuplicatesCount();
+    }
+    
+    // Disable all control buttons except the duplicates button
+    disableControlButtons() {
+        this.disabledControls = [];
+        
+        // Select all control buttons except the duplicates button
+        const controlButtons = document.querySelectorAll('.control-group button:not(#findDuplicatesBtn), .dropdown-group, .toggle-folders-btn, #favoriteFilterBtn');
+        
+        controlButtons.forEach(button => {
+            // Only disable enabled buttons (don't disable already disabled buttons)
+            if (!button.disabled && !button.classList.contains('disabled')) {
+                this.disabledControls.push(button);
+                button.disabled = true;
+                button.classList.add('disabled-during-duplicates');
+            }
+        });
+    }
+    
+    // Re-enable all previously disabled control buttons
+    enableControlButtons() {
+        this.disabledControls.forEach(button => {
+            button.disabled = false;
+            button.classList.remove('disabled-during-duplicates');
+        });
+        this.disabledControls = [];
     }
     
     renderDuplicateGroups() {

@@ -516,7 +516,8 @@ export class PageControls {
      */
     findDuplicates() {
         if (window.modelDuplicatesManager) {
-            window.modelDuplicatesManager.findDuplicates();
+            // Change to toggle functionality
+            window.modelDuplicatesManager.toggleDuplicateMode();
         } else {
             console.error('Model duplicates manager not available');
         }

@@ -50,6 +50,29 @@
     align-items: center;
 }
 
+/* Improved exit button in banner */
+.duplicates-banner button.btn-exit-mode {
+    min-width: 120px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: var(--border-radius-xs);
+    font-size: 0.85em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.duplicates-banner button.btn-exit-mode:hover {
+    background-color: var(--bg-color);
+    border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
+    transform: translateY(-1px);
+}
+
 .duplicates-banner button {
     min-width: 100px;
     display: flex;
@@ -194,7 +217,7 @@
 }
 
 .group-toggle-btn:hover {
-    border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
+    border-color: var(--lora-accent-l) var(--lora-accent-c) var (--lora-accent-h);
     transform: translateY(-1px);
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
 }
@@ -362,4 +385,27 @@ html[data-theme="dark"] .duplicates-banner {
 
 html[data-theme="dark"] .duplicate-group {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); /* Stronger shadow in dark mode */
+}
+
+/* Styles for disabled controls during duplicates mode */
+.disabled-during-duplicates {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    user-select: none !important;
+    filter: grayscale(50%) !important;
+}
+
+/* Make the active duplicates button more prominent */
+#findDuplicatesBtn.active {
+    background: var(--lora-accent);
+    color: white;
+    border-color: var(--lora-accent);
+    box-shadow: 0 0 0 2px oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.25);
+    position: relative;
+    z-index: 5;
+}
+
+#findDuplicatesBtn.active:hover {
+    background: oklch(calc(var(--lora-accent-l) - 5%) var(--lora-accent-c) var(--lora-accent-h));
 }
