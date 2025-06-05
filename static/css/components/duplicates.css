@@ -17,12 +17,13 @@
 }
 
 .duplicates-banner .banner-content {
-    max-width: 1400px; /* Match the container max-width */
+    position: relative;
+    max-width: 1400px;
     margin: 0 auto;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 0 16px; /* Move horizontal padding to the content */
+    padding: 0 16px;
 }
 
 /* Responsive container for larger screens - match container in layout.css */
@@ -122,6 +123,23 @@
     margin-bottom: 24px;
     background: var(--card-bg);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); /* Add subtle shadow to groups */
+    /* Add responsive width settings to match banner */
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Add responsive container adjustments for duplicate groups - match container in banner */
+@media (min-width: 2000px) {
+    .duplicate-group {
+        max-width: 1800px;
+    }
+}
+
+@media (min-width: 3000px) {
+    .duplicate-group {
+        max-width: 2400px;
+    }
 }
 
 .duplicate-group-header {
@@ -345,6 +363,49 @@
     }
 }
 
+/* Help icon styling */
+.help-icon {
+    color: var(--text-color);
+    opacity: 0.7;
+    cursor: help;
+    font-size: 16px;
+    margin-left: 8px;
+    transition: all 0.2s ease;
+}
+
+.help-icon:hover {
+    opacity: 1;
+    color: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h));
+}
+
+/* Help tooltip */
+.help-tooltip {
+    display: none;
+    position: absolute;
+    max-width: 400px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: var(--z-overlay);
+    font-size: 0.9em;
+    margin-top: 10px;
+    text-align: left;
+    pointer-events: none;
+}
+
+.help-tooltip:after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 10px; /* Position the arrow near the left instead of center */
+    border-width: 0 8px 8px 8px;
+    border-style: solid;
+    border-color: transparent transparent var(--card-bg) transparent;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .duplicates-banner .banner-content {
@@ -375,6 +436,15 @@
         margin-left: 0;
         flex: 1;
     }
+
+    .help-tooltip {
+        max-width: calc(100% - 40px);
+    }
+    
+    /* Remove the fixed positioning adjustments for mobile since we're now using dynamic positioning */
+    .help-tooltip:after {
+        left: 10px;
+    }
 }
 
 /* In dark mode, add additional distinction */
@@ -385,6 +455,10 @@ html[data-theme="dark"] .duplicates-banner {
 
 html[data-theme="dark"] .duplicate-group {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); /* Stronger shadow in dark mode */
+}
+
+html[data-theme="dark"] .help-tooltip {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Styles for disabled controls during duplicates mode */

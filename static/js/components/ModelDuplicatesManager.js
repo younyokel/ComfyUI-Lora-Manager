@@ -123,6 +123,9 @@ export class ModelDuplicatesManager {
         if (banner && countSpan) {
             countSpan.textContent = `Found ${this.duplicateGroups.length} duplicate group${this.duplicateGroups.length !== 1 ? 's' : ''}`;
             banner.style.display = 'block';
+            
+            // Setup help tooltip behavior
+            this.setupHelpTooltip();
         }
         
         // Disable virtual scrolling if active
@@ -550,5 +553,47 @@ export class ModelDuplicatesManager {
     updateDuplicatesBadgeAfterRefresh() {
         // Use this method after refresh operations
         this.checkDuplicatesCount();
+    }
+
+    // Add this new method for tooltip behavior
+    setupHelpTooltip() {
+      const helpIcon = document.getElementById('duplicatesHelp');
+      const helpTooltip = document.getElementById('duplicatesHelpTooltip');
+      
+      if (!helpIcon || !helpTooltip) return;
+      
+      helpIcon.addEventListener('mouseenter', (e) => {
+          // Get the container's positioning context
+          const bannerContent = helpIcon.closest('.banner-content');
+          
+          // Get positions relative to the viewport
+          const iconRect = helpIcon.getBoundingClientRect();
+          const bannerRect = bannerContent.getBoundingClientRect();
+          
+          // Set initial position relative to the banner content
+          helpTooltip.style.display = 'block';
+          helpTooltip.style.top = `${iconRect.bottom - bannerRect.top + 10}px`;
+          helpTooltip.style.left = `${iconRect.left - bannerRect.left - 10}px`;
+          
+          // Check if the tooltip is going off-screen to the right
+          const tooltipRect = helpTooltip.getBoundingClientRect();
+          const viewportWidth = window.innerWidth;
+          
+          if (tooltipRect.right > viewportWidth - 20) {
+              // Reposition relative to container if too close to right edge
+              helpTooltip.style.left = `${bannerContent.offsetWidth - tooltipRect.width - 20}px`;
+          }
+      });
+      
+      // Rest of the event listeners remain unchanged
+      helpIcon.addEventListener('mouseleave', () => {
+          helpTooltip.style.display = 'none';
+      });
+      
+      document.addEventListener('click', (e) => {
+          if (!helpIcon.contains(e.target)) {
+              helpTooltip.style.display = 'none';
+          }
+      });
     }
 }
