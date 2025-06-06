@@ -45,8 +45,7 @@ export class ModalManager {
                 onClose: () => {
                     this.getModal('checkpointDownloadModal').element.style.display = 'none';
                     document.body.classList.remove('modal-open');
-                },
-                closeOnOutsideClick: true
+                }
             });
         }
         
@@ -69,8 +68,7 @@ export class ModalManager {
                 onClose: () => {
                     this.getModal('excludeModal').element.classList.remove('show');
                     document.body.classList.remove('modal-open');
-                },
-                closeOnOutsideClick: true
+                }
             });
         }
 
@@ -94,7 +92,8 @@ export class ModalManager {
                 onClose: () => {
                     this.getModal('settingsModal').element.style.display = 'none';
                     document.body.classList.remove('modal-open');
-                }
+                },
+                closeOnOutsideClick: true
             });
         }
 
@@ -118,7 +117,8 @@ export class ModalManager {
                 onClose: () => {
                     this.getModal('supportModal').element.style.display = 'none';
                     document.body.classList.remove('modal-open');
-                }
+                },
+                closeOnOutsideClick: true
             });
         }
 
@@ -130,7 +130,8 @@ export class ModalManager {
                 onClose: () => {
                     this.getModal('updateModal').element.style.display = 'none';
                     document.body.classList.remove('modal-open');
-                }
+                },
+                closeOnOutsideClick: true
             });
         }
 
