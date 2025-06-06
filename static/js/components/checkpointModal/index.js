@@ -97,7 +97,7 @@ export function showCheckpointModal(checkpoint) {
                         </div>
                         <div class="info-item full-width">
                             <label>About this version</label>
-                            <div class="description-text">${checkpoint.description || 'N/A'}</div>
+                            <div class="description-text">${checkpoint.civitai?.description || 'N/A'}</div>
                         </div>
                     </div>
                 </div>

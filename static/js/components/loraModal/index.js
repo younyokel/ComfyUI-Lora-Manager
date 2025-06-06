@@ -122,7 +122,7 @@ export function showLoraModal(lora) {
                         </div>
                         <div class="info-item full-width">
                             <label>About this version</label>
-                            <div class="description-text">${lora.description || 'N/A'}</div>
+                            <div class="description-text">${lora.civitai?.description || 'N/A'}</div>
                         </div>
                     </div>
                 </div>
