@@ -937,3 +937,25 @@ export function scrollToTop(button) {
         });
     }
 }
+
+/**
+ * Get example image files for a specific model from the backend
+ * @param {string} modelHash - The model's hash
+ * @returns {Promise<Array>} Array of file objects with path and metadata
+ */
+export async function getExampleImageFiles(modelHash) {
+  try {
+    const response = await fetch(`/api/example-image-files?model_hash=${modelHash}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      return result.files;
+    } else {
+      console.error('Failed to get example image files:', result.error);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching example image files:', error);
+    return [];
+  }
+}

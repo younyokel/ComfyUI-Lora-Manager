@@ -3,7 +3,7 @@
  * 
  * 将原始的LoraModal.js拆分成多个功能模块后的主入口文件
  */
-import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
+import { showToast, copyToClipboard, getExampleImageFiles } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop } from './ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
@@ -136,7 +136,9 @@ export function showLoraModal(lora) {
                     
                     <div class="tab-content">
                         <div id="showcase-tab" class="tab-pane active">
-                            ${renderShowcaseContent(lora.civitai?.images, lora.sha256)}
+                            <div class="example-images-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading example images...
+                            </div>
                         </div>
                         
                         <div id="description-tab" class="tab-pane">
@@ -182,6 +184,56 @@ export function showLoraModal(lora) {
     
     // Load recipes for this Lora
     loadRecipesForLora(lora.model_name, lora.sha256);
+    
+    // Load example images asynchronously
+    loadExampleImages(lora.civitai?.images, lora.sha256);
+}
+
+/**
+ * Load example images asynchronously
+ * @param {Array} images - Array of image objects
+ * @param {string} modelHash - Model hash for fetching local files
+ */
+async function loadExampleImages(images, modelHash) {
+    try {
+        const showcaseTab = document.getElementById('showcase-tab');
+        if (!showcaseTab) return;
+        
+        // First fetch local example files
+        let localFiles = [];
+        if (modelHash) {
+            try {
+                localFiles = await getExampleImageFiles(modelHash);
+            } catch (error) {
+                console.error("Failed to get example files:", error);
+            }
+        } 
+        
+        // Then render with both remote images and local files
+        showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);
+        
+        // Re-initialize the showcase event listeners
+        const carousel = showcaseTab.querySelector('.carousel');
+        if (carousel) {
+            // Only initialize if we actually have examples and they're expanded
+            if (!carousel.classList.contains('collapsed')) {
+                initLazyLoading(carousel);
+                initNsfwBlurHandlers(carousel);
+                initMetadataPanelHandlers(carousel);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading example images:', error);
+        const showcaseTab = document.getElementById('showcase-tab');
+        if (showcaseTab) {
+            showcaseTab.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Error loading example images
+                </div>
+            `;
+        }
+    }
 }
 
 // Copy file name function

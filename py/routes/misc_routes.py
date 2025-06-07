@@ -66,6 +66,9 @@ class MiscRoutes:
         # Add new route for getting trained words
         app.router.add_get('/api/trained-words', MiscRoutes.get_trained_words)
 
+        # Add new route for getting example images folder contents
+        app.router.add_get('/api/example-image-files', MiscRoutes.get_example_image_files)
+
     @staticmethod
     async def clear_cache(request):
         """Clear all cache files from the cache folder"""
@@ -462,7 +465,7 @@ class MiscRoutes:
         
         model_success = True
         
-        for i, image in enumerate(model_images, 1):
+        for i, image in enumerate(model_images):
             image_url = image.get('url')
             if not image_url:
                 continue
@@ -479,6 +482,7 @@ class MiscRoutes:
                 logger.debug(f"Skipping unsupported file type: {image_filename}")
                 continue
             
+            # Use 0-based indexing instead of 1-based
             save_filename = f"image_{i}{image_ext}"
             
             # If optimizing images and this is a Civitai image, use their pre-optimized WebP version
@@ -1118,7 +1122,7 @@ class MiscRoutes:
         
         # Handle multiple occurrences of {model}
         model_count = pattern.count('{model}')
-        if model_count > 1:
+        if (model_count > 1):
             # Replace the first occurrence with a named capture group
             regex_safe = regex_safe.replace(r'\{model\}', r'(?P<model>.*?)', 1)
             
@@ -1451,6 +1455,144 @@ class MiscRoutes:
             
         except Exception as e:
             logger.error(f"Failed to get trained words: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    @staticmethod
+    async def get_example_image_files(request):
+        """
+        Get list of example image files for a specific model
+        
+        Expects:
+        - model_hash in query parameters
+        
+        Returns:
+        - List of image files with their paths
+        """
+        try:
+            # Get the model hash from query parameters
+            model_hash = request.query.get('model_hash')
+            
+            if not model_hash:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing model_hash parameter'
+                }, status=400)
+            
+            # Get the example images path from settings
+            example_images_path = settings.get('example_images_path')
+            if not example_images_path:
+                return web.json_response({
+                    'success': False,
+                    'error': 'No example images path configured'
+                }, status=400)
+            
+            # Construct the folder path for this model
+            model_folder = os.path.join(example_images_path, model_hash)
+            
+            # Check if the folder exists
+            if not os.path.exists(model_folder):
+                return web.json_response({
+                    'success': False, 
+                    'error': 'No example images found for this model',
+                    'files': []
+                }, status=404)
+            
+            # Get list of files in the folder
+            files = []
+            for file in os.listdir(model_folder):
+                file_path = os.path.join(model_folder, file)
+                if os.path.isfile(file_path):
+                    # Check if the file is a supported media file
+                    file_ext = os.path.splitext(file)[1].lower()
+                    if (file_ext in SUPPORTED_MEDIA_EXTENSIONS['images'] or 
+                        file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']):
+                        files.append({
+                            'name': file,
+                            'path': f'/example_images_static/{model_hash}/{file}',
+                            'extension': file_ext,
+                            'is_video': file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']
+                        })
+            
+            # Check if files are using 1-based indexing (looking for pattern like "image_1.jpg")
+            has_one_based = any(re.match(r'image_1\.\w+$', f['name']) for f in files)
+            has_zero_based = any(re.match(r'image_0\.\w+$', f['name']) for f in files)
+            
+            # If there's 1-based indexing and no 0-based, rename files
+            if has_one_based and not has_zero_based:
+                logger.info(f"Converting 1-based to 0-based indexing in {model_folder}")
+                # Sort files to ensure we process them in the right order
+                files.sort(key=lambda x: x['name'])
+                
+                # First, create a mapping of renames to avoid conflicts
+                renames = []
+                for file in files:
+                    match = re.match(r'image_(\d+)\.(\w+)$', file['name'])
+                    if match:
+                        index = int(match.group(1))
+                        ext = match.group(2)
+                        if index > 0:  # Only rename if index is positive
+                            new_name = f"image_{index-1}.{ext}"
+                            renames.append((file['name'], new_name))
+                
+                # To avoid conflicts, use temporary filenames first
+                for old_name, new_name in renames:
+                    old_path = os.path.join(model_folder, old_name)
+                    temp_path = os.path.join(model_folder, f"temp_{old_name}")
+                    try:
+                        os.rename(old_path, temp_path)
+                    except Exception as e:
+                        logger.error(f"Failed to rename {old_path} to {temp_path}: {e}")
+                
+                # Now rename from temporary names to final names
+                for old_name, new_name in renames:
+                    temp_path = os.path.join(model_folder, f"temp_{old_name}")
+                    new_path = os.path.join(model_folder, new_name)
+                    try:
+                        os.rename(temp_path, new_path)
+                        logger.debug(f"Renamed {old_name} to {new_name}")
+                        
+                        # Update the entry in our files list
+                        for file in files:
+                            if file['name'] == old_name:
+                                file['name'] = new_name
+                                file['path'] = f'/example_images_static/{model_hash}/{new_name}'
+                    except Exception as e:
+                        logger.error(f"Failed to rename {temp_path} to {new_path}: {e}")
+                
+                # Refresh the file list after renaming
+                files = []
+                for file in os.listdir(model_folder):
+                    file_path = os.path.join(model_folder, file)
+                    if os.path.isfile(file_path):
+                        file_ext = os.path.splitext(file)[1].lower()
+                        if (file_ext in SUPPORTED_MEDIA_EXTENSIONS['images'] or 
+                            file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']):
+                            files.append({
+                                'name': file,
+                                'path': f'/example_images_static/{model_hash}/{file}',
+                                'extension': file_ext,
+                                'is_video': file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']
+                            })
+            
+            # Sort files by their index for consistent ordering
+            def extract_index(filename):
+                match = re.match(r'image_(\d+)\.\w+$', filename)
+                if match:
+                    return int(match.group(1))
+                return float('inf')  # Put non-matching files at the end
+            
+            files.sort(key=lambda x: extract_index(x['name']))
+            
+            return web.json_response({
+                'success': True,
+                'files': files
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to get example image files: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)
