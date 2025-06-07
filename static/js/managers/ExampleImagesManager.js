@@ -12,6 +12,7 @@ class ExampleImagesManager {
         this.isProgressPanelCollapsed = false;
         this.pauseButton = null; // Store reference to the pause button
         this.isMigrating = false; // Track migration state separately from downloading
+        this.hasShownCompletionToast = false; // Flag to track if completion toast has been shown
         
         // Initialize download path field and check download status
         this.initializePathOptions();
@@ -173,6 +174,25 @@ class ExampleImagesManager {
                 return;
             }
             
+            // Update path in backend settings before starting migration
+            try {
+                const pathUpdateResponse = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        example_images_path: outputDir
+                    })
+                });
+                
+                if (!pathUpdateResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${pathUpdateResponse.status}`);
+                }
+            } catch (error) {
+                console.error('Failed to update example images path:', error);
+            }
+            
             const pattern = document.getElementById('exampleImagesMigratePattern').value || '{model}.example.{index}.{ext}';
             const optimize = document.getElementById('optimizeExampleImages').checked;
             
@@ -195,6 +215,7 @@ class ExampleImagesManager {
                 this.isDownloading = true;
                 this.isMigrating = true;
                 this.isPaused = false;
+                this.hasShownCompletionToast = false; // Reset toast flag when starting new migration
                 this.startTime = new Date();
                 this.updateUI(data.status);
                 this.showProgressPanel();
@@ -300,6 +321,7 @@ class ExampleImagesManager {
             if (data.success) {
                 this.isDownloading = true;
                 this.isPaused = false;
+                this.hasShownCompletionToast = false; // Reset toast flag when starting new download
                 this.startTime = new Date();
                 this.updateUI(data.status);
                 this.showProgressPanel();
@@ -422,9 +444,11 @@ class ExampleImagesManager {
                     clearInterval(this.progressUpdateInterval);
                     this.progressUpdateInterval = null;
                     
-                    if (data.status.status === 'completed') {
+                    if (data.status.status === 'completed' && !this.hasShownCompletionToast) {
                         const actionType = this.isMigrating ? 'migration' : 'download';
                         showToast(`Example images ${actionType} completed`, 'success');
+                        // Mark as shown to prevent duplicate toasts
+                        this.hasShownCompletionToast = true;
                         // Reset migration flag
                         this.isMigrating = false;
                         // Hide the panel after a delay

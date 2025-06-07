@@ -1158,8 +1158,6 @@ class MiscRoutes:
         """
         matching_files = []
         model_name = os.path.splitext(model_filename)[0]
-        if model_name == "FluxMechaKnights":
-            logger.info(f"Processing model: {model_name}")
         
         # Check if pattern contains a directory separator
         has_subdirs = '/' in regex_pattern.pattern or '\\\\' in regex_pattern.pattern
