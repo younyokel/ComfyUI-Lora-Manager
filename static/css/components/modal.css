@@ -306,6 +306,18 @@ body.modal-open {
     width: 100%; /* Full width */
 }
 
+/* Migrate control styling */
+.migrate-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.migrate-control input {
+    flex: 1;
+    min-width: 0;
+}
+
 /* 统一各个 section 的样式 */
 .support-section,
 .changelog-section,

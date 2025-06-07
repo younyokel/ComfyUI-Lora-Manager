@@ -271,6 +271,27 @@
                         Enter the folder path where example images from Civitai will be saved
                     </div>
                 </div>
+
+                <!-- New migrate section -->
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="exampleImagesMigratePattern">Migrate Existing Example Images</label>
+                        </div>
+                        <div class="setting-control migrate-control">
+                            <input type="text" id="exampleImagesMigratePattern" 
+                                placeholder="{model}.example.{index}.{ext}" 
+                                value="{model}.example.{index}.{ext}" />
+                            <button id="exampleImagesMigrateBtn" class="secondary-btn">
+                                <i class="fas fa-file-import"></i> <span>Migrate</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Pattern to find existing example images. Use {model} for model filename, {index} for numbering, and {ext} for file extension.<br>
+                        Example patterns: "{model}.example.{index}.{ext}", "{model}_{index}.{ext}", "{model}/{model}.example.{index}.{ext}"
+                    </div>
+                </div>
                 
                 <div class="setting-item">
                     <div class="setting-row">
