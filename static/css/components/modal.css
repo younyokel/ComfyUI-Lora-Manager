@@ -572,6 +572,13 @@ input:checked + .toggle-slider:before {
     pointer-events: none;
 }
 
+.restart-required-icon {
+    color: var(--lora-warning);
+    margin-left: 5px;
+    font-size: 0.85em;
+    vertical-align: text-bottom;
+}
+
 /* Dark theme specific button adjustments */
 [data-theme="dark"] .primary-btn:hover {
     background-color: oklch(from var(--lora-accent) l c h / 75%);
