@@ -7,6 +7,7 @@ from .routes.recipe_routes import RecipeRoutes
 from .routes.checkpoints_routes import CheckpointsRoutes
 from .routes.update_routes import UpdateRoutes
 from .routes.misc_routes import MiscRoutes
+from .routes.example_images_routes import ExampleImagesRoutes
 from .services.service_registry import ServiceRegistry
 from .services.settings_manager import settings
 import logging
@@ -112,6 +113,7 @@ class LoraManager:
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)  
         MiscRoutes.setup_routes(app)  # Register miscellaneous routes
+        ExampleImagesRoutes.setup_routes(app)  # Register example images routes
         
         # Schedule service initialization 
         app.on_startup.append(lambda app: cls._initialize_services())
