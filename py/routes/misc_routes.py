@@ -5,6 +5,9 @@ from aiohttp import web
 from ..services.settings_manager import settings
 from ..utils.usage_stats import UsageStats
 from ..utils.lora_metadata import extract_trained_words
+from ..config import config
+from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,9 @@ class MiscRoutes:
 
         # Add new route for getting trained words
         app.router.add_get('/api/trained-words', MiscRoutes.get_trained_words)
+        
+        # Add new route for getting model example files
+        app.router.add_get('/api/model-example-files', MiscRoutes.get_model_example_files)
 
     @staticmethod
     async def clear_cache(request):
@@ -306,6 +312,93 @@ class MiscRoutes:
             
         except Exception as e:
             logger.error(f"Failed to get trained words: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+    @staticmethod
+    async def get_model_example_files(request):
+        """
+        Get list of example image files for a specific model based on file path
+        
+        Expects:
+        - file_path in query parameters
+        
+        Returns:
+        - List of image files with their paths as static URLs
+        """
+        try:
+            # Get the model file path from query parameters
+            file_path = request.query.get('file_path')
+            
+            if not file_path:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing file_path parameter'
+                }, status=400)
+            
+            # Extract directory and base filename
+            model_dir = os.path.dirname(file_path)
+            model_filename = os.path.basename(file_path)
+            model_name = os.path.splitext(model_filename)[0]
+            
+            # Check if the directory exists
+            if not os.path.exists(model_dir):
+                return web.json_response({
+                    'success': False, 
+                    'error': 'Model directory not found',
+                    'files': []
+                }, status=404)
+            
+            # Look for files matching the pattern modelname.example.<index>.<ext>
+            files = []
+            pattern = f"{model_name}.example."
+            
+            for file in os.listdir(model_dir):
+                file_lower = file.lower()
+                if file_lower.startswith(pattern.lower()):
+                    file_full_path = os.path.join(model_dir, file)
+                    if os.path.isfile(file_full_path):
+                        # Check if the file is a supported media file
+                        file_ext = os.path.splitext(file)[1].lower()
+                        if (file_ext in SUPPORTED_MEDIA_EXTENSIONS['images'] or 
+                            file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']):
+                            
+                            # Extract the index from the filename
+                            try:
+                                # Extract the part after '.example.' and before file extension
+                                index_part = file[len(pattern):].split('.')[0]
+                                # Try to parse it as an integer
+                                index = int(index_part)
+                            except (ValueError, IndexError):
+                                # If we can't parse the index, use infinity to sort at the end
+                                index = float('inf')
+                            
+                            # Convert file path to static URL
+                            static_url = config.get_preview_static_url(file_full_path)
+                            
+                            files.append({
+                                'name': file,
+                                'path': static_url,
+                                'extension': file_ext,
+                                'is_video': file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos'],
+                                'index': index
+                            })
+            
+            # Sort files by their index for consistent ordering
+            files.sort(key=lambda x: x['index'])
+            # Remove the index field as it's only used for sorting
+            for file in files:
+                file.pop('index', None)
+            
+            return web.json_response({
+                'success': True,
+                'files': files
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to get model example files: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)

@@ -15,6 +15,7 @@ import {
 import { saveModelMetadata } from '../../api/checkpointApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { updateCheckpointCard } from '../../utils/cardUpdater.js';
+import { state } from '../../state/index.js';
 
 /**
  * Display the checkpoint modal with the given checkpoint data
@@ -149,28 +150,41 @@ export function showCheckpointModal(checkpoint) {
     }
     
     // Load example images asynchronously
-    loadExampleImages(checkpoint.civitai?.images, checkpoint.sha256);
+    loadExampleImages(checkpoint.civitai?.images, checkpoint.sha256, checkpoint.file_path);
 }
 
 /**
  * Load example images asynchronously
  * @param {Array} images - Array of image objects
  * @param {string} modelHash - Model hash for fetching local files
+ * @param {string} filePath - File path for fetching local files
  */
-async function loadExampleImages(images, modelHash) {
+async function loadExampleImages(images, modelHash, filePath) {
     try {
         const showcaseTab = document.getElementById('showcase-tab');
         if (!showcaseTab) return;
         
         // First fetch local example files
         let localFiles = [];
-        if (modelHash) {
-            try {
-                localFiles = await getExampleImageFiles(modelHash);
-            } catch (error) {
-                console.error("Failed to get example files:", error);
+        try {
+            // Choose endpoint based on centralized examples setting
+            const useCentralized = state.global.settings.useCentralizedExamples !== false;
+            const endpoint = useCentralized ? '/api/example-image-files' : '/api/model-example-files';
+            
+            // Use different params based on endpoint
+            const params = useCentralized ? 
+                `model_hash=${modelHash}` :
+                `file_path=${encodeURIComponent(filePath)}`;
+            
+            const response = await fetch(`${endpoint}?${params}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                localFiles = result.files;
             }
-        } 
+        } catch (error) {
+            console.error("Failed to get example files:", error);
+        }
         
         // Then render with both remote images and local files
         showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);

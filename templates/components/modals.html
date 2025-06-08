@@ -258,6 +258,26 @@
                 <div class="setting-item">
                     <div class="setting-row">
                         <div class="setting-info">
+                            <label for="useCentralizedExamples">Use Centralized Example Storage</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="useCentralizedExamples" checked 
+                                       onchange="settingsManager.saveToggleSetting('useCentralizedExamples', 'use_centralized_examples')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        When enabled (recommended), example images are stored in a central folder for better organization and performance.
+                        When disabled, only example images stored alongside models (e.g., model-name.example.0.jpg) will be shown, but download 
+                        and management features will be unavailable.
+                    </div>
+                </div>
+                
+                <div class="setting-item" data-requires-centralized="true">
+                    <div class="setting-row">
+                        <div class="setting-info">
                             <label for="exampleImagesPath">Download Location</label>
                         </div>
                         <div class="setting-control path-control">
@@ -273,7 +293,7 @@
                 </div>
 
                 <!-- New migrate section -->
-                <div class="setting-item">
+                <div class="setting-item" data-requires-centralized="true">
                     <div class="setting-row">
                         <div class="setting-info">
                             <label for="exampleImagesMigratePattern">Migrate Existing Example Images</label>
@@ -293,7 +313,7 @@
                     </div>
                 </div>
                 
-                <div class="setting-item">
+                <div class="setting-item" data-requires-centralized="true">
                     <div class="setting-row">
                         <div class="setting-info">
                             <label for="optimizeExampleImages">Optimize Downloaded Images</label>

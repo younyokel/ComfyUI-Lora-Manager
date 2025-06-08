@@ -18,6 +18,7 @@ import {
 import { saveModelMetadata } from '../../api/loraApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { updateLoraCard } from '../../utils/cardUpdater.js';
+import { state } from '../../state/index.js';
 
 /**
  * 显示LoRA模型弹窗
@@ -186,28 +187,42 @@ export function showLoraModal(lora) {
     loadRecipesForLora(lora.model_name, lora.sha256);
     
     // Load example images asynchronously
-    loadExampleImages(lora.civitai?.images, lora.sha256);
+    loadExampleImages(lora.civitai?.images, lora.sha256, lora.file_path);
 }
 
 /**
  * Load example images asynchronously
  * @param {Array} images - Array of image objects
  * @param {string} modelHash - Model hash for fetching local files
+ * @param {string} filePath - File path for fetching local files
  */
-async function loadExampleImages(images, modelHash) {
+async function loadExampleImages(images, modelHash, filePath) {
     try {
         const showcaseTab = document.getElementById('showcase-tab');
         if (!showcaseTab) return;
         
         // First fetch local example files
         let localFiles = [];
-        if (modelHash) {
-            try {
-                localFiles = await getExampleImageFiles(modelHash);
-            } catch (error) {
-                console.error("Failed to get example files:", error);
+
+        try {
+            // Choose endpoint based on centralized examples setting
+            const useCentralized = state.global.settings.useCentralizedExamples !== false;
+            const endpoint = useCentralized ? '/api/example-image-files' : '/api/model-example-files';
+            
+            // Use different params based on endpoint
+            const params = useCentralized ? 
+                `model_hash=${modelHash}` :
+                `file_path=${encodeURIComponent(filePath)}`;
+            
+            const response = await fetch(`${endpoint}?${params}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                localFiles = result.files;
             }
-        } 
+        } catch (error) {
+            console.error("Failed to get example files:", error);
+        }
         
         // Then render with both remote images and local files
         showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);

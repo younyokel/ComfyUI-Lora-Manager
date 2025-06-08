@@ -375,6 +375,12 @@ body.modal-open {
     background: rgba(255, 255, 255, 0.05);
 }
 
+/* Add disabled style for setting items */
+.setting-item[data-requires-centralized="true"].disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
 /* Control row with label and input together */
 .setting-row {
     display: flex;
