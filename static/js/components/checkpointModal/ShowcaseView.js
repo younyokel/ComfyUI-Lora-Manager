@@ -3,12 +3,6 @@
  * Handles showcase content (images, videos) display for checkpoint modal
  */
 import { 
-    showToast, 
-    copyToClipboard, 
-    getLocalExampleImageUrl,
-    initLazyLoading,
-    initNsfwBlurHandlers,
-    initMetadataPanelHandlers,
     toggleShowcase,
     setupShowcaseScroll,
     scrollToTop 
@@ -20,9 +14,10 @@ import { NSFW_LEVELS } from '../../utils/constants.js';
  * Render showcase content
  * @param {Array} images - Array of images/videos to show
  * @param {string} modelHash - Model hash for identifying local files
+ * @param {Array} exampleFiles - Local example files already fetched
  * @returns {string} HTML content
  */
-export function renderShowcaseContent(images, modelHash) {
+export function renderShowcaseContent(images, exampleFiles = []) {
     if (!images?.length) return '<div class="no-examples">No example images available</div>';
     
     // Filter images based on SFW setting
@@ -65,9 +60,85 @@ export function renderShowcaseContent(images, modelHash) {
             ${hiddenNotification}
             <div class="carousel-container">
                 ${filteredImages.map((img, index) => {
-                    // Get URLs for the example image
-                    const urls = getLocalExampleImageUrl(img, index, modelHash);
-                    return generateMediaWrapper(img, urls);
+                    // Find matching file in our list of actual files
+                    let localFile = null;
+                    if (exampleFiles.length > 0) {
+                        // Try to find the corresponding file by index first
+                        localFile = exampleFiles.find(file => {
+                            const match = file.name.match(/image_(\d+)\./);
+                            return match && parseInt(match[1]) === index;
+                        });
+                        
+                        // If not found by index, just use the same position in the array if available
+                        if (!localFile && index < exampleFiles.length) {
+                            localFile = exampleFiles[index];
+                        }
+                    }
+                    
+                    const remoteUrl = img.url || '';
+                    const localUrl = localFile ? localFile.path : '';
+                    const isVideo = localFile ? localFile.is_video : 
+                                   remoteUrl.endsWith('.mp4') || remoteUrl.endsWith('.webm');
+                    
+                    // Calculate appropriate aspect ratio
+                    const aspectRatio = (img.height / img.width) * 100;
+                    const containerWidth = 800; // modal content maximum width
+                    const minHeightPercent = 40; 
+                    const maxHeightPercent = (window.innerHeight * 0.6 / containerWidth) * 100;
+                    const heightPercent = Math.max(
+                        minHeightPercent,
+                        Math.min(maxHeightPercent, aspectRatio)
+                    );
+                    
+                    // Check if media should be blurred
+                    const nsfwLevel = img.nsfwLevel !== undefined ? img.nsfwLevel : 0;
+                    const shouldBlur = state.settings.blurMatureContent && nsfwLevel > NSFW_LEVELS.PG13;
+                    
+                    // Determine NSFW warning text based on level
+                    let nsfwText = "Mature Content";
+                    if (nsfwLevel >= NSFW_LEVELS.XXX) {
+                        nsfwText = "XXX-rated Content";
+                    } else if (nsfwLevel >= NSFW_LEVELS.X) {
+                        nsfwText = "X-rated Content";
+                    } else if (nsfwLevel >= NSFW_LEVELS.R) {
+                        nsfwText = "R-rated Content";
+                    }
+                    
+                    // Extract metadata from the image
+                    const meta = img.meta || {};
+                    const prompt = meta.prompt || '';
+                    const negativePrompt = meta.negative_prompt || meta.negativePrompt || '';
+                    const size = meta.Size || `${img.width}x${img.height}`;
+                    const seed = meta.seed || '';
+                    const model = meta.Model || '';
+                    const steps = meta.steps || '';
+                    const sampler = meta.sampler || '';
+                    const cfgScale = meta.cfgScale || '';
+                    const clipSkip = meta.clipSkip || '';
+                    
+                    // Check if we have any meaningful generation parameters
+                    const hasParams = seed || model || steps || sampler || cfgScale || clipSkip;
+                    const hasPrompts = prompt || negativePrompt;
+                    
+                    // Create metadata panel content
+                    const metadataPanel = generateMetadataPanel(
+                        hasParams, hasPrompts, 
+                        prompt, negativePrompt, 
+                        size, seed, model, steps, sampler, cfgScale, clipSkip
+                    );
+                    
+                    // Check if this is a video or image
+                    if (isVideo) {
+                        return generateVideoWrapper(
+                            img, heightPercent, shouldBlur, nsfwText, metadataPanel,
+                            localUrl, remoteUrl
+                        );
+                    }
+                    
+                    return generateImageWrapper(
+                        img, heightPercent, shouldBlur, nsfwText, metadataPanel,
+                        localUrl, remoteUrl
+                    );
                 }).join('')}
             </div>
         </div>
@@ -205,7 +276,7 @@ function generateMetadataPanel(hasParams, hasPrompts, prompt, negativePrompt, si
 /**
  * Generate video wrapper HTML
  */
-function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, urls) {
+function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -215,10 +286,10 @@ function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metada
             ` : ''}
             <video controls autoplay muted loop crossorigin="anonymous" 
                 referrerpolicy="no-referrer" 
-                data-local-src="${urls.primary || ''}"
-                data-remote-src="${media.url}"
+                data-local-src="${localUrl || ''}"
+                data-remote-src="${remoteUrl}"
                 class="lazy ${shouldBlur ? 'blurred' : ''}">
-                <source data-local-src="${urls.primary || ''}" data-remote-src="${media.url}" type="video/mp4">
+                <source data-local-src="${localUrl || ''}" data-remote-src="${remoteUrl}" type="video/mp4">
                 Your browser does not support video playback
             </video>
             ${shouldBlur ? `
@@ -237,7 +308,7 @@ function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metada
 /**
  * Generate image wrapper HTML
  */
-function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, urls) {
+function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -245,9 +316,8 @@ function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metada
                     <i class="fas fa-eye"></i>
                 </button>
             ` : ''}
-            <img data-local-src="${urls.primary || ''}" 
-                data-local-fallback-src="${urls.fallback || ''}"
-                data-remote-src="${media.url}"
+            <img data-local-src="${localUrl || ''}"
+                data-remote-src="${remoteUrl}"
                 alt="Preview" 
                 crossorigin="anonymous" 
                 referrerpolicy="no-referrer"

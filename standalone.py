@@ -295,6 +295,7 @@ class StandaloneLoraManager(LoraManager):
         from py.routes.checkpoints_routes import CheckpointsRoutes
         from py.routes.update_routes import UpdateRoutes
         from py.routes.misc_routes import MiscRoutes
+        from py.routes.example_images_routes import ExampleImagesRoutes
         
         lora_routes = LoraRoutes()
         checkpoints_routes = CheckpointsRoutes()
@@ -306,6 +307,7 @@ class StandaloneLoraManager(LoraManager):
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)
         MiscRoutes.setup_routes(app)
+        ExampleImagesRoutes.setup_routes(app)
         
         # Schedule service initialization
         app.on_startup.append(lambda app: cls._initialize_services())

@@ -11,6 +11,8 @@ class ExampleImagesManager {
         this.progressPanel = null;
         this.isProgressPanelCollapsed = false;
         this.pauseButton = null; // Store reference to the pause button
+        this.isMigrating = false; // Track migration state separately from downloading
+        this.hasShownCompletionToast = false; // Flag to track if completion toast has been shown
         
         // Initialize download path field and check download status
         this.initializePathOptions();
@@ -45,6 +47,12 @@ class ExampleImagesManager {
         
         if (collapseBtn) {
             collapseBtn.onclick = () => this.toggleProgressPanel();
+        }
+        
+        // Initialize migration button handler
+        const migrateBtn = document.getElementById('exampleImagesMigrateBtn');
+        if (migrateBtn) {
+            migrateBtn.onclick = () => this.handleMigrateButton();
         }
     }
     
@@ -141,6 +149,95 @@ class ExampleImagesManager {
         }
     }
     
+    // Method to handle migrate button click
+    async handleMigrateButton() {
+        if (this.isDownloading || this.isMigrating) {
+            if (this.isPaused) {
+                // If paused, resume
+                this.resumeDownload();
+            } else {
+                showToast('Migration or download already in progress', 'info');
+            }
+            return;
+        }
+        
+        // Start migration
+        this.startMigrate();
+    }
+    
+    async startMigrate() {
+        try {
+            const outputDir = document.getElementById('exampleImagesPath').value || '';
+            
+            if (!outputDir) {
+                showToast('Please enter a download location first', 'warning');
+                return;
+            }
+            
+            // Update path in backend settings before starting migration
+            try {
+                const pathUpdateResponse = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        example_images_path: outputDir
+                    })
+                });
+                
+                if (!pathUpdateResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${pathUpdateResponse.status}`);
+                }
+            } catch (error) {
+                console.error('Failed to update example images path:', error);
+            }
+            
+            const pattern = document.getElementById('exampleImagesMigratePattern').value || '{model}.example.{index}.{ext}';
+            const optimize = document.getElementById('optimizeExampleImages').checked;
+            
+            const response = await fetch('/api/migrate-example-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    output_dir: outputDir,
+                    pattern: pattern,
+                    optimize: optimize,
+                    model_types: ['lora', 'checkpoint']
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.isDownloading = true;
+                this.isMigrating = true;
+                this.isPaused = false;
+                this.hasShownCompletionToast = false; // Reset toast flag when starting new migration
+                this.startTime = new Date();
+                this.updateUI(data.status);
+                this.showProgressPanel();
+                this.startProgressUpdates();
+                // Update button text
+                const btnTextElement = document.getElementById('exampleDownloadBtnText');
+                if (btnTextElement) {
+                    btnTextElement.textContent = "Resume";
+                }
+                showToast('Example images migration started', 'success');
+                
+                // Close settings modal
+                modalManager.closeModal('settingsModal');
+            } else {
+                showToast(data.error || 'Failed to start migration', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to start migration:', error);
+            showToast('Failed to start migration', 'error');
+        }
+    }
+    
     async checkDownloadStatus() {
         try {
             const response = await fetch('/api/example-images-status');
@@ -224,6 +321,7 @@ class ExampleImagesManager {
             if (data.success) {
                 this.isDownloading = true;
                 this.isPaused = false;
+                this.hasShownCompletionToast = false; // Reset toast flag when starting new download
                 this.startTime = new Date();
                 this.updateUI(data.status);
                 this.showProgressPanel();
@@ -334,6 +432,7 @@ class ExampleImagesManager {
             if (data.success) {
                 this.isDownloading = data.is_downloading;
                 this.isPaused = data.status.status === 'paused';
+                this.isMigrating = data.is_migrating || false;
                 
                 // Update download button text
                 this.updateDownloadButtonText();
@@ -345,12 +444,19 @@ class ExampleImagesManager {
                     clearInterval(this.progressUpdateInterval);
                     this.progressUpdateInterval = null;
                     
-                    if (data.status.status === 'completed') {
-                        showToast('Example images download completed', 'success');
+                    if (data.status.status === 'completed' && !this.hasShownCompletionToast) {
+                        const actionType = this.isMigrating ? 'migration' : 'download';
+                        showToast(`Example images ${actionType} completed`, 'success');
+                        // Mark as shown to prevent duplicate toasts
+                        this.hasShownCompletionToast = true;
+                        // Reset migration flag
+                        this.isMigrating = false;
                         // Hide the panel after a delay
                         setTimeout(() => this.hideProgressPanel(), 5000);
                     } else if (data.status.status === 'error') {
-                        showToast('Example images download failed', 'error');
+                        const actionType = this.isMigrating ? 'migration' : 'download';
+                        showToast(`Example images ${actionType} failed`, 'error');
+                        this.isMigrating = false;
                     }
                 }
             }
@@ -440,6 +546,19 @@ class ExampleImagesManager {
                 const progressPercent = status.total > 0 ? (status.completed / status.total) * 100 : 0;
                 this.updateMiniProgress(progressPercent);
             }
+        }
+        
+        // Update title text
+        const titleElement = document.querySelector('.progress-panel-title');
+        if (titleElement) {
+            const titleIcon = titleElement.querySelector('i');
+            if (titleIcon) {
+                titleIcon.className = this.isMigrating ? 'fas fa-file-import' : 'fas fa-images';
+            }
+            
+            titleElement.innerHTML = 
+                `<i class="${this.isMigrating ? 'fas fa-file-import' : 'fas fa-images'}"></i> ` +
+                `${this.isMigrating ? 'Example Images Migration' : 'Example Images Download'}`;
         }
     }
     
@@ -536,8 +655,10 @@ class ExampleImagesManager {
     }
     
     getStatusText(status) {
+        const prefix = this.isMigrating ? 'Migrating' : 'Downloading';
+        
         switch (status) {
-            case 'running': return 'Downloading';
+            case 'running': return this.isMigrating ? 'Migrating' : 'Downloading';
             case 'paused': return 'Paused';
             case 'completed': return 'Completed';
             case 'error': return 'Error';

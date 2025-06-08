@@ -3,12 +3,6 @@
  * 处理LoRA模型展示内容（图片、视频）的功能模块
  */
 import { 
-    showToast, 
-    copyToClipboard, 
-    getLocalExampleImageUrl,
-    initLazyLoading,
-    initNsfwBlurHandlers,
-    initMetadataPanelHandlers,
     toggleShowcase,
     setupShowcaseScroll,
     scrollToTop 
@@ -17,12 +11,12 @@ import { state } from '../../state/index.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 
 /**
- * 渲染展示内容
+ * 获取展示内容并进行渲染
  * @param {Array} images - 要展示的图片/视频数组
- * @param {string} modelHash - Model hash for identifying local files
- * @returns {string} HTML内容
+ * @param {Array} exampleFiles - Local example files already fetched
+ * @returns {Promise<string>} HTML内容
  */
-export function renderShowcaseContent(images, modelHash) {
+export function renderShowcaseContent(images, exampleFiles = []) {
     if (!images?.length) return '<div class="no-examples">No example images available</div>';
     
     // Filter images based on SFW setting
@@ -65,8 +59,25 @@ export function renderShowcaseContent(images, modelHash) {
             ${hiddenNotification}
             <div class="carousel-container">
                 ${filteredImages.map((img, index) => {
-                    // Get URLs for the example image
-                    const urls = getLocalExampleImageUrl(img, index, modelHash);
+                    // Find matching file in our list of actual files
+                    let localFile = null;
+                    if (exampleFiles.length > 0) {
+                        // Try to find the corresponding file by index first
+                        localFile = exampleFiles.find(file => {
+                            const match = file.name.match(/image_(\d+)\./);
+                            return match && parseInt(match[1]) === index;
+                        });
+                        
+                        // If not found by index, just use the same position in the array if available
+                        if (!localFile && index < exampleFiles.length) {
+                            localFile = exampleFiles[index];
+                        }
+                    }
+                    
+                    const remoteUrl = img.url || '';
+                    const localUrl = localFile ? localFile.path : '';
+                    const isVideo = localFile ? localFile.is_video : 
+                                    remoteUrl.endsWith('.mp4') || remoteUrl.endsWith('.webm');
                     
                     // 计算适当的展示高度
                     const aspectRatio = (img.height / img.width) * 100;
@@ -113,10 +124,16 @@ export function renderShowcaseContent(images, modelHash) {
                         size, seed, model, steps, sampler, cfgScale, clipSkip
                     );
                     
-                    if (img.type === 'video') {
-                        return generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, urls);
+                    if (isVideo) {
+                        return generateVideoWrapper(
+                            img, heightPercent, shouldBlur, nsfwText, metadataPanel, 
+                            localUrl, remoteUrl
+                        );
                     }
-                    return generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, urls);
+                    return generateImageWrapper(
+                        img, heightPercent, shouldBlur, nsfwText, metadataPanel, 
+                        localUrl, remoteUrl
+                    );
                 }).join('')}
             </div>
         </div>
@@ -193,7 +210,7 @@ function generateMetadataPanel(hasParams, hasPrompts, prompt, negativePrompt, si
 /**
  * 生成视频包装HTML
  */
-function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, urls) {
+function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -203,10 +220,10 @@ function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadata
             ` : ''}
             <video controls autoplay muted loop crossorigin="anonymous" 
                 referrerpolicy="no-referrer" 
-                data-local-src="${urls.primary || ''}"
-                data-remote-src="${img.url}"
+                data-local-src="${localUrl || ''}"
+                data-remote-src="${remoteUrl}"
                 class="lazy ${shouldBlur ? 'blurred' : ''}">
-                <source data-local-src="${urls.primary || ''}" data-remote-src="${img.url}" type="video/mp4">
+                <source data-local-src="${localUrl || ''}" data-remote-src="${remoteUrl}" type="video/mp4">
                 Your browser does not support video playback
             </video>
             ${shouldBlur ? `
@@ -225,7 +242,7 @@ function generateVideoWrapper(img, heightPercent, shouldBlur, nsfwText, metadata
 /**
  * 生成图片包装HTML
  */
-function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, urls) {
+function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl) {
     return `
         <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%">
             ${shouldBlur ? `
@@ -233,9 +250,8 @@ function generateImageWrapper(img, heightPercent, shouldBlur, nsfwText, metadata
                     <i class="fas fa-eye"></i>
                 </button>
             ` : ''}
-            <img data-local-src="${urls.primary || ''}" 
-                data-local-fallback-src="${urls.fallback || ''}"
-                data-remote-src="${img.url}"
+            <img data-local-src="${localUrl || ''}" 
+                data-remote-src="${remoteUrl}"
                 alt="Preview" 
                 crossorigin="anonymous" 
                 referrerpolicy="no-referrer"
