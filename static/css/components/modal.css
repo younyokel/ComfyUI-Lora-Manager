@@ -783,30 +783,6 @@ input:checked + .toggle-slider:before {
   display: block;
 }
 
-/* Video embed styles */
-.video-embed {
-  position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
-  height: 0;
-  overflow: hidden;
-  max-width: 100%;
-  margin-bottom: var(--space-2);
-  border-radius: var(--border-radius-sm);
-}
-
-.video-embed iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.video-embed.small {
-  max-width: 100%;
-  margin-bottom: var(--space-1);
-}
-
 .help-text {
   margin: var(--space-2) 0;
 }
@@ -972,4 +948,82 @@ input:checked + .toggle-slider:before {
 [data-theme="dark"] .warning-box {
   background-color: rgba(255, 193, 7, 0.05);
   border-color: rgba(255, 193, 7, 0.3);
+}
+
+/* Privacy-friendly video embed styles */
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  margin-bottom: var(--space-2);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.video-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.2s ease;
+}
+
+.video-play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+/* External link button styles */
+.external-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--lora-accent);
+  color: white;
+  text-decoration: none;
+  border: none;
+}
+
+.external-link-btn:hover {
+  background-color: oklch(from var(--lora-accent) l c h / 85%);
+}
+
+.video-thumbnail i {
+  font-size: 1.2em;
+}
+
+/* Smaller video container for the updates tab */
+.video-item .video-container {
+  padding-bottom: 40%; /* Shorter height for the playlist */
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .video-container {
+  background-color: rgba(255, 255, 255, 0.03);
 }
