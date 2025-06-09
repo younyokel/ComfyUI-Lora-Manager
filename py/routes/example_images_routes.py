@@ -439,9 +439,13 @@ class ExampleImagesRoutes:
                 base_path = os.path.splitext(file_path)[0]  # Remove .safetensors extension
                 metadata_path = f"{base_path}.metadata.json"
                 try:
-                    # Write the metadata to file
+                    # Create a copy of the model data without the 'folder' field
+                    model_copy = model.copy()
+                    model_copy.pop('folder', None)
+                    
+                    # Write the metadata to file without the folder field
                     with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(model, f, indent=2, ensure_ascii=False)
+                        json.dump(model_copy, f, indent=2, ensure_ascii=False)
                     logger.info(f"Saved metadata to {metadata_path}")
                 except Exception as e:
                     logger.error(f"Failed to save metadata to {metadata_path}: {str(e)}")
