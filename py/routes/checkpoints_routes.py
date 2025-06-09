@@ -51,6 +51,7 @@ class CheckpointsRoutes:
         app.router.add_post('/api/checkpoints/delete', self.delete_model)
         app.router.add_post('/api/checkpoints/exclude', self.exclude_model)  # Add new exclude endpoint
         app.router.add_post('/api/checkpoints/fetch-civitai', self.fetch_civitai)
+        app.router.add_post('/api/checkpoints/relink-civitai', self.relink_civitai)  # Add new relink endpoint
         app.router.add_post('/api/checkpoints/replace-preview', self.replace_preview)
         app.router.add_post('/api/checkpoints/download', self.download_checkpoint)
         app.router.add_post('/api/checkpoints/save-metadata', self.save_metadata) # Add new route
@@ -811,3 +812,7 @@ class CheckpointsRoutes:
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+    async def relink_civitai(self, request: web.Request) -> web.Response:
+        """Handle CivitAI metadata re-linking request by model version ID for checkpoints"""
+        return await ModelRouteUtils.handle_relink_civitai(request, self.scanner)

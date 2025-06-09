@@ -613,4 +613,68 @@ class ModelRouteUtils:
                 'success': False,
                 'error': str(e)
             }, status=500)
-    
+
+    @staticmethod
+    async def handle_relink_civitai(request: web.Request, scanner) -> web.Response:
+        """Handle CivitAI metadata re-linking request by model version ID
+        
+        Args:
+            request: The aiohttp request
+            scanner: The model scanner instance with cache management methods
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            model_version_id = data.get('model_version_id')
+            
+            if not file_path or not model_version_id:
+                return web.json_response({"success": False, "error": "Both file_path and model_version_id are required"}, status=400)
+            
+            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+            
+            # Check if model metadata exists
+            local_metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+            
+            # Create a client for fetching from Civitai
+            client = await CivitaiClient.get_instance()
+            try:
+                # Fetch metadata by model version ID
+                civitai_metadata, error = await client.get_model_version_info(model_version_id)
+                if not civitai_metadata:
+                    error_msg = error or "Model version not found on CivitAI"
+                    return web.json_response({"success": False, "error": error_msg}, status=404)
+                
+                # Find the primary model file to get the correct SHA256 hash
+                primary_model_file = None
+                for file in civitai_metadata.get('files', []):
+                    if file.get('primary', False) and file.get('type') == 'Model':
+                        primary_model_file = file
+                        break
+                
+                if not primary_model_file or not primary_model_file.get('hashes', {}).get('SHA256'):
+                    return web.json_response({"success": False, "error": "No SHA256 hash found in model metadata"}, status=404)
+                
+                # Update the SHA256 hash in local metadata (convert to lowercase)
+                local_metadata['sha256'] = primary_model_file['hashes']['SHA256'].lower()
+                
+                # Update metadata with CivitAI information
+                await ModelRouteUtils.update_model_metadata(metadata_path, local_metadata, civitai_metadata, client)
+                
+                # Update the cache
+                await scanner.update_single_model_cache(file_path, file_path, local_metadata)
+                
+                return web.json_response({
+                    "success": True,
+                    "message": f"Model successfully re-linked to Civitai version {model_version_id}",
+                    "hash": local_metadata['sha256']
+                })
+                
+            finally:
+                await client.close()
+
+        except Exception as e:
+            logger.error(f"Error re-linking to CivitAI: {e}", exc_info=True)
+            return web.json_response({"success": False, "error": str(e)}, status=500)

@@ -45,6 +45,7 @@ class ApiRoutes:
         app.router.add_post('/api/delete_model', routes.delete_model)
         app.router.add_post('/api/loras/exclude', routes.exclude_model)  # Add new exclude endpoint
         app.router.add_post('/api/fetch-civitai', routes.fetch_civitai)
+        app.router.add_post('/api/relink-civitai', routes.relink_civitai)  # Add new relink endpoint
         app.router.add_post('/api/replace_preview', routes.replace_preview)
         app.router.add_get('/api/loras', routes.get_loras)
         app.router.add_post('/api/fetch-all-civitai', routes.fetch_all_civitai)
@@ -1285,3 +1286,9 @@ class ApiRoutes:
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+    async def relink_civitai(self, request: web.Request) -> web.Response:
+        """Handle CivitAI metadata re-linking request by model version ID for LoRAs"""
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+        return await ModelRouteUtils.handle_relink_civitai(request, self.scanner)

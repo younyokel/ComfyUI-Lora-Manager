@@ -221,6 +221,19 @@ export class ModalManager {
             });
         }
 
+        // Add relinkCivitaiModal registration
+        const relinkCivitaiModal = document.getElementById('relinkCivitaiModal');
+        if (relinkCivitaiModal) {
+            this.registerModal('relinkCivitaiModal', {
+                element: relinkCivitaiModal,
+                onClose: () => {
+                    this.getModal('relinkCivitaiModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
+        }
+
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
     }

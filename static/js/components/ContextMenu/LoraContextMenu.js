@@ -1,9 +1,11 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
-import { refreshSingleLoraMetadata, saveModelMetadata, replacePreview } from '../../api/loraApi.js';
+import { refreshSingleLoraMetadata, saveModelMetadata, replacePreview, resetAndReload } from '../../api/loraApi.js';
 import { showToast, getNSFWLevelName, copyToClipboard, sendLoraToWorkflow, openExampleImagesFolder } from '../../utils/uiHelpers.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
 import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
+import { modalManager } from '../../managers/ModalManager.js';
+import { state } from '../../state/index.js';
 
 export class LoraContextMenu extends BaseContextMenu {
     constructor() {
@@ -64,6 +66,9 @@ export class LoraContextMenu extends BaseContextMenu {
             case 'refresh-metadata':
                 refreshSingleLoraMetadata(this.currentCard.dataset.filepath);
                 break;
+            case 'relink-civitai':
+                this.showRelinkCivitaiModal();
+                break;
             case 'set-nsfw':
                 this.showNSFWLevelSelector(null, null, this.currentCard);
                 break;
@@ -91,6 +96,90 @@ export class LoraContextMenu extends BaseContextMenu {
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
         
         sendLoraToWorkflow(loraSyntax, replaceMode, 'lora');
+    }
+
+    // New method to handle re-link to Civitai
+    showRelinkCivitaiModal() {
+        const filePath = this.currentCard.dataset.filepath;
+        if (!filePath) return;
+        
+        // Set up confirm button handler
+        const confirmBtn = document.getElementById('confirmRelinkBtn');
+        const urlInput = document.getElementById('civitaiModelUrl');
+        const errorDiv = document.getElementById('civitaiModelUrlError');
+        
+        // Remove previous event listener if exists
+        if (this._boundRelinkHandler) {
+            confirmBtn.removeEventListener('click', this._boundRelinkHandler);
+        }
+        
+        // Create new bound handler
+        this._boundRelinkHandler = async () => {
+            const url = urlInput.value.trim();
+            const modelVersionId = this.extractModelVersionId(url);
+            
+            if (!modelVersionId) {
+                errorDiv.textContent = 'Invalid URL format. Must include modelVersionId parameter.';
+                return;
+            }
+            
+            errorDiv.textContent = '';
+            modalManager.closeModal('relinkCivitaiModal');
+            
+            try {
+                state.loadingManager.showSimpleLoading('Re-linking to Civitai...');
+                
+                const response = await fetch('/api/relink-civitai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_path: filePath,
+                        model_version_id: modelVersionId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to re-link model: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Model successfully re-linked to Civitai', 'success');
+                    // Reload the current view to show updated data
+                    await resetAndReload();
+                } else {
+                    throw new Error(data.error || 'Failed to re-link model');
+                }
+            } catch (error) {
+                console.error('Error re-linking model:', error);
+                showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                state.loadingManager.hide();
+            }
+        };
+        
+        // Set new event listener
+        confirmBtn.addEventListener('click', this._boundRelinkHandler);
+        
+        // Clear previous input
+        urlInput.value = '';
+        errorDiv.textContent = '';
+        
+        // Show modal
+        modalManager.showModal('relinkCivitaiModal');
+    }
+
+    extractModelVersionId(url) {
+        try {
+            const parsedUrl = new URL(url);
+            const modelVersionId = parsedUrl.searchParams.get('modelVersionId');
+            return modelVersionId;
+        } catch (e) {
+            return null;
+        }
     }
 
     // NSFW Selector methods from the original context menu

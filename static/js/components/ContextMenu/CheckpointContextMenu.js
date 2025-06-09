@@ -4,6 +4,9 @@ import { showToast, getNSFWLevelName, openExampleImagesFolder } from '../../util
 import { NSFW_LEVELS } from '../../utils/constants.js';
 import { getStorageItem } from '../../utils/storageHelpers.js';
 import { showExcludeModal } from '../../utils/modalUtils.js';
+import { modalManager } from '../../managers/ModalManager.js';
+import { state } from '../../state/index.js';
+import { resetAndReload } from '../../api/checkpointApi.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {
@@ -55,6 +58,10 @@ export class CheckpointContextMenu extends BaseContextMenu {
             case 'refresh-metadata':
                 // Refresh metadata from CivitAI
                 refreshSingleCheckpointMetadata(this.currentCard.dataset.filepath);
+                break;
+            case 'relink-civitai':
+                // Handle re-link to Civitai
+                this.showRelinkCivitaiModal();
                 break;
             case 'set-nsfw':
                 // Set NSFW level
@@ -318,5 +325,88 @@ export class CheckpointContextMenu extends BaseContextMenu {
         
         // Show selector
         selector.style.display = 'block';
+    }
+
+    showRelinkCivitaiModal() {
+        const filePath = this.currentCard.dataset.filepath;
+        if (!filePath) return;
+        
+        // Set up confirm button handler
+        const confirmBtn = document.getElementById('confirmRelinkBtn');
+        const urlInput = document.getElementById('civitaiModelUrl');
+        const errorDiv = document.getElementById('civitaiModelUrlError');
+        
+        // Remove previous event listener if exists
+        if (this._boundRelinkHandler) {
+            confirmBtn.removeEventListener('click', this._boundRelinkHandler);
+        }
+        
+        // Create new bound handler
+        this._boundRelinkHandler = async () => {
+            const url = urlInput.value.trim();
+            const modelVersionId = this.extractModelVersionId(url);
+            
+            if (!modelVersionId) {
+                errorDiv.textContent = 'Invalid URL format. Must include modelVersionId parameter.';
+                return;
+            }
+            
+            errorDiv.textContent = '';
+            modalManager.closeModal('relinkCivitaiModal');
+            
+            try {
+                state.loadingManager.showSimpleLoading('Re-linking to Civitai...');
+                
+                const response = await fetch('/api/checkpoints/relink-civitai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_path: filePath,
+                        model_version_id: modelVersionId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to re-link model: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Model successfully re-linked to Civitai', 'success');
+                    // Reload the current view to show updated data
+                    await resetAndReload();
+                } else {
+                    throw new Error(data.error || 'Failed to re-link model');
+                }
+            } catch (error) {
+                console.error('Error re-linking model:', error);
+                showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                state.loadingManager.hide();
+            }
+        };
+        
+        // Set new event listener
+        confirmBtn.addEventListener('click', this._boundRelinkHandler);
+        
+        // Clear previous input
+        urlInput.value = '';
+        errorDiv.textContent = '';
+        
+        // Show modal
+        modalManager.showModal('relinkCivitaiModal');
+    }
+
+    extractModelVersionId(url) {
+        try {
+            const parsedUrl = new URL(url);
+            const modelVersionId = parsedUrl.searchParams.get('modelVersionId');
+            return modelVersionId;
+        } catch (e) {
+            return null;
+        }
     }
 }
