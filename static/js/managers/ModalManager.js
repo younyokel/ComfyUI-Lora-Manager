@@ -207,11 +207,18 @@ export class ModalManager {
                 }
             });
         }
-        
-        // Set up event listeners for modal toggles
-        const supportToggle = document.getElementById('supportToggleBtn');
-        if (supportToggle) {
-            supportToggle.addEventListener('click', () => this.toggleModal('supportModal'));
+
+        // Add helpModal registration
+        const helpModal = document.getElementById('helpModal');
+        if (helpModal) {
+            this.registerModal('helpModal', {
+                element: helpModal,
+                onClose: () => {
+                    this.getModal('helpModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
         }
 
         document.addEventListener('keydown', this.boundHandleEscape);

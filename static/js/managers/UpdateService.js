@@ -119,7 +119,6 @@ export class UpdateService {
     updateBadgeVisibility() {
         const updateToggle = document.querySelector('.update-toggle');
         const updateBadge = document.querySelector('.update-toggle .update-badge');
-        const cornerBadge = document.querySelector('.corner-badge');
         
         if (updateToggle) {
             updateToggle.title = this.updateNotificationsEnabled && this.updateAvailable 
@@ -133,11 +132,6 @@ export class UpdateService {
         if (updateBadge) {
             updateBadge.classList.toggle('hidden', !shouldShow);
             console.log("Update badge visibility:", !shouldShow ? "hidden" : "visible");
-        }
-        
-        if (cornerBadge) {
-            cornerBadge.classList.toggle('hidden', !shouldShow);
-            console.log("Corner badge visibility:", !shouldShow ? "hidden" : "visible");
         }
     }
     

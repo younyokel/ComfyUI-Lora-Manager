@@ -75,7 +75,9 @@ export class HeaderManager {
       const supportToggle = document.getElementById('supportToggleBtn');
       if (supportToggle) {
         supportToggle.addEventListener('click', () => {
-          // Handle support panel logic
+          if (window.modalManager) {
+            window.modalManager.toggleModal('supportModal');
+          }
         });
       }
 
@@ -106,5 +108,15 @@ export class HeaderManager {
               }
           });
       }
+      
+      // Handle help toggle
+      // const helpToggle = document.querySelector('.help-toggle');
+      // if (helpToggle) {
+      //   helpToggle.addEventListener('click', () => {
+      //     if (window.modalManager) {
+      //       window.modalManager.toggleModal('helpModal');
+      //     }
+      //   });
+      // }
     }
 }
