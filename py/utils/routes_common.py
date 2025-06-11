@@ -209,13 +209,12 @@ class ModelRouteUtils:
         return {k: data[k] for k in fields if k in data}
 
     @staticmethod
-    async def delete_model_files(target_dir: str, file_name: str, file_monitor=None) -> List[str]:
+    async def delete_model_files(target_dir: str, file_name: str) -> List[str]:
         """Delete model and associated files
         
         Args:
             target_dir: Directory containing the model files
             file_name: Base name of the model file without extension
-            file_monitor: Optional file monitor to ignore delete events
             
         Returns:
             List of deleted file paths
@@ -233,11 +232,7 @@ class ModelRouteUtils:
         main_file = patterns[0]
         main_path = os.path.join(target_dir, main_file).replace(os.sep, '/')
         
-        if os.path.exists(main_path):
-            # Notify file monitor to ignore delete event if available
-            if file_monitor:
-                file_monitor.handler.add_ignore_path(main_path, 0)
-            
+        if os.path.exists(main_path):     
             # Delete file
             os.remove(main_path)
             deleted.append(main_path)
@@ -286,13 +281,9 @@ class ModelRouteUtils:
             target_dir = os.path.dirname(file_path)
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             
-            # Get the file monitor from the scanner if available
-            file_monitor = getattr(scanner, 'file_monitor', None)
-            
             deleted_files = await ModelRouteUtils.delete_model_files(
                 target_dir, 
-                file_name,
-                file_monitor
+                file_name
             )
             
             # Remove from cache

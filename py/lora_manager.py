@@ -131,19 +131,6 @@ class LoraManager:
             
             # Initialize CivitaiClient first to ensure it's ready for other services
             civitai_client = await ServiceRegistry.get_civitai_client()
-            
-            # Get file monitors through ServiceRegistry
-            lora_monitor = await ServiceRegistry.get_lora_monitor()
-            checkpoint_monitor = await ServiceRegistry.get_checkpoint_monitor()
-            
-            # Start monitors
-            lora_monitor.start()
-            logger.debug("Lora monitor started")
-            
-            # Make sure checkpoint monitor has paths before starting
-            await checkpoint_monitor.initialize_paths()
-            checkpoint_monitor.start()
-            logger.debug("Checkpoint monitor started")
 
             # Register DownloadManager with ServiceRegistry
             download_manager = await ServiceRegistry.get_download_manager()

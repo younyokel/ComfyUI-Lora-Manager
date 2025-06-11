@@ -751,29 +751,6 @@ class ModelScanner:
     def get_model_roots(self) -> List[str]:
         """Get model root directories"""
         raise NotImplementedError("Subclasses must implement get_model_roots")
-
-    async def scan_single_model(self, file_path: str) -> Optional[Dict]:
-        """Scan a single model file and return its metadata"""
-        try:
-            if not os.path.exists(os.path.realpath(file_path)):
-                return None
-                
-            # Get basic file info
-            metadata = await self._get_file_info(file_path)
-            if not metadata:
-                return None
-                
-            folder = self._calculate_folder(file_path)
-                    
-            # Ensure folder field exists
-            metadata_dict = metadata.to_dict()
-            metadata_dict['folder'] = folder or ''
-            
-            return metadata_dict
-            
-        except Exception as e:
-            logger.error(f"Error scanning {file_path}: {e}")
-            return None
     
     async def _get_file_info(self, file_path: str) -> Optional[BaseModelMetadata]:
         """Get model file info and metadata (extensible for different model types)"""
@@ -1263,9 +1240,6 @@ class ModelScanner:
                     'results': []
                 }
             
-            # Get the file monitor
-            file_monitor = getattr(self, 'file_monitor', None)
-            
             # Keep track of success and failures
             results = []
             total_deleted = 0
@@ -1286,8 +1260,7 @@ class ModelScanner:
                     from ..utils.routes_common import ModelRouteUtils
                     deleted_files = await ModelRouteUtils.delete_model_files(
                         target_dir, 
-                        file_name,
-                        file_monitor
+                        file_name
                     )
                     
                     if deleted_files:

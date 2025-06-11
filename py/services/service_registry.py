@@ -58,26 +58,6 @@ class ServiceRegistry:
             scanner = await CheckpointScanner.get_instance()
             await cls.register_service("checkpoint_scanner", scanner)
         return scanner
-    
-    @classmethod
-    async def get_lora_monitor(cls):
-        """Get the LoraFileMonitor instance"""
-        from .file_monitor import LoraFileMonitor
-        monitor = await cls.get_service("lora_monitor")
-        if monitor is None:
-            monitor = await LoraFileMonitor.get_instance()
-            await cls.register_service("lora_monitor", monitor)
-        return monitor
-    
-    @classmethod
-    async def get_checkpoint_monitor(cls):
-        """Get the CheckpointFileMonitor instance"""
-        from .file_monitor import CheckpointFileMonitor
-        monitor = await cls.get_service("checkpoint_monitor")
-        if monitor is None:
-            monitor = await CheckpointFileMonitor.get_instance()
-            await cls.register_service("checkpoint_monitor", monitor)
-        return monitor
 
     @classmethod
     async def get_civitai_client(cls):
@@ -95,7 +75,6 @@ class ServiceRegistry:
         from .download_manager import DownloadManager
         manager = await cls.get_service("download_manager")
         if manager is None:
-            # We'll let DownloadManager.get_instance handle file_monitor parameter
             manager = await DownloadManager.get_instance()
             await cls.register_service("download_manager", manager)
         return manager
