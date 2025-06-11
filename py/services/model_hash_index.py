@@ -220,6 +220,15 @@ class ModelHashIndex:
     
     def get_duplicate_hashes(self) -> Dict[str, List[str]]:
         """Get dictionary of duplicate hashes and their paths"""
+        # Remove entries that have only one path
+        hashes_to_remove = []
+        for sha256, paths in self._duplicate_hashes.items():
+            if len(paths) <= 1:
+                hashes_to_remove.append(sha256)
+                
+        for sha256 in hashes_to_remove:
+            del self._duplicate_hashes[sha256]
+            
         return self._duplicate_hashes
     
     def get_duplicate_filenames(self) -> Dict[str, List[str]]:
