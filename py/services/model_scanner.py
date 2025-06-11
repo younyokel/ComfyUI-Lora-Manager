@@ -48,10 +48,25 @@ class ModelScanner:
         self._is_initializing = False  # Flag to track initialization state
         self._excluded_models = []  # List to track excluded models
         self._dirs_last_modified = {}  # Track directory modification times
+        self._use_cache_files = False  # Flag to control cache file usage, default to disabled
+        
+        # Clear cache files if disabled
+        if not self._use_cache_files:
+            self._clear_cache_files()
         
         # Register this service
         asyncio.create_task(self._register_service())
-        
+    
+    def _clear_cache_files(self):
+        """Clear existing cache files if they exist"""
+        try:
+            cache_path = self._get_cache_file_path()
+            if cache_path and os.path.exists(cache_path):
+                os.remove(cache_path)
+                logger.info(f"Cleared {self.model_type} cache file: {cache_path}")
+        except Exception as e:
+            logger.error(f"Error clearing {self.model_type} cache file: {e}")
+    
     async def _register_service(self):
         """Register this instance with the ServiceRegistry"""
         service_name = f"{self.model_type}_scanner"
@@ -93,6 +108,10 @@ class ModelScanner:
 
     async def _save_cache_to_disk(self) -> bool:
         """Save cache data to disk using MessagePack"""
+        if not self._use_cache_files:
+            logger.debug(f"Cache files disabled for {self.model_type}, skipping save")
+            return False
+            
         if self._cache is None or not self._cache.raw_data:
             logger.debug(f"No {self.model_type} cache data to save")
             return False
@@ -172,24 +191,15 @@ class ModelScanner:
         if cache_data.get("model_type") != self.model_type:
             logger.info(f"Cache invalid - model type mismatch. Got: {cache_data.get('model_type')}, Expected: {self.model_type}")
             return False
-            
-        # Check if directories have changed
-        # stored_dirs = cache_data.get("dirs_last_modified", {})
-        # current_dirs = self._get_dirs_last_modified()
-        
-        # If directory structure has changed, cache is invalid
-        # if set(stored_dirs.keys()) != set(current_dirs.keys()):
-        #     logger.info(f"Cache invalid - directory structure changed. Stored: {set(stored_dirs.keys())}, Current: {set(current_dirs.keys())}")
-        #     return False
-            
-        # Remove the modification time check to make cache validation less strict
-        # This allows the cache to be valid even when files have changed
-        # Users can explicitly refresh the cache when needed
                 
         return True
         
     async def _load_cache_from_disk(self) -> bool:
         """Load cache data from disk using MessagePack"""
+        if not self._use_cache_files:
+            logger.info(f"Cache files disabled for {self.model_type}, skipping load")
+            return False
+            
         start_time = time.time()
         cache_path = self._get_cache_file_path()
         if not cache_path or not os.path.exists(cache_path):
