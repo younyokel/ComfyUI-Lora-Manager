@@ -735,7 +735,7 @@ class CheckpointsRoutes:
                     if primary_model:
                         group["models"].insert(0, self._format_checkpoint_response(primary_model))
                 
-                if group["models"]:
+                if len(group["models"]) > 1:  # Only include if we found multiple models
                     result.append(group)
                 
             return web.json_response({

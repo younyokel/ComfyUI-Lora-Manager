@@ -132,8 +132,6 @@ export function appendLoraCards(loras) {
 }
 
 export async function resetAndReload(updateFolders = false) {
-    const pageState = getCurrentPageState();
-    
     // Check if virtual scroller is available
     if (state.virtualScroller) {
         return resetAndReloadWithVirtualScroll({

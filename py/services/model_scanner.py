@@ -1342,7 +1342,7 @@ class ModelScanner:
                     hash_val = model.get('sha256', '').lower()
                     
                     # Remove from hash index
-                    self._hash_index.remove_by_path(file_path)
+                    self._hash_index.remove_by_path(file_path, hash_val)
                     
                     # Check and clean up duplicates
                     self._cleanup_duplicates_after_removal(hash_val, file_name)

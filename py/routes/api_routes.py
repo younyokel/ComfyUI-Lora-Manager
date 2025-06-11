@@ -1209,7 +1209,7 @@ class ApiRoutes:
                     if primary_model:
                         group["models"].insert(0, self._format_lora_response(primary_model))
                 
-                if group["models"]:  # Only include if we found models
+                if len(group["models"]) > 1:  # Only include if we found multiple models
                     result.append(group)
                 
             return web.json_response({

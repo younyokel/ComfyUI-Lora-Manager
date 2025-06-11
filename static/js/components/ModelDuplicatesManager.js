@@ -2,6 +2,8 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { formatDate } from '../utils/formatters.js';
+import { resetAndReload as resetAndReloadLoras } from '../api/loraApi.js';
+import { resetAndReload as resetAndReloadCheckpoints } from '../api/checkpointApi.js';
 
 export class ModelDuplicatesManager {
     constructor(pageManager, modelType = 'loras') {
@@ -536,11 +538,43 @@ export class ModelDuplicatesManager {
             
             showToast(`Successfully deleted ${data.total_deleted} models`, 'success');
             
-            // Exit duplicate mode if deletions were successful
+            // If models were successfully deleted
             if (data.total_deleted > 0) {
-                // Check duplicates count after deletion
-                this.checkDuplicatesCount();
-                this.exitDuplicateMode();
+                // Reload model data with updated folders
+                if (this.modelType === 'loras') {
+                    await resetAndReloadLoras(true);
+                } else {
+                    await resetAndReloadCheckpoints(true);
+                }
+                
+                // Check if there are still duplicates
+                try {
+                    const endpoint = `/api/${this.modelType}/find-duplicates`;
+                    const dupResponse = await fetch(endpoint);
+                    
+                    if (!dupResponse.ok) {
+                        throw new Error(`Failed to get duplicates: ${dupResponse.statusText}`);
+                    }
+                    
+                    const dupData = await dupResponse.json();
+                    const remainingDuplicatesCount = (dupData.duplicates || []).length;
+                    
+                    // Update badge count
+                    this.updateDuplicatesBadge(remainingDuplicatesCount);
+                    
+                    // If no more duplicates, exit duplicate mode
+                    if (remainingDuplicatesCount === 0) {
+                        this.exitDuplicateMode();
+                    } else {
+                        // If duplicates remain, refresh duplicate groups display
+                        this.duplicateGroups = dupData.duplicates || [];
+                        this.selectedForDeletion.clear();
+                        this.renderDuplicateGroups();
+                        this.updateSelectedCount();
+                    }
+                } catch (error) {
+                    console.error('Error checking remaining duplicates:', error);
+                }
             }
             
         } catch (error) {

@@ -63,16 +63,16 @@ class ModelHashIndex:
         """Extract filename without extension from path"""
         return os.path.splitext(os.path.basename(file_path))[0]
     
-    def remove_by_path(self, file_path: str) -> None:
+    def remove_by_path(self, file_path: str, hash_val: str = None) -> None:
         """Remove entry by file path"""
         filename = self._get_filename_from_path(file_path)
-        hash_val = None
         
         # Find the hash for this file path
-        for h, p in self._hash_to_path.items():
-            if p == file_path:
-                hash_val = h
-                break
+        if hash_val is None:
+            for h, p in self._hash_to_path.items():
+                if p == file_path:
+                    hash_val = h
+                    break
         
         # If we didn't find a hash, nothing to do
         if not hash_val:
@@ -219,16 +219,7 @@ class ModelHashIndex:
         return set(self._filename_to_hash.keys())
     
     def get_duplicate_hashes(self) -> Dict[str, List[str]]:
-        """Get dictionary of duplicate hashes and their paths"""
-        # Remove entries that have only one path
-        hashes_to_remove = []
-        for sha256, paths in self._duplicate_hashes.items():
-            if len(paths) <= 1:
-                hashes_to_remove.append(sha256)
-                
-        for sha256 in hashes_to_remove:
-            del self._duplicate_hashes[sha256]
-            
+        """Get dictionary of duplicate hashes and their paths"""    
         return self._duplicate_hashes
     
     def get_duplicate_filenames(self) -> Dict[str, List[str]]:
