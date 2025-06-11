@@ -207,11 +207,11 @@ async def load_metadata(file_path: str, model_class: Type[BaseModelMetadata] = L
                         data['preview_url'] = new_preview_url
                         needs_update = True
                 else:
-                    # Compare preview paths without extensions
-                    stored_preview_base = os.path.splitext(preview_url)[0]
-                    current_preview_base = os.path.splitext(normalize_path(preview_url))[0]
-                    if stored_preview_base != current_preview_base:
-                        data['preview_url'] = normalize_path(preview_url)
+                    if stored_path_base != current_path_base:
+                        # If model location changed, update preview path by replacing old path with new path
+                        preview_file = os.path.basename(preview_url)
+                        new_preview_url = os.path.join(os.path.dirname(file_path), preview_file)
+                        data['preview_url'] = normalize_path(new_preview_url)
                         needs_update = True
 
                 # Ensure all fields are present
