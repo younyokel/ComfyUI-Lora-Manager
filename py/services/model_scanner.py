@@ -669,26 +669,33 @@ class ModelScanner:
                     batch = new_files[i:i+batch_size]
                     for path in batch:
                         try:
-                            model_data = await self.scan_single_model(path)
-                            if model_data:
-                                # Add to cache
-                                self._cache.raw_data.append(model_data)
-                                
-                                # Update hash index if available
-                                if 'sha256' in model_data and 'file_path' in model_data:
-                                    self._hash_index.add_entry(model_data['sha256'].lower(), model_data['file_path'])
-                                
-                                # Update tags count
-                                if 'tags' in model_data and model_data['tags']:
-                                    for tag in model_data['tags']:
-                                        self._tags_count[tag] = self._tags_count.get(tag, 0) + 1
-                                        
-                                total_added += 1
+                            # Find the appropriate root path for this file
+                            root_path = None
+                            for potential_root in self.get_model_roots():
+                                if path.startswith(potential_root):
+                                    root_path = potential_root
+                                    break
+                            
+                            if root_path:
+                                model_data = await self._process_model_file(path, root_path)
+                                if model_data:
+                                    # Add to cache
+                                    self._cache.raw_data.append(model_data)
+                                    
+                                    # Update hash index if available
+                                    if 'sha256' in model_data and 'file_path' in model_data:
+                                        self._hash_index.add_entry(model_data['sha256'].lower(), model_data['file_path'])
+                                    
+                                    # Update tags count
+                                    if 'tags' in model_data and model_data['tags']:
+                                        for tag in model_data['tags']:
+                                            self._tags_count[tag] = self._tags_count.get(tag, 0) + 1
+                                            
+                                    total_added += 1
+                            else:
+                                logger.error(f"Could not determine root path for {path}")
                         except Exception as e:
                             logger.error(f"Error adding {path} to cache: {e}")
-                    
-                    # Yield control after each batch
-                    await asyncio.sleep(0)
             
             # Find missing files (in cache but not in filesystem)
             missing_files = cached_paths - found_paths
