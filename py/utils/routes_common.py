@@ -47,13 +47,30 @@ class ModelRouteUtils:
             if civitai_metadata.get('model', {}).get('name'):
                 local_metadata['model_name'] = civitai_metadata['model']['name']
         
-            # Fetch additional model metadata (description and tags) if we have model ID
-            model_id = civitai_metadata['modelId']
-            if model_id:
-                model_metadata, _ = await client.get_model_metadata(str(model_id))
-                if (model_metadata):
-                    local_metadata['modelDescription'] = model_metadata.get('description', '')
-                    local_metadata['tags'] = model_metadata.get('tags', [])
+            # Extract model metadata directly from civitai_metadata if available
+            model_metadata = None
+            
+            if 'model' in civitai_metadata and civitai_metadata.get('model'):
+                # Data is already available in the response from get_model_version
+                model_metadata = {
+                    'description': civitai_metadata.get('model', {}).get('description', ''),
+                    'tags': civitai_metadata.get('model', {}).get('tags', []),
+                    'creator': civitai_metadata.get('creator', {})
+                }
+            
+            # If we have modelId and don't have enough metadata, fetch additional data
+            if not model_metadata or not model_metadata.get('description'):
+                model_id = civitai_metadata.get('modelId')
+                if model_id:
+                    fetched_metadata, _ = await client.get_model_metadata(str(model_id))
+                    if fetched_metadata:
+                        model_metadata = fetched_metadata
+            
+            # Update local metadata with the model information
+            if model_metadata:
+                local_metadata['modelDescription'] = model_metadata.get('description', '')
+                local_metadata['tags'] = model_metadata.get('tags', [])
+                if 'creator' in model_metadata and model_metadata['creator']:
                     local_metadata['civitai']['creator'] = model_metadata['creator']
         
         # Update base model
@@ -607,7 +624,7 @@ class ModelRouteUtils:
 
     @staticmethod
     async def handle_relink_civitai(request: web.Request, scanner) -> web.Response:
-        """Handle CivitAI metadata re-linking request by model version ID
+        """Handle CivitAI metadata re-linking request by model ID and/or version ID
         
         Args:
             request: The aiohttp request
@@ -619,10 +636,11 @@ class ModelRouteUtils:
         try:
             data = await request.json()
             file_path = data.get('file_path')
+            model_id = data.get('model_id')
             model_version_id = data.get('model_version_id')
             
-            if not file_path or not model_version_id:
-                return web.json_response({"success": False, "error": "Both file_path and model_version_id are required"}, status=400)
+            if not file_path or not model_id:
+                return web.json_response({"success": False, "error": "Both file_path and model_id are required"}, status=400)
             
             metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
             
@@ -632,24 +650,24 @@ class ModelRouteUtils:
             # Create a client for fetching from Civitai
             client = await CivitaiClient.get_instance()
             try:
-                # Fetch metadata by model version ID
-                civitai_metadata, error = await client.get_model_version_info(model_version_id)
+                # Fetch metadata using get_model_version which includes more comprehensive data
+                civitai_metadata = await client.get_model_version(model_id, model_version_id)
                 if not civitai_metadata:
-                    error_msg = error or "Model version not found on CivitAI"
+                    error_msg = f"Model version not found on CivitAI for ID: {model_id}"
+                    if model_version_id:
+                        error_msg += f" with version: {model_version_id}"
                     return web.json_response({"success": False, "error": error_msg}, status=404)
                 
-                # Find the primary model file to get the correct SHA256 hash
+                # Try to find the primary model file to get the SHA256 hash
                 primary_model_file = None
                 for file in civitai_metadata.get('files', []):
                     if file.get('primary', False) and file.get('type') == 'Model':
                         primary_model_file = file
                         break
                 
-                if not primary_model_file or not primary_model_file.get('hashes', {}).get('SHA256'):
-                    return web.json_response({"success": False, "error": "No SHA256 hash found in model metadata"}, status=404)
-                
-                # Update the SHA256 hash in local metadata (convert to lowercase)
-                local_metadata['sha256'] = primary_model_file['hashes']['SHA256'].lower()
+                # Update the SHA256 hash in local metadata if available
+                if primary_model_file and primary_model_file.get('hashes', {}).get('SHA256'):
+                    local_metadata['sha256'] = primary_model_file['hashes']['SHA256'].lower()
                 
                 # Update metadata with CivitAI information
                 await ModelRouteUtils.update_model_metadata(metadata_path, local_metadata, civitai_metadata, client)
@@ -659,8 +677,9 @@ class ModelRouteUtils:
                 
                 return web.json_response({
                     "success": True,
-                    "message": f"Model successfully re-linked to Civitai version {model_version_id}",
-                    "hash": local_metadata['sha256']
+                    "message": f"Model successfully re-linked to Civitai model {model_id}" + 
+                               (f" version {model_version_id}" if model_version_id else ""),
+                    "hash": local_metadata.get('sha256', '')
                 })
                 
             finally:

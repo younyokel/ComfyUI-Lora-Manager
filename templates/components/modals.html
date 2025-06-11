@@ -598,10 +598,14 @@
         </div>
         <div class="input-group">
             <label for="civitaiModelUrl">Civitai Model URL:</label>
-            <input type="text" id="civitaiModelUrl" placeholder="https://civitai.com/models/1098030?modelVersionId=1233411" />
+            <input type="text" id="civitaiModelUrl" placeholder="https://civitai.com/models/649516/model-name?modelVersionId=726676" />
             <div class="input-error" id="civitaiModelUrlError"></div>
             <div class="input-help">
-                The URL must include the modelVersionId parameter.
+                Paste any Civitai model URL. Supported formats:<br>
+                • https://civitai.com/models/649516<br>
+                • https://civitai.com/models/649516?modelVersionId=726676<br>
+                • https://civitai.com/models/649516/model-name?modelVersionId=726676<br>
+                <em>Note: If no modelVersionId is provided, the latest version will be used.</em>
             </div>
         </div>
         <div class="modal-actions">

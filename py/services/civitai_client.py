@@ -224,6 +224,69 @@ class CivitaiClient:
         except Exception as e:
             logger.error(f"Error fetching model versions: {e}")
             return None
+            
+    async def get_model_version(self, model_id: str, version_id: str = "") -> Optional[Dict]:
+        """Get specific model version with additional metadata
+        
+        Args:
+            model_id: The Civitai model ID
+            version_id: Optional specific version ID to retrieve
+            
+        Returns:
+            Optional[Dict]: The model version data with additional fields or None if not found
+        """
+        try:
+            session = await self._ensure_fresh_session()
+            async with session.get(f"{self.base_url}/models/{model_id}") as response:
+                if response.status != 200:
+                    return None
+                    
+                data = await response.json()
+                model_versions = data.get('modelVersions', [])
+                
+                # Find matching version
+                matched_version = None
+                
+                if version_id:
+                    # If version_id provided, find exact match
+                    for version in model_versions:
+                        if str(version.get('id')) == str(version_id):
+                            matched_version = version
+                            break
+                else:
+                    # If no version_id then use the first version
+                    matched_version = model_versions[0] if model_versions else None
+                
+                # If no match found, return None
+                if not matched_version:
+                    return None
+                    
+                # Build result with modified fields
+                result = matched_version.copy()  # Copy to avoid modifying original
+                
+                # Replace index with modelId
+                if 'index' in result:
+                    del result['index']
+                result['modelId'] = model_id
+                
+                # Add model field with metadata from top level
+                result['model'] = {
+                    "name": data.get("name"),
+                    "type": data.get("type"),
+                    "nsfw": data.get("nsfw", False),
+                    "poi": data.get("poi", False),
+                    "description": data.get("description"),
+                    "tags": data.get("tags", [])
+                }
+                
+                # Add creator field from top level
+                result['creator'] = data.get("creator")
+                
+                return result
+                
+        except Exception as e:
+            logger.error(f"Error fetching model version: {e}")
+            return None
 
     async def get_model_version_info(self, version_id: str) -> Tuple[Optional[Dict], Optional[str]]:
         """Fetch model version metadata from Civitai

@@ -273,10 +273,10 @@ export const ModelContextMenuMixin = {
         // Create new bound handler
         this._boundRelinkHandler = async () => {
             const url = urlInput.value.trim();
-            const modelVersionId = this.extractModelVersionId(url);
+            const { modelId, modelVersionId } = this.extractModelVersionId(url);
             
-            if (!modelVersionId) {
-                errorDiv.textContent = 'Invalid URL format. Must include modelVersionId parameter.';
+            if (!modelId) {
+                errorDiv.textContent = 'Invalid URL format. Must include model ID.';
                 return;
             }
             
@@ -297,6 +297,7 @@ export const ModelContextMenuMixin = {
                     },
                     body: JSON.stringify({
                         file_path: filePath,
+                        model_id: modelId,
                         model_version_id: modelVersionId
                     })
                 });
@@ -331,15 +332,30 @@ export const ModelContextMenuMixin = {
         
         // Show modal
         modalManager.showModal('relinkCivitaiModal');
+        
+        // Auto-focus the URL input field after modal is shown
+        setTimeout(() => urlInput.focus(), 50);
     },
 
     extractModelVersionId(url) {
         try {
+            // Handle all three URL formats:
+            // 1. https://civitai.com/models/649516
+            // 2. https://civitai.com/models/649516?modelVersionId=726676
+            // 3. https://civitai.com/models/649516/cynthia-pokemon-diamond-and-pearl-pdxl-lora?modelVersionId=726676
+            
             const parsedUrl = new URL(url);
+            
+            // Extract model ID from path
+            const pathMatch = parsedUrl.pathname.match(/\/models\/(\d+)/);
+            const modelId = pathMatch ? pathMatch[1] : null;
+            
+            // Extract model version ID from query parameters
             const modelVersionId = parsedUrl.searchParams.get('modelVersionId');
-            return modelVersionId;
+            
+            return { modelId, modelVersionId };
         } catch (e) {
-            return null;
+            return { modelId: null, modelVersionId: null };
         }
     },
     
