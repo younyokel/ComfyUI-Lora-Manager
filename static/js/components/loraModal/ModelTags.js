@@ -13,6 +13,9 @@ const PRESET_TAGS = [
     'objects', 'animal'
 ];
 
+// Create a named function so we can remove it later
+let saveTagsHandler = null;
+
 /**
  * Set up tag editing mode
  */
@@ -23,7 +26,13 @@ export function setupTagEditMode() {
     // Store original tags for restoring on cancel
     let originalTags = [];
     
-    editBtn.addEventListener('click', function() {
+    // Remove any previously attached click handler
+    if (editBtn._hasClickHandler) {
+        editBtn.removeEventListener('click', editBtn._clickHandler);
+    }
+    
+    // Create new handler and store reference
+    const editBtnClickHandler = function() {
         const tagsSection = document.querySelector('.model-tags-container');
         const isEditMode = tagsSection.classList.toggle('edit-mode');
         const filePath = this.dataset.filePath;
@@ -103,15 +112,28 @@ export function setupTagEditMode() {
                 delete this.dataset.skipRestore;
             }
         }
-    });
+    };
     
-    // Set up save button
-    document.addEventListener('click', function(e) {
+    // Store the handler reference on the button itself
+    editBtn._clickHandler = editBtnClickHandler;
+    editBtn._hasClickHandler = true;
+    editBtn.addEventListener('click', editBtnClickHandler);
+    
+    // Clean up any previous document click handler
+    if (saveTagsHandler) {
+        document.removeEventListener('click', saveTagsHandler);
+    }
+    
+    // Create new save handler and store reference
+    saveTagsHandler = function(e) {
         if (e.target.classList.contains('save-tags-btn') || 
             e.target.closest('.save-tags-btn')) {
             saveTags();
         }
-    });
+    };
+    
+    // Add the new handler
+    document.addEventListener('click', saveTagsHandler);
 }
 
 /**
