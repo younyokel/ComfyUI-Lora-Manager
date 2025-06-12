@@ -38,10 +38,6 @@ class DownloadManager:
         if self._civitai_client is None:
             self._civitai_client = await ServiceRegistry.get_civitai_client()
         return self._civitai_client
-
-    async def _get_lora_monitor(self):
-        """Get the lora file monitor from registry"""
-        return await ServiceRegistry.get_lora_monitor()
         
     async def _get_checkpoint_monitor(self):
         """Get the checkpoint file monitor from registry"""

@@ -985,17 +985,6 @@ class ApiRoutes:
             renamed_files = []
             new_metadata_path = None
             
-            # Notify file monitor to ignore these events
-            main_file_path = os.path.join(target_dir, f"{old_file_name}.safetensors")
-            if os.path.exists(main_file_path):
-                # Get lora monitor through ServiceRegistry instead of download_manager
-                lora_monitor = await ServiceRegistry.get_lora_monitor()
-                if lora_monitor:
-                    # Add old and new paths to ignore list
-                    file_size = os.path.getsize(main_file_path)
-                    lora_monitor.handler.add_ignore_path(main_file_path, file_size)
-                    lora_monitor.handler.add_ignore_path(new_file_path, file_size)
-            
             for old_path, pattern in existing_files:
                 # Get the file extension like .safetensors or .metadata.json
                 ext = ModelRouteUtils.get_multipart_ext(pattern)

@@ -989,26 +989,6 @@ class ModelScanner:
             real_source = os.path.realpath(source_path)
             real_target = os.path.realpath(target_file)
             
-            file_size = os.path.getsize(real_source)
-            
-            # Get the appropriate file monitor through ServiceRegistry
-            if self.model_type == "lora":
-                monitor = await ServiceRegistry.get_lora_monitor()
-            elif self.model_type == "checkpoint":
-                monitor = await ServiceRegistry.get_checkpoint_monitor()
-            else:
-                monitor = None
-                
-            if monitor:
-                monitor.handler.add_ignore_path(
-                    real_source,
-                    file_size
-                )
-                monitor.handler.add_ignore_path(
-                    real_target,
-                    file_size
-                )
-            
             shutil.move(real_source, real_target)
             
             # Move all associated files with the same base name
