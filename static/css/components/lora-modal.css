@@ -1144,10 +1144,29 @@
     white-space: nowrap;
 }
 
+/* Style for empty tags placeholder */
+.model-tag-empty {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-xs);
+    padding: 2px 8px;
+    font-size: 0.75em;
+    color: var(--text-color);
+    white-space: nowrap;
+    opacity: 0.7;
+    font-style: italic;
+}
+
 /* Adjust dark theme tag styles */
 [data-theme="dark"] .model-tag-compact {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--lora-border);
+}
+
+/* Dark theme for empty tags */
+[data-theme="dark"] .model-tag-empty {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--lora-border);
 }
 
 .model-tag-more {

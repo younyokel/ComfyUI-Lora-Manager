@@ -30,11 +30,12 @@ export function formatFileSize(bytes) {
  * @returns {string} HTML内容
  */
 export function renderCompactTags(tags, filePath = '') {
-    if (!tags || tags.length === 0) return '';
+    // Remove the early return and always render the container
+    const tagsList = tags || [];
     
     // Display up to 5 tags, with a tooltip indicator if there are more
-    const visibleTags = tags.slice(0, 5);
-    const remainingCount = Math.max(0, tags.length - 5);
+    const visibleTags = tagsList.slice(0, 5);
+    const remainingCount = Math.max(0, tagsList.length - 5);
     
     return `
         <div class="model-tags-container">
@@ -44,15 +45,16 @@ export function renderCompactTags(tags, filePath = '') {
                     ${remainingCount > 0 ? 
                         `<span class="model-tag-more" data-count="${remainingCount}">+${remainingCount}</span>` : 
                         ''}
+                    ${tagsList.length === 0 ? `<span class="model-tag-empty">No tags</span>` : ''}
                 </div>
                 <button class="edit-tags-btn" data-file-path="${filePath}" title="Edit tags">
                     <i class="fas fa-pencil-alt"></i>
                 </button>
             </div>
-            ${tags.length > 0 ? 
+            ${tagsList.length > 0 ? 
                 `<div class="model-tags-tooltip">
                     <div class="tooltip-content">
-                        ${tags.map(tag => `<span class="tooltip-tag">${tag}</span>`).join('')}
+                        ${tagsList.map(tag => `<span class="tooltip-tag">${tag}</span>`).join('')}
                     </div>
                 </div>` : 
                 ''}
