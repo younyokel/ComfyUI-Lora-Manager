@@ -13,7 +13,7 @@ from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
-from ..utils.constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
+from ..utils.constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH, VALID_LORA_TYPES
 from ..utils.exif_utils import ExifUtils
 from ..services.service_registry import ServiceRegistry
 
@@ -401,8 +401,8 @@ class ApiRoutes:
             versions = response.get('modelVersions', [])
             model_type = response.get('type', '')
             
-            # Check model type - should be LORA or LoCon
-            if model_type.lower() not in ['lora', 'locon']:
+            # Check model type - should be LORA, LoCon, or DORA
+            if model_type.lower() not in VALID_LORA_TYPES:
                 return web.json_response({
                     'error': f"Model type mismatch. Expected LORA or LoCon, got {model_type}"
                 }, status=400)

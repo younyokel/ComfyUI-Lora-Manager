@@ -32,3 +32,6 @@ SUPPORTED_MEDIA_EXTENSIONS = {
     'images': ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
     'videos': ['.mp4', '.webm']
 }
+
+# Valid Lora types
+VALID_LORA_TYPES = ['lora', 'locon', 'dora']

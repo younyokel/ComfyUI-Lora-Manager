@@ -7,7 +7,7 @@ import re
 from typing import Dict, List, Any, Optional, Tuple
 from abc import ABC, abstractmethod
 from ..config import config
-from .constants import VALID_LORA_TYPES
+from ..utils.constants import VALID_LORA_TYPES
 
 logger = logging.getLogger(__name__)
 

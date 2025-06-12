@@ -1,5 +1,8 @@
 """Constants used across recipe parsers."""
 
+# Import VALID_LORA_TYPES from utils.constants
+from ..utils.constants import VALID_LORA_TYPES
+
 # Constants for generation parameters
 GEN_PARAM_KEYS = [
     'prompt',
@@ -11,6 +14,3 @@ GEN_PARAM_KEYS = [
     'size',
     'clip_skip',
 ]
-
-# Valid Lora types
-VALID_LORA_TYPES = ['lora', 'locon']
