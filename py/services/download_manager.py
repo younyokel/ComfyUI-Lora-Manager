@@ -38,10 +38,6 @@ class DownloadManager:
         if self._civitai_client is None:
             self._civitai_client = await ServiceRegistry.get_civitai_client()
         return self._civitai_client
-        
-    async def _get_checkpoint_monitor(self):
-        """Get the checkpoint file monitor from registry"""
-        return await ServiceRegistry.get_checkpoint_monitor()
     
     async def _get_lora_scanner(self):
         """Get the lora scanner from registry"""
@@ -131,9 +127,6 @@ class DownloadManager:
             # 3. Prepare download
             file_name = file_info['name']
             save_path = os.path.join(save_dir, file_name)
-
-            # 4. Notify file monitor - use normalized path and file size
-            # file monitor is despreted, so we don't need to use it
 
             # 5. Prepare metadata based on model type
             if model_type == "checkpoint":

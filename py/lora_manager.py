@@ -166,17 +166,6 @@ class LoraManager:
         """Cleanup resources using ServiceRegistry"""
         try:
             logger.info("LoRA Manager: Cleaning up services")
-            
-            # Get monitors from ServiceRegistry
-            lora_monitor = await ServiceRegistry.get_service("lora_monitor")
-            if lora_monitor:
-                lora_monitor.stop()
-                logger.info("Stopped LoRA monitor")
-                
-            checkpoint_monitor = await ServiceRegistry.get_service("checkpoint_monitor")
-            if checkpoint_monitor:
-                checkpoint_monitor.stop()
-                logger.info("Stopped checkpoint monitor")
                 
             # Close CivitaiClient gracefully
             civitai_client = await ServiceRegistry.get_service("civitai_client")
