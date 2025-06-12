@@ -143,40 +143,6 @@ export function setupModelNameEditing(filePath) {
 }
 
 /**
- * 保存模型名称
- * @param {string} filePath - 文件路径
- */
-async function saveModelName(filePath) {
-    const modelNameElement = document.querySelector('.model-name-content');
-    const newModelName = modelNameElement.textContent.trim();
-    
-    // Validate model name
-    if (!newModelName) {
-        showToast('Model name cannot be empty', 'error');
-        return;
-    }
-    
-    // Check if model name is too long (limit to 100 characters)
-    if (newModelName.length > 100) {
-        showToast('Model name is too long (maximum 100 characters)', 'error');
-        // Truncate the displayed text
-        modelNameElement.textContent = newModelName.substring(0, 100);
-        return;
-    }
-    
-    try {
-        await saveModelMetadata(filePath, { model_name: newModelName });
-        
-        // Update the corresponding lora card's dataset and display
-        updateLoraCard(filePath, { model_name: newModelName });
-        
-        showToast('Model name updated successfully', 'success');
-    } catch (error) {
-        showToast('Failed to update model name', 'error');
-    }
-}
-
-/**
  * 设置基础模型编辑功能
  * @param {string} filePath - 文件路径
  */

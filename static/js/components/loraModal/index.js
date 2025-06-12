@@ -9,7 +9,8 @@ import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';
-import { loadRecipesForLora } from './RecipeTab.js'; // Add import for recipe tab
+import { loadRecipesForLora } from './RecipeTab.js'; 
+import { setupTagEditMode } from './ModelTags.js'; // Add import for tag editing
 import { 
     setupModelNameEditing, 
     setupBaseModelEditing, 
@@ -52,7 +53,7 @@ export function showLoraModal(lora) {
                     <span class="creator-username">${lora.civitai.creator.username}</span>
                 </div>` : ''}
                 
-                ${renderCompactTags(lora.tags || [])}
+                ${renderCompactTags(lora.tags || [], lora.file_path)}
             </header>
 
             <div class="modal-body">
@@ -177,6 +178,7 @@ export function showLoraModal(lora) {
     setupModelNameEditing(lora.file_path);
     setupBaseModelEditing(lora.file_path);
     setupFileNameEditing(lora.file_path);
+    setupTagEditMode(); // Initialize tag editing functionality
     
     // If we have a model ID but no description, fetch it
     if (lora.civitai?.modelId && !lora.modelDescription) {

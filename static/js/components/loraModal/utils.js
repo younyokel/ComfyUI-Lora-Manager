@@ -26,9 +26,10 @@ export function formatFileSize(bytes) {
 /**
  * 渲染紧凑标签
  * @param {Array} tags - 标签数组
+ * @param {string} filePath - 文件路径，用于编辑按钮
  * @returns {string} HTML内容
  */
-export function renderCompactTags(tags) {
+export function renderCompactTags(tags, filePath = '') {
     if (!tags || tags.length === 0) return '';
     
     // Display up to 5 tags, with a tooltip indicator if there are more
@@ -37,11 +38,16 @@ export function renderCompactTags(tags) {
     
     return `
         <div class="model-tags-container">
-            <div class="model-tags-compact">
-                ${visibleTags.map(tag => `<span class="model-tag-compact">${tag}</span>`).join('')}
-                ${remainingCount > 0 ? 
-                    `<span class="model-tag-more" data-count="${remainingCount}">+${remainingCount}</span>` : 
-                    ''}
+            <div class="model-tags-header">
+                <div class="model-tags-compact">
+                    ${visibleTags.map(tag => `<span class="model-tag-compact">${tag}</span>`).join('')}
+                    ${remainingCount > 0 ? 
+                        `<span class="model-tag-more" data-count="${remainingCount}">+${remainingCount}</span>` : 
+                        ''}
+                </div>
+                <button class="edit-tags-btn" data-file-path="${filePath}" title="Edit tags">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
             </div>
             ${tags.length > 0 ? 
                 `<div class="model-tags-tooltip">
