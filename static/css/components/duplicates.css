@@ -315,11 +315,134 @@
     margin-bottom: 4px;
     display: flex;
     flex-wrap: wrap;
+    word-break: break-all; /* Ensure long hashes wrap properly */
 }
 
 .model-tooltip .tooltip-info div strong {
     margin-right: 5px;
     min-width: 70px;
+}
+
+/* Latest indicator */
+.hash-mismatch-info {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+    color: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
+    font-weight: bold;
+    word-break: break-all; /* Ensure long hashes wrap properly */
+}
+
+/* Verification Badge Styles */
+.verification-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 6px;
+    font-size: 0.8em;
+    border-radius: var(--border-radius-xs);
+    font-weight: normal;
+}
+
+.verification-badge.metadata {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.verification-badge.verified {
+    background-color: oklch(70% 0.2 140); /* Green for verified */
+    color: white;
+}
+
+.verification-badge.mismatch {
+    background-color: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
+    color: white;
+}
+
+.verification-badge i {
+    margin-right: 4px;
+}
+
+/* Hash Mismatch Styling */
+.lora-card.duplicate.hash-mismatch {
+    border: 2px dashed oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
+    opacity: 0.85;
+    position: relative;
+}
+
+.lora-card.duplicate.hash-mismatch::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h) / 0.05),
+        oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h) / 0.05) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    z-index: 1;
+    pointer-events: none;
+}
+
+.lora-card.duplicate.hash-mismatch .card-preview {
+    filter: grayscale(20%);
+}
+
+/* Mismatch Badge */
+.mismatch-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px; /* Changed from right:10px to left:10px */
+    background: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
+    color: white;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: var(--border-radius-xs);
+    z-index: 5;
+}
+
+/* Disabled checkbox style */
+.lora-card.duplicate.hash-mismatch .selector-checkbox {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Hash mismatch info in tooltip */
+.hash-mismatch-info {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+    color: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
+    font-weight: bold;
+}
+
+/* Verify hash button styling */
+.btn-verify-hashes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xs);
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-verify-hashes:hover {
+    background: var(--bg-color);
+    border-color: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h));
+    transform: translateY(-1px);
+}
+
+.btn-verify-hashes i {
+    font-size: 0.9em;
 }
 
 /* Badge Styles */

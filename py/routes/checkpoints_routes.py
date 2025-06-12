@@ -66,6 +66,9 @@ class CheckpointsRoutes:
         # Add new endpoint for bulk deleting checkpoints
         app.router.add_post('/api/checkpoints/bulk-delete', self.bulk_delete_checkpoints)
 
+        # Add new endpoint for verifying duplicates
+        app.router.add_post('/api/checkpoints/verify-duplicates', self.verify_duplicates)
+
     async def get_checkpoints(self, request):
         """Get paginated checkpoint data"""
         try:
@@ -816,3 +819,7 @@ class CheckpointsRoutes:
     async def relink_civitai(self, request: web.Request) -> web.Response:
         """Handle CivitAI metadata re-linking request by model version ID for checkpoints"""
         return await ModelRouteUtils.handle_relink_civitai(request, self.scanner)
+
+    async def verify_duplicates(self, request: web.Request) -> web.Response:
+        """Handle verification of duplicate checkpoint hashes"""
+        return await ModelRouteUtils.handle_verify_duplicates(request, self.scanner)

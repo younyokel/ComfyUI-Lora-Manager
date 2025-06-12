@@ -88,6 +88,9 @@ class ApiRoutes:
         # Add new endpoint for bulk deleting loras
         app.router.add_post('/api/loras/bulk-delete', routes.bulk_delete_loras)
 
+        # Add new endpoint for verifying duplicates
+        app.router.add_post('/api/loras/verify-duplicates', routes.verify_duplicates)
+
     async def delete_model(self, request: web.Request) -> web.Response:
         """Handle model deletion request"""
         if self.scanner is None:
@@ -1292,3 +1295,9 @@ class ApiRoutes:
         if self.scanner is None:
             self.scanner = await ServiceRegistry.get_lora_scanner()
         return await ModelRouteUtils.handle_relink_civitai(request, self.scanner)
+
+    async def verify_duplicates(self, request: web.Request) -> web.Response:
+        """Handle verification of duplicate lora hashes"""
+        if self.scanner is None:
+            self.scanner = await ServiceRegistry.get_lora_scanner()
+        return await ModelRouteUtils.handle_verify_duplicates(request, self.scanner)

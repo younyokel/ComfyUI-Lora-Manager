@@ -4,6 +4,7 @@ import { state, getCurrentPageState } from '../state/index.js';
 import { formatDate } from '../utils/formatters.js';
 import { resetAndReload as resetAndReloadLoras } from '../api/loraApi.js';
 import { resetAndReload as resetAndReloadCheckpoints } from '../api/checkpointApi.js';
+import { LoadingManager } from '../managers/LoadingManager.js';
 
 export class ModelDuplicatesManager {
     constructor(pageManager, modelType = 'loras') {
@@ -13,10 +14,18 @@ export class ModelDuplicatesManager {
         this.selectedForDeletion = new Set();
         this.modelType = modelType; // Use the provided modelType or default to 'loras'
         
+        // Verification tracking
+        this.verifiedGroups = new Set(); // Track which groups have been verified
+        this.mismatchedFiles = new Map(); // Map file paths to actual hashes for mismatched files
+        
+        // Loading manager for verification process
+        this.loadingManager = new LoadingManager();
+        
         // Bind methods
         this.renderModelCard = this.renderModelCard.bind(this);
         this.renderTooltip = this.renderTooltip.bind(this);
         this.checkDuplicatesCount = this.checkDuplicatesCount.bind(this);
+        this.handleVerifyHashes = this.handleVerifyHashes.bind(this);
         
         // Keep track of which controls need to be re-enabled
         this.disabledControls = [];
@@ -247,14 +256,34 @@ export class ModelDuplicatesManager {
             // Create group header
             const header = document.createElement('div');
             header.className = 'duplicate-group-header';
+            
+            // Create verification status badge
+            const verificationBadge = document.createElement('span');
+            verificationBadge.className = 'verification-badge';
+            if (this.verifiedGroups.has(group.hash)) {
+                verificationBadge.classList.add('verified');
+                verificationBadge.innerHTML = '<i class="fas fa-check-circle"></i> Verified';
+            } else {
+                verificationBadge.classList.add('metadata');
+                verificationBadge.innerHTML = '<i class="fas fa-tag"></i> Metadata Hash';
+            }
+            
             header.innerHTML = `
                 <span>Duplicate Group #${groupIndex + 1} (${group.models.length} models with same hash: ${group.hash})</span>
                 <span>
+                    <button class="btn-verify-hashes" data-hash="${group.hash}" title="Recalculate SHA256 hashes to verify if these are true duplicates">
+                        <i class="fas fa-fingerprint"></i> Verify Hashes
+                    </button>
                     <button class="btn-select-all" onclick="modelDuplicatesManager.toggleSelectAllInGroup('${group.hash}')">
                         Select All
                     </button>
                 </span>
             `;
+            
+            // Insert verification badge after the group title
+            const headerFirstSpan = header.querySelector('span:first-child');
+            headerFirstSpan.appendChild(verificationBadge);
+            
             groupDiv.appendChild(header);
             
             // Create cards container
@@ -287,6 +316,15 @@ export class ModelDuplicatesManager {
             
             groupDiv.appendChild(cardsDiv);
             modelGrid.appendChild(groupDiv);
+            
+            // Add event listener to the verify hashes button
+            const verifyButton = header.querySelector('.btn-verify-hashes');
+            if (verifyButton) {
+                verifyButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.handleVerifyHashes(group);
+                });
+            }
         });
     }
     
@@ -296,6 +334,14 @@ export class ModelDuplicatesManager {
         card.className = 'lora-card duplicate';
         card.dataset.hash = model.sha256;
         card.dataset.filePath = model.file_path;
+        
+        // Check if this model is a mismatched file
+        const isMismatched = this.mismatchedFiles.has(model.file_path);
+        
+        // Add mismatched class if needed
+        if (isMismatched) {
+            card.classList.add('hash-mismatch');
+        }
         
         // Create card content using structure similar to createLoraCard in LoraCard.js
         const previewContainer = document.createElement('div');
@@ -338,6 +384,19 @@ export class ModelDuplicatesManager {
         
         previewContainer.appendChild(preview);
         
+        // Add hash mismatch badge if needed
+        if (isMismatched) {
+            const mismatchBadge = document.createElement('div');
+            mismatchBadge.className = 'mismatch-badge';
+            mismatchBadge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Different Hash';
+            previewContainer.appendChild(mismatchBadge);
+        }
+        
+        // Mark as latest if applicable
+        if (model.is_latest) {
+            card.classList.add('latest');
+        }
+        
         // Move tooltip listeners to the preview container for consistent behavior
         // regardless of whether the preview is an image or video
         previewContainer.addEventListener('mouseover', () => this.renderTooltip(card, model));
@@ -375,6 +434,12 @@ export class ModelDuplicatesManager {
             card.classList.add('duplicate-selected');
         }
         
+        // Disable checkbox for mismatched files
+        if (isMismatched) {
+            checkbox.disabled = true;
+            checkbox.title = "This file has a different actual hash and can't be selected";
+        }
+        
         // Add change event to checkbox
         checkbox.addEventListener('change', (e) => {
             e.stopPropagation();
@@ -385,6 +450,11 @@ export class ModelDuplicatesManager {
         card.addEventListener('click', (e) => {
             // Don't toggle if clicking on the checkbox directly or card actions
             if (e.target === checkbox || e.target.closest('.card-actions')) {
+                return;
+            }
+            
+            // Don't toggle if it's a mismatched file
+            if (isMismatched) {
                 return;
             }
             
@@ -406,8 +476,12 @@ export class ModelDuplicatesManager {
         const tooltip = document.createElement('div');
         tooltip.className = 'model-tooltip';
         
+        // Check if this model is a mismatched file and get the actual hash
+        const isMismatched = this.mismatchedFiles.has(model.file_path);
+        const actualHash = isMismatched ? this.mismatchedFiles.get(model.file_path) : null;
+        
         // Add model information to tooltip
-        tooltip.innerHTML = `
+        let tooltipContent = `
             <div class="tooltip-header">${model.model_name}</div>
             <div class="tooltip-info">
                 <div><strong>Version:</strong> ${model.civitai?.name || 'Unknown'}</div>
@@ -415,8 +489,16 @@ export class ModelDuplicatesManager {
                 <div><strong>Path:</strong> ${model.file_path}</div>
                 <div><strong>Base Model:</strong> ${model.base_model || 'Unknown'}</div>
                 <div><strong>Modified:</strong> ${formatDate(model.modified)}</div>
-            </div>
+                <div><strong>Metadata Hash:</strong> <span class="hash-value">${model.sha256}</span></div>
         `;
+        
+        // Add actual hash information if available
+        if (isMismatched && actualHash) {
+            tooltipContent += `<div class="hash-mismatch-info"><strong>Actual Hash:</strong> <span class="hash-value">${actualHash}</span></div>`;
+        }
+        
+        tooltipContent += `</div>`;
+        tooltip.innerHTML = tooltipContent;
         
         // Position tooltip relative to card
         const cardRect = card.getBoundingClientRect();
@@ -629,5 +711,74 @@ export class ModelDuplicatesManager {
               helpTooltip.style.display = 'none';
           }
       });
+    }
+
+    // Handle verify hashes button click
+    async handleVerifyHashes(group) {
+        try {
+            const groupHash = group.hash;
+            
+            // Check if already verified
+            if (this.verifiedGroups.has(groupHash)) {
+                showToast('This group has already been verified', 'info');
+                return;
+            }
+            
+            // Show loading state
+            this.loadingManager.showSimpleLoading('Verifying hashes...');
+            
+            // Get file paths for all models in the group
+            const filePaths = group.models.map(model => model.file_path);
+            
+            // Make API request to verify hashes
+            const response = await fetch(`/api/${this.modelType}/verify-duplicates`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ file_paths: filePaths })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Verification failed: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Unknown error during verification');
+            }
+            
+            // Process verification results
+            const verifiedAsDuplicates = data.verified_as_duplicates;
+            const mismatchedFiles = data.mismatched_files || [];
+            
+            // Update mismatchedFiles map
+            if (data.new_hash_map) {
+                Object.entries(data.new_hash_map).forEach(([path, hash]) => {
+                    this.mismatchedFiles.set(path, hash);
+                });
+            }
+            
+            // Mark this group as verified
+            this.verifiedGroups.add(groupHash);
+            
+            // Re-render the duplicate groups to show verification status
+            this.renderDuplicateGroups();
+            
+            // Show appropriate toast message
+            if (mismatchedFiles.length > 0) {
+                showToast(`Verification complete. ${mismatchedFiles.length} file(s) have different actual hashes.`, 'warning');
+            } else {
+                showToast('Verification complete. All files are confirmed duplicates.', 'success');
+            }
+            
+        } catch (error) {
+            console.error('Error verifying hashes:', error);
+            showToast('Failed to verify hashes: ' + error.message, 'error');
+        } finally {
+            // Hide loading state
+            this.loadingManager.hide();
+        }
     }
 }

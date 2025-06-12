@@ -39,6 +39,9 @@ html, body {
     --lora-warning-l: 75%;
     --lora-warning-c: 0.25;
     --lora-warning-h: 80;
+    --lora-success-l: 70%;
+    --lora-success-c: 0.2;
+    --lora-success-h: 140;
 
     /* Composed Colors */
     --lora-accent: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h));
@@ -47,6 +50,7 @@ html, body {
     --lora-text: oklch(95% 0.02 256);
     --lora-error: oklch(75% 0.32 29);
     --lora-warning: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h)); /* Modified to be used with oklch() */
+    --lora-success: oklch(var(--lora-success-l) var(--lora-success-c) var(--lora-success-h)); /* New green success color */
     
     /* Spacing Scale */
     --space-1: calc(8px * 1);

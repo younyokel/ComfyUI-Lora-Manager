@@ -688,3 +688,95 @@ class ModelRouteUtils:
         except Exception as e:
             logger.error(f"Error re-linking to CivitAI: {e}", exc_info=True)
             return web.json_response({"success": False, "error": str(e)}, status=500)
+
+    @staticmethod
+    async def handle_verify_duplicates(request: web.Request, scanner) -> web.Response:
+        """Handle verification of duplicate model hashes
+        
+        Args:
+            request: The aiohttp request
+            scanner: The model scanner instance with cache management methods
+            
+        Returns:
+            web.Response: The HTTP response with verification results
+        """
+        try:
+            data = await request.json()
+            file_paths = data.get('file_paths', [])
+            
+            if not file_paths:
+                return web.json_response({
+                    'success': False,
+                    'error': 'No file paths provided for verification'
+                }, status=400)
+            
+            # Results tracking
+            results = {
+                'verified_as_duplicates': True,  # Start true, set to false if any mismatch
+                'mismatched_files': [],
+                'new_hash_map': {}
+            }
+            
+            # Get expected hash from the first file's metadata
+            expected_hash = None
+            first_metadata_path = os.path.splitext(file_paths[0])[0] + '.metadata.json'
+            first_metadata = await ModelRouteUtils.load_local_metadata(first_metadata_path)
+            if first_metadata and 'sha256' in first_metadata:
+                expected_hash = first_metadata['sha256'].lower()
+            
+            # Process each file
+            for file_path in file_paths:
+                # Skip files that don't exist
+                if not os.path.exists(file_path):
+                    continue
+                    
+                # Calculate actual hash
+                try:
+                    from .file_utils import calculate_sha256
+                    actual_hash = await calculate_sha256(file_path)
+                    
+                    # Get metadata
+                    metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+                    metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+                    
+                    # Compare hashes
+                    stored_hash = metadata.get('sha256', '').lower()
+                    
+                    # Set expected hash from first file if not yet set
+                    if not expected_hash:
+                        expected_hash = stored_hash
+                    
+                    # Check if hash matches expected hash
+                    if actual_hash != expected_hash:
+                        results['verified_as_duplicates'] = False
+                        results['mismatched_files'].append(file_path)
+                        results['new_hash_map'][file_path] = actual_hash
+                        
+                    # Check if stored hash needs updating
+                    if actual_hash != stored_hash:
+                        # Update metadata with actual hash
+                        metadata['sha256'] = actual_hash
+                        
+                        # Save updated metadata
+                        with open(metadata_path, 'w', encoding='utf-8') as f:
+                            json.dump(metadata, f, indent=2, ensure_ascii=False)
+                        
+                        # Update cache
+                        await scanner.update_single_model_cache(file_path, file_path, metadata)
+                except Exception as e:
+                    logger.error(f"Error verifying hash for {file_path}: {e}")
+                    results['mismatched_files'].append(file_path)
+                    results['new_hash_map'][file_path] = "error_calculating_hash"
+                    results['verified_as_duplicates'] = False
+            
+            return web.json_response({
+                'success': True,
+                **results
+            })
+            
+        except Exception as e:
+            logger.error(f"Error verifying duplicate models: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
