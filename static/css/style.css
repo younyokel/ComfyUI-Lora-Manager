@@ -13,7 +13,12 @@
 @import 'components/loading.css';
 @import 'components/menu.css';
 @import 'components/update-modal.css';
-@import 'components/lora-modal.css';
+@import 'components/lora-modal/lora-modal.css';
+@import 'components/lora-modal/description.css';
+@import 'components/lora-modal/tag.css';
+@import 'components/lora-modal/preset-tags.css';
+@import 'components/lora-modal/showcase.css';
+@import 'components/lora-modal/triggerwords.css';
 @import 'components/support-modal.css';
 @import 'components/search-filter.css';
 @import 'components/bulk.css';
