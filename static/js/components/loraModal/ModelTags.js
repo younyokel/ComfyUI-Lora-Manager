@@ -39,7 +39,7 @@ export function setupTagEditMode() {
         
         // Toggle edit mode UI elements
         const compactTagsDisplay = tagsSection.querySelector('.model-tags-compact');
-        const tagsEditContainer = tagsSection.querySelector('.tags-edit-container');
+        const tagsEditContainer = tagsSection.querySelector('.metadata-edit-container');
         
         if (isEditMode) {
             // Enter edit mode
@@ -57,11 +57,11 @@ export function setupTagEditMode() {
             // If edit container doesn't exist yet, create it
             if (!tagsEditContainer) {
                 const editContainer = document.createElement('div');
-                editContainer.className = 'tags-edit-container';
+                editContainer.className = 'metadata-edit-container';
                 
                 // Move the edit button inside the container header for better visibility
                 const editBtnClone = editBtn.cloneNode(true);
-                editBtnClone.classList.add('edit-header-btn');
+                editBtnClone.classList.add('metadata-header-btn');
                 
                 // Create edit UI with edit button in the header
                 editContainer.innerHTML = createTagEditUI(originalTags, editBtnClone.outerHTML);
@@ -71,7 +71,7 @@ export function setupTagEditMode() {
                 setupTagInput();
                 
                 // Create and add preset suggestions dropdown
-                const tagForm = editContainer.querySelector('.add-tag-form');
+                const tagForm = editContainer.querySelector('.metadata-add-form');
                 const suggestionsDropdown = createSuggestionsDropdown(originalTags);
                 tagForm.appendChild(suggestionsDropdown);
                 
@@ -79,7 +79,7 @@ export function setupTagEditMode() {
                 setupDeleteButtons();
                 
                 // Transfer click event from original button to the cloned one
-                const newEditBtn = editContainer.querySelector('.edit-header-btn');
+                const newEditBtn = editContainer.querySelector('.metadata-header-btn');
                 if (newEditBtn) {
                     newEditBtn.addEventListener('click', function() {
                         editBtn.click();
@@ -144,28 +144,28 @@ export function setupTagEditMode() {
  */
 function createTagEditUI(currentTags, editBtnHTML = '') {
     return `
-        <div class="tags-edit-content">
-            <div class="tags-edit-header">
+        <div class="metadata-edit-content">
+            <div class="metadata-edit-header">
                 <label>Edit Tags</label>
                 ${editBtnHTML}
             </div>
-            <div class="tags-tags">
+            <div class="metadata-items">
                 ${currentTags.map(tag => `
-                    <div class="tag-edit-tag" data-tag="${tag}">
-                        <span class="tag-edit-content">${tag}</span>
-                        <button class="delete-tag-btn">
+                    <div class="metadata-item" data-tag="${tag}">
+                        <span class="metadata-item-content">${tag}</span>
+                        <button class="metadata-delete-btn">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                 `).join('')}
             </div>
-            <div class="tags-edit-controls">
+            <div class="metadata-edit-controls">
                 <button class="save-tags-btn" title="Save changes">
                     <i class="fas fa-save"></i> Save
                 </button>
             </div>
-            <div class="add-tag-form">
-                <input type="text" class="new-tag-input" placeholder="Type to add or click suggestions below">
+            <div class="metadata-add-form">
+                <input type="text" class="metadata-input" placeholder="Type to add or click suggestions below">
             </div>
         </div>
     `;
@@ -178,11 +178,11 @@ function createTagEditUI(currentTags, editBtnHTML = '') {
  */
 function createSuggestionsDropdown(existingTags = []) {
     const dropdown = document.createElement('div');
-    dropdown.className = 'tag-suggestions-dropdown';
+    dropdown.className = 'metadata-suggestions-dropdown';
     
     // Create header
     const header = document.createElement('div');
-    header.className = 'tag-suggestions-header';
+    header.className = 'metadata-suggestions-header';
     header.innerHTML = `
         <span>Suggested Tags</span>
         <small>Click to add</small>
@@ -191,17 +191,17 @@ function createSuggestionsDropdown(existingTags = []) {
     
     // Create tag container
     const container = document.createElement('div');
-    container.className = 'tag-suggestions-container';
+    container.className = 'metadata-suggestions-container';
     
     // Add each preset tag as a suggestion
     PRESET_TAGS.forEach(tag => {
         const isAdded = existingTags.includes(tag);
         
         const item = document.createElement('div');
-        item.className = `tag-suggestion-item ${isAdded ? 'already-added' : ''}`;
+        item.className = `metadata-suggestion-item ${isAdded ? 'already-added' : ''}`;
         item.title = tag;
         item.innerHTML = `
-            <span class="tag-suggestion-text">${tag}</span>
+            <span class="metadata-suggestion-text">${tag}</span>
             ${isAdded ? '<span class="added-indicator"><i class="fas fa-check"></i></span>' : ''}
         `;
         
@@ -210,7 +210,7 @@ function createSuggestionsDropdown(existingTags = []) {
                 addNewTag(tag);
                 
                 // Also populate the input field for potential editing
-                const input = document.querySelector('.new-tag-input');
+                const input = document.querySelector('.metadata-input');
                 if (input) input.value = tag;
                 
                 // Focus on the input
@@ -232,7 +232,7 @@ function createSuggestionsDropdown(existingTags = []) {
  * Set up tag input behavior
  */
 function setupTagInput() {
-    const tagInput = document.querySelector('.new-tag-input');
+    const tagInput = document.querySelector('.metadata-input');
     
     if (tagInput) {
         tagInput.addEventListener('keydown', function(e) {
@@ -249,10 +249,10 @@ function setupTagInput() {
  * Set up delete buttons for tags
  */
 function setupDeleteButtons() {
-    document.querySelectorAll('.delete-tag-btn').forEach(btn => {
+    document.querySelectorAll('.metadata-delete-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
-            const tag = this.closest('.tag-edit-tag');
+            const tag = this.closest('.metadata-item');
             tag.remove();
             
             // Update status of items in the suggestion dropdown
@@ -269,7 +269,7 @@ function addNewTag(tag) {
     tag = tag.trim().toLowerCase();
     if (!tag) return;
     
-    const tagsContainer = document.querySelector('.tags-tags');
+    const tagsContainer = document.querySelector('.metadata-items');
     if (!tagsContainer) return;
     
     // Validation: Check length
@@ -279,7 +279,7 @@ function addNewTag(tag) {
     }
     
     // Validation: Check total number
-    const currentTags = tagsContainer.querySelectorAll('.tag-edit-tag');
+    const currentTags = tagsContainer.querySelectorAll('.metadata-item');
     if (currentTags.length >= 30) {
         showToast('Maximum 30 tags allowed', 'error');
         return;
@@ -294,17 +294,17 @@ function addNewTag(tag) {
     
     // Create new tag
     const newTag = document.createElement('div');
-    newTag.className = 'tag-edit-tag';
+    newTag.className = 'metadata-item';
     newTag.dataset.tag = tag;
     newTag.innerHTML = `
-        <span class="tag-edit-content">${tag}</span>
-        <button class="delete-tag-btn">
+        <span class="metadata-item-content">${tag}</span>
+        <button class="metadata-delete-btn">
             <i class="fas fa-times"></i>
         </button>
     `;
     
     // Add event listener to delete button
-    const deleteBtn = newTag.querySelector('.delete-tag-btn');
+    const deleteBtn = newTag.querySelector('.metadata-delete-btn');
     deleteBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         newTag.remove();
@@ -323,16 +323,16 @@ function addNewTag(tag) {
  * Update status of items in the suggestions dropdown
  */
 function updateSuggestionsDropdown() {
-    const dropdown = document.querySelector('.tag-suggestions-dropdown');
+    const dropdown = document.querySelector('.metadata-suggestions-dropdown');
     if (!dropdown) return;
     
     // Get all current tags
-    const currentTags = document.querySelectorAll('.tag-edit-tag');
+    const currentTags = document.querySelectorAll('.metadata-item');
     const existingTags = Array.from(currentTags).map(tag => tag.dataset.tag);
     
     // Update status of each item in dropdown
-    dropdown.querySelectorAll('.tag-suggestion-item').forEach(item => {
-        const tagText = item.querySelector('.tag-suggestion-text').textContent;
+    dropdown.querySelectorAll('.metadata-suggestion-item').forEach(item => {
+        const tagText = item.querySelector('.metadata-suggestion-text').textContent;
         const isAdded = existingTags.includes(tagText);
         
         if (isAdded) {
@@ -360,11 +360,11 @@ function updateSuggestionsDropdown() {
             // Restore click event if not already set
             if (!item.onclick) {
                 item.onclick = () => {
-                    const tag = item.querySelector('.tag-suggestion-text').textContent;
+                    const tag = item.querySelector('.metadata-suggestion-text').textContent;
                     addNewTag(tag);
                     
                     // Also populate the input field
-                    const input = document.querySelector('.new-tag-input');
+                    const input = document.querySelector('.metadata-input');
                     if (input) input.value = tag;
                     
                     // Focus the input
@@ -393,7 +393,7 @@ async function saveTags() {
     if (!editBtn) return;
     
     const filePath = editBtn.dataset.filePath;
-    const tagElements = document.querySelectorAll('.tag-edit-tag');
+    const tagElements = document.querySelectorAll('.metadata-item');
     const tags = Array.from(tagElements).map(tag => tag.dataset.tag);
 
     // Get original tags to compare
