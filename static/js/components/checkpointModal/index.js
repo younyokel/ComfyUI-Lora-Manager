@@ -12,6 +12,7 @@ import {
     setupBaseModelEditing, 
     setupFileNameEditing
 } from './ModelMetadata.js';
+import { setupTagEditMode } from './ModelTags.js'; // Add import for tag editing
 import { saveModelMetadata } from '../../api/checkpointApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { updateCheckpointCard } from '../../utils/cardUpdater.js';
@@ -46,7 +47,7 @@ export function showCheckpointModal(checkpoint) {
                     <span class="creator-username">${checkpoint.civitai.creator.username}</span>
                 </div>` : ''}
 
-                ${renderCompactTags(checkpoint.tags || [])}
+                ${renderCompactTags(checkpoint.tags || [], checkpoint.file_path)}
             </header>
 
             <div class="modal-body">
@@ -140,6 +141,7 @@ export function showCheckpointModal(checkpoint) {
     setupShowcaseScroll();
     setupTabSwitching();
     setupTagTooltip();
+    setupTagEditMode(); // Initialize tag editing functionality
     setupModelNameEditing(checkpoint.file_path);
     setupBaseModelEditing(checkpoint.file_path);
     setupFileNameEditing(checkpoint.file_path);

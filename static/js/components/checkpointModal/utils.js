@@ -27,27 +27,35 @@ export function formatFileSize(bytes) {
 /**
  * Render compact tags
  * @param {Array} tags - Array of tags
+ * @param {string} filePath - File path for the edit button
  * @returns {string} HTML content
  */
-export function renderCompactTags(tags) {
-    if (!tags || tags.length === 0) return '';
+export function renderCompactTags(tags, filePath = '') {
+    // Remove the early return and always render the container
+    const tagsList = tags || [];
     
     // Display up to 5 tags, with a tooltip indicator if there are more
-    const visibleTags = tags.slice(0, 5);
-    const remainingCount = Math.max(0, tags.length - 5);
+    const visibleTags = tagsList.slice(0, 5);
+    const remainingCount = Math.max(0, tagsList.length - 5);
     
     return `
         <div class="model-tags-container">
-            <div class="model-tags-compact">
-                ${visibleTags.map(tag => `<span class="model-tag-compact">${tag}</span>`).join('')}
-                ${remainingCount > 0 ? 
-                    `<span class="model-tag-more" data-count="${remainingCount}">+${remainingCount}</span>` : 
-                    ''}
+            <div class="model-tags-header">
+                <div class="model-tags-compact">
+                    ${visibleTags.map(tag => `<span class="model-tag-compact">${tag}</span>`).join('')}
+                    ${remainingCount > 0 ? 
+                        `<span class="model-tag-more" data-count="${remainingCount}">+${remainingCount}</span>` : 
+                        ''}
+                    ${tagsList.length === 0 ? `<span class="model-tag-empty">No tags</span>` : ''}
+                </div>
+                <button class="edit-tags-btn" data-file-path="${filePath}" title="Edit tags">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
             </div>
-            ${tags.length > 0 ? 
+            ${tagsList.length > 0 ? 
                 `<div class="model-tags-tooltip">
                     <div class="tooltip-content">
-                        ${tags.map(tag => `<span class="tooltip-tag">${tag}</span>`).join('')}
+                        ${tagsList.map(tag => `<span class="tooltip-tag">${tag}</span>`).join('')}
                     </div>
                 </div>` : 
                 ''}

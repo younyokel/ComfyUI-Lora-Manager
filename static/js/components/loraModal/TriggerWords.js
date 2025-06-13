@@ -354,7 +354,8 @@ export function setupTriggerWordsEditMode() {
             }
             
             // Remove dropdown if present
-            const dropdown = document.querySelector('.metadata-suggestions-dropdown');
+            const triggerWordsSection = editBtn.closest('.trigger-words');
+            const dropdown = triggerWordsSection.querySelector('.metadata-suggestions-dropdown');
             if (dropdown) dropdown.remove();
         }
     });
