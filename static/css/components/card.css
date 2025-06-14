@@ -89,7 +89,7 @@
 /* Smaller text for medium density */
 .medium-density .model-name {
     font-size: 0.95em;
-    max-height: 2.6em;
+    max-height: 3em; /* Increased from 2.6em */
 }
 
 .medium-density .base-model-label {
@@ -105,7 +105,7 @@
 /* Smaller text for compact mode */
 .compact-density .model-name {
     font-size: 0.9em;
-    max-height: 2.4em;
+    max-height: 2.8em; /* Increased from 2.4em */
 }
 
 .compact-density .base-model-label {
@@ -331,21 +331,24 @@
     text-decoration: none;
 }
 
+/* Updated model name to fix text cutoff issues */
 .model-name {
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     font-size: 0.95em;
     word-break: break-word;
     display: block;
-    max-height: 2.8em;
+    max-height: 3em; /* Increased to ensure two full lines */
     overflow: hidden;
+    /* Add line height for consistency */
+    line-height: 1.4;
 }
 
 .model-info {
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    padding-bottom: 4px;
+    padding-bottom: 6px; /* Increased from 4px to give more room for text */
 }
 
 .base-model {
