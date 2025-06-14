@@ -1,163 +1,6 @@
-// filepath: d:\Workspace\ComfyUI\custom_nodes\ComfyUI-Lora-Manager\static\js\api\baseModelApi.js
 import { state, getCurrentPageState } from '../state/index.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { getSessionItem, saveMapToStorage } from '../utils/storageHelpers.js';
-
-/**
- * Shared functionality for handling models (loras and checkpoints)
- */
-
-// Generic function to load more models with pagination
-export async function loadMoreModels(options = {}) {
-    const {
-        resetPage = false,
-        updateFolders = false,
-        modelType = 'lora', // 'lora' or 'checkpoint'
-        createCardFunction,
-        endpoint = '/api/loras'
-    } = options;
-
-    const pageState = getCurrentPageState();
-    
-    if (pageState.isLoading || (!pageState.hasMore && !resetPage)) return;
-    
-    pageState.isLoading = true;
-    document.body.classList.add('loading');
-    
-    try {
-        // Reset to first page if requested
-        if (resetPage) {
-            pageState.currentPage = 1;
-            // Clear grid if resetting
-            const gridId = modelType === 'checkpoint' ? 'checkpointGrid' : 'loraGrid';
-            const grid = document.getElementById(gridId);
-            if (grid) grid.innerHTML = '';
-        }
-        
-        const params = new URLSearchParams({
-            page: pageState.currentPage,
-            page_size: pageState.pageSize || 20,
-            sort_by: pageState.sortBy
-        });
-        
-        if (pageState.activeFolder !== null) {
-            params.append('folder', pageState.activeFolder);
-        }
-
-        // Add favorites filter parameter if enabled
-        if (pageState.showFavoritesOnly) {
-            params.append('favorites_only', 'true');
-        }
-        
-        // Add active letter filter if set
-        if (pageState.activeLetterFilter) {
-            params.append('first_letter', pageState.activeLetterFilter);
-        }
-
-        // Add search parameters if there's a search term
-        if (pageState.filters?.search) {
-            params.append('search', pageState.filters.search);
-            params.append('fuzzy', 'true');
-            
-            // Add search option parameters if available
-            if (pageState.searchOptions) {
-                params.append('search_filename', pageState.searchOptions.filename.toString());
-                params.append('search_modelname', pageState.searchOptions.modelname.toString());
-                if (pageState.searchOptions.tags !== undefined) {
-                    params.append('search_tags', pageState.searchOptions.tags.toString());
-                }
-                params.append('recursive', (pageState.searchOptions?.recursive ?? false).toString());
-            }
-        }
-        
-        // Add filter parameters if active
-        if (pageState.filters) {
-            // Handle tags filters
-            if (pageState.filters.tags && pageState.filters.tags.length > 0) {
-                // Checkpoints API expects individual 'tag' parameters, Loras API expects comma-separated 'tags'
-                if (modelType === 'checkpoint') {
-                    pageState.filters.tags.forEach(tag => {
-                        params.append('tag', tag);
-                    });
-                } else {
-                    params.append('tags', pageState.filters.tags.join(','));
-                }
-            }
-            
-            // Handle base model filters
-            if (pageState.filters.baseModel && pageState.filters.baseModel.length > 0) {
-                if (modelType === 'checkpoint') {
-                    pageState.filters.baseModel.forEach(model => {
-                        params.append('base_model', model);
-                    });
-                } else {
-                    params.append('base_models', pageState.filters.baseModel.join(','));
-                }
-            }
-        }
-
-        // Add model-specific parameters
-        if (modelType === 'lora') {
-            // Check for recipe-based filtering parameters from session storage
-            const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
-            const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
-
-            // Add hash filter parameter if present
-            if (filterLoraHash) {
-                params.append('lora_hash', filterLoraHash);
-            } 
-            // Add multiple hashes filter if present
-            else if (filterLoraHashes) {
-                try {
-                    if (Array.isArray(filterLoraHashes) && filterLoraHashes.length > 0) {
-                        params.append('lora_hashes', filterLoraHashes.join(','));
-                    }
-                } catch (error) {
-                    console.error('Error parsing lora hashes from session storage:', error);
-                }
-            }
-        }
-
-        const response = await fetch(`${endpoint}?${params}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch models: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        const gridId = modelType === 'checkpoint' ? 'checkpointGrid' : 'loraGrid';
-        const grid = document.getElementById(gridId);
-        
-        if (data.items.length === 0 && pageState.currentPage === 1) {
-            grid.innerHTML = `<div class="no-results">No ${modelType}s found in this folder</div>`;
-            pageState.hasMore = false;
-        } else if (data.items.length > 0) {
-            pageState.hasMore = pageState.currentPage < data.total_pages;
-            
-            // Append model cards using the provided card creation function
-            data.items.forEach(model => {
-                const card = createCardFunction(model);
-                grid.appendChild(card);
-            });
-            
-            // Increment the page number AFTER successful loading
-            pageState.currentPage++;
-        } else {
-            pageState.hasMore = false;
-        }
-
-        if (updateFolders && data.folders) {
-            updateFolderTags(data.folders);
-        }
-        
-    } catch (error) {
-        console.error(`Error loading ${modelType}s:`, error);
-        showToast(`Failed to load ${modelType}s: ${error.message}`, 'error');
-    } finally {
-        pageState.isLoading = false;
-        document.body.classList.remove('loading');
-    }
-}
 
 // New method for virtual scrolling fetch
 export async function fetchModelsPage(options = {}) {
@@ -294,7 +137,6 @@ export async function resetAndReloadWithVirtualScroll(options = {}) {
     
     try {
         pageState.isLoading = true;
-        document.body.classList.add('loading');
         
         // Reset page counter
         pageState.currentPage = 1;
@@ -325,7 +167,6 @@ export async function resetAndReloadWithVirtualScroll(options = {}) {
         throw error;
     } finally {
         pageState.isLoading = false;
-        document.body.classList.remove('loading');
     }
 }
 
@@ -347,7 +188,6 @@ export async function loadMoreWithVirtualScroll(options = {}) {
     try {
         // Start loading state
         pageState.isLoading = true;
-        document.body.classList.add('loading');
         
         // Reset to first page if requested
         if (resetPage) {
@@ -380,7 +220,6 @@ export async function loadMoreWithVirtualScroll(options = {}) {
         throw error;
     } finally {
         pageState.isLoading = false;
-        document.body.classList.remove('loading');
     }
 }
 
@@ -479,22 +318,6 @@ export async function deleteModel(filePath, modelType = 'lora') {
         return false;
     } finally {
         state.loadingManager.hide();
-    }
-}
-
-// Reset and reload models
-export async function resetAndReload(options = {}) {
-    const {
-        updateFolders = false,
-        modelType = 'lora', 
-        loadMoreFunction
-    } = options;
-    
-    const pageState = getCurrentPageState();
-    
-    // Reset pagination and load more models
-    if (typeof loadMoreFunction === 'function') {
-        await loadMoreFunction(true, updateFolders);
     }
 }
 

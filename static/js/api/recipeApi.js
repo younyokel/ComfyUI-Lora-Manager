@@ -1,6 +1,5 @@
 import { RecipeCard } from '../components/RecipeCard.js';
 import {
-    fetchModelsPage,
     resetAndReloadWithVirtualScroll,
     loadMoreWithVirtualScroll
 } from './baseModelApi.js';

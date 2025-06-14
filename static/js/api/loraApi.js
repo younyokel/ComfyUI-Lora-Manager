@@ -1,8 +1,5 @@
-import { createLoraCard } from '../components/LoraCard.js';
 import {
-    loadMoreModels,
     fetchModelsPage,
-    resetAndReload as baseResetAndReload,
     resetAndReloadWithVirtualScroll,
     loadMoreWithVirtualScroll,
     refreshModels as baseRefreshModels,
@@ -12,7 +9,7 @@ import {
     refreshSingleModelMetadata,
     excludeModel as baseExcludeModel
 } from './baseModelApi.js';
-import { state, getCurrentPageState } from '../state/index.js';
+import { state } from '../state/index.js';
 
 /**
  * Save model metadata to the server
@@ -63,26 +60,12 @@ export async function excludeLora(filePath) {
  * @returns {Promise<void>}
  */
 export async function loadMoreLoras(resetPage = false, updateFolders = false) {
-    const pageState = getCurrentPageState();
-    
-    // Check if virtual scroller is available
-    if (state.virtualScroller) {
-        return loadMoreWithVirtualScroll({
-            modelType: 'lora',
-            resetPage,
-            updateFolders,
-            fetchPageFunction: fetchLorasPage
-        });
-    } else {
-        // Fall back to the original implementation if virtual scroller isn't available
-        return loadMoreModels({
-            resetPage,
-            updateFolders,
-            modelType: 'lora',
-            createCardFunction: createLoraCard,
-            endpoint: '/api/loras'
-        });
-    }
+    return loadMoreWithVirtualScroll({
+        modelType: 'lora',
+        resetPage,
+        updateFolders,
+        fetchPageFunction: fetchLorasPage
+    });
 }
 
 /**
@@ -116,37 +99,12 @@ export async function replacePreview(filePath) {
     return replaceModelPreview(filePath, 'lora');
 }
 
-export function appendLoraCards(loras) {
-    // This function is no longer needed with virtual scrolling
-    // but kept for compatibility
-    if (state.virtualScroller) {
-        console.warn('appendLoraCards is deprecated when using virtual scrolling');
-    } else {
-        const grid = document.getElementById('loraGrid');
-        
-        loras.forEach(lora => {
-            const card = createLoraCard(lora);
-            grid.appendChild(card);
-        });
-    }
-}
-
 export async function resetAndReload(updateFolders = false) {
-    // Check if virtual scroller is available
-    if (state.virtualScroller) {
-        return resetAndReloadWithVirtualScroll({
-            modelType: 'lora',
-            updateFolders,
-            fetchPageFunction: fetchLorasPage
-        });
-    } else {
-        // Fall back to original implementation
-        return baseResetAndReload({
-            updateFolders,
-            modelType: 'lora',
-            loadMoreFunction: loadMoreLoras
-        });
-    }
+    return resetAndReloadWithVirtualScroll({
+        modelType: 'lora',
+        updateFolders,
+        fetchPageFunction: fetchLorasPage
+    });
 }
 
 export async function refreshLoras(fullRebuild = false) {

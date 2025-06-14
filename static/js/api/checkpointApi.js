@@ -1,8 +1,5 @@
-import { createCheckpointCard } from '../components/CheckpointCard.js';
 import {
-    loadMoreModels,
     fetchModelsPage,
-    resetAndReload as baseResetAndReload,
     resetAndReloadWithVirtualScroll,
     loadMoreWithVirtualScroll,
     refreshModels as baseRefreshModels,
@@ -36,43 +33,21 @@ export async function fetchCheckpointsPage(page = 1, pageSize = 100) {
  * @returns {Promise<void>}
  */
 export async function loadMoreCheckpoints(resetPage = false, updateFolders = false) {
-    // Check if virtual scroller is available
-    if (state.virtualScroller) {
-        return loadMoreWithVirtualScroll({
-            modelType: 'checkpoint',
-            resetPage,
-            updateFolders,
-            fetchPageFunction: fetchCheckpointsPage
-        });
-    } else {
-        // Fall back to the original implementation if virtual scroller isn't available
-        return loadMoreModels({
-            resetPage,
-            updateFolders,
-            modelType: 'checkpoint',
-            createCardFunction: createCheckpointCard,
-            endpoint: '/api/checkpoints'
-        });
-    }
+    return loadMoreWithVirtualScroll({
+        modelType: 'checkpoint',
+        resetPage,
+        updateFolders,
+        fetchPageFunction: fetchCheckpointsPage
+    });
 }
 
 // Reset and reload checkpoints
 export async function resetAndReload(updateFolders = false) {
-    // Check if virtual scroller is available
-    if (state.virtualScroller) {
-        return resetAndReloadWithVirtualScroll({
-            modelType: 'checkpoint',
-            updateFolders,
-            fetchPageFunction: fetchCheckpointsPage
-        });
-    } else {
-        // Fall back to original implementation
-        return baseResetAndReload({
-            updateFolders,
-            modelType: 'checkpoint',
-            loadMoreFunction: loadMoreCheckpoints
-        });
-    }
+    return resetAndReloadWithVirtualScroll({
+        modelType: 'checkpoint',
+        updateFolders,
+        fetchPageFunction: fetchCheckpointsPage
+    });
 }
 
 // Refresh checkpoints
