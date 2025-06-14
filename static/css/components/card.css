@@ -167,6 +167,38 @@
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
 }
 
+/* NSFW warning adjustments for medium density */
+.medium-density .nsfw-warning {
+    padding: calc(var(--space-2) * 0.85);
+    max-width: 70%;
+}
+
+.medium-density .nsfw-warning p {
+    font-size: 0.95em;
+    margin-bottom: calc(var(--space-1) * 0.85);
+}
+
+.medium-density .show-content-btn {
+    font-size: 0.85em;
+    padding: 3px calc(var(--space-1) * 0.85);
+}
+
+/* NSFW warning adjustments for compact density */
+.compact-density .nsfw-warning {
+    padding: calc(var(--space-2) * 0.7);
+    max-width: 60%;
+}
+
+.compact-density .nsfw-warning p {
+    font-size: 0.85em;
+    margin-bottom: calc(var(--space-1) * 0.7);
+}
+
+.compact-density .show-content-btn {
+    font-size: 0.8em;
+    padding: 2px var(--space-1);
+}
+
 .toggle-blur-btn {
     position: absolute;
     left: var(--space-1);
