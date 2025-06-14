@@ -4,7 +4,6 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { saveModelMetadata } from '../../api/loraApi.js';
-import { updateLoraCard } from '../../utils/cardUpdater.js';
 
 // Preset tag suggestions
 const PRESET_TAGS = [

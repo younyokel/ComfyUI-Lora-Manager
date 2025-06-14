@@ -15,7 +15,7 @@ import {
 import { setupTagEditMode } from './ModelTags.js'; // Add import for tag editing
 import { saveModelMetadata } from '../../api/checkpointApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
-import { updateCheckpointCard } from '../../utils/cardUpdater.js';
+import { updateModelCard } from '../../utils/cardUpdater.js';
 import { state } from '../../state/index.js';
 
 /**
@@ -264,7 +264,7 @@ async function saveNotes(filePath) {
         await saveModelMetadata(filePath, { notes: content });
 
         // Update the corresponding checkpoint card's dataset
-        updateCheckpointCard(filePath, { notes: content });
+        updateModelCard(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {

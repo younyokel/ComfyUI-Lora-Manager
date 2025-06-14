@@ -18,7 +18,7 @@ import {
 } from './ModelMetadata.js';
 import { saveModelMetadata } from '../../api/loraApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
-import { updateLoraCard } from '../../utils/cardUpdater.js';
+import { updateModelCard } from '../../utils/cardUpdater.js';
 import { state } from '../../state/index.js';
 
 /**
@@ -270,7 +270,7 @@ window.saveNotes = async function(filePath) {
         await saveModelMetadata(filePath, { notes: content });
 
         // Update the corresponding lora card's dataset
-        updateLoraCard(filePath, { notes: content });
+        updateModelCard(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {
@@ -337,7 +337,7 @@ function setupEditableFields(filePath) {
         });
 
         // Update the card with the new usage tips
-        updateLoraCard(filePath, { usage_tips: newPresetsJson });
+        updateModelCard(filePath, { usage_tips: newPresetsJson });
         
         presetTags.innerHTML = renderPresetTags(currentPresets);
         

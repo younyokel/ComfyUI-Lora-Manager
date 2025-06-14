@@ -4,7 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { updateCheckpointCard } from '../../utils/cardUpdater.js';
+import { updateModelCard } from '../../utils/cardUpdater.js';
 import { saveModelMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
 
 /**
@@ -115,7 +115,7 @@ export function setupModelNameEditing(filePath) {
             await saveModelMetadata(filePath, { model_name: newModelName });
             
             // Update the corresponding checkpoint card's dataset and display
-            updateCheckpointCard(filePath, { model_name: newModelName });
+            updateModelCard(filePath, { model_name: newModelName });
             
             // BUGFIX: Directly update the card's dataset.name attribute to ensure
             // it's correctly read when reopening the modal
@@ -301,7 +301,7 @@ async function saveBaseModel(filePath, originalValue) {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
         
         // Update the card with the new base model
-        updateCheckpointCard(filePath, { base_model: newBaseModel });
+        updateModelCard(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -431,7 +431,7 @@ export function setupFileNameEditing(filePath) {
                 const newFilePath = [...pathParts, newFileName].join('/');
                 
                 // Update the checkpoint card with new file path
-                updateCheckpointCard(filePath, { 
+                updateModelCard(filePath, { 
                     filepath: newFilePath,
                     file_name: newFileName 
                 });

@@ -801,11 +801,7 @@ export class VirtualScroller {
         if (!filePath || this.disabled || this.items.length === 0) return false;
 
         // Find the index of the item with the matching file path
-        const index = this.items.findIndex(item => 
-            item.file_path === filePath || 
-            item.filepath === filePath || 
-            item.path === filePath
-        );
+        const index = this.items.findIndex(item => item.file_path === filePath);
 
         if (index === -1) {
             console.warn(`Item with file path ${filePath} not found in virtual scroller data`);

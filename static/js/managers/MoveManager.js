@@ -1,8 +1,8 @@
 import { showToast } from '../utils/uiHelpers.js';
-import { state } from '../state/index.js';
-import { resetAndReload } from '../api/loraApi.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { modalManager } from './ModalManager.js';
 import { getStorageItem } from '../utils/storageHelpers.js';
+import { updateModelCard } from '../utils/cardUpdater.js';
 
 class MoveManager {
     constructor() {
@@ -136,13 +136,45 @@ class MoveManager {
             if (this.bulkFilePaths) {
                 // Bulk move mode
                 await this.moveBulkModels(this.bulkFilePaths, targetPath);
+
+                // Update virtual scroller if in active folder view
+                const pageState = getCurrentPageState();
+                if (pageState.activeFolder !== null && state.virtualScroller) {
+                    // Remove moved items from virtual scroller instead of reloading
+                    this.bulkFilePaths.forEach(filePath => {
+                        state.virtualScroller.removeItemByFilePath(filePath);
+                    });
+                } else {
+                    // Update the model cards' filepath in the DOM
+                    this.bulkFilePaths.forEach(filePath => {
+                        // Extract filename from original path
+                        const filename = filePath.substring(filePath.lastIndexOf('/') + 1);
+                        // Construct new filepath
+                        const newFilePath = `${targetPath}/${filename}`;
+                        // Update the card with new filepath
+                        updateModelCard(filePath, {filepath: newFilePath});
+                    });
+                }
             } else {
                 // Single move mode
                 await this.moveSingleModel(this.currentFilePath, targetPath);
+                
+                // Update virtual scroller if in active folder view
+                const pageState = getCurrentPageState();
+                if (pageState.activeFolder !== null && state.virtualScroller) {
+                    // Remove moved item from virtual scroller instead of reloading
+                    state.virtualScroller.removeItemByFilePath(this.currentFilePath);
+                } else {
+                    // Extract filename from original path
+                    const filename = this.currentFilePath.substring(this.currentFilePath.lastIndexOf('/') + 1);
+                    // Construct new filepath
+                    const newFilePath = `${targetPath}/${filename}`;
+                    // Update the card with new filepath
+                    updateModelCard(this.currentFilePath, {filepath: newFilePath});
+                }
             }
 
             modalManager.closeModal('moveModal');
-            await resetAndReload(true);
             
             // If we were in bulk mode, exit it after successful move
             if (this.bulkFilePaths && state.bulkMode) {

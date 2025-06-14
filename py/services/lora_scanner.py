@@ -374,32 +374,6 @@ class LoraScanner(ModelScanner):
                 
         return letters
 
-    async def _update_metadata_paths(self, metadata_path: str, lora_path: str) -> Dict:
-        """Update file paths in metadata file"""
-        try:
-            with open(metadata_path, 'r', encoding='utf-8') as f:
-                metadata = json.load(f)
-            
-            # Update file_path
-            metadata['file_path'] = lora_path.replace(os.sep, '/')
-            
-            # Update preview_url if exists
-            if 'preview_url' in metadata:
-                preview_dir = os.path.dirname(lora_path)
-                preview_name = os.path.splitext(os.path.basename(metadata['preview_url']))[0]
-                preview_ext = os.path.splitext(metadata['preview_url'])[1]
-                new_preview_path = os.path.join(preview_dir, f"{preview_name}{preview_ext}")
-                metadata['preview_url'] = new_preview_path.replace(os.sep, '/')
-            
-            # Save updated metadata
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata, f, indent=2, ensure_ascii=False)
-
-            return metadata
-                
-        except Exception as e:
-            logger.error(f"Error updating metadata paths: {e}", exc_info=True)
-
     # Lora-specific hash index functionality
     def has_lora_hash(self, sha256: str) -> bool:
         """Check if a LoRA with given hash exists"""

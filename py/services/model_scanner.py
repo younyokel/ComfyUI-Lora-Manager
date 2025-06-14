@@ -1042,7 +1042,7 @@ class ModelScanner:
             
             metadata['file_path'] = model_path.replace(os.sep, '/')
             
-            if 'preview_url' in metadata:
+            if 'preview_url' in metadata and metadata['preview_url']:
                 preview_dir = os.path.dirname(model_path)
                 preview_name = os.path.splitext(os.path.basename(metadata['preview_url']))[0]
                 preview_ext = os.path.splitext(metadata['preview_url'])[1]

@@ -4,7 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { updateLoraCard } from '../../utils/cardUpdater.js';
+import { updateModelCard } from '../../utils/cardUpdater.js';
 import { saveModelMetadata, renameLoraFile } from '../../api/loraApi.js';
 
 /**
@@ -116,7 +116,7 @@ export function setupModelNameEditing(filePath) {
             await saveModelMetadata(filePath, { model_name: newModelName });
             
             // Update the corresponding lora card's dataset and display
-            updateLoraCard(filePath, { model_name: newModelName });
+            updateModelCard(filePath, { model_name: newModelName });
             
             // BUGFIX: Directly update the card's dataset.name attribute to ensure
             // it's correctly read when reopening the modal
@@ -305,7 +305,7 @@ async function saveBaseModel(filePath, originalValue) {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
         
         // Update the corresponding lora card's dataset
-        updateLoraCard(filePath, { base_model: newBaseModel });
+        updateModelCard(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -434,7 +434,7 @@ export function setupFileNameEditing(filePath) {
                 // Get the new file path and update the card
                 const newFilePath = filePath.replace(originalValue, newFileName);
                 // Pass the new file_name in the updates object for proper card update
-                updateLoraCard(filePath, { file_name: newFileName }, newFilePath);
+                updateModelCard(filePath, { file_name: newFileName, filepath: newFilePath });
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

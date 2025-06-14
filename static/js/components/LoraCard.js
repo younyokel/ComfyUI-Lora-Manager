@@ -4,7 +4,6 @@ import { showLoraModal } from './loraModal/index.js';
 import { bulkManager } from '../managers/BulkManager.js';
 import { NSFW_LEVELS } from '../utils/constants.js';
 import { replacePreview, saveModelMetadata } from '../api/loraApi.js'
-import { showDeleteModal } from '../utils/modalUtils.js';
 
 // Add a global event delegation handler
 export function setupLoraCardEventDelegation() {
