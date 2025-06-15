@@ -18,6 +18,8 @@ export class BulkManager {
         if (!state.loraMetadataCache) {
             state.loraMetadataCache = new Map();
         }
+
+        this.stripMaxThumbnails = 50; // Maximum thumbnails to show in strip
     }
 
     initialize() {
@@ -29,6 +31,24 @@ export class BulkManager {
         if (selectedCount) {
             selectedCount.addEventListener('click', () => this.toggleThumbnailStrip());
         }
+
+        // Add global keyboard event listener for Ctrl+A
+        document.addEventListener('keydown', (e) => {
+            // Check if it's Ctrl+A (or Cmd+A on Mac)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                // Prevent default browser "Select All" behavior
+                e.preventDefault();
+                
+                // If not in bulk mode, enable it first
+                if (!state.bulkMode) {
+                    this.toggleBulkMode();
+                    // Small delay to ensure DOM is updated
+                    setTimeout(() => this.selectAllVisibleLoras(), 50);
+                } else {
+                    this.selectAllVisibleLoras();
+                }
+            }
+        });
     }
 
     toggleBulkMode() {
@@ -404,10 +424,24 @@ export class BulkManager {
         // Clear existing thumbnails
         container.innerHTML = '';
         
-        // Add a thumbnail for each selected LoRA
-        for (const filepath of state.selectedLoras) {
+        // Get all selected loras
+        const selectedLoras = Array.from(state.selectedLoras);
+        
+        // Create counter if we have more thumbnails than we'll show
+        if (selectedLoras.length > this.stripMaxThumbnails) {
+            const counter = document.createElement('div');
+            counter.className = 'strip-counter';
+            counter.textContent = `Showing ${this.stripMaxThumbnails} of ${selectedLoras.length} selected`;
+            container.appendChild(counter);
+        }
+        
+        // Limit the number of thumbnails to display
+        const thumbnailsToShow = selectedLoras.slice(0, this.stripMaxThumbnails);
+        
+        // Add a thumbnail for each selected LoRA (limited to max)
+        thumbnailsToShow.forEach(filepath => {
             const metadata = state.loraMetadataCache.get(filepath);
-            if (!metadata) continue;
+            if (!metadata) return;
             
             const thumbnail = document.createElement('div');
             thumbnail.className = 'selected-thumbnail';
@@ -444,7 +478,7 @@ export class BulkManager {
             });
             
             container.appendChild(thumbnail);
-        }
+        });
     }
     
     deselectItem(filepath) {
@@ -464,6 +498,47 @@ export class BulkManager {
         // Hide the strip if no more selections
         if (state.selectedLoras.size === 0) {
             this.hideThumbnailStrip();
+        }
+    }
+
+    // Add method to select all visible loras
+    selectAllVisibleLoras() {
+        // Only select loras already in the VirtualScroller's data model
+        if (!state.virtualScroller || !state.virtualScroller.items) {
+            showToast('Unable to select all items', 'error');
+            return;
+        }
+        
+        const oldCount = state.selectedLoras.size;
+        
+        // Add all loaded loras to the selection set
+        state.virtualScroller.items.forEach(item => {
+            if (item && item.file_path) {
+                state.selectedLoras.add(item.file_path);
+                
+                // Add to metadata cache if not already there
+                if (!state.loraMetadataCache.has(item.file_path)) {
+                    state.loraMetadataCache.set(item.file_path, {
+                        fileName: item.file_name,
+                        usageTips: item.usage_tips || '{}',
+                        previewUrl: item.preview_url || '/loras_static/images/no-preview.png',
+                        isVideo: item.is_video || false,
+                        modelName: item.name || item.file_name
+                    });
+                }
+            }
+        });
+        
+        // Update visual state
+        this.applySelectionState();
+        
+        // Show success message
+        const newlySelected = state.selectedLoras.size - oldCount;
+        showToast(`Selected ${newlySelected} additional LoRAs`, 'success');
+        
+        // Update thumbnail strip if visible
+        if (this.isStripVisible) {
+            this.updateThumbnailStrip();
         }
     }
 }
