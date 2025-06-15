@@ -471,6 +471,11 @@ export async function refreshSingleModelMetadata(filePath, modelType = 'lora') {
         const data = await response.json();
         
         if (data.success) {
+            // Use the returned metadata to update just this single item
+            if (data.metadata && state.virtualScroller) {
+                state.virtualScroller.updateSingleItem(filePath, data.metadata);
+            }
+
             showToast('Metadata refreshed successfully', 'success');
             return true;
         } else {

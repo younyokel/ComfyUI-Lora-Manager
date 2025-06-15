@@ -10,7 +10,6 @@ from ..nodes.utils import get_lora_info
 
 from ..config import config
 from ..services.websocket_manager import ws_manager
-from ..services.settings_manager import settings
 import asyncio
 from .update_routes import UpdateRoutes
 from ..utils.constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH, VALID_LORA_TYPES
@@ -107,7 +106,21 @@ class ApiRoutes:
         """Handle CivitAI metadata fetch request"""
         if self.scanner is None:
             self.scanner = await ServiceRegistry.get_lora_scanner()
-        return await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
+        
+        response = await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
+        
+        # If successful, format the metadata before returning
+        if response.status == 200:
+            data = json.loads(response.body.decode('utf-8'))
+            if data.get("success") and data.get("metadata"):
+                formatted_metadata = self._format_lora_response(data["metadata"])
+                return web.json_response({
+                    "success": True,
+                    "metadata": formatted_metadata
+                })
+        
+        # Otherwise, return the original response
+        return response
 
     async def replace_preview(self, request: web.Request) -> web.Response:
         """Handle preview image replacement request"""

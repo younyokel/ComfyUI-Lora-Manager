@@ -521,7 +521,20 @@ class CheckpointsRoutes:
     
     async def fetch_civitai(self, request: web.Request) -> web.Response:
         """Handle CivitAI metadata fetch request for checkpoints"""
-        return await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
+        response = await ModelRouteUtils.handle_fetch_civitai(request, self.scanner)
+        
+        # If successful, format the metadata before returning
+        if response.status == 200:
+            data = json.loads(response.body.decode('utf-8'))
+            if data.get("success") and data.get("metadata"):
+                formatted_metadata = self._format_checkpoint_response(data["metadata"])
+                return web.json_response({
+                    "success": True,
+                    "metadata": formatted_metadata
+                })
+        
+        # Otherwise, return the original response
+        return response
     
     async def replace_preview(self, request: web.Request) -> web.Response:
         """Handle preview image replacement for checkpoints"""

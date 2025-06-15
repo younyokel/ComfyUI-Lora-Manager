@@ -117,11 +117,7 @@ export async function refreshLoras(fullRebuild = false) {
 }
 
 export async function refreshSingleLoraMetadata(filePath) {
-    const success = await refreshSingleModelMetadata(filePath, 'lora');
-    if (success) {
-        // Reload the current view to show updated data
-        await resetAndReload();
-    }
+    await refreshSingleModelMetadata(filePath, 'lora');
 }
 
 export async function fetchModelDescription(modelId, filePath) {

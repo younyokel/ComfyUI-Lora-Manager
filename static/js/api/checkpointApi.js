@@ -81,11 +81,7 @@ export async function fetchCivitai() {
 
 // Refresh single checkpoint metadata
 export async function refreshSingleCheckpointMetadata(filePath) {
-    const success = await refreshSingleModelMetadata(filePath, 'checkpoint');
-    if (success) {
-        // Reload the current view to show updated data
-        await resetAndReload();
-    }
+    await refreshSingleModelMetadata(filePath, 'checkpoint');
 }
 
 /**

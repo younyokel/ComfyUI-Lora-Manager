@@ -796,6 +796,39 @@ export class VirtualScroller {
         console.log('Virtual scroller enabled');
     }
 
+    updateSingleItem(filePath, updatedItem) {
+        if (!filePath || !updatedItem) {
+            console.error('Invalid parameters for updateSingleItem');
+            return false;
+        }
+
+        // Find the index of the item with the matching file_path
+        const index = this.items.findIndex(item => item.file_path === filePath);
+        if (index === -1) {
+            console.warn(`Item with file path ${filePath} not found in virtual scroller data`);
+            return false;
+        }
+
+        // Update the item data
+        this.items[index] = {...this.items[index], ...updatedItem};
+        
+        // If the item is currently rendered, update its DOM representation
+        if (this.renderedItems.has(index)) {
+            const element = this.renderedItems.get(index);
+            
+            // Remove the old element
+            element.remove();
+            this.renderedItems.delete(index);
+            
+            // Create and render the updated element
+            const updatedElement = this.createItemElement(this.items[index], index);
+            this.renderedItems.set(index, updatedElement);
+            this.gridElement.appendChild(updatedElement);
+        }
+        
+        return true;
+    }
+
     // New method to remove an item by file path
     removeItemByFilePath(filePath) {
         if (!filePath || this.disabled || this.items.length === 0) return false;

@@ -332,7 +332,7 @@ class ModelRouteUtils:
             scanner: The model scanner instance with cache management methods
             
         Returns:
-            web.Response: The HTTP response
+            web.Response: The HTTP response with metadata on success
         """
         try:
             data = await request.json()
@@ -357,7 +357,8 @@ class ModelRouteUtils:
                 # Update the cache
                 await scanner.update_single_model_cache(data['file_path'], data['file_path'], local_metadata)
                 
-                return web.json_response({"success": True})
+                # Return the updated metadata along with success status
+                return web.json_response({"success": True, "metadata": local_metadata})
             finally:
                 await client.close()
 
