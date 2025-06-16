@@ -169,14 +169,9 @@ async function loadExampleImages(images, modelHash, filePath) {
         // First fetch local example files
         let localFiles = [];
         try {
-            // Choose endpoint based on centralized examples setting
-            const useCentralized = state.global.settings.useCentralizedExamples !== false;
-            const endpoint = useCentralized ? '/api/example-image-files' : '/api/model-example-files';
+            const endpoint = '/api/example-image-files';
             
-            // Use different params based on endpoint
-            const params = useCentralized ? 
-                `model_hash=${modelHash}` :
-                `file_path=${encodeURIComponent(filePath)}`;
+            const params = `model_hash=${modelHash}`;
             
             const response = await fetch(`${endpoint}?${params}`);
             const result = await response.json();

@@ -36,11 +36,6 @@ export class SettingsManager {
         if (state.global.settings.optimizeExampleImages === undefined) {
             state.global.settings.optimizeExampleImages = true;
         }
-        
-        // Set default for useCentralizedExamples if undefined
-        if (state.global.settings.useCentralizedExamples === undefined) {
-            state.global.settings.useCentralizedExamples = true;
-        }
 
         // Convert old boolean compactMode to new displayDensity string
         if (typeof state.global.settings.displayDensity === 'undefined') {
@@ -112,14 +107,6 @@ export class SettingsManager {
         const optimizeExampleImagesCheckbox = document.getElementById('optimizeExampleImages');
         if (optimizeExampleImagesCheckbox) {
             optimizeExampleImagesCheckbox.checked = state.global.settings.optimizeExampleImages || false;
-        }
-
-        // Set centralized examples setting
-        const useCentralizedExamplesCheckbox = document.getElementById('useCentralizedExamples');
-        if (useCentralizedExamplesCheckbox) {
-            useCentralizedExamplesCheckbox.checked = state.global.settings.useCentralizedExamples !== false;
-            // Update dependent controls
-            this.updateExamplesControlsState();
         }
 
         // Load default lora root
@@ -196,10 +183,6 @@ export class SettingsManager {
             state.global.settings.optimizeExampleImages = value;
         } else if (settingKey === 'compact_mode') {
             state.global.settings.compactMode = value;
-        } else if (settingKey === 'use_centralized_examples') {
-            state.global.settings.useCentralizedExamples = value;
-            // Update dependent controls state
-            this.updateExamplesControlsState();
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;
@@ -523,42 +506,6 @@ export class SettingsManager {
             // Add the appropriate density class
             grid.classList.add(`${density}-density`);
         }
-
-        // Apply centralized examples toggle state
-        this.updateExamplesControlsState();
-    }
-
-    // Add new method to update example control states
-    updateExamplesControlsState() {
-        const useCentralized = state.global.settings.useCentralizedExamples !== false;
-        
-        // Find all controls that require centralized mode
-        const exampleSections = document.querySelectorAll('[data-requires-centralized="true"]');
-        exampleSections.forEach(section => {
-            // Enable/disable all inputs and buttons in the section
-            const controls = section.querySelectorAll('input, button, select');
-            controls.forEach(control => {
-                control.disabled = !useCentralized;
-                
-                // Add/remove disabled class for styling
-                if (control.classList.contains('primary-btn') || control.classList.contains('secondary-btn')) {
-                    if (!useCentralized) {
-                        control.classList.add('disabled');
-                    } else {
-                        control.classList.remove('disabled');
-                    }
-                }
-            });
-            
-            // Visually show the section as disabled
-            if (!useCentralized) {
-                section.style.opacity = '0.6';
-                section.style.pointerEvents = 'none';
-            } else {
-                section.style.opacity = '';
-                section.style.pointerEvents = '';
-            }
-        });
     }
 }
 
