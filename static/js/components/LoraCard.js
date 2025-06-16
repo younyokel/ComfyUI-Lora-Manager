@@ -70,7 +70,7 @@ function handleLoraCardEvent(event) {
     
     if (event.target.closest('.fa-folder-open')) {
         event.stopPropagation();
-        openExampleImagesFolder(card.dataset.sha256);
+        handleExampleImagesAccess(card);
         return;
     }
     
@@ -198,6 +198,142 @@ function copyLoraSyntax(card) {
     const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
     
     copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
+}
+
+// New function to handle example images access
+async function handleExampleImagesAccess(card) {
+    const modelHash = card.dataset.sha256;
+    
+    try {
+        // Check if example images exist
+        const response = await fetch(`/api/has-example-images?model_hash=${modelHash}`);
+        const data = await response.json();
+        
+        if (data.has_images) {
+            // If images exist, open the folder directly (existing behavior)
+            openExampleImagesFolder(modelHash);
+        } else {
+            // If no images exist, show the new modal
+            showExampleAccessModal(card);
+        }
+    } catch (error) {
+        console.error('Error checking for example images:', error);
+        showToast('Error checking for example images', 'error');
+    }
+}
+
+// Function to show the example access modal
+function showExampleAccessModal(card) {
+    const modal = document.getElementById('exampleAccessModal');
+    if (!modal) return;
+    
+    // Get download button and determine if download should be enabled
+    const downloadBtn = modal.querySelector('#downloadExamplesBtn');
+    let hasRemoteExamples = false;
+    
+    try {
+        const metaData = JSON.parse(card.dataset.meta || '{}');
+        hasRemoteExamples = metaData.images && 
+                            Array.isArray(metaData.images) && 
+                            metaData.images.length > 0 && 
+                            metaData.images[0].url;
+    } catch (e) {
+        console.error('Error parsing meta data:', e);
+    }
+    
+    // Enable or disable download button
+    if (downloadBtn) {
+        if (hasRemoteExamples) {
+            downloadBtn.classList.remove('disabled');
+            downloadBtn.removeAttribute('title'); // Remove any previous tooltip
+            downloadBtn.onclick = () => {
+                modalManager.closeModal('exampleAccessModal');
+                // Open settings modal and scroll to example images section
+                const settingsModal = document.getElementById('settingsModal');
+                if (settingsModal) {
+                    modalManager.showModal('settingsModal');
+                    // Scroll to example images section after modal is visible
+                    setTimeout(() => {
+                        const exampleSection = settingsModal.querySelector('.settings-section:nth-child(5)'); // Example Images section
+                        if (exampleSection) {
+                            exampleSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }, 300);
+                }
+            };
+        } else {
+            downloadBtn.classList.add('disabled');
+            downloadBtn.setAttribute('title', 'No remote example images available for this model on Civitai');
+            downloadBtn.onclick = null;
+        }
+    }
+    
+    // Set up import button
+    const importBtn = modal.querySelector('#importExamplesBtn');
+    if (importBtn) {
+        importBtn.onclick = () => {
+            modalManager.closeModal('exampleAccessModal');
+            
+            // Get the lora data from card dataset
+            const loraMeta = {
+                sha256: card.dataset.sha256,
+                file_path: card.dataset.filepath,
+                model_name: card.dataset.name,
+                file_name: card.dataset.file_name,
+                // Other properties needed for showLoraModal
+                folder: card.dataset.folder,
+                modified: card.dataset.modified,
+                file_size: card.dataset.file_size,
+                from_civitai: card.dataset.from_civitai === 'true',
+                base_model: card.dataset.base_model,
+                usage_tips: card.dataset.usage_tips,
+                notes: card.dataset.notes,
+                favorite: card.dataset.favorite === 'true',
+                civitai: (() => {
+                    try {
+                        return JSON.parse(card.dataset.meta || '{}');
+                    } catch (e) {
+                        return {};
+                    }
+                })(),
+                tags: JSON.parse(card.dataset.tags || '[]'),
+                modelDescription: card.dataset.modelDescription || ''
+            };
+            
+            // Show the lora modal
+            showLoraModal(loraMeta);
+            
+            // Scroll to import area after modal is visible
+            setTimeout(() => {
+                const importArea = document.querySelector('.example-import-area');
+                if (importArea) {
+                    const showcaseTab = document.getElementById('showcase-tab');
+                    if (showcaseTab) {
+                        // First make sure showcase tab is visible
+                        const tabBtn = document.querySelector('.tab-btn[data-tab="showcase"]');
+                        if (tabBtn && !tabBtn.classList.contains('active')) {
+                            tabBtn.click();
+                        }
+                        
+                        // Then toggle showcase if collapsed
+                        const carousel = showcaseTab.querySelector('.carousel');
+                        if (carousel && carousel.classList.contains('collapsed')) {
+                            const scrollIndicator = showcaseTab.querySelector('.scroll-indicator');
+                            if (scrollIndicator) {
+                                scrollIndicator.click();
+                            }
+                        }
+                        
+                        // Finally scroll to the import area
+                        importArea.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            }, 500);
+        };
+    }
+    
+    // Show the modal
+    modalManager.showModal('exampleAccessModal');
 }
 
 export function createLoraCard(lora) {

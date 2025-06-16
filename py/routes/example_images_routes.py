@@ -45,6 +45,7 @@ class ExampleImagesRoutes:
         app.router.add_post('/api/resume-example-images', ExampleImagesRoutes.resume_example_images)
         app.router.add_post('/api/open-example-images-folder', ExampleImagesRoutes.open_example_images_folder)
         app.router.add_get('/api/example-image-files', ExampleImagesRoutes.get_example_image_files)
+        app.router.add_get('/api/has-example-images', ExampleImagesRoutes.has_example_images)
 
     @staticmethod
     async def download_example_images(request):
@@ -1245,3 +1246,63 @@ class ExampleImagesRoutes:
         except Exception as e:
             logger.error(f"Failed to update metadata after import: {e}", exc_info=True)
             return []
+        
+    @staticmethod
+    async def has_example_images(request):
+        """
+        Check if example images folder exists and is not empty for a model
+        
+        Expects:
+        - model_hash in query parameters
+        
+        Returns:
+        - Boolean value indicating if folder exists and has images/videos
+        """
+        try:
+            # Get the model hash from query parameters
+            model_hash = request.query.get('model_hash')
+            
+            if not model_hash:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing model_hash parameter'
+                }, status=400)
+            
+            # Get the example images path from settings
+            example_images_path = settings.get('example_images_path')
+            if not example_images_path:
+                return web.json_response({
+                    'has_images': False
+                })
+            
+            # Construct the folder path for this model
+            model_folder = os.path.join(example_images_path, model_hash)
+            
+            # Check if the folder exists
+            if not os.path.exists(model_folder) or not os.path.isdir(model_folder):
+                return web.json_response({
+                    'has_images': False
+                })
+            
+            # Check if the folder has any supported media files
+            for file in os.listdir(model_folder):
+                file_path = os.path.join(model_folder, file)
+                if os.path.isfile(file_path):
+                    file_ext = os.path.splitext(file)[1].lower()
+                    if (file_ext in SUPPORTED_MEDIA_EXTENSIONS['images'] or 
+                        file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']):
+                        return web.json_response({
+                            'has_images': True
+                        })
+            
+            # If we reach here, the folder exists but has no supported media files
+            return web.json_response({
+                'has_images': False
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to check example images folder: {e}", exc_info=True)
+            return web.json_response({
+                'has_images': False,
+                'error': str(e)
+            })
