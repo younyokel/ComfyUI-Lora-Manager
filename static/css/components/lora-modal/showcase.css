@@ -290,3 +290,94 @@
 .lazy[src] {
   opacity: 1;
 }
+
+/* Example Import Area */
+.example-import-area {
+  margin-top: var(--space-4);
+  padding: var(--space-2);
+}
+
+.example-import-area.empty {
+  margin-top: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+}
+
+.import-container {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--space-4);
+  text-align: center;
+  transition: all 0.3s ease;
+  background: var(--lora-surface);
+  cursor: pointer;
+}
+
+.import-container.highlight {
+  border-color: var(--lora-accent);
+  background: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.1);
+  transform: scale(1.01);
+}
+
+.import-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+.import-placeholder i {
+  font-size: 2.5rem;
+  /* color: var(--lora-accent); */
+  opacity: 0.8;
+  margin-bottom: var(--space-1);
+}
+
+.import-placeholder h3 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.import-placeholder p {
+  margin: var(--space-1) 0;
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.import-placeholder .sub-text {
+  font-size: 0.9em;
+  opacity: 0.6;
+  margin: var(--space-1) 0;
+}
+
+.import-formats {
+  font-size: 0.8em !important;
+  opacity: 0.6 !important;
+  margin-top: var(--space-2) !important;
+}
+
+.select-files-btn {
+  background: var(--lora-accent);
+  color: var(--lora-text);
+  border: none;
+  border-radius: var(--border-radius-xs);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.select-files-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* For dark theme */
+[data-theme="dark"] .import-container {
+  background: rgba(255, 255, 255, 0.03);
+}

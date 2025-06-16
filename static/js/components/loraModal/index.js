@@ -5,7 +5,13 @@
  */
 import { showToast, copyToClipboard, getExampleImageFiles } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
-import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop } from './ShowcaseView.js';
+import { 
+    renderShowcaseContent, 
+    toggleShowcase, 
+    setupShowcaseScroll, 
+    scrollToTop,
+    initExampleImport 
+} from './ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';
@@ -207,14 +213,8 @@ async function loadExampleImages(images, modelHash, filePath) {
         let localFiles = [];
 
         try {
-            // Choose endpoint based on centralized examples setting
-            const useCentralized = state.global.settings.useCentralizedExamples !== false;
-            const endpoint = useCentralized ? '/api/example-image-files' : '/api/model-example-files';
-            
-            // Use different params based on endpoint
-            const params = useCentralized ? 
-                `model_hash=${modelHash}` :
-                `file_path=${encodeURIComponent(filePath)}`;
+            const endpoint = '/api/example-image-files';
+            const params = `model_hash=${modelHash}`;
             
             const response = await fetch(`${endpoint}?${params}`);
             const result = await response.json();
@@ -239,6 +239,9 @@ async function loadExampleImages(images, modelHash, filePath) {
                 initMetadataPanelHandlers(carousel);
             }
         }
+        
+        // Initialize the example import functionality
+        initExampleImport(modelHash, showcaseTab);
     } catch (error) {
         console.error('Error loading example images:', error);
         const showcaseTab = document.getElementById('showcase-tab');

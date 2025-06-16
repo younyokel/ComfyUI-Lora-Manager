@@ -17,7 +17,10 @@ import { NSFW_LEVELS } from '../../utils/constants.js';
  * @returns {Promise<string>} HTML内容
  */
 export function renderShowcaseContent(images, exampleFiles = []) {
-    if (!images?.length) return '<div class="no-examples">No example images available</div>';
+    if (!images?.length) {
+        // Replace empty message with import interface
+        return renderImportInterface(true);
+    }
     
     // Filter images based on SFW setting
     const showOnlySFW = state.settings.show_only_sfw;
@@ -136,8 +139,200 @@ export function renderShowcaseContent(images, exampleFiles = []) {
                     );
                 }).join('')}
             </div>
+            
+            <!-- Add import interface at the bottom of existing examples -->
+            ${renderImportInterface(false)}
         </div>
     `;
+}
+
+/**
+ * Render the import interface for example images
+ * @param {boolean} isEmpty - Whether there are no existing examples
+ * @returns {string} HTML content for import interface
+ */
+function renderImportInterface(isEmpty) {
+    return `
+        <div class="example-import-area ${isEmpty ? 'empty' : ''}">
+            <div class="import-container" id="exampleImportContainer">
+                <div class="import-placeholder">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>${isEmpty ? 'No example images available' : 'Add more examples'}</h3>
+                    <p>Drag & drop images or videos here</p>
+                    <p class="sub-text">or</p>
+                    <button class="select-files-btn" id="selectExampleFilesBtn">
+                        <i class="fas fa-folder-open"></i> Select Files
+                    </button>
+                    <p class="import-formats">Supported formats: jpg, png, gif, webp, mp4, webm</p>
+                </div>
+                <input type="file" id="exampleFilesInput" multiple accept="image/*,video/mp4,video/webm" style="display: none;">
+                <div class="import-progress-container" style="display: none;">
+                    <div class="import-progress">
+                        <div class="progress-bar"></div>
+                    </div>
+                    <span class="progress-text">Importing files...</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Initialize the import functionality for example images
+ * @param {string} modelHash - The SHA256 hash of the model
+ * @param {Element} container - The container element for the import area
+ */
+export function initExampleImport(modelHash, container) {
+    if (!container) return;
+    
+    const importContainer = container.querySelector('#exampleImportContainer');
+    const fileInput = container.querySelector('#exampleFilesInput');
+    const selectFilesBtn = container.querySelector('#selectExampleFilesBtn');
+    
+    // Set up file selection button
+    if (selectFilesBtn) {
+        selectFilesBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+    }
+    
+    // Handle file selection
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleImportFiles(Array.from(e.target.files), modelHash, importContainer);
+            }
+        });
+    }
+    
+    // Set up drag and drop
+    if (importContainer) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            importContainer.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // Highlight drop area on drag over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            importContainer.addEventListener(eventName, () => {
+                importContainer.classList.add('highlight');
+            }, false);
+        });
+        
+        // Remove highlight on drag leave
+        ['dragleave', 'drop'].forEach(eventName => {
+            importContainer.addEventListener(eventName, () => {
+                importContainer.classList.remove('highlight');
+            }, false);
+        });
+        
+        // Handle dropped files
+        importContainer.addEventListener('drop', (e) => {
+            const files = Array.from(e.dataTransfer.files);
+            handleImportFiles(files, modelHash, importContainer);
+        }, false);
+    }
+}
+
+/**
+ * Handle the file import process
+ * @param {File[]} files - Array of files to import
+ * @param {string} modelHash - The SHA256 hash of the model
+ * @param {Element} importContainer - The container element for import UI
+ */
+async function handleImportFiles(files, modelHash, importContainer) {
+    // Filter for supported file types
+    const supportedImages = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const supportedVideos = ['.mp4', '.webm'];
+    const supportedExtensions = [...supportedImages, ...supportedVideos];
+    
+    const validFiles = files.filter(file => {
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        return supportedExtensions.includes(ext);
+    });
+    
+    if (validFiles.length === 0) {
+        alert('No supported files selected. Please select image or video files.');
+        return;
+    }
+    
+    try {
+        // Get file paths to send to backend
+        const filePaths = validFiles.map(file => {
+            // We need the full path, but we only have the filename
+            // For security reasons, browsers don't provide full paths
+            // This will only work if the backend can handle just filenames
+            return URL.createObjectURL(file);
+        });
+        
+        // Use FileReader to get the file data for direct upload
+        const formData = new FormData();
+        formData.append('model_hash', modelHash);
+        
+        validFiles.forEach(file => {
+            formData.append('files', file);
+        });
+        
+        // Call API to import files
+        const response = await fetch('/api/import-example-images', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to import example files');
+        }
+        
+        // Get updated local files
+        const updatedFilesResponse = await fetch(`/api/example-image-files?model_hash=${modelHash}`);
+        const updatedFilesResult = await updatedFilesResponse.json();
+        
+        if (!updatedFilesResult.success) {
+            throw new Error(updatedFilesResult.error || 'Failed to get updated file list');
+        }
+        
+        // Re-render the showcase content
+        const showcaseTab = document.getElementById('showcase-tab');
+        if (showcaseTab) {
+            // Get the updated images from the result
+            const updatedImages = result.updated_images || [];
+            showcaseTab.innerHTML = renderShowcaseContent(updatedImages, updatedFilesResult.files);
+            
+            // Re-initialize showcase functionality
+            const carousel = showcaseTab.querySelector('.carousel');
+            if (carousel) {
+                if (!carousel.classList.contains('collapsed')) {
+                    initLazyLoading(carousel);
+                    initNsfwBlurHandlers(carousel);
+                    initMetadataPanelHandlers(carousel);
+                }
+                // Initialize the import UI for the new content
+                initExampleImport(modelHash, showcaseTab);
+            }
+            
+            // Update VirtualScroller if available
+            if (state.virtualScroller && result.model_file_path) {
+                // Create an update object with only the necessary properties
+                const updateData = {
+                    civitai: {
+                        images: updatedImages
+                    }
+                };
+                
+                // Update the item in the virtual scroller
+                state.virtualScroller.updateSingleItem(result.model_file_path, updateData);
+                console.log('Updated VirtualScroller item with new example images');
+            }
+        }
+    } catch (error) {
+        console.error('Error importing examples:', error);
+    }
 }
 
 /**
