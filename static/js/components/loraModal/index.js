@@ -3,7 +3,7 @@
  * 
  * 将原始的LoraModal.js拆分成多个功能模块后的主入口文件
  */
-import { showToast, copyToClipboard, getExampleImageFiles } from '../../utils/uiHelpers.js';
+import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { 
     renderShowcaseContent, 
@@ -24,8 +24,6 @@ import {
 } from './ModelMetadata.js';
 import { saveModelMetadata } from '../../api/loraApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
-import { updateModelCard } from '../../utils/cardUpdater.js';
-import { state } from '../../state/index.js';
 
 /**
  * 显示LoRA模型弹窗

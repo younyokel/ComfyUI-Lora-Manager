@@ -3,7 +3,7 @@
  * 
  * Modularized checkpoint modal component that handles checkpoint model details display
  */
-import { showToast, getExampleImageFiles, initLazyLoading, initNsfwBlurHandlers, initMetadataPanelHandlers } from '../../utils/uiHelpers.js';
+import { showToast, initLazyLoading, initNsfwBlurHandlers, initMetadataPanelHandlers } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop } from './ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
@@ -15,8 +15,6 @@ import {
 import { setupTagEditMode } from './ModelTags.js'; // Add import for tag editing
 import { saveModelMetadata } from '../../api/checkpointApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
-import { updateModelCard } from '../../utils/cardUpdater.js';
-import { state } from '../../state/index.js';
 
 /**
  * Display the checkpoint modal with the given checkpoint data
