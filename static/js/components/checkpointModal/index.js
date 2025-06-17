@@ -258,9 +258,6 @@ async function saveNotes(filePath) {
     try {
         await saveModelMetadata(filePath, { notes: content });
 
-        // Update the corresponding checkpoint card's dataset
-        updateModelCard(filePath, { notes: content });
-
         showToast('Notes saved successfully', 'success');
     } catch (error) {
         showToast('Failed to save notes', 'error');

@@ -463,12 +463,6 @@ async function saveTags() {
         // Exit edit mode
         editBtn.click();
         
-        // Update the checkpoint card's dataset
-        const checkpointCard = document.querySelector(`.checkpoint-card[data-filepath="${filePath}"]`);
-        if (checkpointCard) {
-            checkpointCard.dataset.tags = JSON.stringify(tags);
-        }
-        
         showToast('Tags updated successfully', 'success');
     } catch (error) {
         console.error('Error saving tags:', error);

@@ -26,24 +26,6 @@ export const ModelContextMenuMixin = {
                 try {
                     await this.saveModelMetadata(filePath, { preview_nsfw_level: level });
                     
-                    // Update card data
-                    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-                    if (card) {
-                        let metaData = {};
-                        try {
-                            metaData = JSON.parse(card.dataset.meta || '{}');
-                        } catch (err) {
-                            console.error('Error parsing metadata:', err);
-                        }
-                        
-                        metaData.preview_nsfw_level = level;
-                        card.dataset.meta = JSON.stringify(metaData);
-                        card.dataset.nsfwLevel = level.toString();
-                        
-                        // Apply blur effect immediately
-                        this.updateCardBlurEffect(card, level);
-                    }
-                    
                     showToast(`Content rating set to ${getNSFWLevelName(level)}`, 'success');
                     this.nsfwSelector.style.display = 'none';
                 } catch (error) {

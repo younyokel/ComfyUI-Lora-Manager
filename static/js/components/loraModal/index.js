@@ -272,9 +272,6 @@ window.saveNotes = async function(filePath) {
     try {
         await saveModelMetadata(filePath, { notes: content });
 
-        // Update the corresponding lora card's dataset
-        updateModelCard(filePath, { notes: content });
-
         showToast('Notes saved successfully', 'success');
     } catch (error) {
         showToast('Failed to save notes', 'error');
@@ -339,9 +336,6 @@ function setupEditableFields(filePath) {
             usage_tips: newPresetsJson
         });
 
-        // Update the card with the new usage tips
-        updateModelCard(filePath, { usage_tips: newPresetsJson });
-        
         presetTags.innerHTML = renderPresetTags(currentPresets);
         
         presetSelector.value = '';
