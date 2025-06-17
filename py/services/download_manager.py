@@ -6,6 +6,7 @@ from typing import Dict
 from ..utils.models import LoraMetadata, CheckpointMetadata
 from ..utils.constants import CARD_PREVIEW_WIDTH
 from ..utils.exif_utils import ExifUtils
+from ..utils.metadata_manager import MetadataManager
 from .service_registry import ServiceRegistry
 
 # Download to temporary file first
@@ -198,8 +199,6 @@ class DownloadManager:
                     if await civitai_client.download_preview_image(images[0]['url'], preview_path):
                         metadata.preview_url = preview_path.replace(os.sep, '/')
                         metadata.preview_nsfw_level = images[0].get('nsfwLevel', 0)
-                        with open(metadata_path, 'w', encoding='utf-8') as f:
-                            json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
                 else:
                     # For images, use WebP format for better performance
                     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
@@ -226,8 +225,6 @@ class DownloadManager:
                         # Update metadata
                         metadata.preview_url = preview_path.replace(os.sep, '/')
                         metadata.preview_nsfw_level = images[0].get('nsfwLevel', 0)
-                        with open(metadata_path, 'w', encoding='utf-8') as f:
-                            json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
                         
                         # Remove temporary file
                         try:
@@ -258,8 +255,7 @@ class DownloadManager:
             metadata.update_file_info(save_path)
 
             # 5. Final metadata update
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
+            await MetadataManager.save_metadata(save_path, metadata)
 
             # 6. Update cache based on model type
             if model_type == "checkpoint":

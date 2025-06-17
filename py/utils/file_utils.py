@@ -172,7 +172,7 @@ async def save_metadata(file_path: str, metadata: BaseModelMetadata) -> None:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata_dict, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"Error saving metadata to {metadata_path}: {str(e)}")
+        logger.error(f"Error saving metadata to {metadata_path}: {str(e)}")
 
 async def load_metadata(file_path: str, model_class: Type[BaseModelMetadata] = LoraMetadata) -> Optional[BaseModelMetadata]:
     """Load metadata from .metadata.json file"""
@@ -251,11 +251,5 @@ async def load_metadata(file_path: str, model_class: Type[BaseModelMetadata] = L
                 return model_class.from_dict(data)
                 
     except Exception as e:
-        print(f"Error loading metadata from {metadata_path}: {str(e)}")
+        logger.error(f"Error loading metadata from {metadata_path}: {str(e)}")
     return None
-
-async def update_civitai_metadata(file_path: str, civitai_data: Dict) -> None:
-    """Update metadata file with Civitai data"""
-    metadata = await load_metadata(file_path)
-    metadata['civitai'] = civitai_data
-    await save_metadata(file_path, metadata)

@@ -7,6 +7,7 @@ import asyncio
 
 from ..utils.routes_common import ModelRouteUtils
 from ..utils.constants import NSFW_LEVELS
+from ..utils.metadata_manager import MetadataManager
 from ..services.websocket_manager import ws_manager
 from ..services.service_registry import ServiceRegistry
 from ..config import config
@@ -650,8 +651,7 @@ class CheckpointsRoutes:
             metadata.update(metadata_updates)
 
             # Save updated metadata
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            await MetadataManager.save_metadata(file_path, metadata)
 
             # Update cache
             await self.scanner.update_single_model_cache(file_path, file_path, metadata)

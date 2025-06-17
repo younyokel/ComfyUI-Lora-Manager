@@ -1,5 +1,5 @@
-from dataclasses import dataclass, asdict
-from typing import Dict, Optional, List
+from dataclasses import dataclass, asdict, field
+from typing import Dict, Optional, List, Any
 from datetime import datetime
 import os
 from .model_utils import determine_base_model
@@ -24,6 +24,7 @@ class BaseModelMetadata:
     civitai_deleted: bool = False  # Whether deleted from Civitai
     favorite: bool = False      # Whether the model is a favorite
     exclude: bool = False       # Whether to exclude this model from the cache
+    _unknown_fields: Dict[str, Any] = field(default_factory=dict, repr=False, compare=False)  # Store unknown fields
 
     def __post_init__(self):
         # Initialize empty lists to avoid mutable default parameter issue
@@ -34,11 +35,43 @@ class BaseModelMetadata:
     def from_dict(cls, data: Dict) -> 'BaseModelMetadata':
         """Create instance from dictionary"""
         data_copy = data.copy()
-        return cls(**data_copy)
+        
+        # Use cached fields if available, otherwise compute them
+        if not hasattr(cls, '_known_fields_cache'):
+            known_fields = set()
+            for c in cls.mro():
+                if hasattr(c, '__annotations__'):
+                    known_fields.update(c.__annotations__.keys())
+            cls._known_fields_cache = known_fields
+        
+        known_fields = cls._known_fields_cache
+        
+        # Extract fields that match our class attributes
+        fields_to_use = {k: v for k, v in data_copy.items() if k in known_fields}
+        
+        # Store unknown fields separately
+        unknown_fields = {k: v for k, v in data_copy.items() if k not in known_fields and not k.startswith('_')}
+        
+        # Create instance with known fields
+        instance = cls(**fields_to_use)
+        
+        # Add unknown fields as a separate attribute
+        instance._unknown_fields = unknown_fields
+        
+        return instance
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization"""
-        return asdict(self)
+        result = asdict(self)
+        
+        # Remove private fields
+        result = {k: v for k, v in result.items() if not k.startswith('_')}
+        
+        # Add back unknown fields if they exist
+        if hasattr(self, '_unknown_fields'):
+            result.update(self._unknown_fields)
+            
+        return result
 
     @property
     def modified_datetime(self) -> datetime:

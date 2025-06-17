@@ -14,6 +14,7 @@ import asyncio
 from .update_routes import UpdateRoutes
 from ..utils.constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH, VALID_LORA_TYPES
 from ..utils.exif_utils import ExifUtils
+from ..utils.metadata_manager import MetadataManager
 from ..services.service_registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
@@ -288,22 +289,6 @@ class ApiRoutes:
             f.write(optimized_data)
             
         return preview_path
-
-    async def _update_preview_metadata(self, model_path: str, preview_path: str):
-        """Update preview path in metadata"""
-        metadata_path = os.path.splitext(model_path)[0] + '.metadata.json'
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path, 'r', encoding='utf-8') as f:
-                    metadata = json.load(f)
-                
-                # Update preview_url directly in the metadata dict
-                metadata['preview_url'] = preview_path
-                
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(metadata, f, indent=2, ensure_ascii=False)
-            except Exception as e:
-                logger.error(f"Error updating metadata: {e}")
 
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:
         """Fetch CivitAI metadata for all loras in the background"""
@@ -640,8 +625,7 @@ class ApiRoutes:
                     metadata[key] = value
 
             # Save updated metadata
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            await MetadataManager.save_metadata(file_path, metadata)
 
             # Update cache
             await self.scanner.update_single_model_cache(file_path, file_path, metadata)
@@ -854,9 +838,7 @@ class ApiRoutes:
                             metadata['tags'] = tags
                             metadata['creator'] = creator
                             
-                            with open(metadata_path, 'w', encoding='utf-8') as f:
-                                json.dump(metadata, f, indent=2, ensure_ascii=False)
-                                logger.info(f"Saved model metadata to file for {file_path}")
+                            await MetadataManager.save_metadata(file_path, metadata)
                         except Exception as e:
                             logger.error(f"Error saving model metadata: {e}")
             
@@ -972,6 +954,7 @@ class ApiRoutes:
             patterns = [
                 f"{old_file_name}.safetensors",  # Required
                 f"{old_file_name}.metadata.json",
+                f"{old_file_name}.metadata.json.bak",
             ]
             
             # Add all preview file extensions
@@ -1027,8 +1010,7 @@ class ApiRoutes:
                     metadata['preview_url'] = new_preview
                 
                 # Save updated metadata
-                with open(new_metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                await MetadataManager.save_metadata(new_file_path, metadata)
             
             # Update the scanner cache
             if metadata:

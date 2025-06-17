@@ -13,6 +13,7 @@ from ..services.settings_manager import settings
 from ..services.service_registry import ServiceRegistry
 from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
 from ..utils.routes_common import ModelRouteUtils
+from ..utils.metadata_manager import MetadataManager
 
 logger = logging.getLogger(__name__)
 
@@ -446,8 +447,7 @@ class ExampleImagesRoutes:
                     model_copy.pop('folder', None)
                     
                     # Write the metadata to file without the folder field
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(model_copy, f, indent=2, ensure_ascii=False)
+                    await MetadataManager.save_metadata(file_path, model_copy)
                     logger.info(f"Saved metadata to {metadata_path}")
                 except Exception as e:
                     logger.error(f"Failed to save metadata to {metadata_path}: {str(e)}")
@@ -1231,8 +1231,7 @@ class ExampleImagesRoutes:
                     model_copy.pop('folder', None)
                     
                     # Write the metadata to file
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(model_copy, f, indent=2, ensure_ascii=False)
+                    await MetadataManager.save_metadata(file_path, model_copy)
                     logger.info(f"Saved metadata to {metadata_path}")
                 except Exception as e:
                     logger.error(f"Failed to save metadata to {metadata_path}: {str(e)}")

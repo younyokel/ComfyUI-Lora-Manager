@@ -9,6 +9,7 @@ from .constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
 from ..config import config
 from ..services.civitai_client import CivitaiClient
 from ..utils.exif_utils import ExifUtils
+from ..utils.metadata_manager import MetadataManager
 from ..services.download_manager import DownloadManager
 
 logger = logging.getLogger(__name__)
@@ -32,8 +33,7 @@ class ModelRouteUtils:
     async def handle_not_found_on_civitai(metadata_path: str, local_metadata: Dict) -> None:
         """Handle case when model is not found on CivitAI"""
         local_metadata['from_civitai'] = False
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+        await MetadataManager.save_metadata(metadata_path, local_metadata)
 
     @staticmethod
     async def update_model_metadata(metadata_path: str, local_metadata: Dict, 
@@ -138,8 +138,7 @@ class ModelRouteUtils:
                                 local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
 
         # Save updated metadata
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+        await MetadataManager.save_metadata(metadata_path, local_metadata)
 
     @staticmethod
     async def fetch_and_update_model(
@@ -177,8 +176,7 @@ class ModelRouteUtils:
                 # Mark as not from CivitAI if not found
                 local_metadata['from_civitai'] = False
                 model_data['from_civitai'] = False
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+                await MetadataManager.save_metadata(file_path, local_metadata)
                 return False
 
             # Update metadata
@@ -270,10 +268,12 @@ class ModelRouteUtils:
     
     @staticmethod
     def get_multipart_ext(filename):
-        """Get extension that may have multiple parts like .metadata.json"""
+        """Get extension that may have multiple parts like .metadata.json or .metadata.json.bak"""
         parts = filename.split(".")
-        if len(parts) > 2:  # If contains multi-part extension
+        if len(parts) == 3:  # If contains 2-part extension
             return "." + ".".join(parts[-2:])  # Take the last two parts, like ".metadata.json"
+        elif len(parts) >= 4:  # If contains 3-part or more extensions
+            return "." + ".".join(parts[-3:])  # Take the last three parts, like ".metadata.json.bak"
         return os.path.splitext(filename)[1]  # Otherwise take the regular extension, like ".safetensors"
 
     # New common endpoint handlers
@@ -428,8 +428,7 @@ class ModelRouteUtils:
                     # Update preview_url directly in the metadata dict
                     metadata['preview_url'] = preview_path
                     
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(metadata, f, indent=2, ensure_ascii=False)
+                    await MetadataManager.save_metadata(model_path, metadata)
                 except Exception as e:
                     logger.error(f"Error updating metadata: {e}")
             
@@ -469,8 +468,7 @@ class ModelRouteUtils:
             metadata['exclude'] = True
             
             # Save updated metadata
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            await MetadataManager.save_metadata(file_path, metadata)
 
             # Update cache
             cache = await scanner.get_cached_data()
@@ -759,8 +757,7 @@ class ModelRouteUtils:
                         metadata['sha256'] = actual_hash
                         
                         # Save updated metadata
-                        with open(metadata_path, 'w', encoding='utf-8') as f:
-                            json.dump(metadata, f, indent=2, ensure_ascii=False)
+                        await MetadataManager.save_metadata(file_path, metadata)
                         
                         # Update cache
                         await scanner.update_single_model_cache(file_path, file_path, metadata)
