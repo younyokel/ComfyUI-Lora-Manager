@@ -429,6 +429,16 @@ class ModelRouteUtils:
                 )
                 extension = '.webp'  # Use .webp without .preview part
             
+            # Delete any existing preview files for this model
+            for ext in PREVIEW_EXTENSIONS:
+                existing_preview = os.path.join(folder, base_name + ext)
+                if os.path.exists(existing_preview):
+                    try:
+                        os.remove(existing_preview)
+                        logger.info(f"Deleted existing preview: {existing_preview}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete existing preview {existing_preview}: {e}")
+            
             preview_path = os.path.join(folder, base_name + extension).replace(os.sep, '/')
             
             with open(preview_path, 'wb') as f:
@@ -449,8 +459,7 @@ class ModelRouteUtils:
                     logger.error(f"Error updating metadata: {e}")
             
             # Update preview URL in scanner cache
-            if hasattr(scanner, 'update_preview_in_cache'):
-                await scanner.update_preview_in_cache(model_path, preview_path)
+            await scanner.update_preview_in_cache(model_path, preview_path)
             
             return web.json_response({
                 "success": True,

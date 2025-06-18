@@ -546,12 +546,8 @@ export async function excludeModel(filePath, modelType = 'lora') {
 
 // Upload a preview image
 async function uploadPreview(filePath, file, modelType = 'lora') {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const loadingStatus = document.querySelector('.loading-status');
-    
     try {
-        if (loadingOverlay) loadingOverlay.style.display = 'flex';
-        if (loadingStatus) loadingStatus.textContent = 'Uploading preview...';
+        state.loadingManager.showSimpleLoading('Uploading preview...');
         
         const formData = new FormData();
         
@@ -575,53 +571,33 @@ async function uploadPreview(filePath, file, modelType = 'lora') {
         }
 
         const data = await response.json();
+
+        // Get the current page's previewVersions Map based on model type
+        const pageType = modelType === 'checkpoint' ? 'checkpoints' : 'loras';
+        const previewVersions = state.pages[pageType].previewVersions;
         
-        // Update the card preview in UI
-        const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (card) {
-            const previewContainer = card.querySelector('.card-preview');
-            const oldPreview = previewContainer.querySelector('img, video');
+        // Update the version timestamp
+        const timestamp = Date.now();
+        if (previewVersions) {
+            previewVersions.set(filePath, timestamp);
             
-            // Get the current page's previewVersions Map based on model type
-            const pageType = modelType === 'checkpoint' ? 'checkpoints' : 'loras';
-            const previewVersions = state.pages[pageType].previewVersions;
-            
-            // Update the version timestamp
-            const timestamp = Date.now();
-            if (previewVersions) {
-                previewVersions.set(filePath, timestamp);
-                
-                // Save the updated Map to localStorage
-                const storageKey = modelType === 'checkpoint' ? 'checkpoint_preview_versions' : 'lora_preview_versions';
-                saveMapToStorage(storageKey, previewVersions);
-            }
-            
-            const previewUrl = data.preview_url ? 
-                `${data.preview_url}?t=${timestamp}` : 
-                `/api/model/preview_image?path=${encodeURIComponent(filePath)}&t=${timestamp}`;
-            
-            // Create appropriate element based on file type
-            if (file.type.startsWith('video/')) {
-                const video = document.createElement('video');
-                video.controls = true;
-                video.autoplay = true;
-                video.muted = true;
-                video.loop = true;
-                video.src = previewUrl;
-                oldPreview.replaceWith(video);
-            } else {
-                const img = document.createElement('img');
-                img.src = previewUrl;
-                oldPreview.replaceWith(img);
-            }
-            
-            showToast('Preview updated successfully', 'success');
+            // Save the updated Map to localStorage
+            const storageKey = modelType === 'checkpoint' ? 'checkpoint_preview_versions' : 'lora_preview_versions';
+            saveMapToStorage(storageKey, previewVersions);
         }
+
+        const updateData = {
+            preview_url: data.preview_url
+        };
+
+        state.virtualScroller.updateSingleItem(filePath, updateData);
+
+        showToast('Preview updated successfully', 'success');
     } catch (error) {
         console.error('Error uploading preview:', error);
         showToast('Failed to upload preview image', 'error');
     } finally {
-        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        state.loadingManager.hide();
     }
 }
 
