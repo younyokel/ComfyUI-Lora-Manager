@@ -749,6 +749,10 @@ class ModelScanner:
         """Scan all model directories and return metadata"""
         raise NotImplementedError("Subclasses must implement scan_all_models")
     
+    def is_initializing(self) -> bool:
+        """Check if the scanner is currently initializing"""
+        return self._is_initializing
+    
     def get_model_roots(self) -> List[str]:
         """Get model root directories"""
         raise NotImplementedError("Subclasses must implement get_model_roots")

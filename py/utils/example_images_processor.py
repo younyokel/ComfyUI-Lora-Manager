@@ -2,14 +2,21 @@ import logging
 import os
 import re
 import tempfile
+import random
+import string
 from aiohttp import web
-import asyncio
 from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
 class ExampleImagesProcessor:
     """Processes and manipulates example images"""
+
+    @staticmethod
+    def generate_short_id(length=8):
+        """Generate a short random alphanumeric identifier"""
+        chars = string.ascii_lowercase + string.digits
+        return ''.join(random.choice(chars) for _ in range(length))
     
     @staticmethod
     def get_civitai_optimized_url(image_url):
@@ -265,11 +272,6 @@ class ExampleImagesProcessor:
                     'error': f"Model with hash {model_hash} not found in cache"
                 }, status=404)
             
-            # Get the current number of images in the civitai.images array
-            civitai_data = model_data.get('civitai')
-            current_images = civitai_data.get('images', []) if civitai_data is not None else []
-            next_index = len(current_images)
-            
             # Create model folder
             model_folder = os.path.join(example_images_path, model_hash)
             os.makedirs(model_folder, exist_ok=True)
@@ -293,16 +295,17 @@ class ExampleImagesProcessor:
                         errors.append(f"Unsupported file type: {file_path}")
                         continue
                     
-                    # Generate new filename using sequential index starting from current image length
-                    new_filename = f"image_{next_index}{file_ext}"
-                    next_index += 1
+                    # Generate new filename using short ID instead of UUID
+                    short_id = ExampleImagesProcessor.generate_short_id()
+                    new_filename = f"custom_{short_id}{file_ext}"
                     
                     dest_path = os.path.join(model_folder, new_filename)
                     
                     # Copy the file
                     import shutil
                     shutil.copy2(file_path, dest_path)
-                    newly_imported_paths.append(dest_path)
+                    # Store both the dest_path and the short_id
+                    newly_imported_paths.append((dest_path, short_id))
                     
                     # Add to imported files list
                     imported_files.append({
@@ -315,7 +318,7 @@ class ExampleImagesProcessor:
                     errors.append(f"Error importing {file_path}: {str(e)}")
             
             # Update metadata with new example images
-            updated_images = await MetadataUpdater.update_metadata_after_import(
+            regular_images, custom_images = await MetadataUpdater.update_metadata_after_import(
                 model_hash, 
                 model_data,
                 scanner,
@@ -328,7 +331,8 @@ class ExampleImagesProcessor:
                         (f' with {len(errors)} errors' if errors else ''),
                 'files': imported_files,
                 'errors': errors,
-                'updated_images': updated_images,
+                'regular_images': regular_images,
+                'custom_images': custom_images,
                 "model_file_path": model_data.get('file_path', ''),
             })
                 

@@ -198,29 +198,32 @@ class MetadataUpdater:
             newly_imported_paths: List of paths to newly imported files
             
         Returns:
-            list: Updated images array
+            tuple: (regular_images, custom_images) - Both image arrays
         """
         try:
             # Ensure civitai field exists in model_data
             if not model_data.get('civitai'):
                 model_data['civitai'] = {}
             
-            # Ensure images array exists
-            if not model_data['civitai'].get('images'):
-                model_data['civitai']['images'] = []
+            # Ensure customImages array exists
+            if not model_data['civitai'].get('customImages'):
+                model_data['civitai']['customImages'] = []
             
-            # Get current images array
-            images = model_data['civitai']['images']
+            # Get current customImages array
+            custom_images = model_data['civitai']['customImages']
             
             # Add new image entry for each imported file
-            for path in newly_imported_paths:
+            for path_tuple in newly_imported_paths:
+                path, short_id = path_tuple
+
                 # Determine if video or image
                 file_ext = os.path.splitext(path)[1].lower()
                 is_video = file_ext in SUPPORTED_MEDIA_EXTENSIONS['videos']
                 
                 # Create image metadata entry
                 image_entry = {
-                    "url": "",  # Empty URL as required
+                    "url": "",  # Empty URL as requested
+                    "id": short_id,
                     "nsfwLevel": 0,
                     "width": 720,  # Default dimensions
                     "height": 1280,
@@ -240,8 +243,8 @@ class MetadataUpdater:
                     # If PIL fails or is unavailable, use default dimensions
                     pass
                     
-                # Append to existing images array
-                images.append(image_entry)
+                # Append to existing customImages array
+                custom_images.append(image_entry)
             
             # Save metadata to .metadata.json file
             file_path = model_data.get('file_path')
@@ -261,8 +264,12 @@ class MetadataUpdater:
             if file_path:
                 await scanner.update_single_model_cache(file_path, file_path, model_data)
             
-            return images
+            # Get regular images array (might be None)
+            regular_images = model_data['civitai'].get('images', [])
+            
+            # Return both image arrays
+            return regular_images, custom_images
                 
         except Exception as e:
             logger.error(f"Failed to update metadata after import: {e}", exc_info=True)
-            return []
+            return [], []

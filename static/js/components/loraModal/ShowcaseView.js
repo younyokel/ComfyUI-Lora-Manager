@@ -65,15 +65,21 @@ export function renderShowcaseContent(images, exampleFiles = []) {
                     // Find matching file in our list of actual files
                     let localFile = null;
                     if (exampleFiles.length > 0) {
-                        // Try to find the corresponding file by index first
-                        localFile = exampleFiles.find(file => {
-                            const match = file.name.match(/image_(\d+)\./);
-                            return match && parseInt(match[1]) === index;
-                        });
-                        
-                        // If not found by index, just use the same position in the array if available
-                        if (!localFile && index < exampleFiles.length) {
-                            localFile = exampleFiles[index];
+                        if (img.id) {
+                            // This is a custom image, find by custom_<id>
+                            const customPrefix = `custom_${img.id}`;
+                            localFile = exampleFiles.find(file => file.name.startsWith(customPrefix));
+                        } else {
+                            // This is a regular image from civitai, find by index
+                            localFile = exampleFiles.find(file => {
+                                const match = file.name.match(/image_(\d+)\./);
+                                return match && parseInt(match[1]) === index;
+                            });
+                            
+                            // If not found by index, just use the same position in the array if available
+                            if (!localFile && index < exampleFiles.length) {
+                                localFile = exampleFiles[index];
+                            }
                         }
                     }
                     
@@ -301,8 +307,11 @@ async function handleImportFiles(files, modelHash, importContainer) {
         const showcaseTab = document.getElementById('showcase-tab');
         if (showcaseTab) {
             // Get the updated images from the result
-            const updatedImages = result.updated_images || [];
-            showcaseTab.innerHTML = renderShowcaseContent(updatedImages, updatedFilesResult.files);
+            const regularImages = result.regular_images || [];
+            const customImages = result.custom_images || [];
+            // Combine both arrays for rendering
+            const allImages = [...regularImages, ...customImages];
+            showcaseTab.innerHTML = renderShowcaseContent(allImages, updatedFilesResult.files);
             
             // Re-initialize showcase functionality
             const carousel = showcaseTab.querySelector('.carousel');
@@ -321,7 +330,8 @@ async function handleImportFiles(files, modelHash, importContainer) {
                 // Create an update object with only the necessary properties
                 const updateData = {
                     civitai: {
-                        images: updatedImages
+                        images: regularImages,
+                        customImages: customImages
                     }
                 };
                 

@@ -192,17 +192,20 @@ export function showLoraModal(lora) {
     // Load recipes for this Lora
     loadRecipesForLora(lora.model_name, lora.sha256);
     
-    // Load example images asynchronously
-    loadExampleImages(lora.civitai?.images, lora.sha256, lora.file_path);
+    // Load example images asynchronously - merge regular and custom images
+    const regularImages = lora.civitai?.images || [];
+    const customImages = lora.civitai?.customImages || [];
+    // Combine images - regular images first, then custom images
+    const allImages = [...regularImages, ...customImages];
+    loadExampleImages(allImages, lora.sha256);
 }
 
 /**
  * Load example images asynchronously
- * @param {Array} images - Array of image objects
+ * @param {Array} images - Array of image objects (both regular and custom)
  * @param {string} modelHash - Model hash for fetching local files
- * @param {string} filePath - File path for fetching local files
  */
-async function loadExampleImages(images, modelHash, filePath) {
+async function loadExampleImages(images, modelHash) {
     try {
         const showcaseTab = document.getElementById('showcase-tab');
         if (!showcaseTab) return;
