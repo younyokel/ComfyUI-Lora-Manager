@@ -822,6 +822,28 @@ export class VirtualScroller {
             
             // Create and render the updated element
             const updatedElement = this.createItemElement(this.items[index], index);
+            
+            // Add update indicator visual effects
+            updatedElement.classList.add('updated');
+            
+            // Add temporary update tag
+            const updateIndicator = document.createElement('div');
+            updateIndicator.className = 'update-indicator';
+            updateIndicator.textContent = 'Updated';
+            updatedElement.querySelector('.card-preview').appendChild(updateIndicator);
+            
+            // Automatically remove the updated class after animation completes
+            setTimeout(() => {
+                updatedElement.classList.remove('updated');
+            }, 1500);
+            
+            // Automatically remove the indicator after animation completes
+            setTimeout(() => {
+                if (updateIndicator && updateIndicator.parentNode) {
+                    updateIndicator.remove();
+                }
+            }, 2000);
+            
             this.renderedItems.set(index, updatedElement);
             this.gridElement.appendChild(updatedElement);
         }
