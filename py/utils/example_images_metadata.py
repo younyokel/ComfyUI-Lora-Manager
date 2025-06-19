@@ -1,8 +1,11 @@
 import logging
 import os
+import re
 from ..utils.metadata_manager import MetadataManager
 from ..utils.routes_common import ModelRouteUtils
 from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
+from ..utils.exif_utils import ExifUtils
+from ..recipes.constants import GEN_PARAM_KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +236,24 @@ class MetadataUpdater:
                     "hasPositivePrompt": False
                 }
                 
+                # Extract and parse metadata if this is an image
+                if not is_video:
+                    try:
+                        # Extract metadata from image
+                        extracted_metadata = ExifUtils.extract_image_metadata(path)
+                        
+                        if extracted_metadata:
+                            # Parse the extracted metadata to get generation parameters
+                            parsed_meta = MetadataUpdater._parse_image_metadata(extracted_metadata)
+                            
+                            if parsed_meta:
+                                image_entry["meta"] = parsed_meta
+                                image_entry["hasMeta"] = True
+                                image_entry["hasPositivePrompt"] = bool(parsed_meta.get("prompt", ""))
+                                logger.debug(f"Extracted metadata from {os.path.basename(path)}")
+                    except Exception as e:
+                        logger.warning(f"Failed to extract metadata from {os.path.basename(path)}: {e}")
+                
                 # If it's an image, try to get actual dimensions
                 try:
                     from PIL import Image
@@ -273,3 +294,97 @@ class MetadataUpdater:
         except Exception as e:
             logger.error(f"Failed to update metadata after import: {e}", exc_info=True)
             return [], []
+    
+    @staticmethod
+    def _parse_image_metadata(user_comment):
+        """Parse metadata from image to extract generation parameters
+        
+        Args:
+            user_comment: Metadata string extracted from image
+            
+        Returns:
+            dict: Parsed metadata with generation parameters
+        """
+        if not user_comment:
+            return None
+            
+        try:
+            # Initialize metadata dictionary
+            metadata = {}
+            
+            # Split on Negative prompt if it exists
+            if "Negative prompt:" in user_comment:
+                parts = user_comment.split('Negative prompt:', 1)
+                prompt = parts[0].strip()
+                negative_and_params = parts[1] if len(parts) > 1 else ""
+            else:
+                # No negative prompt section
+                param_start = re.search(r'Steps: \d+', user_comment)
+                if param_start:
+                    prompt = user_comment[:param_start.start()].strip()
+                    negative_and_params = user_comment[param_start.start():]
+                else:
+                    prompt = user_comment.strip()
+                    negative_and_params = ""
+            
+            # Add prompt if it's in GEN_PARAM_KEYS
+            if 'prompt' in GEN_PARAM_KEYS:
+                metadata['prompt'] = prompt
+            
+            # Extract negative prompt and parameters
+            if negative_and_params:
+                # If we split on "Negative prompt:", check for params section
+                if "Negative prompt:" in user_comment:
+                    param_start = re.search(r'Steps: ', negative_and_params)
+                    if param_start:
+                        neg_prompt = negative_and_params[:param_start.start()].strip()
+                        if 'negative_prompt' in GEN_PARAM_KEYS:
+                            metadata['negative_prompt'] = neg_prompt
+                        params_section = negative_and_params[param_start.start():]
+                    else:
+                        if 'negative_prompt' in GEN_PARAM_KEYS:
+                            metadata['negative_prompt'] = negative_and_params.strip()
+                        params_section = ""
+                else:
+                    # No negative prompt, entire section is params
+                    params_section = negative_and_params
+                
+                # Extract generation parameters
+                if params_section:
+                    # Extract basic parameters
+                    param_pattern = r'([A-Za-z\s]+): ([^,]+)'
+                    params = re.findall(param_pattern, params_section)
+                    
+                    for key, value in params:
+                        clean_key = key.strip().lower().replace(' ', '_')
+                        
+                        # Skip if not in recognized gen param keys
+                        if clean_key not in GEN_PARAM_KEYS:
+                            continue
+                            
+                        # Convert numeric values
+                        if clean_key in ['steps', 'seed']:
+                            try:
+                                metadata[clean_key] = int(value.strip())
+                            except ValueError:
+                                metadata[clean_key] = value.strip()
+                        elif clean_key in ['cfg_scale']:
+                            try:
+                                metadata[clean_key] = float(value.strip())
+                            except ValueError:
+                                metadata[clean_key] = value.strip()
+                        else:
+                            metadata[clean_key] = value.strip()
+                    
+                    # Extract size if available and add if a recognized key
+                    size_match = re.search(r'Size: (\d+)x(\d+)', params_section)
+                    if size_match and 'size' in GEN_PARAM_KEYS:
+                        width, height = size_match.groups()
+                        metadata['size'] = f"{width}x{height}"
+            
+            # Return metadata if we have any entries
+            return metadata if metadata else None
+            
+        except Exception as e:
+            logger.error(f"Error parsing image metadata: {e}", exc_info=True)
+            return None

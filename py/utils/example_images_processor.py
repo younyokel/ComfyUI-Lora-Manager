@@ -9,6 +9,7 @@ from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
 from ..services.service_registry import ServiceRegistry
 from ..services.settings_manager import settings
 from .example_images_metadata import MetadataUpdater
+from ..utils.metadata_manager import MetadataManager
 
 logger = logging.getLogger(__name__)
 
@@ -463,9 +464,8 @@ class ExampleImagesProcessor:
                     model_copy.pop('folder', None)
                     
                     # Write metadata to file
-                    from ..utils.metadata_manager import MetadataManager
                     await MetadataManager.save_metadata(file_path, model_copy)
-                    logger.info(f"Saved updated metadata for {model_data.get('model_name')}")
+                    logger.debug(f"Saved updated metadata for {model_data.get('model_name')}")
                 except Exception as e:
                     logger.error(f"Failed to save metadata: {str(e)}")
                     return web.json_response({

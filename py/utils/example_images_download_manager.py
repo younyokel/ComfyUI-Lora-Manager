@@ -265,16 +265,7 @@ class DownloadManager:
                 
             # Save final progress to file
             try:
-                progress_file = os.path.join(output_dir, '.download_progress.json')
-                with open(progress_file, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        'processed_models': list(download_progress['processed_models']),
-                        'refreshed_models': list(download_progress['refreshed_models']),
-                        'completed': download_progress['completed'],
-                        'total': download_progress['total'],
-                        'last_update': time.time(),
-                        'status': download_progress['status']
-                    }, f, indent=2)
+                DownloadManager._save_progress(output_dir)
             except Exception as e:
                 logger.error(f"Failed to save progress file: {e}")
             
@@ -377,13 +368,32 @@ class DownloadManager:
         global download_progress
         try:
             progress_file = os.path.join(output_dir, '.download_progress.json')
+            
+            # Read existing progress file if it exists
+            existing_data = {}
+            if os.path.exists(progress_file):
+                try:
+                    with open(progress_file, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                except Exception as e:
+                    logger.warning(f"Failed to read existing progress file: {e}")
+            
+            # Create new progress data
+            progress_data = {
+                'processed_models': list(download_progress['processed_models']),
+                'refreshed_models': list(download_progress['refreshed_models']),
+                'completed': download_progress['completed'],
+                'total': download_progress['total'],
+                'last_update': time.time()
+            }
+            
+            # Preserve existing fields (especially naming_version)
+            for key, value in existing_data.items():
+                if key not in progress_data:
+                    progress_data[key] = value
+            
+            # Write updated progress data
             with open(progress_file, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'processed_models': list(download_progress['processed_models']),
-                    'refreshed_models': list(download_progress['refreshed_models']),
-                    'completed': download_progress['completed'],
-                    'total': download_progress['total'],
-                    'last_update': time.time()
-                }, f, indent=2)
+                json.dump(progress_data, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save progress file: {e}")
