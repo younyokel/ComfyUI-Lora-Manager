@@ -79,14 +79,79 @@
 /* Position the toggle button at the top left of showcase media */
 .showcase-toggle-btn {
   position: absolute;
-  left: var(--space-1);
-  top: var(--space-1);
   z-index: 3;
 }
 
-/* Make sure media wrapper maintains position: relative for absolute positioning of children */
-.carousel .media-wrapper {
-  position: relative;
+/* Add styles for showcase media controls */
+.media-controls {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  z-index: 4;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.media-wrapper:hover .media-controls,
+.media-controls.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.media-control-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+.media-control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.2);
+}
+
+.media-control-btn.set-preview-btn:hover {
+  background: var(--lora-accent);
+  color: white;
+  border-color: var(--lora-accent);
+}
+
+.media-control-btn.example-delete-btn:hover {
+  background: var(--lora-error);
+  color: white;
+  border-color: var(--lora-error);
+}
+
+/* Two-step confirmation for delete button */
+.media-control-btn.example-delete-btn.confirm {
+  background: var(--lora-error);
+  color: white;
+  border-color: var(--lora-error);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
 }
 
 /* Image Metadata Panel Styles */

@@ -3,9 +3,16 @@
  * 
  * Modularized checkpoint modal component that handles checkpoint model details display
  */
-import { showToast, initLazyLoading, initNsfwBlurHandlers, initMetadataPanelHandlers } from '../../utils/uiHelpers.js';
+import { showToast } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
-import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop } from './ShowcaseView.js';
+import { 
+    renderShowcaseContent, 
+    initShowcaseContent, 
+    toggleShowcase,
+    setupShowcaseScroll, 
+    scrollToTop,
+    initExampleImport
+} from '../shared/showcase/ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { 
     setupModelNameEditing, 
@@ -157,9 +164,8 @@ export function showCheckpointModal(checkpoint) {
  * Load example images asynchronously
  * @param {Array} images - Array of image objects
  * @param {string} modelHash - Model hash for fetching local files
- * @param {string} filePath - File path for fetching local files
  */
-async function loadExampleImages(images, modelHash, filePath) {
+async function loadExampleImages(images, modelHash) {
     try {
         const showcaseTab = document.getElementById('showcase-tab');
         if (!showcaseTab) return;
@@ -186,14 +192,12 @@ async function loadExampleImages(images, modelHash, filePath) {
         
         // Re-initialize the showcase event listeners
         const carousel = showcaseTab.querySelector('.carousel');
-        if (carousel) {
-            // Only initialize if we actually have examples and they're expanded
-            if (!carousel.classList.contains('collapsed')) {
-                initLazyLoading(carousel);
-                initNsfwBlurHandlers(carousel);
-                initMetadataPanelHandlers(carousel);
-            }
+        if (carousel && !carousel.classList.contains('collapsed')) {
+            initShowcaseContent(carousel);
         }
+
+        // Initialize the example import functionality
+        initExampleImport(modelHash, showcaseTab);
     } catch (error) {
         console.error('Error loading example images:', error);
         const showcaseTab = document.getElementById('showcase-tab');

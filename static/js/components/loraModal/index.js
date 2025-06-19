@@ -7,11 +7,12 @@ import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { 
     renderShowcaseContent, 
-    toggleShowcase, 
+    initShowcaseContent, 
+    toggleShowcase,
     setupShowcaseScroll, 
     scrollToTop,
-    initExampleImport 
-} from './ShowcaseView.js';
+    initExampleImport
+} from '../shared/showcase/ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';
@@ -175,7 +176,7 @@ export function showLoraModal(lora) {
     
     modalManager.showModal('loraModal', content);
     setupEditableFields(lora.file_path);
-    setupShowcaseScroll();
+    setupShowcaseScroll('loraModal');
     setupTabSwitching();
     setupTagTooltip();
     setupTriggerWordsEditMode();
@@ -232,13 +233,8 @@ async function loadExampleImages(images, modelHash) {
         
         // Re-initialize the showcase event listeners
         const carousel = showcaseTab.querySelector('.carousel');
-        if (carousel) {
-            // Only initialize if we actually have examples and they're expanded
-            if (!carousel.classList.contains('collapsed')) {
-                initLazyLoading(carousel);
-                initNsfwBlurHandlers(carousel);
-                initMetadataPanelHandlers(carousel);
-            }
+        if (carousel && !carousel.classList.contains('collapsed')) {
+            initShowcaseContent(carousel);
         }
         
         // Initialize the example import functionality
@@ -368,5 +364,4 @@ function setupEditableFields(filePath) {
     });
 }
 
-// Export functions for global access
-export { toggleShowcase, scrollToTop };
+window.scrollToTop = scrollToTop;
