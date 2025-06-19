@@ -1,5 +1,10 @@
 import asyncio
+import sys
+import os
+import logging
+from pathlib import Path
 from server import PromptServer # type: ignore
+
 from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
@@ -11,9 +16,6 @@ from .routes.example_images_routes import ExampleImagesRoutes
 from .services.service_registry import ServiceRegistry
 from .services.settings_manager import settings
 from .utils.example_images_migration import ExampleImagesMigration
-import logging
-import sys
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -95,10 +97,14 @@ class LoraManager:
                     route_path = f'/loras_static/link_{link_idx["lora"]}/preview'
                     link_idx["lora"] += 1
                 
-                app.router.add_static(route_path, target_path)
-                logger.info(f"Added static route for link target {route_path} -> {target_path}")
-                config.add_route_mapping(target_path, route_path)
-                added_targets.add(target_path)
+                try:
+                    app.router.add_static(route_path, Path(target_path).resolve(strict=False))
+                    logger.info(f"Added static route for link target {route_path} -> {target_path}")
+                    config.add_route_mapping(target_path, route_path)
+                    added_targets.add(target_path)
+                except Exception as e:
+                    logger.warning(f"Failed to add static route on initialization for {target_path}: {e}")
+                    continue
         
         # Add static route for plugin assets
         app.router.add_static('/loras_static', config.static_path)
