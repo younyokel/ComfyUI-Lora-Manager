@@ -16,8 +16,10 @@
  * @returns {string} HTML content
  */
 export function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl, mediaControlsHtml = '') {
+    const nsfwLevel = media.nsfwLevel !== undefined ? media.nsfwLevel : 0;
+    
     return `
-        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%" data-short-id="${media.id || ''}">
+        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%" data-short-id="${media.id || ''}" data-nsfw-level="${nsfwLevel}">
             ${shouldBlur ? `
                 <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
                     <i class="fas fa-eye"></i>
@@ -28,6 +30,7 @@ export function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText,
                 referrerpolicy="no-referrer" 
                 data-local-src="${localUrl || ''}"
                 data-remote-src="${remoteUrl}"
+                data-nsfw-level="${nsfwLevel}"
                 class="lazy ${shouldBlur ? 'blurred' : ''}">
                 <source data-local-src="${localUrl || ''}" data-remote-src="${remoteUrl}" type="video/mp4">
                 Your browser does not support video playback
@@ -58,8 +61,10 @@ export function generateVideoWrapper(media, heightPercent, shouldBlur, nsfwText,
  * @returns {string} HTML content
  */
 export function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText, metadataPanel, localUrl, remoteUrl, mediaControlsHtml = '') {
+    const nsfwLevel = media.nsfwLevel !== undefined ? media.nsfwLevel : 0;
+    
     return `
-        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%" data-short-id="${media.id || ''}">
+        <div class="media-wrapper ${shouldBlur ? 'nsfw-media-wrapper' : ''}" style="padding-bottom: ${heightPercent}%" data-short-id="${media.id || ''}" data-nsfw-level="${nsfwLevel}">
             ${shouldBlur ? `
                 <button class="toggle-blur-btn showcase-toggle-btn" title="Toggle blur">
                     <i class="fas fa-eye"></i>
@@ -68,6 +73,7 @@ export function generateImageWrapper(media, heightPercent, shouldBlur, nsfwText,
             ${mediaControlsHtml}
             <img data-local-src="${localUrl || ''}" 
                 data-remote-src="${remoteUrl}"
+                data-nsfw-level="${nsfwLevel}"
                 alt="Preview" 
                 crossorigin="anonymous" 
                 referrerpolicy="no-referrer"

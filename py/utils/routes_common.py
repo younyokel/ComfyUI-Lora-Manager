@@ -409,6 +409,15 @@ class ModelRouteUtils:
                 raise ValueError("Expected 'model_path' field")
             model_path = (await field.read()).decode()
             
+            # Read NSFW level (new parameter)
+            nsfw_level = 0  # Default to 0 (unknown)
+            field = await reader.next()
+            if field and field.name == 'nsfw_level':
+                try:
+                    nsfw_level = int((await field.read()).decode())
+                except (ValueError, TypeError):
+                    logger.warning("Invalid NSFW level format, using default 0")
+            
             # Save preview file
             base_name = os.path.splitext(os.path.basename(model_path))[0]
             folder = os.path.dirname(model_path)
@@ -435,7 +444,7 @@ class ModelRouteUtils:
                 if os.path.exists(existing_preview):
                     try:
                         os.remove(existing_preview)
-                        logger.info(f"Deleted existing preview: {existing_preview}")
+                        logger.debug(f"Deleted existing preview: {existing_preview}")
                     except Exception as e:
                         logger.warning(f"Failed to delete existing preview {existing_preview}: {e}")
             
@@ -444,26 +453,28 @@ class ModelRouteUtils:
             with open(preview_path, 'wb') as f:
                 f.write(optimized_data)
             
-            # Update preview path in metadata
+            # Update preview path and NSFW level in metadata
             metadata_path = os.path.splitext(model_path)[0] + '.metadata.json'
             if os.path.exists(metadata_path):
                 try:
                     with open(metadata_path, 'r', encoding='utf-8') as f:
                         metadata = json.load(f)
                     
-                    # Update preview_url directly in the metadata dict
+                    # Update preview_url and preview_nsfw_level in the metadata dict
                     metadata['preview_url'] = preview_path
+                    metadata['preview_nsfw_level'] = nsfw_level
                     
                     await MetadataManager.save_metadata(model_path, metadata)
                 except Exception as e:
                     logger.error(f"Error updating metadata: {e}")
             
             # Update preview URL in scanner cache
-            await scanner.update_preview_in_cache(model_path, preview_path)
+            await scanner.update_preview_in_cache(model_path, preview_path, nsfw_level)
             
             return web.json_response({
                 "success": True,
-                "preview_url": config.get_preview_static_url(preview_path)
+                "preview_url": config.get_preview_static_url(preview_path),
+                "preview_nsfw_level": nsfw_level
             })
             
         except Exception as e:

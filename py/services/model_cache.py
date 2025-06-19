@@ -32,12 +32,13 @@ class ModelCache:
             all_folders = set(l['folder'] for l in self.raw_data)
             self.folders = sorted(list(all_folders), key=lambda x: x.lower())
 
-    async def update_preview_url(self, file_path: str, preview_url: str) -> bool:
+    async def update_preview_url(self, file_path: str, preview_url: str, preview_nsfw_level: int) -> bool:
         """Update preview_url for a specific model in all cached data
         
         Args:
             file_path: The file path of the model to update
             preview_url: The new preview URL
+            preview_nsfw_level: The NSFW level of the preview
             
         Returns:
             bool: True if the update was successful, False if the model wasn't found
@@ -47,19 +48,9 @@ class ModelCache:
             for item in self.raw_data:
                 if item['file_path'] == file_path:
                     item['preview_url'] = preview_url
+                    item['preview_nsfw_level'] = preview_nsfw_level
                     break
             else:
                 return False  # Model not found
-                
-            # Update in sorted lists (references to the same dict objects)
-            for item in self.sorted_by_name:
-                if item['file_path'] == file_path:
-                    item['preview_url'] = preview_url
-                    break
-                    
-            for item in self.sorted_by_date:
-                if item['file_path'] == file_path:
-                    item['preview_url'] = preview_url
-                    break
                     
             return True

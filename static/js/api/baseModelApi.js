@@ -542,19 +542,17 @@ export async function excludeModel(filePath, modelType = 'lora') {
     }
 }
 
-// Private methods
-
 // Upload a preview image
-async function uploadPreview(filePath, file, modelType = 'lora') {
+export async function uploadPreview(filePath, file, modelType = 'lora', nsfwLevel = 0) {
     try {
         state.loadingManager.showSimpleLoading('Uploading preview...');
         
         const formData = new FormData();
         
-        // Use appropriate parameter names and endpoint based on model type
         // Prepare common form data
         formData.append('preview_file', file);
         formData.append('model_path', filePath);
+        formData.append('nsfw_level', nsfwLevel.toString());  // Add nsfw_level parameter
 
         // Set endpoint based on model type
         const endpoint = modelType === 'checkpoint' 
@@ -587,7 +585,8 @@ async function uploadPreview(filePath, file, modelType = 'lora') {
         }
 
         const updateData = {
-            preview_url: data.preview_url
+            preview_url: data.preview_url,
+            preview_nsfw_level: data.preview_nsfw_level // Include nsfw level in update data
         };
 
         state.virtualScroller.updateSingleItem(filePath, updateData);
@@ -600,6 +599,8 @@ async function uploadPreview(filePath, file, modelType = 'lora') {
         state.loadingManager.hide();
     }
 }
+
+// Private methods
 
 // Private function to perform the delete operation
 async function performDelete(filePath, modelType = 'lora') {

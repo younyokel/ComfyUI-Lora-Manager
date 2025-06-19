@@ -145,13 +145,15 @@ function renderMediaItem(img, index, exampleFiles) {
     const mediaControlsHtml = `
         <div class="media-controls">
             <button class="media-control-btn set-preview-btn" title="Set as preview">
-                <i class="fas fa-star"></i>
+                <i class="fas fa-image"></i>
             </button>
-            ${isCustomImage ? `
-                <button class="media-control-btn example-delete-btn" title="Delete this example" data-short-id="${img.id}">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            ` : ''}
+            <button class="media-control-btn example-delete-btn ${!isCustomImage ? 'disabled' : ''}" 
+                    title="${isCustomImage ? 'Delete this example' : 'Only custom images can be deleted'}" 
+                    data-short-id="${img.id || ''}" 
+                    ${!isCustomImage ? 'disabled' : ''}>
+                <i class="fas fa-trash-alt"></i>
+                <i class="fas fa-check confirm-icon"></i>
+            </button>
         </div>
     `;
     

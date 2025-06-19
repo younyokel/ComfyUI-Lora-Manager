@@ -108,7 +108,7 @@ export function showCheckpointModal(checkpoint) {
                     </div>
                 </div>
 
-                <div class="showcase-section" data-checkpoint-id="${checkpoint.civitai?.modelId || ''}">
+                <div class="showcase-section" data-model-hash="${checkpoint.sha256 || ''}">
                     <div class="showcase-tabs">
                         <button class="tab-btn active" data-tab="showcase">Examples</button>
                         <button class="tab-btn" data-tab="description">Model Description</button>

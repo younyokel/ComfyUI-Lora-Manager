@@ -5,6 +5,7 @@
  */
 import { showToast, copyToClipboard } from '../../../utils/uiHelpers.js';
 import { state } from '../../../state/index.js';
+import { uploadPreview } from '../../../api/baseModelApi.js';
 
 /**
  * Try to load local image first, fall back to remote if local fails
@@ -186,9 +187,10 @@ export function initMetadataPanelHandlers(container) {
     mediaWrappers.forEach(wrapper => {
         // Get the metadata panel and media element (img or video)
         const metadataPanel = wrapper.querySelector('.image-metadata-panel');
+        const mediaControls = wrapper.querySelector('.media-controls');
         const mediaElement = wrapper.querySelector('img, video');
         
-        if (!metadataPanel || !mediaElement) return;
+        if (!mediaElement) return;
         
         let isOverMetadataPanel = false;
         
@@ -210,81 +212,88 @@ export function initMetadataPanelHandlers(container) {
                 mouseY <= mediaRect.bottom
             );
             
-            // Show metadata panel when over media content or metadata panel itself
+            // Show metadata panel and controls when over media content or metadata panel itself
             if (isOverMedia || isOverMetadataPanel) {
-                metadataPanel.classList.add('visible');
+                if (metadataPanel) metadataPanel.classList.add('visible');
+                if (mediaControls) mediaControls.classList.add('visible');
             } else {
-                metadataPanel.classList.remove('visible');
+                if (metadataPanel) metadataPanel.classList.remove('visible');
+                if (mediaControls) mediaControls.classList.remove('visible');
             }
         });
         
         wrapper.addEventListener('mouseleave', () => {
             if (!isOverMetadataPanel) {
-                metadataPanel.classList.remove('visible');
+                if (metadataPanel) metadataPanel.classList.remove('visible');
+                if (mediaControls) mediaControls.classList.remove('visible');
             }
         });
         
         // Add mouse enter/leave events for the metadata panel itself
-        metadataPanel.addEventListener('mouseenter', () => {
-            isOverMetadataPanel = true;
-            metadataPanel.classList.add('visible');
-        });
-        
-        metadataPanel.addEventListener('mouseleave', () => {
-            isOverMetadataPanel = false;
-            // Only hide if mouse is not over the media
-            const rect = wrapper.getBoundingClientRect();
-            const mediaRect = getRenderedMediaRect(mediaElement, rect.width, rect.height);
-            const mouseX = event.clientX - rect.left;
-            const mouseY = event.clientY - rect.top;
+        if (metadataPanel) {
+            metadataPanel.addEventListener('mouseenter', () => {
+                isOverMetadataPanel = true;
+                metadataPanel.classList.add('visible');
+                if (mediaControls) mediaControls.classList.add('visible');
+            });
             
-            const isOverMedia = (
-                mouseX >= mediaRect.left && 
-                mouseX <= mediaRect.right && 
-                mouseY >= mediaRect.top && 
-                mouseY <= mediaRect.bottom
-            );
-            
-            if (!isOverMedia) {
-                metadataPanel.classList.remove('visible');
-            }
-        });
-        
-        // Prevent events from bubbling
-        metadataPanel.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-        
-        // Handle copy prompt buttons
-        const copyBtns = metadataPanel.querySelectorAll('.copy-prompt-btn');
-        copyBtns.forEach(copyBtn => {
-            const promptIndex = copyBtn.dataset.promptIndex;
-            const promptElement = wrapper.querySelector(`#prompt-${promptIndex}`);
-            
-            copyBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
+            metadataPanel.addEventListener('mouseleave', () => {
+                isOverMetadataPanel = false;
+                // Only hide if mouse is not over the media
+                const rect = wrapper.getBoundingClientRect();
+                const mediaRect = getRenderedMediaRect(mediaElement, rect.width, rect.height);
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
                 
-                if (!promptElement) return;
+                const isOverMedia = (
+                    mouseX >= mediaRect.left && 
+                    mouseX <= mediaRect.right && 
+                    mouseY >= mediaRect.top && 
+                    mouseY <= mediaRect.bottom
+                );
                 
-                try {
-                    await copyToClipboard(promptElement.textContent, 'Prompt copied to clipboard');
-                } catch (err) {
-                    console.error('Copy failed:', err);
-                    showToast('Copy failed', 'error');
+                if (!isOverMedia) {
+                    metadataPanel.classList.remove('visible');
+                    if (mediaControls) mediaControls.classList.remove('visible');
                 }
             });
-        });
-        
-        // Prevent panel scroll from causing modal scroll
-        metadataPanel.addEventListener('wheel', (e) => {
-            const isAtTop = metadataPanel.scrollTop === 0;
-            const isAtBottom = metadataPanel.scrollHeight - metadataPanel.scrollTop === metadataPanel.clientHeight;
             
-            // Only prevent default if scrolling would cause the panel to scroll
-            if ((e.deltaY < 0 && !isAtTop) || (e.deltaY > 0 && !isAtBottom)) {
+            // Prevent events from bubbling
+            metadataPanel.addEventListener('click', (e) => {
                 e.stopPropagation();
-            }
-        }, { passive: true });
+            });
+            
+            // Handle copy prompt buttons
+            const copyBtns = metadataPanel.querySelectorAll('.copy-prompt-btn');
+            copyBtns.forEach(copyBtn => {
+                const promptIndex = copyBtn.dataset.promptIndex;
+                const promptElement = wrapper.querySelector(`#prompt-${promptIndex}`);
+                
+                copyBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    
+                    if (!promptElement) return;
+                    
+                    try {
+                        await copyToClipboard(promptElement.textContent, 'Prompt copied to clipboard');
+                    } catch (err) {
+                        console.error('Copy failed:', err);
+                        showToast('Copy failed', 'error');
+                    }
+                });
+            });
+            
+            // Prevent panel scroll from causing modal scroll
+            metadataPanel.addEventListener('wheel', (e) => {
+                const isAtTop = metadataPanel.scrollTop === 0;
+                const isAtBottom = metadataPanel.scrollHeight - metadataPanel.scrollTop === metadataPanel.clientHeight;
+                
+                // Only prevent default if scrolling would cause the panel to scroll
+                if ((e.deltaY < 0 && !isAtTop) || (e.deltaY > 0 && !isAtBottom)) {
+                    e.stopPropagation();
+                }
+            }, { passive: true });
+        }
     });
 }
 
@@ -356,13 +365,19 @@ export function initMediaControlHandlers(container) {
         
         btn.addEventListener('click', async function(e) {
             e.stopPropagation();
+            
+            // Explicitly check for disabled state
+            if (this.classList.contains('disabled')) {
+                return; // Don't do anything if button is disabled
+            }
+            
             const shortId = this.dataset.shortId;
-            const state = this.dataset.state;
+            const btnState = this.dataset.state;
             
             if (!shortId) return;
             
             // Handle two-step confirmation
-            if (state === 'initial') {
+            if (btnState === 'initial') {
                 // First click: show confirmation state
                 this.dataset.state = 'confirm';
                 this.classList.add('confirm');
@@ -381,14 +396,15 @@ export function initMediaControlHandlers(container) {
             }
             
             // Second click within 3 seconds: proceed with deletion
-            if (state === 'confirm') {
+            if (btnState === 'confirm') {
                 this.disabled = true;
+                this.classList.remove('confirm');
                 this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 
                 // Get model hash from URL or data attribute
                 const mediaWrapper = this.closest('.media-wrapper');
-                const modelIdAttr = document.querySelector('.showcase-section')?.dataset;
-                const modelHash = modelIdAttr?.loraId || modelIdAttr?.checkpointId;
+                const modelHashAttr = document.querySelector('.showcase-section')?.dataset;
+                const modelHash = modelHashAttr?.modelHash;
                 
                 try {
                     // Call the API to delete the custom example
@@ -417,20 +433,16 @@ export function initMediaControlHandlers(container) {
                         
                         // Show success toast
                         showToast('Example image deleted', 'success');
+
+                        // Create an update object with only the necessary properties
+                        const updateData = {
+                            civitai: {
+                                customImages: result.custom_images || []
+                            }
+                        };
                         
-                        // Update VirtualScroller if available
-                        if (state.virtualScroller && result.model_file_path) {
-                            // Create an update object with only the necessary properties
-                            const updateData = {
-                                civitai: {
-                                    images: result.regular_images || [],
-                                    customImages: result.custom_images || []
-                                }
-                            };
-                            
-                            // Update the item in the virtual scroller
-                            state.virtualScroller.updateSingleItem(result.model_file_path, updateData);
-                        }
+                        // Update the item in the virtual scroller
+                        state.virtualScroller.updateSingleItem(result.model_file_path, updateData);
                     } else {
                         // Show error message
                         showToast(result.error || 'Failed to delete example image', 'error');
@@ -457,31 +469,79 @@ export function initMediaControlHandlers(container) {
         });
     });
     
-    // Find all media controls
-    const mediaControls = container.querySelectorAll('.media-controls');
+    // Initialize set preview buttons
+    initSetPreviewHandlers(container);
     
-    // Set up same visibility behavior as metadata panel
-    mediaControls.forEach(controlsEl => {
-        const mediaWrapper = controlsEl.closest('.media-wrapper');
-        const mediaElement = mediaWrapper.querySelector('img, video');
-        
-        // Media controls should be visible when metadata panel is visible
-        const metadataPanel = mediaWrapper.querySelector('.image-metadata-panel');
-        if (metadataPanel) {
-            const observer = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        if (metadataPanel.classList.contains('visible')) {
-                            controlsEl.classList.add('visible');
-                        } else if (!mediaWrapper.matches(':hover')) {
-                            controlsEl.classList.remove('visible');
-                        }
-                    }
-                });
-            });
+    // Media control visibility is now handled in initMetadataPanelHandlers
+    // Any click handlers or other functionality can still be added here
+}
+
+/**
+ * Initialize set preview button handlers
+ * @param {HTMLElement} container - Container with media wrappers
+ */
+function initSetPreviewHandlers(container) {
+    const previewButtons = container.querySelectorAll('.set-preview-btn');
+    const modelType = state.currentPageType == 'loras' ? 'lora' : 'checkpoint';
+    
+    previewButtons.forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
             
-            observer.observe(metadataPanel, { attributes: true });
-        }
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+            
+            try {
+                // Get the model file path from showcase section data attribute
+                const showcaseSection = document.querySelector('.showcase-section');
+                const modelHash = showcaseSection?.dataset.modelHash;
+                const modelFilePath = showcaseSection?.dataset.filepath;
+                
+                if (!modelFilePath) {
+                    throw new Error('Could not determine model file path');
+                }
+                
+                // Get the media wrapper and media element
+                const mediaWrapper = this.closest('.media-wrapper');
+                const mediaElement = mediaWrapper.querySelector('img, video');
+                
+                if (!mediaElement) {
+                    throw new Error('Media element not found');
+                }
+                
+                // Get NSFW level from the wrapper or media element
+                const nsfwLevel = parseInt(mediaWrapper.dataset.nsfwLevel || mediaElement.dataset.nsfwLevel || '0', 10);
+                
+                // Get local file path if available
+                const useLocalFile = mediaElement.dataset.localSrc && !mediaElement.dataset.localSrc.includes('undefined');
+                
+                if (useLocalFile) {
+                    // We have a local file, use it directly
+                    const response = await fetch(mediaElement.dataset.localSrc);
+                    const blob = await response.blob();
+                    const file = new File([blob], 'preview.jpg', { type: blob.type });
+                    
+                    // Use the existing baseModelApi uploadPreview method with nsfw level
+                    await uploadPreview(modelFilePath, file, modelType, nsfwLevel);
+                } else {
+                    // We need to download the remote file first
+                    const response = await fetch(mediaElement.src);
+                    const blob = await response.blob();
+                    const file = new File([blob], 'preview.jpg', { type: blob.type });
+                    
+                    // Use the existing baseModelApi uploadPreview method with nsfw level
+                    await uploadPreview(modelFilePath, file, modelType, nsfwLevel);
+                }
+            } catch (error) {
+                console.error('Error setting preview:', error);
+                showToast('Failed to set preview image', 'error');
+            } finally {
+                // Restore button state
+                this.innerHTML = '<i class="fas fa-image"></i>';
+                this.disabled = false;
+            }
+        });
     });
 }
 

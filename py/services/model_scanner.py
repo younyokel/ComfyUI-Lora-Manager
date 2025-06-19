@@ -1184,12 +1184,13 @@ class ModelScanner:
         """Get list of excluded model file paths"""
         return self._excluded_models.copy()
 
-    async def update_preview_in_cache(self, file_path: str, preview_url: str) -> bool:
+    async def update_preview_in_cache(self, file_path: str, preview_url: str, preview_nsfw_level: int) -> bool:
         """Update preview URL in cache for a specific lora
         
         Args:
             file_path: The file path of the lora to update
             preview_url: The new preview URL
+            preview_nsfw_level: The NSFW level of the preview
             
         Returns:
             bool: True if the update was successful, False if cache doesn't exist or lora wasn't found
@@ -1197,7 +1198,7 @@ class ModelScanner:
         if self._cache is None:
             return False
 
-        updated = await self._cache.update_preview_url(file_path, preview_url)
+        updated = await self._cache.update_preview_url(file_path, preview_url, preview_nsfw_level)
         if updated:
             # Save updated cache to disk
             await self._save_cache_to_disk()

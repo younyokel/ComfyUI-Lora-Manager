@@ -134,7 +134,7 @@ export function showLoraModal(lora) {
                     </div>
                 </div>
 
-                <div class="showcase-section" data-lora-id="${lora.civitai?.modelId || ''}">
+                <div class="showcase-section" data-model-hash="${lora.sha256 || ''}" data-filepath="${lora.file_path}">
                     <div class="showcase-tabs">
                         <button class="tab-btn active" data-tab="showcase">Examples</button>
                         <button class="tab-btn" data-tab="description">Model Description</button>
