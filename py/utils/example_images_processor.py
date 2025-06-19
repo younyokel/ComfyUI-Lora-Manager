@@ -6,6 +6,9 @@ import random
 import string
 from aiohttp import web
 from ..utils.constants import SUPPORTED_MEDIA_EXTENSIONS
+from ..services.service_registry import ServiceRegistry
+from ..services.settings_manager import settings
+from .example_images_metadata import MetadataUpdater
 
 logger = logging.getLogger(__name__)
 
@@ -180,10 +183,6 @@ class ExampleImagesProcessor:
         Returns:
         - Success status and list of imported files
         """
-        from ..services.service_registry import ServiceRegistry
-        from ..services.settings_manager import settings
-        from .example_images_metadata import MetadataUpdater
-        
         try:
             model_hash = None
             files_to_import = []
@@ -349,3 +348,147 @@ class ExampleImagesProcessor:
                     os.remove(temp_file)
                 except Exception as e:
                     logger.error(f"Failed to remove temporary file {temp_file}: {e}")
+
+    @staticmethod
+    async def delete_custom_image(request):
+        """
+        Delete a custom example image for a model
+        
+        Accepts:
+        - JSON request with model_hash and short_id
+        
+        Returns:
+        - Success status and updated image lists
+        """
+        try:
+            # Parse request data
+            data = await request.json()
+            model_hash = data.get('model_hash')
+            short_id = data.get('short_id')
+            
+            if not model_hash or not short_id:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Missing required parameters: model_hash and short_id'
+                }, status=400)
+            
+            # Get example images path
+            example_images_path = settings.get('example_images_path')
+            if not example_images_path:
+                return web.json_response({
+                    'success': False,
+                    'error': 'No example images path configured'
+                }, status=400)
+            
+            # Find the model and get current metadata
+            lora_scanner = await ServiceRegistry.get_lora_scanner()
+            checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+            
+            model_data = None
+            scanner = None
+            
+            # Check both scanners to find the model
+            for scan_obj in [lora_scanner, checkpoint_scanner]:
+                if scan_obj.has_hash(model_hash):
+                    cache = await scan_obj.get_cached_data()
+                    for item in cache.raw_data:
+                        if item.get('sha256') == model_hash:
+                            model_data = item
+                            scanner = scan_obj
+                            break
+                if model_data:
+                    break
+            
+            if not model_data:
+                return web.json_response({
+                    'success': False,
+                    'error': f"Model with hash {model_hash} not found in cache"
+                }, status=404)
+            
+            # Check if model has custom images
+            if not model_data.get('civitai', {}).get('customImages'):
+                return web.json_response({
+                    'success': False,
+                    'error': f"Model has no custom images"
+                }, status=404)
+            
+            # Find the custom image with matching short_id
+            custom_images = model_data['civitai']['customImages']
+            matching_image = None
+            new_custom_images = []
+            
+            for image in custom_images:
+                if image.get('id') == short_id:
+                    matching_image = image
+                else:
+                    new_custom_images.append(image)
+            
+            if not matching_image:
+                return web.json_response({
+                    'success': False,
+                    'error': f"Custom image with id {short_id} not found"
+                }, status=404)
+            
+            # Find and delete the actual file
+            model_folder = os.path.join(example_images_path, model_hash)
+            file_deleted = False
+            
+            if os.path.exists(model_folder):
+                for filename in os.listdir(model_folder):
+                    if f"custom_{short_id}" in filename:
+                        file_path = os.path.join(model_folder, filename)
+                        try:
+                            os.remove(file_path)
+                            file_deleted = True
+                            logger.info(f"Deleted custom example file: {file_path}")
+                            break
+                        except Exception as e:
+                            return web.json_response({
+                                'success': False,
+                                'error': f"Failed to delete file: {str(e)}"
+                            }, status=500)
+            
+            if not file_deleted:
+                logger.warning(f"File for custom example with id {short_id} not found, but metadata will still be updated")
+            
+            # Update metadata
+            model_data['civitai']['customImages'] = new_custom_images
+            
+            # Save updated metadata to file
+            file_path = model_data.get('file_path')
+            if file_path:
+                try:
+                    # Create a copy of model data without 'folder' field
+                    model_copy = model_data.copy()
+                    model_copy.pop('folder', None)
+                    
+                    # Write metadata to file
+                    from ..utils.metadata_manager import MetadataManager
+                    await MetadataManager.save_metadata(file_path, model_copy)
+                    logger.info(f"Saved updated metadata for {model_data.get('model_name')}")
+                except Exception as e:
+                    logger.error(f"Failed to save metadata: {str(e)}")
+                    return web.json_response({
+                        'success': False,
+                        'error': f"Failed to save metadata: {str(e)}"
+                    }, status=500)
+            
+                # Update cache
+                await scanner.update_single_model_cache(file_path, file_path, model_data)
+            
+            # Get regular images array (might be None)
+            regular_images = model_data['civitai'].get('images', [])
+            
+            return web.json_response({
+                'success': True,
+                'regular_images': regular_images,
+                'custom_images': new_custom_images,
+                'model_file_path': model_data.get('file_path', '')
+            })
+                
+        except Exception as e:
+            logger.error(f"Failed to delete custom example image: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)

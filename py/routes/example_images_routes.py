@@ -20,6 +20,7 @@ class ExampleImagesRoutes:
         app.router.add_post('/api/open-example-images-folder', ExampleImagesRoutes.open_example_images_folder)
         app.router.add_get('/api/example-image-files', ExampleImagesRoutes.get_example_image_files)
         app.router.add_get('/api/has-example-images', ExampleImagesRoutes.has_example_images)
+        app.router.add_post('/api/delete-example-image', ExampleImagesRoutes.delete_example_image)
 
     @staticmethod
     async def download_example_images(request):
@@ -60,3 +61,8 @@ class ExampleImagesRoutes:
     async def has_example_images(request):
         """Check if example images folder exists and is not empty for a model"""
         return await ExampleImagesFileManager.has_images(request)
+
+    @staticmethod
+    async def delete_example_image(request):
+        """Delete a custom example image for a model"""
+        return await ExampleImagesProcessor.delete_custom_image(request)
