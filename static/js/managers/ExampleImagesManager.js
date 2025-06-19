@@ -48,12 +48,6 @@ class ExampleImagesManager {
         if (collapseBtn) {
             collapseBtn.onclick = () => this.toggleProgressPanel();
         }
-        
-        // Initialize migration button handler
-        const migrateBtn = document.getElementById('exampleImagesMigrateBtn');
-        if (migrateBtn) {
-            migrateBtn.onclick = () => this.handleMigrateButton();
-        }
     }
     
     // Initialize event listeners for buttons
@@ -146,95 +140,6 @@ class ExampleImagesManager {
         } else {
             // If download is in progress, show info toast
             showToast('Download already in progress', 'info');
-        }
-    }
-    
-    // Method to handle migrate button click
-    async handleMigrateButton() {
-        if (this.isDownloading || this.isMigrating) {
-            if (this.isPaused) {
-                // If paused, resume
-                this.resumeDownload();
-            } else {
-                showToast('Migration or download already in progress', 'info');
-            }
-            return;
-        }
-        
-        // Start migration
-        this.startMigrate();
-    }
-    
-    async startMigrate() {
-        try {
-            const outputDir = document.getElementById('exampleImagesPath').value || '';
-            
-            if (!outputDir) {
-                showToast('Please enter a download location first', 'warning');
-                return;
-            }
-            
-            // Update path in backend settings before starting migration
-            try {
-                const pathUpdateResponse = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        example_images_path: outputDir
-                    })
-                });
-                
-                if (!pathUpdateResponse.ok) {
-                    throw new Error(`HTTP error! Status: ${pathUpdateResponse.status}`);
-                }
-            } catch (error) {
-                console.error('Failed to update example images path:', error);
-            }
-            
-            const pattern = document.getElementById('exampleImagesMigratePattern').value || '{model}.example.{index}.{ext}';
-            const optimize = document.getElementById('optimizeExampleImages').checked;
-            
-            const response = await fetch('/api/migrate-example-images', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    output_dir: outputDir,
-                    pattern: pattern,
-                    optimize: optimize,
-                    model_types: ['lora', 'checkpoint']
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.isDownloading = true;
-                this.isMigrating = true;
-                this.isPaused = false;
-                this.hasShownCompletionToast = false; // Reset toast flag when starting new migration
-                this.startTime = new Date();
-                this.updateUI(data.status);
-                this.showProgressPanel();
-                this.startProgressUpdates();
-                // Update button text
-                const btnTextElement = document.getElementById('exampleDownloadBtnText');
-                if (btnTextElement) {
-                    btnTextElement.textContent = "Resume";
-                }
-                showToast('Example images migration started', 'success');
-                
-                // Close settings modal
-                modalManager.closeModal('settingsModal');
-            } else {
-                showToast(data.error || 'Failed to start migration', 'error');
-            }
-        } catch (error) {
-            console.error('Failed to start migration:', error);
-            showToast('Failed to start migration', 'error');
         }
     }
     

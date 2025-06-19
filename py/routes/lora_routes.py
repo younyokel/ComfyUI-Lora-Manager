@@ -70,8 +70,7 @@ class LoraRoutes:
             # It's initializing if the cache object doesn't exist yet,
             # OR if the scanner explicitly says it's initializing (background task running).
             is_initializing = (
-                self.scanner._cache is None or
-                (hasattr(self.scanner, '_is_initializing') and self.scanner._is_initializing)
+                self.scanner._cache is None or self.scanner.is_initializing()
             )
 
             if is_initializing:

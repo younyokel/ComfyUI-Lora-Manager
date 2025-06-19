@@ -796,6 +796,30 @@ export class VirtualScroller {
         console.log('Virtual scroller enabled');
     }
 
+    // Helper function for deep merging objects
+    deepMerge(target, source) {
+        if (!source) return target;
+        
+        const result = { ...target };
+        
+        Object.keys(source).forEach(key => {
+            if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                // If property exists in target and is an object, recursively merge
+                if (target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+                    result[key] = this.deepMerge(target[key], source[key]);
+                } else {
+                    // Otherwise just assign the source value
+                    result[key] = source[key];
+                }
+            } else {
+                // For non-objects (including arrays), just assign the value
+                result[key] = source[key];
+            }
+        });
+        
+        return result;
+    }
+
     updateSingleItem(filePath, updatedItem) {
         if (!filePath || !updatedItem) {
             console.error('Invalid parameters for updateSingleItem');
@@ -809,8 +833,8 @@ export class VirtualScroller {
             return false;
         }
 
-        // Update the item data
-        this.items[index] = {...this.items[index], ...updatedItem};
+        // Update the item data using deep merge
+        this.items[index] = this.deepMerge(this.items[index], updatedItem);
         
         // If the item is currently rendered, update its DOM representation
         if (this.renderedItems.has(index)) {
@@ -822,6 +846,28 @@ export class VirtualScroller {
             
             // Create and render the updated element
             const updatedElement = this.createItemElement(this.items[index], index);
+            
+            // Add update indicator visual effects
+            updatedElement.classList.add('updated');
+            
+            // Add temporary update tag
+            const updateIndicator = document.createElement('div');
+            updateIndicator.className = 'update-indicator';
+            updateIndicator.textContent = 'Updated';
+            updatedElement.querySelector('.card-preview').appendChild(updateIndicator);
+            
+            // Automatically remove the updated class after animation completes
+            setTimeout(() => {
+                updatedElement.classList.remove('updated');
+            }, 1500);
+            
+            // Automatically remove the indicator after animation completes
+            setTimeout(() => {
+                if (updateIndicator && updateIndicator.parentNode) {
+                    updateIndicator.remove();
+                }
+            }, 2000);
+            
             this.renderedItems.set(index, updatedElement);
             this.gridElement.appendChild(updatedElement);
         }

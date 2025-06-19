@@ -36,6 +36,11 @@ export class BulkManager {
         document.addEventListener('keydown', (e) => {
             // Check if it's Ctrl+A (or Cmd+A on Mac)
             if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                // First check if any modal is currently open - if so, don't handle Ctrl+A
+                if (modalManager.isAnyModalOpen()) {
+                    return; // Exit early - let the browser handle Ctrl+A within the modal
+                }
+
                 // Prevent default browser "Select All" behavior
                 e.preventDefault();
                 

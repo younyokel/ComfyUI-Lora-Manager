@@ -9,6 +9,7 @@ from .constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
 from ..config import config
 from ..services.civitai_client import CivitaiClient
 from ..utils.exif_utils import ExifUtils
+from ..utils.metadata_manager import MetadataManager
 from ..services.download_manager import DownloadManager
 
 logger = logging.getLogger(__name__)
@@ -32,14 +33,29 @@ class ModelRouteUtils:
     async def handle_not_found_on_civitai(metadata_path: str, local_metadata: Dict) -> None:
         """Handle case when model is not found on CivitAI"""
         local_metadata['from_civitai'] = False
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+        await MetadataManager.save_metadata(metadata_path, local_metadata)
 
     @staticmethod
     async def update_model_metadata(metadata_path: str, local_metadata: Dict, 
                                   civitai_metadata: Dict, client: CivitaiClient) -> None:
         """Update local metadata with CivitAI data"""
-        local_metadata['civitai'] = civitai_metadata
+        # Save existing trainedWords and customImages if they exist
+        existing_civitai = local_metadata.get('civitai') or {}  # Use empty dict if None
+
+        # Create a new civitai metadata by updating existing with new
+        merged_civitai = existing_civitai.copy()
+        merged_civitai.update(civitai_metadata)
+
+        # Special handling for trainedWords - ensure we don't lose any existing trained words
+        if 'trainedWords' in existing_civitai:
+            existing_trained_words = existing_civitai.get('trainedWords', [])
+            new_trained_words = civitai_metadata.get('trainedWords', [])
+            # Use a set to combine words without duplicates, then convert back to list
+            merged_trained_words = list(set(existing_trained_words + new_trained_words))
+            merged_civitai['trainedWords'] = merged_trained_words
+
+        # Update local metadata with merged civitai data
+        local_metadata['civitai'] = merged_civitai
         local_metadata['from_civitai'] = True
         
         # Update model name if available
@@ -138,8 +154,7 @@ class ModelRouteUtils:
                                 local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
 
         # Save updated metadata
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+        await MetadataManager.save_metadata(metadata_path, local_metadata)
 
     @staticmethod
     async def fetch_and_update_model(
@@ -177,8 +192,7 @@ class ModelRouteUtils:
                 # Mark as not from CivitAI if not found
                 local_metadata['from_civitai'] = False
                 model_data['from_civitai'] = False
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(local_metadata, f, indent=2, ensure_ascii=False)
+                await MetadataManager.save_metadata(file_path, local_metadata)
                 return False
 
             # Update metadata
@@ -221,7 +235,7 @@ class ModelRouteUtils:
         fields = [
             "id", "modelId", "name", "createdAt", "updatedAt", 
             "publishedAt", "trainedWords", "baseModel", "description",
-            "model", "images", "creator"
+            "model", "images", "customImages", "creator"
         ]
         return {k: data[k] for k in fields if k in data}
 
@@ -270,10 +284,12 @@ class ModelRouteUtils:
     
     @staticmethod
     def get_multipart_ext(filename):
-        """Get extension that may have multiple parts like .metadata.json"""
+        """Get extension that may have multiple parts like .metadata.json or .metadata.json.bak"""
         parts = filename.split(".")
-        if len(parts) > 2:  # If contains multi-part extension
+        if len(parts) == 3:  # If contains 2-part extension
             return "." + ".".join(parts[-2:])  # Take the last two parts, like ".metadata.json"
+        elif len(parts) >= 4:  # If contains 3-part or more extensions
+            return "." + ".".join(parts[-3:])  # Take the last three parts, like ".metadata.json.bak"
         return os.path.splitext(filename)[1]  # Otherwise take the regular extension, like ".safetensors"
 
     # New common endpoint handlers
@@ -393,6 +409,15 @@ class ModelRouteUtils:
                 raise ValueError("Expected 'model_path' field")
             model_path = (await field.read()).decode()
             
+            # Read NSFW level (new parameter)
+            nsfw_level = 0  # Default to 0 (unknown)
+            field = await reader.next()
+            if field and field.name == 'nsfw_level':
+                try:
+                    nsfw_level = int((await field.read()).decode())
+                except (ValueError, TypeError):
+                    logger.warning("Invalid NSFW level format, using default 0")
+            
             # Save preview file
             base_name = os.path.splitext(os.path.basename(model_path))[0]
             folder = os.path.dirname(model_path)
@@ -413,33 +438,43 @@ class ModelRouteUtils:
                 )
                 extension = '.webp'  # Use .webp without .preview part
             
+            # Delete any existing preview files for this model
+            for ext in PREVIEW_EXTENSIONS:
+                existing_preview = os.path.join(folder, base_name + ext)
+                if os.path.exists(existing_preview):
+                    try:
+                        os.remove(existing_preview)
+                        logger.debug(f"Deleted existing preview: {existing_preview}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete existing preview {existing_preview}: {e}")
+            
             preview_path = os.path.join(folder, base_name + extension).replace(os.sep, '/')
             
             with open(preview_path, 'wb') as f:
                 f.write(optimized_data)
             
-            # Update preview path in metadata
+            # Update preview path and NSFW level in metadata
             metadata_path = os.path.splitext(model_path)[0] + '.metadata.json'
             if os.path.exists(metadata_path):
                 try:
                     with open(metadata_path, 'r', encoding='utf-8') as f:
                         metadata = json.load(f)
                     
-                    # Update preview_url directly in the metadata dict
+                    # Update preview_url and preview_nsfw_level in the metadata dict
                     metadata['preview_url'] = preview_path
+                    metadata['preview_nsfw_level'] = nsfw_level
                     
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(metadata, f, indent=2, ensure_ascii=False)
+                    await MetadataManager.save_metadata(model_path, metadata)
                 except Exception as e:
                     logger.error(f"Error updating metadata: {e}")
             
             # Update preview URL in scanner cache
-            if hasattr(scanner, 'update_preview_in_cache'):
-                await scanner.update_preview_in_cache(model_path, preview_path)
+            await scanner.update_preview_in_cache(model_path, preview_path, nsfw_level)
             
             return web.json_response({
                 "success": True,
-                "preview_url": config.get_preview_static_url(preview_path)
+                "preview_url": config.get_preview_static_url(preview_path),
+                "preview_nsfw_level": nsfw_level
             })
             
         except Exception as e:
@@ -469,8 +504,7 @@ class ModelRouteUtils:
             metadata['exclude'] = True
             
             # Save updated metadata
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            await MetadataManager.save_metadata(file_path, metadata)
 
             # Update cache
             cache = await scanner.get_cached_data()
@@ -759,8 +793,7 @@ class ModelRouteUtils:
                         metadata['sha256'] = actual_hash
                         
                         # Save updated metadata
-                        with open(metadata_path, 'w', encoding='utf-8') as f:
-                            json.dump(metadata, f, indent=2, ensure_ascii=False)
+                        await MetadataManager.save_metadata(file_path, metadata)
                         
                         # Update cache
                         await scanner.update_single_model_cache(file_path, file_path, metadata)

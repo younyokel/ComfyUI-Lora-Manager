@@ -1,7 +1,7 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { refreshSingleLoraMetadata, saveModelMetadata, replacePreview, resetAndReload } from '../../api/loraApi.js';
-import { showToast, copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
+import { copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
 
 export class LoraContextMenu extends BaseContextMenu {

@@ -463,15 +463,6 @@ async function saveTags() {
         // Exit edit mode
         editBtn.click();
         
-        // Update the LoRA card's dataset
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard) {
-            loraCard.dataset.tags = JSON.stringify(tags);
-            
-            // Also update the card in the DOM
-            // updateLoraCard(loraCard, { tags: tags });
-        }
-        
         showToast('Tags updated successfully', 'success');
     } catch (error) {
         console.error('Error saving tags:', error);

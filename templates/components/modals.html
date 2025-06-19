@@ -229,7 +229,7 @@
             </div>
             
             <!-- Add Cache Management Section -->
-            <div class="settings-section">
+            <!-- <div class="settings-section">
                 <h3>Cache Management</h3>
                 
                 <div class="setting-item">
@@ -249,33 +249,13 @@
                         <span class="warning-text">May cause temporary performance impact during rebuild.</span>
                     </div>
                 </div>
-            </div>
+            </div> -->
             
             <!-- Add Example Images Settings Section -->
             <div class="settings-section">
                 <h3>Example Images</h3>
                 
                 <div class="setting-item">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <label for="useCentralizedExamples">Use Centralized Example Storage</label>
-                        </div>
-                        <div class="setting-control">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="useCentralizedExamples" checked 
-                                       onchange="settingsManager.saveToggleSetting('useCentralizedExamples', 'use_centralized_examples')">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="input-help">
-                        When enabled (recommended), example images are stored in a central folder for better organization and performance.
-                        When disabled, only example images stored alongside models (e.g., model-name.example.0.jpg) will be shown, but download 
-                        and management features will be unavailable.
-                    </div>
-                </div>
-                
-                <div class="setting-item" data-requires-centralized="true">
                     <div class="setting-row">
                         <div class="setting-info">
                             <label for="exampleImagesPath">Download Location <i class="fas fa-sync-alt restart-required-icon" title="Requires restart"></i></label>
@@ -291,29 +271,8 @@
                         Enter the folder path where example images from Civitai will be saved
                     </div>
                 </div>
-
-                <!-- New migrate section -->
-                <div class="setting-item" data-requires-centralized="true">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <label for="exampleImagesMigratePattern">Migrate Existing Example Images</label>
-                        </div>
-                        <div class="setting-control migrate-control">
-                            <input type="text" id="exampleImagesMigratePattern" 
-                                placeholder="{model}.example.{index}.{ext}" 
-                                value="{model}.example.{index}.{ext}" />
-                            <button id="exampleImagesMigrateBtn" class="secondary-btn">
-                                <i class="fas fa-file-import"></i> <span>Migrate</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="input-help">
-                        Pattern to find existing example images. Use {model} for model filename, {index} for numbering, and {ext} for file extension.<br>
-                        Example patterns: "{model}.example.{index}.{ext}", "{model}_{index}.{ext}", "{model}/{model}.example.{index}.{ext}"
-                    </div>
-                </div>
                 
-                <div class="setting-item" data-requires-centralized="true">
+                <div class="setting-item">
                     <div class="setting-row">
                         <div class="setting-info">
                             <label for="optimizeExampleImages">Optimize Downloaded Images</label>
@@ -327,7 +286,7 @@
                         </div>
                     </div>
                     <div class="input-help">
-                        Optimize example images to reduce file size and improve loading speed
+                        Optimize example images to reduce file size and improve loading speed (metadata will be preserved)
                     </div>
                 </div>
             </div>
@@ -611,6 +570,34 @@
         <div class="modal-actions">
             <button class="cancel-btn" onclick="modalManager.closeModal('relinkCivitaiModal')">Cancel</button>
             <button class="confirm-btn" id="confirmRelinkBtn">Confirm Re-link</button>
+        </div>
+    </div>
+</div>
+
+<!-- Example Images Access Modal -->
+<div id="exampleAccessModal" class="modal">
+    <div class="modal-content example-access-modal">
+        <button class="close" onclick="modalManager.closeModal('exampleAccessModal')">&times;</button>
+        <h2>Local Example Images</h2>
+        <p>No local example images found for this model. View options:</p>
+
+        <div class="example-access-options">
+            <button id="downloadExamplesBtn" class="example-option-btn">
+                <i class="fas fa-cloud-download-alt"></i>
+                <span class="option-title">Download from Civitai</span>
+                <span class="option-desc">Save remote examples locally for offline use and faster loading</span>
+            </button>
+
+            <button id="importExamplesBtn" class="example-option-btn">
+                <i class="fas fa-file-import"></i>
+                <span class="option-title">Import Your Own</span>
+                <span class="option-desc">Add your own custom examples for this model</span>
+            </button>
+        </div>
+
+        <div class="modal-footer-note">
+            <i class="fas fa-info-circle"></i>
+            <span>Remote examples are still viewable in the model details even without local copies</span>
         </div>
     </div>
 </div>

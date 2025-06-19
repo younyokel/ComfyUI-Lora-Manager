@@ -521,3 +521,43 @@
         max-width: 2400px;
     }
 }
+
+/* Add after the existing .lora-card:hover styles */
+
+@keyframes update-pulse {
+    0% { box-shadow: 0 0 0 0 var(--lora-accent-transparent); }
+    50% { box-shadow: 0 0 0 4px var(--lora-accent-transparent); }
+    100% { box-shadow: 0 0 0 0 var(--lora-accent-transparent); }
+  }
+  
+  /* Add semi-transparent version of accent color for animation */
+  :root {
+    --lora-accent-transparent: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.6);
+  }
+  
+  .lora-card.updated {
+    animation: update-pulse 1.2s ease-out;
+  }
+  
+  /* Add a subtle updated tag that fades in and out */
+  .update-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--lora-accent);
+    color: white;
+    border-radius: var(--border-radius-xs);
+    padding: 3px 6px;
+    font-size: 0.75em;
+    opacity: 0;
+    transform: translateY(-5px);
+    z-index: 4;
+    animation: update-tag 1.8s ease-out forwards;
+  }
+  
+  @keyframes update-tag {
+    0% { opacity: 0; transform: translateY(-5px); }
+    15% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(0); }
+  }

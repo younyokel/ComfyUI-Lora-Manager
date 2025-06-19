@@ -115,16 +115,6 @@ export function setupModelNameEditing(filePath) {
             
             await saveModelMetadata(filePath, { model_name: newModelName });
             
-            // Update the corresponding lora card's dataset and display
-            updateModelCard(filePath, { model_name: newModelName });
-            
-            // BUGFIX: Directly update the card's dataset.name attribute to ensure
-            // it's correctly read when reopening the modal
-            const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-            if (loraCard) {
-                loraCard.dataset.name = newModelName;
-            }
-            
             showToast('Model name updated successfully', 'success');
         } catch (error) {
             console.error('Error updating model name:', error);
@@ -303,9 +293,6 @@ async function saveBaseModel(filePath, originalValue) {
     
     try {
         await saveModelMetadata(filePath, { base_model: newBaseModel });
-        
-        // Update the corresponding lora card's dataset
-        updateModelCard(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {

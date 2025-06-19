@@ -234,6 +234,19 @@ export class ModalManager {
             });
         }
 
+        // Add exampleAccessModal registration
+        const exampleAccessModal = document.getElementById('exampleAccessModal');
+        if (exampleAccessModal) {
+            this.registerModal('exampleAccessModal', {
+                element: exampleAccessModal,
+                onClose: () => {
+                    this.getModal('exampleAccessModal').element.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                },
+                closeOnOutsideClick: true
+            });
+        }
+
         document.addEventListener('keydown', this.boundHandleEscape);
         this.initialized = true;
     }

@@ -1,6 +1,6 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
-import { showLoraModal, toggleShowcase, scrollToTop } from './components/loraModal/index.js';
+import { showLoraModal } from './components/loraModal/index.js';
 import { loadMoreLoras } from './api/loraApi.js';
 import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
@@ -43,8 +43,6 @@ class LoraPageManager {
         window.closeExcludeModal = closeExcludeModal;
         window.downloadManager = this.downloadManager;
         window.moveManager = moveManager;
-        window.toggleShowcase = toggleShowcase;
-        window.scrollToTop = scrollToTop;
         
         // Bulk operations
         window.toggleBulkMode = () => bulkManager.toggleBulkMode();

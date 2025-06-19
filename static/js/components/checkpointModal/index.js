@@ -3,9 +3,14 @@
  * 
  * Modularized checkpoint modal component that handles checkpoint model details display
  */
-import { showToast, getExampleImageFiles, initLazyLoading, initNsfwBlurHandlers, initMetadataPanelHandlers } from '../../utils/uiHelpers.js';
+import { showToast } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
-import { renderShowcaseContent, toggleShowcase, setupShowcaseScroll, scrollToTop } from './ShowcaseView.js';
+import { 
+    toggleShowcase,
+    setupShowcaseScroll, 
+    scrollToTop,
+    loadExampleImages
+} from '../shared/showcase/ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { 
     setupModelNameEditing, 
@@ -15,8 +20,6 @@ import {
 import { setupTagEditMode } from './ModelTags.js'; // Add import for tag editing
 import { saveModelMetadata } from '../../api/checkpointApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
-import { updateModelCard } from '../../utils/cardUpdater.js';
-import { state } from '../../state/index.js';
 
 /**
  * Display the checkpoint modal with the given checkpoint data
@@ -103,7 +106,7 @@ export function showCheckpointModal(checkpoint) {
                     </div>
                 </div>
 
-                <div class="showcase-section" data-checkpoint-id="${checkpoint.civitai?.modelId || ''}">
+                <div class="showcase-section" data-model-hash="${checkpoint.sha256 || ''}" data-filepath="${checkpoint.file_path}">
                     <div class="showcase-tabs">
                         <button class="tab-btn active" data-tab="showcase">Examples</button>
                         <button class="tab-btn" data-tab="description">Model Description</button>
@@ -138,7 +141,7 @@ export function showCheckpointModal(checkpoint) {
     
     modalManager.showModal('checkpointModal', content);
     setupEditableFields(checkpoint.file_path);
-    setupShowcaseScroll();
+    setupShowcaseScroll('checkpointModal');
     setupTabSwitching();
     setupTagTooltip();
     setupTagEditMode(); // Initialize tag editing functionality
@@ -151,68 +154,12 @@ export function showCheckpointModal(checkpoint) {
         loadModelDescription(checkpoint.civitai.modelId, checkpoint.file_path);
     }
     
-    // Load example images asynchronously
-    loadExampleImages(checkpoint.civitai?.images, checkpoint.sha256, checkpoint.file_path);
-}
-
-/**
- * Load example images asynchronously
- * @param {Array} images - Array of image objects
- * @param {string} modelHash - Model hash for fetching local files
- * @param {string} filePath - File path for fetching local files
- */
-async function loadExampleImages(images, modelHash, filePath) {
-    try {
-        const showcaseTab = document.getElementById('showcase-tab');
-        if (!showcaseTab) return;
-        
-        // First fetch local example files
-        let localFiles = [];
-        try {
-            // Choose endpoint based on centralized examples setting
-            const useCentralized = state.global.settings.useCentralizedExamples !== false;
-            const endpoint = useCentralized ? '/api/example-image-files' : '/api/model-example-files';
-            
-            // Use different params based on endpoint
-            const params = useCentralized ? 
-                `model_hash=${modelHash}` :
-                `file_path=${encodeURIComponent(filePath)}`;
-            
-            const response = await fetch(`${endpoint}?${params}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                localFiles = result.files;
-            }
-        } catch (error) {
-            console.error("Failed to get example files:", error);
-        }
-        
-        // Then render with both remote images and local files
-        showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);
-        
-        // Re-initialize the showcase event listeners
-        const carousel = showcaseTab.querySelector('.carousel');
-        if (carousel) {
-            // Only initialize if we actually have examples and they're expanded
-            if (!carousel.classList.contains('collapsed')) {
-                initLazyLoading(carousel);
-                initNsfwBlurHandlers(carousel);
-                initMetadataPanelHandlers(carousel);
-            }
-        }
-    } catch (error) {
-        console.error('Error loading example images:', error);
-        const showcaseTab = document.getElementById('showcase-tab');
-        if (showcaseTab) {
-            showcaseTab.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    Error loading example images
-                </div>
-            `;
-        }
-    }
+    // Load example images asynchronously - merge regular and custom images
+    const regularImages = checkpoint.civitai?.images || [];
+    const customImages = checkpoint.civitai?.customImages || [];
+    // Combine images - regular images first, then custom images
+    const allImages = [...regularImages, ...customImages];
+    loadExampleImages(allImages, checkpoint.sha256);
 }
 
 /**
@@ -262,9 +209,6 @@ async function saveNotes(filePath) {
     const content = document.querySelector('.notes-content').textContent;
     try {
         await saveModelMetadata(filePath, { notes: content });
-
-        // Update the corresponding checkpoint card's dataset
-        updateModelCard(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {

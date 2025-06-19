@@ -620,28 +620,6 @@ async function saveTriggerWords() {
         // Exit edit mode without restoring original trigger words
         editBtn.click();
         
-        // Update the LoRA card's dataset
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
-        if (loraCard) {
-            try {
-                // Create a proper structure for civitai data
-                let civitaiData = {};
-                
-                // Parse existing data if available
-                if (loraCard.dataset.meta) {
-                    civitaiData = JSON.parse(loraCard.dataset.meta);
-                }
-                
-                // Update trainedWords property
-                civitaiData.trainedWords = words;
-                
-                // Update the meta dataset attribute with the full civitai data
-                loraCard.dataset.meta = JSON.stringify(civitaiData);
-            } catch (e) {
-                console.error('Error updating civitai data:', e);
-            }
-        }
-        
         // If we saved an empty array and there's a no-trigger-words element, show it
         const noTriggerWords = triggerWordsSection.querySelector('.no-trigger-words');
         const tagsContainer = triggerWordsSection.querySelector('.trigger-words-tags');

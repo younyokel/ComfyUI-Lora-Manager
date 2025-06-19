@@ -62,6 +62,5 @@ window.removePreset = async function(key) {
         usage_tips: newPresetsJson 
     });
     
-    loraCard.dataset.usage_tips = newPresetsJson;
     document.querySelector('.preset-tags').innerHTML = renderPresetTags(currentPresets);
 };

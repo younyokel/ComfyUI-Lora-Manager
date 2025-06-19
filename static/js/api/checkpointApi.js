@@ -109,6 +109,9 @@ export async function saveModelMetadata(filePath, data) {
         if (!response.ok) {
             throw new Error('Failed to save metadata');
         }
+
+        // Update the virtual scroller with the new metadata
+        state.virtualScroller.updateSingleItem(filePath, data);
         
         return response.json();
     } finally {

@@ -219,18 +219,9 @@ export function createCheckpointCard(checkpoint) {
                 favorite: newFavoriteState 
             });
 
-            // Update the UI
             if (newFavoriteState) {
-                starIcon.classList.remove('far');
-                starIcon.classList.add('fas', 'favorite-active');
-                starIcon.title = 'Remove from favorites';
-                card.dataset.favorite = 'true';
                 showToast('Added to favorites', 'success');
             } else {
-                starIcon.classList.remove('fas', 'favorite-active');
-                starIcon.classList.add('far');
-                starIcon.title = 'Add to favorites';
-                card.dataset.favorite = 'false';
                 showToast('Removed from favorites', 'success');
             }
         } catch (error) {

@@ -3,7 +3,6 @@ import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { refreshSingleCheckpointMetadata, saveModelMetadata, replaceCheckpointPreview, resetAndReload } from '../../api/checkpointApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
 import { showExcludeModal } from '../../utils/modalUtils.js';
-import { state } from '../../state/index.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {

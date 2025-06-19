@@ -9,7 +9,8 @@ import msgpack  # Add MessagePack import for efficient serialization
 
 from ..utils.models import BaseModelMetadata
 from ..config import config
-from ..utils.file_utils import load_metadata, get_file_info, find_preview_file, save_metadata
+from ..utils.file_utils import find_preview_file
+from ..utils.metadata_manager import MetadataManager
 from .model_cache import ModelCache
 from .model_hash_index import ModelHashIndex
 from ..utils.constants import PREVIEW_EXTENSIONS
@@ -748,13 +749,17 @@ class ModelScanner:
         """Scan all model directories and return metadata"""
         raise NotImplementedError("Subclasses must implement scan_all_models")
     
+    def is_initializing(self) -> bool:
+        """Check if the scanner is currently initializing"""
+        return self._is_initializing
+    
     def get_model_roots(self) -> List[str]:
         """Get model root directories"""
         raise NotImplementedError("Subclasses must implement get_model_roots")
     
-    async def _get_file_info(self, file_path: str) -> Optional[BaseModelMetadata]:
+    async def _create_default_metadata(self, file_path: str) -> Optional[BaseModelMetadata]:
         """Get model file info and metadata (extensible for different model types)"""
-        return await get_file_info(file_path, self.model_class)
+        return await MetadataManager.create_default_metadata(file_path, self.model_class)
     
     def _calculate_folder(self, file_path: str) -> str:
         """Calculate the folder path for a model file"""
@@ -767,7 +772,7 @@ class ModelScanner:
     # Common methods shared between scanners
     async def _process_model_file(self, file_path: str, root_path: str) -> Dict:
         """Process a single model file and return its metadata"""
-        metadata = await load_metadata(file_path, self.model_class)
+        metadata = await MetadataManager.load_metadata(file_path, self.model_class)
         
         if metadata is None:
             civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
@@ -783,7 +788,7 @@ class ModelScanner:
                     
                         metadata = self.model_class.from_civitai_info(version_info, file_info, file_path)
                         metadata.preview_url = find_preview_file(file_name, os.path.dirname(file_path))
-                        await save_metadata(file_path, metadata)
+                        await MetadataManager.save_metadata(file_path, metadata)
                         logger.debug(f"Created metadata from .civitai.info for {file_path}")
                 except Exception as e:
                     logger.error(f"Error creating metadata from .civitai.info for {file_path}: {e}")
@@ -810,13 +815,13 @@ class ModelScanner:
                                 metadata.modelDescription = version_info['model']['description']
                         
                         # Save the updated metadata
-                        await save_metadata(file_path, metadata)
+                        await MetadataManager.save_metadata(file_path, metadata)
                         logger.debug(f"Updated metadata with civitai info for {file_path}")
                     except Exception as e:
                         logger.error(f"Error restoring civitai data from .civitai.info for {file_path}: {e}")
             
         if metadata is None:
-            metadata = await self._get_file_info(file_path)
+            metadata = await self._create_default_metadata(file_path)
         
         model_data = metadata.to_dict()
         
@@ -866,9 +871,7 @@ class ModelScanner:
                     logger.warning(f"Model {model_id} appears to be deleted from Civitai (404 response)")
                     model_data['civitai_deleted'] = True
                     
-                    metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(model_data, f, indent=2, ensure_ascii=False)
+                    await MetadataManager.save_metadata(file_path, model_data)
                 
                 elif model_metadata:
                     logger.debug(f"Updating metadata for {file_path} with model ID {model_id}")
@@ -881,9 +884,7 @@ class ModelScanner:
 
                     model_data['civitai']['creator'] = model_metadata['creator']
                     
-                    metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
-                        json.dump(model_data, f, indent=2, ensure_ascii=False)
+                    await MetadataManager.save_metadata(file_path, model_data)
         except Exception as e:
             logger.error(f"Failed to update metadata from Civitai for {file_path}: {e}")
 
@@ -1049,8 +1050,7 @@ class ModelScanner:
                 new_preview_path = os.path.join(preview_dir, f"{preview_name}{preview_ext}")
                 metadata['preview_url'] = new_preview_path.replace(os.sep, '/')
             
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            await MetadataManager.save_metadata(metadata_path, metadata)
 
             return metadata
                 
@@ -1184,12 +1184,13 @@ class ModelScanner:
         """Get list of excluded model file paths"""
         return self._excluded_models.copy()
 
-    async def update_preview_in_cache(self, file_path: str, preview_url: str) -> bool:
+    async def update_preview_in_cache(self, file_path: str, preview_url: str, preview_nsfw_level: int) -> bool:
         """Update preview URL in cache for a specific lora
         
         Args:
             file_path: The file path of the lora to update
             preview_url: The new preview URL
+            preview_nsfw_level: The NSFW level of the preview
             
         Returns:
             bool: True if the update was successful, False if cache doesn't exist or lora wasn't found
@@ -1197,7 +1198,7 @@ class ModelScanner:
         if self._cache is None:
             return False
 
-        updated = await self._cache.update_preview_url(file_path, preview_url)
+        updated = await self._cache.update_preview_url(file_path, preview_url, preview_nsfw_level)
         if updated:
             # Save updated cache to disk
             await self._save_cache_to_disk()

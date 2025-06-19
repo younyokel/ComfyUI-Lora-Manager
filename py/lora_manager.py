@@ -1,5 +1,10 @@
 import asyncio
+import sys
+import os
+import logging
+from pathlib import Path
 from server import PromptServer # type: ignore
+
 from .config import config
 from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
@@ -10,10 +15,7 @@ from .routes.misc_routes import MiscRoutes
 from .routes.example_images_routes import ExampleImagesRoutes
 from .services.service_registry import ServiceRegistry
 from .services.settings_manager import settings
-from pathlib import Path
-import logging
-import sys
-import os
+from .utils.example_images_migration import ExampleImagesMigration
 
 logger = logging.getLogger(__name__)
 
@@ -135,13 +137,13 @@ class LoraManager:
             logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
             
             # Initialize CivitaiClient first to ensure it's ready for other services
-            civitai_client = await ServiceRegistry.get_civitai_client()
+            await ServiceRegistry.get_civitai_client()
 
             # Register DownloadManager with ServiceRegistry
-            download_manager = await ServiceRegistry.get_download_manager()
+            await ServiceRegistry.get_download_manager()
             
             # Initialize WebSocket manager
-            ws_manager = await ServiceRegistry.get_websocket_manager()
+            await ServiceRegistry.get_websocket_manager()
             
             # Initialize scanners in background
             lora_scanner = await ServiceRegistry.get_lora_scanner()
@@ -160,6 +162,8 @@ class LoraManager:
             asyncio.create_task(lora_scanner.initialize_in_background(), name='lora_cache_init')
             asyncio.create_task(checkpoint_scanner.initialize_in_background(), name='checkpoint_cache_init')
             asyncio.create_task(recipe_scanner.initialize_in_background(), name='recipe_cache_init')
+
+            await ExampleImagesMigration.check_and_run_migrations()
             
             logger.info("LoRA Manager: All services initialized and background tasks scheduled")
                 
