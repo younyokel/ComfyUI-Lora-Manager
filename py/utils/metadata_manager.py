@@ -200,7 +200,7 @@ class MetadataManager:
                     tags=[],
                     modelDescription="",
                     model_type="checkpoint",
-                    from_civitai=False
+                    from_civitai=True
                 )
             else:  # Default to LoraMetadata
                 metadata = model_class(
@@ -214,7 +214,7 @@ class MetadataManager:
                     preview_url=normalize_path(preview_url),
                     tags=[],
                     modelDescription="",
-                    from_civitai=False,
+                    from_civitai=True,
                     usage_tips="{}"
                 )
             
