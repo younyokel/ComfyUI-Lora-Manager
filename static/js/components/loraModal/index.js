@@ -3,15 +3,12 @@
  * 
  * 将原始的LoraModal.js拆分成多个功能模块后的主入口文件
  */
-import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
+import { showToast } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { 
-    renderShowcaseContent, 
-    initShowcaseContent, 
-    toggleShowcase,
     setupShowcaseScroll, 
     scrollToTop,
-    initExampleImport
+    loadExampleImages
 } from '../shared/showcase/ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
@@ -122,7 +119,7 @@ export function showLoraModal(lora) {
                             <label>Additional Notes</label>
                             <div class="editable-field">
                                 <div class="notes-content" contenteditable="true" spellcheck="false">${lora.notes || 'Add your notes here...'}</div>
-                                <button class="save-btn" onclick="saveNotes('${lora.file_path}')">
+                                <button class="save-btn" data-action="save-notes">
                                     <i class="fas fa-save"></i>
                                 </button>
                             </div>
@@ -166,7 +163,7 @@ export function showLoraModal(lora) {
                         </div>
                     </div>
                     
-                    <button class="back-to-top" onclick="scrollToTop(this)">
+                    <button class="back-to-top" data-action="scroll-to-top">
                         <i class="fas fa-arrow-up"></i>
                     </button>
                 </div>
@@ -184,6 +181,7 @@ export function showLoraModal(lora) {
     setupBaseModelEditing(lora.file_path);
     setupFileNameEditing(lora.file_path);
     setupTagEditMode(); // Initialize tag editing functionality
+    setupEventHandlers(lora.file_path);
     
     // If we have a model ID but no description, fetch it
     if (lora.civitai?.modelId && !lora.modelDescription) {
@@ -202,69 +200,36 @@ export function showLoraModal(lora) {
 }
 
 /**
- * Load example images asynchronously
- * @param {Array} images - Array of image objects (both regular and custom)
- * @param {string} modelHash - Model hash for fetching local files
+ * Sets up event handlers using event delegation
+ * @param {string} filePath - Path to the model file
  */
-async function loadExampleImages(images, modelHash) {
-    try {
-        const showcaseTab = document.getElementById('showcase-tab');
-        if (!showcaseTab) return;
+function setupEventHandlers(filePath) {
+    const modalElement = document.getElementById('loraModal');
+    
+    // Use event delegation to handle clicks
+    modalElement.addEventListener('click', async (event) => {
+        const target = event.target.closest('[data-action]');
+        if (!target) return;
         
-        // First fetch local example files
-        let localFiles = [];
-
-        try {
-            const endpoint = '/api/example-image-files';
-            const params = `model_hash=${modelHash}`;
-            
-            const response = await fetch(`${endpoint}?${params}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                localFiles = result.files;
-            }
-        } catch (error) {
-            console.error("Failed to get example files:", error);
+        const action = target.dataset.action;
+        
+        switch (action) {
+            case 'close-modal':
+                modalManager.closeModal('loraModal');
+                break;
+                
+            case 'save-notes':
+                await saveNotes(filePath);
+                break;
+                
+            case 'scroll-to-top':
+                scrollToTop(target);
+                break;
         }
-        
-        // Then render with both remote images and local files
-        showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);
-        
-        // Re-initialize the showcase event listeners
-        const carousel = showcaseTab.querySelector('.carousel');
-        if (carousel && !carousel.classList.contains('collapsed')) {
-            initShowcaseContent(carousel);
-        }
-        
-        // Initialize the example import functionality
-        initExampleImport(modelHash, showcaseTab);
-    } catch (error) {
-        console.error('Error loading example images:', error);
-        const showcaseTab = document.getElementById('showcase-tab');
-        if (showcaseTab) {
-            showcaseTab.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    Error loading example images
-                </div>
-            `;
-        }
-    }
+    });
 }
 
-// Copy file name function
-window.copyFileName = async function(fileName) {
-    try {
-        await copyToClipboard(fileName, 'File name copied');
-    } catch (err) {
-        console.error('Copy failed:', err);
-        showToast('Copy failed', 'error');
-    }
-};
-
-// Add save note function
-window.saveNotes = async function(filePath) {
+async function saveNotes(filePath) {
     const content = document.querySelector('.notes-content').textContent;
     try {
         await saveModelMetadata(filePath, { notes: content });
@@ -363,5 +328,3 @@ function setupEditableFields(filePath) {
         }
     });
 }
-
-window.scrollToTop = scrollToTop;

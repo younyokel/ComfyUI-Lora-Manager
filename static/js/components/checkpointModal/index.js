@@ -6,12 +6,10 @@
 import { showToast } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { 
-    renderShowcaseContent, 
-    initShowcaseContent, 
     toggleShowcase,
     setupShowcaseScroll, 
     scrollToTop,
-    initExampleImport
+    loadExampleImages
 } from '../shared/showcase/ShowcaseView.js';
 import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
 import { 
@@ -108,7 +106,7 @@ export function showCheckpointModal(checkpoint) {
                     </div>
                 </div>
 
-                <div class="showcase-section" data-model-hash="${checkpoint.sha256 || ''}">
+                <div class="showcase-section" data-model-hash="${checkpoint.sha256 || ''}" data-filepath="${checkpoint.file_path}">
                     <div class="showcase-tabs">
                         <button class="tab-btn active" data-tab="showcase">Examples</button>
                         <button class="tab-btn" data-tab="description">Model Description</button>
@@ -143,7 +141,7 @@ export function showCheckpointModal(checkpoint) {
     
     modalManager.showModal('checkpointModal', content);
     setupEditableFields(checkpoint.file_path);
-    setupShowcaseScroll();
+    setupShowcaseScroll('checkpointModal');
     setupTabSwitching();
     setupTagTooltip();
     setupTagEditMode(); // Initialize tag editing functionality
@@ -156,60 +154,12 @@ export function showCheckpointModal(checkpoint) {
         loadModelDescription(checkpoint.civitai.modelId, checkpoint.file_path);
     }
     
-    // Load example images asynchronously
-    loadExampleImages(checkpoint.civitai?.images, checkpoint.sha256, checkpoint.file_path);
-}
-
-/**
- * Load example images asynchronously
- * @param {Array} images - Array of image objects
- * @param {string} modelHash - Model hash for fetching local files
- */
-async function loadExampleImages(images, modelHash) {
-    try {
-        const showcaseTab = document.getElementById('showcase-tab');
-        if (!showcaseTab) return;
-        
-        // First fetch local example files
-        let localFiles = [];
-        try {
-            const endpoint = '/api/example-image-files';
-            
-            const params = `model_hash=${modelHash}`;
-            
-            const response = await fetch(`${endpoint}?${params}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                localFiles = result.files;
-            }
-        } catch (error) {
-            console.error("Failed to get example files:", error);
-        }
-        
-        // Then render with both remote images and local files
-        showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);
-        
-        // Re-initialize the showcase event listeners
-        const carousel = showcaseTab.querySelector('.carousel');
-        if (carousel && !carousel.classList.contains('collapsed')) {
-            initShowcaseContent(carousel);
-        }
-
-        // Initialize the example import functionality
-        initExampleImport(modelHash, showcaseTab);
-    } catch (error) {
-        console.error('Error loading example images:', error);
-        const showcaseTab = document.getElementById('showcase-tab');
-        if (showcaseTab) {
-            showcaseTab.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    Error loading example images
-                </div>
-            `;
-        }
-    }
+    // Load example images asynchronously - merge regular and custom images
+    const regularImages = checkpoint.civitai?.images || [];
+    const customImages = checkpoint.civitai?.customImages || [];
+    // Combine images - regular images first, then custom images
+    const allImages = [...regularImages, ...customImages];
+    loadExampleImages(allImages, checkpoint.sha256);
 }
 
 /**

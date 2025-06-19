@@ -16,6 +16,58 @@ import { generateMetadataPanel } from './MetadataPanel.js';
 import { generateImageWrapper, generateVideoWrapper } from './MediaRenderers.js';
 
 /**
+ * Load example images asynchronously
+ * @param {Array} images - Array of image objects (both regular and custom)
+ * @param {string} modelHash - Model hash for fetching local files
+ */
+export async function loadExampleImages(images, modelHash) {
+    try {
+        const showcaseTab = document.getElementById('showcase-tab');
+        if (!showcaseTab) return;
+        
+        // First fetch local example files
+        let localFiles = [];
+
+        try {
+            const endpoint = '/api/example-image-files';
+            const params = `model_hash=${modelHash}`;
+            
+            const response = await fetch(`${endpoint}?${params}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                localFiles = result.files;
+            }
+        } catch (error) {
+            console.error("Failed to get example files:", error);
+        }
+        
+        // Then render with both remote images and local files
+        showcaseTab.innerHTML = renderShowcaseContent(images, localFiles);
+        
+        // Re-initialize the showcase event listeners
+        const carousel = showcaseTab.querySelector('.carousel');
+        if (carousel && !carousel.classList.contains('collapsed')) {
+            initShowcaseContent(carousel);
+        }
+        
+        // Initialize the example import functionality
+        initExampleImport(modelHash, showcaseTab);
+    } catch (error) {
+        console.error('Error loading example images:', error);
+        const showcaseTab = document.getElementById('showcase-tab');
+        if (showcaseTab) {
+            showcaseTab.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Error loading example images
+                </div>
+            `;
+        }
+    }
+}
+
+/**
  * Render showcase content
  * @param {Array} images - Array of images/videos to show
  * @param {Array} exampleFiles - Local example files

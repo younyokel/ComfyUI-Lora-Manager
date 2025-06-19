@@ -40,16 +40,16 @@ class ModelRouteUtils:
                                   civitai_metadata: Dict, client: CivitaiClient) -> None:
         """Update local metadata with CivitAI data"""
         # Save existing trainedWords and customImages if they exist
-        existing_civitai = local_metadata.get('civitai', {})
-        existing_trained_words = existing_civitai.get('trainedWords', [])
+        existing_civitai = local_metadata.get('civitai') or {}  # Use empty dict if None
 
         # Create a new civitai metadata by updating existing with new
         merged_civitai = existing_civitai.copy()
         merged_civitai.update(civitai_metadata)
 
         # Special handling for trainedWords - ensure we don't lose any existing trained words
-        new_trained_words = civitai_metadata.get('trainedWords', [])
-        if existing_trained_words:
+        if 'trainedWords' in existing_civitai:
+            existing_trained_words = existing_civitai.get('trainedWords', [])
+            new_trained_words = civitai_metadata.get('trainedWords', [])
             # Use a set to combine words without duplicates, then convert back to list
             merged_trained_words = list(set(existing_trained_words + new_trained_words))
             merged_civitai['trainedWords'] = merged_trained_words
