@@ -47,6 +47,13 @@ class CLIPTextEncodeExtractor(NodeMetadataExtractor):
             "text": text,
             "node_id": node_id
         }
+
+    @staticmethod
+    def update(node_id, outputs, metadata):
+        if outputs and isinstance(outputs, list) and len(outputs) > 0:
+            if isinstance(outputs[0], tuple) and len(outputs[0]) > 0:
+                conditioning = outputs[0][0]
+                metadata[PROMPTS][node_id]["conditioning"] = conditioning
         
 class SamplerExtractor(NodeMetadataExtractor):
     @staticmethod
@@ -64,6 +71,18 @@ class SamplerExtractor(NodeMetadataExtractor):
             "node_id": node_id,
             IS_SAMPLER: True  # Add sampler flag
         }
+
+        # Store the conditioning objects directly in metadata for later matching
+        pos_conditioning = inputs.get("positive", None)
+        neg_conditioning = inputs.get("negative", None)
+
+        # Save conditioning objects in metadata for later matching
+        if pos_conditioning is not None or neg_conditioning is not None:
+            if node_id not in metadata[PROMPTS]:
+                metadata[PROMPTS][node_id] = {"node_id": node_id}
+            
+            metadata[PROMPTS][node_id]["pos_conditioning"] = pos_conditioning
+            metadata[PROMPTS][node_id]["neg_conditioning"] = neg_conditioning
         
         # Extract latent image dimensions if available
         if "latent_image" in inputs and inputs["latent_image"] is not None:
@@ -102,6 +121,18 @@ class KSamplerAdvancedExtractor(NodeMetadataExtractor):
             "node_id": node_id,
             IS_SAMPLER: True  # Add sampler flag
         }
+        
+        # Store the conditioning objects directly in metadata for later matching
+        pos_conditioning = inputs.get("positive", None)
+        neg_conditioning = inputs.get("negative", None)
+
+        # Save conditioning objects in metadata for later matching
+        if pos_conditioning is not None or neg_conditioning is not None:
+            if node_id not in metadata[PROMPTS]:
+                metadata[PROMPTS][node_id] = {"node_id": node_id}
+            
+            metadata[PROMPTS][node_id]["pos_conditioning"] = pos_conditioning
+            metadata[PROMPTS][node_id]["neg_conditioning"] = neg_conditioning
         
         # Extract latent image dimensions if available
         if "latent_image" in inputs and inputs["latent_image"] is not None:
@@ -376,6 +407,13 @@ class CLIPTextEncodeFluxExtractor(NodeMetadataExtractor):
                 
             metadata[SAMPLING][node_id]["parameters"]["guidance"] = guidance_value
 
+    @staticmethod
+    def update(node_id, outputs, metadata):
+        if outputs and isinstance(outputs, list) and len(outputs) > 0:
+            if isinstance(outputs[0], tuple) and len(outputs[0]) > 0:
+                conditioning = outputs[0][0]
+                metadata[PROMPTS][node_id]["conditioning"] = conditioning
+
 class CFGGuiderExtractor(NodeMetadataExtractor):
     @staticmethod
     def extract(node_id, inputs, outputs, metadata):
@@ -404,6 +442,7 @@ NODE_EXTRACTORS = {
     "BasicScheduler": BasicSchedulerExtractor,  # Add BasicScheduler
     # Loaders
     "CheckpointLoaderSimple": CheckpointLoaderExtractor,
+    "comfyLoader": CheckpointLoaderExtractor,  # eeasy comfyLoader
     "UNETLoader": UNETLoaderExtractor,          # Updated to use dedicated extractor
     "UnetLoaderGGUF": UNETLoaderExtractor,  # Updated to use dedicated extractor
     "LoraLoader": LoraLoaderExtractor,
