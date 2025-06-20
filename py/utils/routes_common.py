@@ -384,15 +384,7 @@ class ModelRouteUtils:
 
     @staticmethod
     async def handle_replace_preview(request: web.Request, scanner) -> web.Response:
-        """Handle preview image replacement request
-        
-        Args:
-            request: The aiohttp request
-            scanner: The model scanner instance with methods to update cache
-            
-        Returns:
-            web.Response: The HTTP response
-        """
+        """Handle preview image replacement request"""
         try:
             reader = await request.multipart()
             
@@ -401,6 +393,15 @@ class ModelRouteUtils:
             if field.name != 'preview_file':
                 raise ValueError("Expected 'preview_file' field")
             content_type = field.headers.get('Content-Type', 'image/png')
+            
+            # Try to get original filename if available
+            content_disposition = field.headers.get('Content-Disposition', '')
+            original_filename = None
+            import re
+            filename_match = re.search(r'filename="(.*?)"', content_disposition)
+            if filename_match:
+                original_filename = filename_match.group(1)
+                
             preview_data = await field.read()
             
             # Read model path
@@ -409,7 +410,7 @@ class ModelRouteUtils:
                 raise ValueError("Expected 'model_path' field")
             model_path = (await field.read()).decode()
             
-            # Read NSFW level (new parameter)
+            # Read NSFW level
             nsfw_level = 0  # Default to 0 (unknown)
             field = await reader.next()
             if field and field.name == 'nsfw_level':
@@ -422,13 +423,34 @@ class ModelRouteUtils:
             base_name = os.path.splitext(os.path.basename(model_path))[0]
             folder = os.path.dirname(model_path)
             
-            # Determine if content is video or image
+            # Determine format based on content type and original filename
+            is_gif = False
+            if original_filename and original_filename.lower().endswith('.gif'):
+                is_gif = True
+            elif content_type.lower() == 'image/gif':
+                is_gif = True
+                
+            # Determine if content is video or image and handle specific formats
             if content_type.startswith('video/'):
-                # For videos, keep original format and use .mp4 extension
-                extension = '.mp4'
+                # For videos, preserve original format if possible
+                if original_filename:
+                    extension = os.path.splitext(original_filename)[1].lower()
+                    # Default to .mp4 if no extension or unrecognized
+                    if not extension or extension not in ['.mp4', '.webm', '.mov', '.avi']:
+                        extension = '.mp4'
+                else:
+                    # Try to determine extension from content type
+                    if 'webm' in content_type:
+                        extension = '.webm'
+                    else:
+                        extension = '.mp4'  # Default
+                optimized_data = preview_data  # No optimization for videos
+            elif is_gif:
+                # Preserve GIF format without optimization
+                extension = '.gif'
                 optimized_data = preview_data
             else:
-                # For images, optimize and convert to WebP
+                # For other images, optimize and convert to WebP
                 optimized_data, _ = ExifUtils.optimize_image(
                     image_data=preview_data,
                     target_width=CARD_PREVIEW_WIDTH,
@@ -436,7 +458,7 @@ class ModelRouteUtils:
                     quality=85,
                     preserve_metadata=False
                 )
-                extension = '.webp'  # Use .webp without .preview part
+                extension = '.webp'
             
             # Delete any existing preview files for this model
             for ext in PREVIEW_EXTENSIONS:

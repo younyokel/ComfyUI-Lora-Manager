@@ -18,7 +18,9 @@ PREVIEW_EXTENSIONS = [
     '.png',
     '.jpeg',
     '.jpg',
-    '.mp4'
+    '.mp4',
+    '.gif',
+    '.webm'
 ]
 
 # Card preview image width
