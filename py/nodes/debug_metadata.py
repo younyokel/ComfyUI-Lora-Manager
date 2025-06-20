@@ -1,4 +1,5 @@
 import logging
+from server import PromptServer   # type: ignore
 from ..metadata_collector.metadata_processor import MetadataProcessor
 
 logger = logging.getLogger(__name__)
@@ -7,6 +8,7 @@ class DebugMetadata:
     NAME = "Debug Metadata (LoraManager)"
     CATEGORY = "Lora Manager/utils"
     DESCRIPTION = "Debug node to verify metadata_processor functionality"
+    OUTPUT_NODE = True
     
     @classmethod
     def INPUT_TYPES(cls):
@@ -19,8 +21,7 @@ class DebugMetadata:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("metadata_json",)
+    RETURN_TYPES = ()
     FUNCTION = "process_metadata"
 
     def process_metadata(self, images, id):
@@ -32,7 +33,13 @@ class DebugMetadata:
             # Use the MetadataProcessor to convert it to JSON string
             metadata_json = MetadataProcessor.to_json(metadata, id)
             
-            return (metadata_json,)
+            # Send metadata to frontend for display
+            PromptServer.instance.send_sync("metadata_update", {
+                "id": id,
+                "metadata": metadata_json
+            })
+            
         except Exception as e:
             logger.error(f"Error processing metadata: {e}")
-            return ("{}",)  # Return empty JSON object in case of error
+        
+        return ()
