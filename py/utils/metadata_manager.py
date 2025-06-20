@@ -244,11 +244,11 @@ class MetadataManager:
                 model_info = await extract_lora_metadata(file_path)
                 metadata.base_model = model_info['base_model']
             
-            elif metadata.__class__.__name__ == "CheckpointMetadata":
-                model_info = await extract_checkpoint_metadata(file_path)
-                metadata.base_model = model_info['base_model']
-                if 'model_type' in model_info:
-                    metadata.model_type = model_info['model_type']
+            # elif metadata.__class__.__name__ == "CheckpointMetadata":
+            #     model_info = await extract_checkpoint_metadata(file_path)
+            #     metadata.base_model = model_info['base_model']
+            #     if 'model_type' in model_info:
+            #         metadata.model_type = model_info['model_type']
         except Exception as e:
             logger.error(f"Error enriching metadata: {str(e)}")
     

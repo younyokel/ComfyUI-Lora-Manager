@@ -246,50 +246,6 @@ class ApiRoutes:
             "civitai": ModelRouteUtils.filter_civitai_data(lora.get("civitai", {}))
         }
 
-    # Private helper methods
-    async def _read_preview_file(self, reader) -> tuple[bytes, str]:
-        """Read preview file and content type from multipart request"""
-        field = await reader.next()
-        if field.name != 'preview_file':
-            raise ValueError("Expected 'preview_file' field")
-        content_type = field.headers.get('Content-Type', 'image/png')
-        return await field.read(), content_type
-
-    async def _read_model_path(self, reader) -> str:
-        """Read model path from multipart request"""
-        field = await reader.next()
-        if field.name != 'model_path':
-            raise ValueError("Expected 'model_path' field")
-        return (await field.read()).decode()
-
-    async def _save_preview_file(self, model_path: str, preview_data: bytes, content_type: str) -> str:
-        """Save preview file and return its path"""
-        base_name = os.path.splitext(os.path.basename(model_path))[0]
-        folder = os.path.dirname(model_path)
-        
-        # Determine if content is video or image
-        if content_type.startswith('video/'):
-            # For videos, keep original format and use .mp4 extension
-            extension = '.mp4'
-            optimized_data = preview_data
-        else:
-            # For images, optimize and convert to WebP
-            optimized_data, _ = ExifUtils.optimize_image(
-                image_data=preview_data,
-                target_width=CARD_PREVIEW_WIDTH,
-                format='webp',
-                quality=85,
-                preserve_metadata=False
-            )
-            extension = '.webp'  # Use .webp without .preview part
-        
-        preview_path = os.path.join(folder, base_name + extension).replace(os.sep, '/')
-        
-        with open(preview_path, 'wb') as f:
-            f.write(optimized_data)
-            
-        return preview_path
-
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:
         """Fetch CivitAI metadata for all loras in the background"""
         try:
