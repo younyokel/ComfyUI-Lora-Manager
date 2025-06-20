@@ -31,7 +31,7 @@ class ExifUtils:
                 # Method 2: Check EXIF UserComment field
                 if img.format not in ['JPEG', 'TIFF', 'WEBP']:
                     # For non-JPEG/TIFF/WEBP images, try to get EXIF through PIL
-                    exif = img._getexif()
+                    exif = img.getexif()
                     if exif and piexif.ExifIFD.UserComment in exif:
                         user_comment = exif[piexif.ExifIFD.UserComment]
                         if isinstance(user_comment, bytes):
