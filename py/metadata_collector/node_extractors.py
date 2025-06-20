@@ -432,6 +432,7 @@ class CFGGuiderExtractor(NodeMetadataExtractor):
         metadata[SAMPLING][node_id]["parameters"]["cfg"] = cfg_value
 
 # Registry of node-specific extractors
+# Keys are node class names
 NODE_EXTRACTORS = {
     # Sampling
     "KSampler": SamplerExtractor,
@@ -451,6 +452,7 @@ NODE_EXTRACTORS = {
     "CLIPTextEncode": CLIPTextEncodeExtractor,
     "CLIPTextEncodeFlux": CLIPTextEncodeFluxExtractor,  # Add CLIPTextEncodeFlux
     "WAS_Text_to_Conditioning": CLIPTextEncodeExtractor,
+    "AdvancedCLIPTextEncode": CLIPTextEncodeExtractor,  # From https://github.com/BlenderNeko/ComfyUI_ADV_CLIP_emb
     # Latent
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux
