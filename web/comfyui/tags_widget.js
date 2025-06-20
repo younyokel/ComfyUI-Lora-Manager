@@ -131,7 +131,7 @@ export function addTagsWidget(node, name, opts, callback) {
   // Helper function to update tag style based on active state
   function updateTagStyle(tagEl, active) {
     const baseStyles = {
-      padding: "4px 10px", // Slightly reduced horizontal padding
+      padding: "3px 10px", // Adjusted vertical padding to balance text
       borderRadius: "6px",
       maxWidth: "200px",
       overflow: "hidden",
@@ -141,18 +141,22 @@ export function addTagsWidget(node, name, opts, callback) {
       cursor: "pointer",
       transition: "all 0.2s ease",
       border: "1px solid transparent",
-      display: "inline-flex", // Changed to inline-flex for better text alignment
-      alignItems: "center", // Center text vertically
-      justifyContent: "center", // Center text horizontally
+      display: "inline-block", // inline-block for better text truncation
       boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-      margin: "1px", // Reduced margin
+      margin: "1px", 
       userSelect: "none",
       WebkitUserSelect: "none",
       MozUserSelect: "none",
       msUserSelect: "none",
-      height: "20px", // Slightly increased height to prevent text cutoff
-      minHeight: "20px", // Ensure consistent height
-      boxSizing: "border-box" // Ensure padding doesn't affect the overall size
+      height: "22px", // Increased height to better fit text with descenders
+      minHeight: "22px", // Matching minHeight
+      boxSizing: "border-box",
+      width: "fit-content",
+      maxWidth: "200px",
+      lineHeight: "16px", // Added explicit line-height
+      verticalAlign: "middle", // Added vertical alignment
+      position: "relative", // For better text positioning
+      textAlign: "center", // Center text horizontally
     };
 
     if (active) {
@@ -225,4 +229,4 @@ export function addTagsWidget(node, name, opts, callback) {
   };
 
   return { minWidth: 300, minHeight: defaultHeight, widget };
-} 
+}

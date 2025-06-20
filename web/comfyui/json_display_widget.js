@@ -120,7 +120,8 @@ export function addJsonDisplayWidget(node, name, opts) {
       return parseInt(container.style.getPropertyValue('--comfy-widget-max-height')) || defaultHeight * 2;
     },
     getHeight: function() {
-      return defaultHeight; // Fixed height to maintain node boundaries
+      // Return actual container height to reduce the gap
+      return parseInt(container.style.getPropertyValue('--comfy-widget-height')) || defaultHeight;
     },
     hideOnZoom: true
   });
@@ -141,7 +142,8 @@ export function addJsonDisplayWidget(node, name, opts) {
     
     // Adjust container height to node height
     if(size && size[1]) {
-      const widgetHeight = Math.min(size[1] - 80, defaultHeight * 2); // Account for node header
+      // Reduce the offset to minimize the gap at the bottom
+      const widgetHeight = Math.min(size[1] - 30, defaultHeight * 2); // Reduced from 80 to 30
       container.style.maxHeight = `${widgetHeight}px`;
       container.style.setProperty('--comfy-widget-height', `${widgetHeight}px`);
     }
