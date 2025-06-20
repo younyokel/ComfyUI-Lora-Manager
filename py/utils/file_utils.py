@@ -1,13 +1,7 @@
 import logging
 import os
 import hashlib
-import json
-import time
-from typing import Dict, Optional, Type
 
-from .model_utils import determine_base_model
-from .lora_metadata import extract_lora_metadata, extract_checkpoint_metadata
-from .models import BaseModelMetadata, LoraMetadata, CheckpointMetadata
 from .constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
 from .exif_utils import ExifUtils
 
@@ -24,7 +18,12 @@ async def calculate_sha256(file_path: str) -> str:
 def find_preview_file(base_name: str, dir_path: str) -> str:
     """Find preview file for given base name in directory"""
     
-    for ext in PREVIEW_EXTENSIONS:
+    temp_extensions = PREVIEW_EXTENSIONS.copy()
+    # Add example extension for compatibility
+    # https://github.com/willmiao/ComfyUI-Lora-Manager/issues/225
+    # The preview image will be optimized to lora-name.webp, so it won't affect other logic
+    temp_extensions.append(".example.0.jpeg")
+    for ext in temp_extensions:
         full_pattern = os.path.join(dir_path, f"{base_name}{ext}")
         if os.path.exists(full_pattern):
             # Check if this is an image and not already webp
@@ -42,7 +41,7 @@ def find_preview_file(base_name: str, dir_path: str) -> str:
                         target_width=CARD_PREVIEW_WIDTH,
                         format='webp',
                         quality=85,
-                        preserve_metadata=False  # Changed from True to False
+                        preserve_metadata=False
                     )
                     
                     # Save the optimized webp file
