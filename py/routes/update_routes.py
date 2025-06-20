@@ -15,7 +15,8 @@ class UpdateRoutes:
     @staticmethod
     def setup_routes(app):
         """Register update check routes"""
-        app.router.add_get('/loras/api/check-updates', UpdateRoutes.check_updates)
+        app.router.add_get('/api/check-updates', UpdateRoutes.check_updates)
+        app.router.add_get('/api/version-info', UpdateRoutes.get_version_info)
     
     @staticmethod
     async def check_updates(request):
@@ -50,6 +51,34 @@ class UpdateRoutes:
             
         except Exception as e:
             logger.error(f"Failed to check for updates: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            })
+    
+    @staticmethod
+    async def get_version_info(request):
+        """
+        Returns the current version in the format 'version-short_hash'
+        """
+        try:
+            # Read local version from pyproject.toml
+            local_version = UpdateRoutes._get_local_version().replace('v', '')
+            
+            # Get git info (commit hash, branch)
+            git_info = UpdateRoutes._get_git_info()
+            short_hash = git_info['short_hash']
+            
+            # Format: version-short_hash
+            version_string = f"{local_version}-{short_hash}"
+            
+            return web.json_response({
+                'success': True,
+                'version': version_string
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to get version info: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)

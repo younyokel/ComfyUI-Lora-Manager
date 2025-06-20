@@ -104,6 +104,45 @@ const initializeWidgets = () => {
     addWidget('.comfy-menu', addWidgetMenu);
 };
 
+// Fetch version info from the API
+const fetchVersionInfo = async () => {
+    try {
+        const response = await fetch('/api/version-info');
+        const data = await response.json();
+        
+        if (data.success) {
+            return data.version;
+        }
+        return '';
+    } catch (error) {
+        console.error('Error fetching version info:', error);
+        return '';
+    }
+};
+
+// Register about badge with version info
+const registerAboutBadge = async () => {
+    let version = await fetchVersionInfo();
+    const label = version ? `LoRA-Manager v${version}` : 'LoRA-Manager';
+    
+    app.registerExtension({
+        name: 'LoraManager.AboutBadge',
+        aboutPageBadges: [
+            {
+                label: label,
+                url: 'https://github.com/willmiao/ComfyUI-Lora-Manager',
+                icon: 'pi pi-tags'
+            }
+        ]
+    });
+};
+
+// Initialize everything
+const initialize = () => {
+    initializeWidgets();
+    registerAboutBadge();
+};
+
 const getLoraManagerIcon = () => {
     return `
         <svg enable-background="new 0 0 512 512" version="1.1" viewBox="0 0 512 512" xml:space="preserve" xmlns="http://www.w3.org/2000/svg">
@@ -144,4 +183,4 @@ const getLoraManagerIcon = () => {
     `;
 };
 
-initializeWidgets();
+initialize();

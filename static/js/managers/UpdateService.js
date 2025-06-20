@@ -60,7 +60,7 @@ export class UpdateService {
         
         try {
             // Call backend API to check for updates
-            const response = await fetch('/loras/api/check-updates');
+            const response = await fetch('/api/check-updates');
             const data = await response.json();
             
             if (data.success) {
