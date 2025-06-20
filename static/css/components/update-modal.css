@@ -37,13 +37,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(0, 0, 0, 0.02); /* 轻微的灰色背景 */
-    border: 1px solid rgba(0, 0, 0, 0.08); /* 更明显的边框 */
     border-radius: var(--border-radius-sm);
     padding: var(--space-3);
 }
 
-.version-info {
+.update-info .version-info {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -68,6 +66,15 @@
 
 .new-version .version-number {
     color: var(--lora-accent);
+}
+
+/* Add styling for git info display */
+.git-info {
+    font-size: 0.85em;
+    opacity: 0.7;
+    margin-top: 4px;
+    font-family: monospace;
+    color: var(--text-color);
 }
 
 .update-link {

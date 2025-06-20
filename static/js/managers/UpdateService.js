@@ -8,6 +8,11 @@ export class UpdateService {
         this.latestVersion = "v0.0.0";   // Initialize with default values
         this.updateInfo = null;
         this.updateAvailable = false;
+        this.gitInfo = {
+            short_hash: "unknown",
+            branch: "unknown",
+            commit_date: "unknown"
+        };
         this.updateNotificationsEnabled = getStorageItem('show_update_notifications');
         this.lastCheckTime = parseInt(getStorageItem('last_update_check') || '0');
     }
@@ -62,6 +67,7 @@ export class UpdateService {
                 this.currentVersion = data.current_version || "v0.0.0";
                 this.latestVersion = data.latest_version || "v0.0.0";
                 this.updateInfo = data;
+                this.gitInfo = data.git_info || this.gitInfo;
                 
                 // Explicitly set update availability based on version comparison
                 this.updateAvailable = this.isNewerVersion(this.latestVersion, this.currentVersion);
@@ -77,7 +83,8 @@ export class UpdateService {
                 console.log("Update check complete:", {
                     currentVersion: this.currentVersion,
                     latestVersion: this.latestVersion,
-                    updateAvailable: this.updateAvailable
+                    updateAvailable: this.updateAvailable,
+                    gitInfo: this.gitInfo
                 });
             }
         } catch (error) {
@@ -151,6 +158,21 @@ export class UpdateService {
         
         if (currentVersionEl) currentVersionEl.textContent = this.currentVersion;
         if (newVersionEl) newVersionEl.textContent = this.latestVersion;
+        
+        // Update git info
+        const gitInfoEl = modal.querySelector('.git-info');
+        if (gitInfoEl && this.gitInfo) {
+            if (this.gitInfo.short_hash !== 'unknown') {
+                let gitText = `Commit: ${this.gitInfo.short_hash}`;
+                if (this.gitInfo.commit_date !== 'unknown') {
+                    gitText += ` - Date: ${this.gitInfo.commit_date}`;
+                }
+                gitInfoEl.textContent = gitText;
+                gitInfoEl.style.display = 'block';
+            } else {
+                gitInfoEl.style.display = 'none';
+            }
+        }
         
         // Update changelog content if available
         if (this.updateInfo && this.updateInfo.changelog) {

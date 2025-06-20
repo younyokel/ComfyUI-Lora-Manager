@@ -95,7 +95,7 @@
     flex: 1;
 }
 
-.version-info {
+.version-content .version-info {
     display: flex;
     flex-wrap: wrap;
     flex-direction: row !important;
@@ -104,7 +104,7 @@
     font-size: 0.9em;
 }
 
-.version-info .base-model {
+.version-content .version-info .base-model {
     background: oklch(var(--lora-accent) / 0.1);
     color: var(--lora-accent);
     padding: 2px 8px;

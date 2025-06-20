@@ -2,6 +2,8 @@ import os
 import aiohttp
 import logging
 import toml
+import subprocess
+from datetime import datetime
 from aiohttp import web
 from typing import Dict, Any, List
 
@@ -24,6 +26,9 @@ class UpdateRoutes:
         try:
             # Read local version from pyproject.toml
             local_version = UpdateRoutes._get_local_version()
+            
+            # Get git info (commit hash, branch)
+            git_info = UpdateRoutes._get_git_info()
 
             # Fetch remote version from GitHub
             remote_version, changelog = await UpdateRoutes._get_remote_version()
@@ -39,7 +44,8 @@ class UpdateRoutes:
                 'current_version': local_version,
                 'latest_version': remote_version,
                 'update_available': update_available,
-                'changelog': changelog
+                'changelog': changelog,
+                'git_info': git_info
             })
             
         except Exception as e:
@@ -71,6 +77,72 @@ class UpdateRoutes:
         except Exception as e:
             logger.error(f"Failed to get local version: {e}", exc_info=True)
             return "v0.0.0"
+    
+    @staticmethod
+    def _get_git_info() -> Dict[str, str]:
+        """Get Git repository information"""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        plugin_root = os.path.dirname(os.path.dirname(current_dir))
+        
+        git_info = {
+            'commit_hash': 'unknown',
+            'short_hash': 'unknown',
+            'branch': 'unknown',
+            'commit_date': 'unknown'
+        }
+        
+        try:
+            # Check if we're in a git repository
+            if not os.path.exists(os.path.join(plugin_root, '.git')):
+                return git_info
+                
+            # Get current commit hash
+            result = subprocess.run(
+                ['git', 'rev-parse', 'HEAD'],
+                cwd=plugin_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                git_info['commit_hash'] = result.stdout.strip()
+                git_info['short_hash'] = git_info['commit_hash'][:7]
+            
+            # Get current branch name
+            result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=plugin_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                git_info['branch'] = result.stdout.strip()
+            
+            # Get commit date
+            result = subprocess.run(
+                ['git', 'show', '-s', '--format=%ci', 'HEAD'],
+                cwd=plugin_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                commit_date = result.stdout.strip()
+                # Format the date nicely if possible
+                try:
+                    date_obj = datetime.strptime(commit_date, '%Y-%m-%d %H:%M:%S %z')
+                    git_info['commit_date'] = date_obj.strftime('%Y-%m-%d')
+                except:
+                    git_info['commit_date'] = commit_date
+                    
+        except Exception as e:
+            logger.warning(f"Error getting git info: {e}")
+            
+        return git_info
     
     @staticmethod
     async def _get_remote_version() -> tuple[str, List[str]]:
