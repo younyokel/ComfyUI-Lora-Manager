@@ -116,12 +116,9 @@ export function showLoraModal(lora) {
                         </div>
                         ${renderTriggerWords(escapedWords, lora.file_path)}
                         <div class="info-item notes">
-                            <label>Additional Notes</label>
+                            <label>Additional Notes <i class="fas fa-info-circle notes-hint" title="Press Enter to save, Shift+Enter for new line"></i></label>
                             <div class="editable-field">
                                 <div class="notes-content" contenteditable="true" spellcheck="false">${lora.notes || 'Add your notes here...'}</div>
-                                <button class="save-btn" data-action="save-notes">
-                                    <i class="fas fa-save"></i>
-                                </button>
                             </div>
                         </div>
                         <div class="info-item full-width">
@@ -171,7 +168,14 @@ export function showLoraModal(lora) {
         </div>
     `;
     
-    modalManager.showModal('loraModal', content);
+    modalManager.showModal('loraModal', content, null, function() {
+        // Clean up all handlers when modal closes
+        const modalElement = document.getElementById('loraModal');
+        if (modalElement && modalElement._clickHandler) {
+            modalElement.removeEventListener('click', modalElement._clickHandler);
+            delete modalElement._clickHandler;
+        }
+    });
     setupEditableFields(lora.file_path);
     setupShowcaseScroll('loraModal');
     setupTabSwitching();
@@ -206,8 +210,11 @@ export function showLoraModal(lora) {
 function setupEventHandlers(filePath) {
     const modalElement = document.getElementById('loraModal');
     
-    // Use event delegation to handle clicks
-    modalElement.addEventListener('click', async (event) => {
+    // Remove existing event listeners first
+    modalElement.removeEventListener('click', handleModalClick);
+    
+    // Create and store the handler function
+    function handleModalClick(event) {
         const target = event.target.closest('[data-action]');
         if (!target) return;
         
@@ -217,16 +224,17 @@ function setupEventHandlers(filePath) {
             case 'close-modal':
                 modalManager.closeModal('loraModal');
                 break;
-                
-            case 'save-notes':
-                await saveNotes(filePath);
-                break;
-                
             case 'scroll-to-top':
                 scrollToTop(target);
                 break;
         }
-    });
+    }
+    
+    // Add the event listener with the named function
+    modalElement.addEventListener('click', handleModalClick);
+    
+    // Store reference to the handler on the element for potential cleanup
+    modalElement._clickHandler = handleModalClick;
 }
 
 async function saveNotes(filePath) {

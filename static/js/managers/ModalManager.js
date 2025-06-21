@@ -299,7 +299,7 @@ export class ModalManager {
         return null;
     }
 
-    showModal(id, content = null, onCloseCallback = null) {
+    showModal(id, content = null, onCloseCallback = null, cleanupCallback = null) {
         const modal = this.getModal(id);
         if (!modal) return;
 
@@ -314,9 +314,8 @@ export class ModalManager {
         }
 
         // Store callback
-        if (onCloseCallback) {
-            modal.onCloseCallback = onCloseCallback;
-        }
+        modal.onCloseCallback = onCloseCallback;
+        modal.cleanupCallback = cleanupCallback;
 
         // Store current scroll position before showing modal
         this.scrollPosition = window.scrollY;
@@ -361,6 +360,11 @@ export class ModalManager {
         if (modal.onCloseCallback) {
             modal.onCloseCallback();
             modal.onCloseCallback = null;
+        }
+
+        if (modal.cleanupCallback) {
+            modal.cleanupCallback();
+            modal.cleanupCallback = null;
         }
     }
 

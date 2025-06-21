@@ -107,25 +107,13 @@
     opacity: 0.5;
 }
 
-.save-btn {
-    padding: 4px 8px;
-    background: var(--lora-accent);
-    border: none;
-    border-radius: var(--border-radius-xs);
-    color: white;
-    cursor: pointer;
-    transition: opacity 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.save-btn:hover {
-    opacity: 0.9;
-}
-
-.save-btn i {
-    font-size: 0.9em;
+.notes-hint {
+    font-size: 0.8em;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-left: 5px;
+    cursor: help;
+    position: relative; /* Add positioning context */
 }
 
 @media (max-width: 640px) {
