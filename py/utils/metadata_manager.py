@@ -261,15 +261,29 @@ class MetadataManager:
             metadata: Metadata object to update
             file_path: Current file path for the model
         """
+        need_update = False
+        
         # Check if file path is different from what's in metadata
         if normalize_path(file_path) != metadata.file_path:
             metadata.file_path = normalize_path(file_path)
+            need_update = True
         
         # Check if preview exists at the current location
         preview_url = metadata.preview_url
-        if preview_url and not os.path.exists(preview_url):
-            base_name = os.path.splitext(os.path.basename(file_path))[0]
-            dir_path = os.path.dirname(file_path)
-            new_preview_url = find_preview_file(base_name, dir_path)
-            if new_preview_url:
-                metadata.preview_url = normalize_path(new_preview_url)
+        if preview_url:
+            # Get directory parts of both paths
+            file_dir = os.path.dirname(file_path)
+            preview_dir = os.path.dirname(preview_url)
+            
+            # Update preview if it doesn't exist OR if model and preview are in different directories
+            if not os.path.exists(preview_url) or file_dir != preview_dir:
+                base_name = os.path.splitext(os.path.basename(file_path))[0]
+                dir_path = os.path.dirname(file_path)
+                new_preview_url = find_preview_file(base_name, dir_path)
+                if new_preview_url:
+                    metadata.preview_url = normalize_path(new_preview_url)
+                    need_update = True
+        
+        # If path attributes were changed, save the metadata back to disk
+        if need_update:
+            await MetadataManager.save_metadata(file_path, metadata, create_backup=False)
