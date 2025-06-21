@@ -115,7 +115,8 @@
 }
 
 .theme-toggle .light-icon,
-.theme-toggle .dark-icon {
+.theme-toggle .dark-icon,
+.theme-toggle .auto-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -124,15 +125,38 @@
   transition: opacity 0.3s ease;
 }
 
+/* Default state shows dark icon */
 .theme-toggle .dark-icon {
   opacity: 1;
 }
 
-[data-theme="light"] .theme-toggle .light-icon {
+/* Light theme shows light icon */
+.theme-toggle.theme-light .light-icon {
   opacity: 1;
 }
 
-[data-theme="light"] .theme-toggle .dark-icon {
+.theme-toggle.theme-light .dark-icon,
+.theme-toggle.theme-light .auto-icon {
+  opacity: 0;
+}
+
+/* Dark theme shows dark icon */
+.theme-toggle.theme-dark .dark-icon {
+  opacity: 1;
+}
+
+.theme-toggle.theme-dark .light-icon,
+.theme-toggle.theme-dark .auto-icon {
+  opacity: 0;
+}
+
+/* Auto theme shows auto icon */
+.theme-toggle.theme-auto .auto-icon {
+  opacity: 1;
+}
+
+.theme-toggle.theme-auto .light-icon,
+.theme-toggle.theme-auto .dark-icon {
   opacity: 0;
 }
 

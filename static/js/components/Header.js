@@ -46,9 +46,21 @@ export class HeaderManager {
       // Handle theme toggle
       const themeToggle = document.querySelector('.theme-toggle');
       if (themeToggle) {
+        // Set initial state based on current theme
+        const currentTheme = localStorage.getItem('lm_theme') || 'auto';
+        themeToggle.classList.add(`theme-${currentTheme}`);
+        
         themeToggle.addEventListener('click', () => {
           if (typeof toggleTheme === 'function') {
-            toggleTheme();
+            const newTheme = toggleTheme();
+            // Update tooltip based on next toggle action
+            if (newTheme === 'light') {
+              themeToggle.title = "Switch to dark theme";
+            } else if (newTheme === 'dark') {
+              themeToggle.title = "Switch to auto theme";
+            } else {
+              themeToggle.title = "Switch to light theme";
+            }
           }
         });
       }

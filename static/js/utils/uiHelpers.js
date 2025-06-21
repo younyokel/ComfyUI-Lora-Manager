@@ -118,10 +118,13 @@ export function toggleTheme() {
     const currentTheme = getStorageItem('theme') || 'auto';
     let newTheme;
     
-    if (currentTheme === 'dark') {
-        newTheme = 'light';
-    } else {
+    // Cycle through themes: light → dark → auto → light
+    if (currentTheme === 'light') {
         newTheme = 'dark';
+    } else if (currentTheme === 'dark') {
+        newTheme = 'auto';
+    } else {
+        newTheme = 'light';
     }
     
     setStorageItem('theme', newTheme);
@@ -151,6 +154,21 @@ function applyTheme(theme) {
         htmlElement.setAttribute('data-theme', 'light');
         document.body.dataset.theme = 'light';
     }
+    
+    // Update the theme-toggle icon state
+    updateThemeToggleIcons(theme);
+}
+
+// New function to update theme toggle icons
+function updateThemeToggleIcons(theme) {
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (!themeToggle) return;
+    
+    // Remove any existing active classes
+    themeToggle.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+    
+    // Add the appropriate class based on current theme
+    themeToggle.classList.add(`theme-${theme}`);
 }
 
 export function toggleFolder(tag) {
