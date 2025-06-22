@@ -996,7 +996,7 @@ class RecipeRoutes:
             else:
                 latest_image = None
             
-            if not latest_image:
+            if latest_image is None:
                 return web.json_response({"error": "No recent images found to use for recipe. Try generating an image first."}, status=400)
             
             # Convert the image data to bytes - handle tuple and tensor cases

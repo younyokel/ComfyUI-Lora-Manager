@@ -35,7 +35,70 @@ class CheckpointLoaderExtractor(NodeMetadataExtractor):
                 "type": "checkpoint",
                 "node_id": node_id
             }
+
+class TSCCheckpointLoaderExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs or "ckpt_name" not in inputs:
+            return
+            
+        model_name = inputs.get("ckpt_name")
+        if model_name:
+            metadata[MODELS][node_id] = {
+                "name": model_name,
+                "type": "checkpoint",
+                "node_id": node_id
+            }
+
+        # For loader node has lora_stack input, like Efficient Loader from Efficient Nodes
+        active_loras = []
         
+        # Process lora_stack if available
+        if "lora_stack" in inputs:
+            lora_stack = inputs.get("lora_stack", [])
+            for lora_path, model_strength, clip_strength in lora_stack:
+                # Extract lora name from path (following the format in lora_loader.py)
+                lora_name = os.path.splitext(os.path.basename(lora_path))[0]
+                active_loras.append({
+                    "name": lora_name,
+                    "strength": model_strength
+                })
+        
+        if active_loras:
+            metadata[LORAS][node_id] = {
+                "lora_list": active_loras,
+                "node_id": node_id
+            }
+        
+        # Extract positive and negative prompt text if available
+        positive_text = inputs.get("positive", "")
+        negative_text = inputs.get("negative", "")
+        
+        if positive_text or negative_text:
+            if node_id not in metadata[PROMPTS]:
+                metadata[PROMPTS][node_id] = {"node_id": node_id}
+            
+            # Store both positive and negative text
+            metadata[PROMPTS][node_id]["positive_text"] = positive_text
+            metadata[PROMPTS][node_id]["negative_text"] = negative_text
+            
+    @staticmethod
+    def update(node_id, outputs, metadata):
+        # Handle conditioning outputs from TSC_EfficientLoader
+        # outputs is a list with [(model, positive_encoded, negative_encoded, {"samples":latent}, vae, clip, dependencies,)]
+        if outputs and isinstance(outputs, list) and len(outputs) > 0:
+            first_output = outputs[0]
+            if isinstance(first_output, tuple) and len(first_output) >= 3:
+                positive_conditioning = first_output[1]
+                negative_conditioning = first_output[2]
+                
+                # Save both conditioning objects in metadata
+                if node_id not in metadata[PROMPTS]:
+                    metadata[PROMPTS][node_id] = {"node_id": node_id}
+                    
+                metadata[PROMPTS][node_id]["positive_encoded"] = positive_conditioning
+                metadata[PROMPTS][node_id]["negative_encoded"] = negative_conditioning
+
 class CLIPTextEncodeExtractor(NodeMetadataExtractor):
     @staticmethod
     def extract(node_id, inputs, outputs, metadata):
@@ -154,6 +217,47 @@ class KSamplerAdvancedExtractor(NodeMetadataExtractor):
                         "height": height,
                         "node_id": node_id
                     }
+
+class TSCSamplerBaseExtractor(NodeMetadataExtractor):
+    """Base extractor for handling TSC sampler node outputs"""
+    @staticmethod
+    def update(node_id, outputs, metadata):
+        # Ensure IMAGES category exists
+        if IMAGES not in metadata:
+            metadata[IMAGES] = {}
+        
+        # Extract output_images from the TSC sampler format
+        # outputs = [{"ui": {"images": preview_images}, "result": result}]
+        # where result = (original_model, original_positive, original_negative, latent_list, optional_vae, output_images,)
+        if outputs and isinstance(outputs, list) and len(outputs) > 0:
+            # Get the first item in the list
+            output_item = outputs[0]
+            if isinstance(output_item, dict) and "result" in output_item:
+                result = output_item["result"]
+                if isinstance(result, tuple) and len(result) >= 6:
+                    # The output_images is the last element in the result tuple
+                    output_images = (result[5],)
+                    
+                    # Save image data under node ID index to be captured by caching mechanism
+                    metadata[IMAGES][node_id] = {
+                    "node_id": node_id,
+                    "image": output_images
+                    }
+                    
+                    # Only set first_decode if it hasn't been recorded yet
+                    if "first_decode" not in metadata[IMAGES]:
+                        metadata[IMAGES]["first_decode"] = metadata[IMAGES][node_id]
+
+class TSCKSamplerExtractor(SamplerExtractor, TSCSamplerBaseExtractor):
+    """Extractor for TSC_KSampler nodes"""
+    # Extract method is inherited from SamplerExtractor
+    # Update method is inherited from TSCSamplerBaseExtractor
+
+
+class TSCKSamplerAdvancedExtractor(KSamplerAdvancedExtractor, TSCSamplerBaseExtractor):
+    """Extractor for TSC_KSamplerAdvanced nodes"""
+    # Extract method is inherited from KSamplerAdvancedExtractor
+    # Update method is inherited from TSCSamplerBaseExtractor
 
 class LoraLoaderExtractor(NodeMetadataExtractor):
     @staticmethod
@@ -437,13 +541,16 @@ NODE_EXTRACTORS = {
     # Sampling
     "KSampler": SamplerExtractor,
     "KSamplerAdvanced": KSamplerAdvancedExtractor,
-    "SamplerCustomAdvanced": SamplerCustomAdvancedExtractor,  # Updated to use dedicated extractor
+    "SamplerCustomAdvanced": SamplerCustomAdvancedExtractor,
+    "TSC_KSampler": TSCKSamplerExtractor,   # Efficient Nodes
+    "TSC_KSamplerAdvanced": TSCKSamplerAdvancedExtractor,  # Efficient Nodes
     # Sampling Selectors
     "KSamplerSelect": KSamplerSelectExtractor,  # Add KSamplerSelect
     "BasicScheduler": BasicSchedulerExtractor,  # Add BasicScheduler
     # Loaders
     "CheckpointLoaderSimple": CheckpointLoaderExtractor,
-    "comfyLoader": CheckpointLoaderExtractor,  # eeasy comfyLoader
+    "comfyLoader": CheckpointLoaderExtractor,  # easy comfyLoader
+    "TSC_EfficientLoader": TSCCheckpointLoaderExtractor,  # Efficient Nodes
     "UNETLoader": UNETLoaderExtractor,          # Updated to use dedicated extractor
     "UnetLoaderGGUF": UNETLoaderExtractor,  # Updated to use dedicated extractor
     "LoraLoader": LoraLoaderExtractor,

@@ -233,17 +233,25 @@ class MetadataProcessor:
             
             pos_conditioning = metadata[PROMPTS][sampler_id].get("pos_conditioning")
             neg_conditioning = metadata[PROMPTS][sampler_id].get("neg_conditioning")
-            
+                
             # Try to match conditioning objects with those stored by CLIPTextEncodeExtractor
             for prompt_node_id, prompt_data in metadata[PROMPTS].items():
-                if "conditioning" not in prompt_data:
-                    continue
+                # For nodes with single conditioning output
+                if "conditioning" in prompt_data:
+                    if pos_conditioning is not None and id(prompt_data["conditioning"]) == id(pos_conditioning):
+                        result["prompt"] = prompt_data.get("text", "")
                     
-                if pos_conditioning is not None and id(prompt_data["conditioning"]) == id(pos_conditioning):
-                    result["prompt"] = prompt_data.get("text", "")
+                    if neg_conditioning is not None and id(prompt_data["conditioning"]) == id(neg_conditioning):
+                        result["negative_prompt"] = prompt_data.get("text", "")
                 
-                if neg_conditioning is not None and id(prompt_data["conditioning"]) == id(neg_conditioning):
-                    result["negative_prompt"] = prompt_data.get("text", "")
+                # For nodes with separate pos_conditioning and neg_conditioning outputs (like TSC_EfficientLoader)
+                if "positive_encoded" in prompt_data:
+                    if pos_conditioning is not None and id(prompt_data["positive_encoded"]) == id(pos_conditioning):
+                        result["prompt"] = prompt_data.get("positive_text", "")
+                
+                if "negative_encoded" in prompt_data:
+                    if neg_conditioning is not None and id(prompt_data["negative_encoded"]) == id(neg_conditioning):
+                        result["negative_prompt"] = prompt_data.get("negative_text", "")
             
         return result
     
