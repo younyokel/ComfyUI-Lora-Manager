@@ -1373,7 +1373,7 @@ class RecipeRoutes:
                 json.dump(recipe_data, f, indent=4, ensure_ascii=False)
 
             updated_lora['inLibrary'] = True
-            updated_lora['preview_url'] = target_lora['preview_url']
+            updated_lora['preview_url'] = config.get_preview_static_url(target_lora['preview_url'])
             updated_lora['localPath'] = target_lora['file_path']
                 
             # Update in cache if it exists

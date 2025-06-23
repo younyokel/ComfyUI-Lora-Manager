@@ -989,13 +989,10 @@ class RecipeModal {
                 setTimeout(() => {
                     this.showRecipeDetails(this.currentRecipe);
                 }, 500);
-                
-                // Refresh recipes list
-                if (window.recipeManager && typeof window.recipeManager.loadRecipes === 'function') {
-                    setTimeout(() => {
-                        window.recipeManager.loadRecipes(true);
-                    }, 1000);
-                }
+
+                state.virtualScroller.updateSingleItem(this.currentRecipe.file_path, {
+                    loras: this.currentRecipe.loras
+                });
             } else {
                 showToast(`Error: ${result.error}`, 'error');
             }
