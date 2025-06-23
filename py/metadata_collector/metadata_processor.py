@@ -1,5 +1,6 @@
 import json
 import sys
+from .constants import IMAGES
 
 # Check if running in standalone mode
 standalone_mode = 'nodes' not in sys.modules
@@ -18,6 +19,10 @@ class MetadataProcessor:
         - metadata: The workflow metadata
         - downstream_id: Optional ID of a downstream node to help identify the specific primary sampler
         """
+        if downstream_id is None:
+            if IMAGES in metadata and "first_decode" in metadata[IMAGES]:
+                downstream_id = metadata[IMAGES]["first_decode"]["node_id"]
+                
         # If we have a downstream_id and execution_order, use it to narrow down potential samplers
         if downstream_id and "execution_order" in metadata:
             execution_order = metadata["execution_order"]

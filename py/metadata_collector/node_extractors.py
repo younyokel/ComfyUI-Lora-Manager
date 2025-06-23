@@ -221,7 +221,31 @@ class KSamplerAdvancedExtractor(NodeMetadataExtractor):
 class TSCSamplerBaseExtractor(NodeMetadataExtractor):
     """Base extractor for handling TSC sampler node outputs"""
     @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        # Store vae_decode setting for later use in update
+        if inputs and "vae_decode" in inputs:
+            if SAMPLING not in metadata:
+                metadata[SAMPLING] = {}
+                
+            if node_id not in metadata[SAMPLING]:
+                metadata[SAMPLING][node_id] = {"parameters": {}, "node_id": node_id}
+                
+            # Store the vae_decode setting
+            metadata[SAMPLING][node_id]["vae_decode"] = inputs["vae_decode"]
+
+    @staticmethod
     def update(node_id, outputs, metadata):
+        # Check if vae_decode was set to "true"
+        should_save_image = True
+        if SAMPLING in metadata and node_id in metadata[SAMPLING]:
+            vae_decode = metadata[SAMPLING][node_id].get("vae_decode")
+            if vae_decode is not None:
+                should_save_image = (vae_decode == "true")
+        
+        # Skip image saving if vae_decode isn't "true"
+        if not should_save_image:
+            return
+        
         # Ensure IMAGES category exists
         if IMAGES not in metadata:
             metadata[IMAGES] = {}
@@ -250,13 +274,23 @@ class TSCSamplerBaseExtractor(NodeMetadataExtractor):
 
 class TSCKSamplerExtractor(SamplerExtractor, TSCSamplerBaseExtractor):
     """Extractor for TSC_KSampler nodes"""
-    # Extract method is inherited from SamplerExtractor
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        # Call parent extract methods
+        SamplerExtractor.extract(node_id, inputs, outputs, metadata)
+        TSCSamplerBaseExtractor.extract(node_id, inputs, outputs, metadata)
+
     # Update method is inherited from TSCSamplerBaseExtractor
 
 
 class TSCKSamplerAdvancedExtractor(KSamplerAdvancedExtractor, TSCSamplerBaseExtractor):
     """Extractor for TSC_KSamplerAdvanced nodes"""
-    # Extract method is inherited from KSamplerAdvancedExtractor
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        # Call parent extract methods
+        SamplerExtractor.extract(node_id, inputs, outputs, metadata)
+        TSCSamplerBaseExtractor.extract(node_id, inputs, outputs, metadata)
+
     # Update method is inherited from TSCSamplerBaseExtractor
 
 class LoraLoaderExtractor(NodeMetadataExtractor):
