@@ -148,6 +148,8 @@ export class FilterManager {
             apiEndpoint = '/api/recipes/base-models';
         } else if (this.currentPage === 'checkpoints') {
             apiEndpoint = '/api/checkpoints/base-models';
+        } else {
+            return;
         }
         
         // Fetch base models

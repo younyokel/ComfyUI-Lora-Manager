@@ -40,7 +40,8 @@ export const apiRoutes = {
 export const pageRoutes = {
     loras: '/loras',
     recipes: '/loras/recipes',
-    checkpoints: '/checkpoints'
+    checkpoints: '/checkpoints',
+    statistics: '/statistics'
 };
 
 // Helper function to get current page type
@@ -48,6 +49,7 @@ export function getCurrentPageType() {
     const path = window.location.pathname;
     if (path.includes('/loras/recipes')) return 'recipes';
     if (path.includes('/checkpoints')) return 'checkpoints';
+    if (path.includes('/statistics')) return 'statistics';
     if (path.includes('/loras')) return 'loras';
     return 'unknown';
 }
