@@ -1,11 +1,12 @@
 import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 import { 
-    getLorasWidgetModule,
     LORA_PATTERN,
     collectActiveLorasFromChain,
-    updateConnectedTriggerWords 
+    updateConnectedTriggerWords,
+    chainCallback
 } from "./utils.js";
-import { api } from "../../scripts/api.js";
+import { addLorasWidget } from "./loras_widget.js";
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -82,7 +83,7 @@ app.registerExtension({
         
         this.updateNodeLoraCode(node, loraCode, mode);
     },
-    
+
     // Helper method to update a single node's lora code
     updateNodeLoraCode(node, loraCode, mode) {
         // Update the input widget with new lora code
@@ -107,90 +108,94 @@ app.registerExtension({
             inputWidget.callback(inputWidget.value);
         }
     },
-    
-    async nodeCreated(node) {
-        if (node.comfyClass === "Lora Loader (LoraManager)") {
+
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeType.comfyClass == "Lora Loader (LoraManager)") {
+          chainCallback(nodeType.prototype, "onNodeCreated", function () {
             // Enable widget serialization
-            node.serialize_widgets = true;
+            this.serialize_widgets = true;
 
-            node.addInput('clip', 'CLIP', {
-                "shape": 7
+            this.addInput("clip", "CLIP", {
+              shape: 7,
             });
 
-            node.addInput("lora_stack", 'LORA_STACK', {
-                "shape": 7  // 7 is the shape of the optional input
+            this.addInput("lora_stack", "LORA_STACK", {
+              shape: 7, // 7 is the shape of the optional input
             });
 
-            // Wait for node to be properly initialized
-            requestAnimationFrame(async () => {
-                // Restore saved value if exists
-                let existingLoras = [];
-                if (node.widgets_values && node.widgets_values.length > 0) {
-                    // 0 for input widget, 1 for loras widget
-                    const savedValue = node.widgets_values[1];
-                    existingLoras = savedValue || [];
+            // Restore saved value if exists
+            let existingLoras = [];
+            if (this.widgets_values && this.widgets_values.length > 0) {
+              // 0 for input widget, 1 for loras widget
+              const savedValue = this.widgets_values[1];
+              existingLoras = savedValue || [];
+            }
+            // Merge the loras data
+            const mergedLoras = mergeLoras(
+              this.widgets[0].value,
+              existingLoras
+            );
+
+            // Add flag to prevent callback loops
+            let isUpdating = false;
+
+            // Get the widget object directly from the returned object
+            this.lorasWidget = addLorasWidget(
+              this,
+              "loras",
+              {
+                defaultVal: mergedLoras, // Pass object directly
+              },
+              (value) => {
+                // Collect all active loras from this node and its input chain
+                const allActiveLoraNames = collectActiveLorasFromChain(this);
+
+                // Update trigger words for connected toggle nodes with the aggregated lora names
+                updateConnectedTriggerWords(this, allActiveLoraNames);
+
+                // Prevent recursive calls
+                if (isUpdating) return;
+                isUpdating = true;
+
+                try {
+                  // Remove loras that are not in the value array
+                  const inputWidget = this.widgets[0];
+                  const currentLoras = value.map((l) => l.name);
+
+                  // Use the constant pattern here as well
+                  let newText = inputWidget.value.replace(
+                    LORA_PATTERN,
+                    (match, name, strength, clipStrength) => {
+                      return currentLoras.includes(name) ? match : "";
+                    }
+                  );
+
+                  // Clean up multiple spaces and trim
+                  newText = newText.replace(/\s+/g, " ").trim();
+
+                  inputWidget.value = newText;
+                } finally {
+                  isUpdating = false;
                 }
-                // Merge the loras data
-                const mergedLoras = mergeLoras(node.widgets[0].value, existingLoras);
-                
-                // Add flag to prevent callback loops
-                let isUpdating = false;
-                
-                // Dynamically load the appropriate widget module
-                const lorasModule = await getLorasWidgetModule();
-                const { addLorasWidget } = lorasModule;
-                 
-                // Get the widget object directly from the returned object
-                const result = addLorasWidget(node, "loras", {
-                    defaultVal: mergedLoras  // Pass object directly
-                }, (value) => {
-                    // Collect all active loras from this node and its input chain
-                    const allActiveLoraNames = collectActiveLorasFromChain(node);
-                        
-                    // Update trigger words for connected toggle nodes with the aggregated lora names
-                    updateConnectedTriggerWords(node, allActiveLoraNames);
+              }
+            ).widget;
 
-                    // Prevent recursive calls
-                    if (isUpdating) return;
-                    isUpdating = true;
+            // Update input widget callback
+            const inputWidget = this.widgets[0];
+            inputWidget.callback = (value) => {
+              if (isUpdating) return;
+              isUpdating = true;
 
-                    try {
-                        // Remove loras that are not in the value array
-                        const inputWidget = node.widgets[0];
-                        const currentLoras = value.map(l => l.name);
-                        
-                        // Use the constant pattern here as well
-                        let newText = inputWidget.value.replace(LORA_PATTERN, (match, name, strength, clipStrength) => {
-                            return currentLoras.includes(name) ? match : '';
-                        });
-                        
-                        // Clean up multiple spaces and trim
-                        newText = newText.replace(/\s+/g, ' ').trim();
-                        
-                        inputWidget.value = newText;
-                    } finally {
-                        isUpdating = false;
-                    }
-                });
-                
-                node.lorasWidget = result.widget;
+              try {
+                const currentLoras = this.lorasWidget.value || [];
+                const mergedLoras = mergeLoras(value, currentLoras);
 
-                // Update input widget callback
-                const inputWidget = node.widgets[0];
-                inputWidget.callback = (value) => {
-                    if (isUpdating) return;
-                    isUpdating = true;
-                    
-                    try {
-                        const currentLoras = node.lorasWidget.value || [];
-                        const mergedLoras = mergeLoras(value, currentLoras);
-                        
-                        node.lorasWidget.value = mergedLoras;
-                    } finally {
-                        isUpdating = false;
-                    }
-                };
-            });
+                this.lorasWidget.value = mergedLoras;
+              } finally {
+                isUpdating = false;
+              }
+            };
+          });
         }
     },
 });

@@ -1,11 +1,12 @@
 import { app } from "../../scripts/app.js";
 import { 
-    getLorasWidgetModule, 
     LORA_PATTERN, 
     getActiveLorasFromNode,
     collectActiveLorasFromChain,
-    updateConnectedTriggerWords
+    updateConnectedTriggerWords,
+    chainCallback
 } from "./utils.js";
+import { addLorasWidget } from "./loras_widget.js";
 
 function mergeLoras(lorasText, lorasArr) {
     const result = [];
@@ -39,35 +40,30 @@ function mergeLoras(lorasText, lorasArr) {
 app.registerExtension({
     name: "LoraManager.LoraStacker",
     
-    async nodeCreated(node) {
-        if (node.comfyClass === "Lora Stacker (LoraManager)") {
-            // Enable widget serialization
-            node.serialize_widgets = true;
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeType.comfyClass === "Lora Stacker (LoraManager)") {
+            chainCallback(nodeType.prototype, "onNodeCreated", async function() {
+                // Enable widget serialization
+                this.serialize_widgets = true;
 
-            node.addInput("lora_stack", 'LORA_STACK', {
-                "shape": 7  // 7 is the shape of the optional input
-            });
+                this.addInput("lora_stack", 'LORA_STACK', {
+                    "shape": 7  // 7 is the shape of the optional input
+                });
 
-            // Wait for node to be properly initialized
-            requestAnimationFrame(async () => {               
                 // Restore saved value if exists
                 let existingLoras = [];
-                if (node.widgets_values && node.widgets_values.length > 0) {
+                if (this.widgets_values && this.widgets_values.length > 0) {
                     // 0 for input widget, 1 for loras widget
-                    const savedValue = node.widgets_values[1];
+                    const savedValue = this.widgets_values[1];
                     existingLoras = savedValue || [];
                 }
                 // Merge the loras data
-                const mergedLoras = mergeLoras(node.widgets[0].value, existingLoras);
+                const mergedLoras = mergeLoras(this.widgets[0].value, existingLoras);
                 
                 // Add flag to prevent callback loops
                 let isUpdating = false;
                  
-                // Dynamically load the appropriate widget module
-                const lorasModule = await getLorasWidgetModule();
-                const { addLorasWidget } = lorasModule;
-                
-                const result = addLorasWidget(node, "loras", {
+                const result = addLorasWidget(this, "loras", {
                     defaultVal: mergedLoras  // Pass object directly
                 }, (value) => {
                     // Prevent recursive calls
@@ -76,7 +72,7 @@ app.registerExtension({
                     
                     try {
                         // Remove loras that are not in the value array
-                        const inputWidget = node.widgets[0];
+                        const inputWidget = this.widgets[0];
                         const currentLoras = value.map(l => l.name);
                         
                         // Use the constant pattern here as well
@@ -96,35 +92,35 @@ app.registerExtension({
                                 activeLoraNames.add(lora.name);
                             }
                         });
-                        updateConnectedTriggerWords(node, activeLoraNames);
+                        updateConnectedTriggerWords(this, activeLoraNames);
                         
                         // Find all Lora Loader nodes in the chain that might need updates
-                        updateDownstreamLoaders(node);
+                        updateDownstreamLoaders(this);
                     } finally {
                         isUpdating = false;
                     }
                 });
                 
-                node.lorasWidget = result.widget;
+                this.lorasWidget = result.widget;
 
                 // Update input widget callback
-                const inputWidget = node.widgets[0];
+                const inputWidget = this.widgets[0];
                 inputWidget.callback = (value) => {
                     if (isUpdating) return;
                     isUpdating = true;
                     
                     try {
-                        const currentLoras = node.lorasWidget.value || [];
+                        const currentLoras = this.lorasWidget.value || [];
                         const mergedLoras = mergeLoras(value, currentLoras);
                         
-                        node.lorasWidget.value = mergedLoras;
+                        this.lorasWidget.value = mergedLoras;
                         
                         // Update this stacker's direct trigger toggles with its own active loras
-                        const activeLoraNames = getActiveLorasFromNode(node);
-                        updateConnectedTriggerWords(node, activeLoraNames);
+                        const activeLoraNames = getActiveLorasFromNode(this);
+                        updateConnectedTriggerWords(this, activeLoraNames);
                         
                         // Find all Lora Loader nodes in the chain that might need updates
-                        updateDownstreamLoaders(node);
+                        updateDownstreamLoaders(this);
                     } finally {
                         isUpdating = false;
                     }

@@ -1,5 +1,23 @@
 export const CONVERTED_TYPE = 'converted-widget';
 
+export function chainCallback(object, property, callback) {
+  if (object == undefined) {
+    //This should not happen.
+    console.error("Tried to add callback to non-existant object")
+    return;
+  }
+  if (property in object) {
+    const callback_orig = object[property]
+    object[property] = function () {
+      const r = callback_orig.apply(this, arguments);
+      callback.apply(this, arguments);
+      return r
+    };
+  } else {
+    object[property] = callback;
+  }
+}
+
 export function getComfyUIFrontendVersion() {
   return window['__COMFYUI_FRONTEND_VERSION__'] || "0.0.0";
 }
