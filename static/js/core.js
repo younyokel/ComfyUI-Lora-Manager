@@ -42,6 +42,9 @@ export class AppCore {
         exampleImagesManager.initialize();
         // Initialize the help manager
         helpManager.initialize();
+
+        const cardInfoDisplay = state.global.settings.cardInfoDisplay || 'always';
+        document.body.classList.toggle('hover-reveal', cardInfoDisplay === 'hover');
         
         // Mark as initialized
         this.initialized = true;

@@ -36,6 +36,11 @@ export class SettingsManager {
         if (state.global.settings.optimizeExampleImages === undefined) {
             state.global.settings.optimizeExampleImages = true;
         }
+        
+        // Set default for cardInfoDisplay if undefined
+        if (state.global.settings.cardInfoDisplay === undefined) {
+            state.global.settings.cardInfoDisplay = 'always';
+        }
 
         // Convert old boolean compactMode to new displayDensity string
         if (typeof state.global.settings.displayDensity === 'undefined') {
@@ -101,6 +106,12 @@ export class SettingsManager {
         const displayDensitySelect = document.getElementById('displayDensity');
         if (displayDensitySelect) {
             displayDensitySelect.value = state.global.settings.displayDensity || 'default';
+        }
+        
+        // Set card info display setting
+        const cardInfoDisplaySelect = document.getElementById('cardInfoDisplay');
+        if (cardInfoDisplaySelect) {
+            cardInfoDisplaySelect.value = state.global.settings.cardInfoDisplay || 'always';
         }
 
         // Set optimize example images setting
@@ -245,6 +256,8 @@ export class SettingsManager {
             
             // Also update compactMode for backwards compatibility
             state.global.settings.compactMode = (value !== 'default');
+        } else if (settingKey === 'card_info_display') {
+            state.global.settings.cardInfoDisplay = value;
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;
@@ -506,6 +519,10 @@ export class SettingsManager {
             // Add the appropriate density class
             grid.classList.add(`${density}-density`);
         }
+        
+        // Apply card info display setting
+        const cardInfoDisplay = state.global.settings.cardInfoDisplay || 'always';
+        document.body.classList.toggle('hover-reveal', cardInfoDisplay === 'hover');
     }
 }
 

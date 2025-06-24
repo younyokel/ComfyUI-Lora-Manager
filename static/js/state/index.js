@@ -4,7 +4,8 @@ import { getStorageItem, getMapFromStorage } from '../utils/storageHelpers.js';
 // Load settings from localStorage or use defaults
 const savedSettings = getStorageItem('settings', {
     blurMatureContent: true,
-    show_only_sfw: false
+    show_only_sfw: false,
+    cardInfoDisplay: 'always' // Add default value for card info display
 });
 
 // Load preview versions from localStorage

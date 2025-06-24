@@ -226,6 +226,28 @@
                         <span class="warning-text">Warning: Higher densities may cause performance issues on systems with limited resources.</span>
                     </div>
                 </div>
+                
+                <!-- Add Card Info Display setting -->
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="cardInfoDisplay">Card Info Display</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="cardInfoDisplay" onchange="settingsManager.saveSelectSetting('cardInfoDisplay', 'card_info_display')">
+                                <option value="always">Always Visible</option>
+                                <option value="hover">Reveal on Hover</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Choose when to display model information and action buttons:
+                        <ul>
+                            <li><strong>Always Visible:</strong> Headers and footers are always visible</li>
+                            <li><strong>Reveal on Hover:</strong> Headers and footers only appear when hovering over a card</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             
             <!-- Add Cache Management Section -->
