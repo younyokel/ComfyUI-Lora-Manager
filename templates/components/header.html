@@ -16,10 +16,13 @@
       <a href="/checkpoints" class="nav-item" id="checkpointsNavItem">
         <i class="fas fa-check-circle"></i> Checkpoints
       </a>
+      <a href="/statistics" class="nav-item" id="statisticsNavItem">
+        <i class="fas fa-chart-bar"></i> Statistics
+      </a>
     </nav>
     
     <!-- Context-aware search container -->
-    <div class="header-search">
+    <div class="header-search" id="headerSearch">
       <div class="search-container">
         <input type="text" id="searchInput" placeholder="Search..." />
         <i class="fas fa-search search-icon"></i>
@@ -153,6 +156,7 @@
     const lorasNavItem = document.getElementById('lorasNavItem');
     const recipesNavItem = document.getElementById('recipesNavItem');
     const checkpointsNavItem = document.getElementById('checkpointsNavItem');
+    const statisticsNavItem = document.getElementById('statisticsNavItem');
     
     if (currentPath === '/loras') {
       lorasNavItem.classList.add('active');
@@ -160,6 +164,8 @@
       recipesNavItem.classList.add('active');
     } else if (currentPath === '/checkpoints') {
       checkpointsNavItem.classList.add('active');
+    } else if (currentPath === '/statistics') {
+      statisticsNavItem.classList.add('active');
     }
   });
 </script>

@@ -26,6 +26,7 @@ export class HeaderManager {
       const path = window.location.pathname;
       if (path.includes('/loras/recipes')) return 'recipes';
       if (path.includes('/checkpoints')) return 'checkpoints';
+      if (path.includes('/statistics')) return 'statistics';
       if (path.includes('/loras')) return 'loras';
       return 'unknown';
     }
@@ -121,14 +122,17 @@ export class HeaderManager {
           });
       }
       
-      // Handle help toggle
-      // const helpToggle = document.querySelector('.help-toggle');
-      // if (helpToggle) {
-      //   helpToggle.addEventListener('click', () => {
-      //     if (window.modalManager) {
-      //       window.modalManager.toggleModal('helpModal');
-      //     }
-      //   });
-      // }
+      // Hide search functionality on Statistics page
+      this.updateHeaderForPage();
+    }
+    
+    updateHeaderForPage() {
+      const headerSearch = document.getElementById('headerSearch');
+      
+      if (this.currentPage === 'statistics' && headerSearch) {
+        headerSearch.style.display = 'none';
+      } else if (headerSearch) {
+        headerSearch.style.display = 'flex';
+      }
     }
 }

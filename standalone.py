@@ -301,13 +301,16 @@ class StandaloneLoraManager(LoraManager):
         from py.routes.update_routes import UpdateRoutes
         from py.routes.misc_routes import MiscRoutes
         from py.routes.example_images_routes import ExampleImagesRoutes
+        from py.routes.stats_routes import StatsRoutes
         
         lora_routes = LoraRoutes()
         checkpoints_routes = CheckpointsRoutes()
+        stats_routes = StatsRoutes()
         
         # Initialize routes
         lora_routes.setup_routes(app)
         checkpoints_routes.setup_routes(app)
+        stats_routes.setup_routes(app)
         ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)

@@ -10,6 +10,7 @@ from .routes.lora_routes import LoraRoutes
 from .routes.api_routes import ApiRoutes
 from .routes.recipe_routes import RecipeRoutes
 from .routes.checkpoints_routes import CheckpointsRoutes
+from .routes.stats_routes import StatsRoutes
 from .routes.update_routes import UpdateRoutes
 from .routes.misc_routes import MiscRoutes
 from .routes.example_images_routes import ExampleImagesRoutes
@@ -112,10 +113,12 @@ class LoraManager:
         # Setup feature routes
         lora_routes = LoraRoutes()
         checkpoints_routes = CheckpointsRoutes()
+        stats_routes = StatsRoutes()
         
         # Initialize routes
         lora_routes.setup_routes(app)
         checkpoints_routes.setup_routes(app)
+        stats_routes.setup_routes(app)  # Add statistics routes
         ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)  
