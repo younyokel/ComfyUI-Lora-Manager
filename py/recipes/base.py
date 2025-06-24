@@ -79,6 +79,9 @@ class RecipeMetadataParser(ABC):
             if 'model' in civitai_info and 'name' in civitai_info['model']:
                 lora_entry['name'] = civitai_info['model']['name']
             
+            lora_entry['id'] = civitai_info.get('id')
+            lora_entry['modelId'] = civitai_info.get('modelId')
+            
             # Update version if available
             if 'name' in civitai_info:
                 lora_entry['version'] = civitai_info.get('name', '')

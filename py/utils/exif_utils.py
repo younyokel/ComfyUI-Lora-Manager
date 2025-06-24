@@ -147,7 +147,7 @@ class ExifUtils:
                     "file_name": lora.get("file_name", ""),
                     "hash": lora.get("hash", "").lower() if lora.get("hash") else "",
                     "strength": float(lora.get("strength", 1.0)),
-                    "modelVersionId": lora.get("modelVersionId", ""),
+                    "modelVersionId": lora.get("modelVersionId", 0),
                     "modelName": lora.get("modelName", ""),
                     "modelVersionName": lora.get("modelVersionName", ""),
                 }

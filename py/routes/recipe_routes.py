@@ -648,7 +648,7 @@ class RecipeRoutes:
                     "file_name": lora.get("file_name", "") or os.path.splitext(os.path.basename(lora.get("localPath", "")))[0] if lora.get("localPath") else "",
                     "hash": lora.get("hash", "").lower() if lora.get("hash") else "",
                     "strength": float(lora.get("weight", 1.0)),
-                    "modelVersionId": lora.get("id", ""),
+                    "modelVersionId": lora.get("id", 0),
                     "modelName": lora.get("name", ""),
                     "modelVersionName": lora.get("version", ""),
                     "isDeleted": lora.get("isDeleted", False),  # Preserve deletion status in saved recipe
@@ -1107,7 +1107,7 @@ class RecipeRoutes:
                         "file_name": lora_name,
                         "hash": lora_info.get("sha256", "").lower() if lora_info else "",
                         "strength": float(lora_strength),
-                        "modelVersionId": lora_info.get("civitai", {}).get("id", "") if lora_info else "",
+                        "modelVersionId": lora_info.get("civitai", {}).get("id", 0) if lora_info else 0,
                         "modelName": lora_info.get("civitai", {}).get("model", {}).get("name", "") if lora_info else lora_name,
                         "modelVersionName": lora_info.get("civitai", {}).get("name", "") if lora_info else "",
                         "isDeleted": False
@@ -1296,7 +1296,7 @@ class RecipeRoutes:
             data = await request.json()
             
             # Validate required fields
-            required_fields = ['recipe_id', 'lora_data', 'target_name']
+            required_fields = ['recipe_id', 'lora_index', 'target_name']
             for field in required_fields:
                 if field not in data:
                     return web.json_response({
@@ -1304,7 +1304,7 @@ class RecipeRoutes:
                     }, status=400)
             
             recipe_id = data['recipe_id']
-            lora_data = data['lora_data']
+            lora_index = int(data['lora_index'])
             target_name = data['target_name']
             
             # Get recipe scanner
@@ -1324,46 +1324,27 @@ class RecipeRoutes:
             # Load recipe data
             with open(recipe_path, 'r', encoding='utf-8') as f:
                 recipe_data = json.load(f)
-                
-            # Find the deleted LoRA in the recipe
-            found = False
-            updated_lora = None
+
+            lora = recipe_data.get("loras", [])[lora_index] if lora_index < len(recipe_data.get('loras', [])) else None
+
+            if lora is None:
+                return web.json_response({"error": "LoRA index out of range in recipe"}, status=404)
+
+            # Update LoRA data
+            lora['isDeleted'] = False
+            lora['exclude'] = False
+            lora['file_name'] = target_name
             
-            # Identification can be by hash, modelVersionId, or modelName
-            for i, lora in enumerate(recipe_data.get('loras', [])):
-                match_found = False
-                
-                # Try to match by available identifiers
-                if 'hash' in lora and 'hash' in lora_data and lora['hash'] == lora_data['hash']:
-                    match_found = True
-                elif 'modelVersionId' in lora and 'modelVersionId' in lora_data and lora['modelVersionId'] == lora_data['modelVersionId']:
-                    match_found = True
-                elif 'modelName' in lora and 'modelName' in lora_data and lora['modelName'] == lora_data['modelName']:
-                    match_found = True
-                    
-                if match_found:
-                    # Update LoRA data
-                    lora['isDeleted'] = False
-                    lora['file_name'] = target_name
-                    
-                    # Update with information from the target LoRA
-                    if 'sha256' in target_lora:
-                        lora['hash'] = target_lora['sha256'].lower()
-                    if target_lora.get("civitai"):
-                        lora['modelName'] = target_lora['civitai']['model']['name']
-                        lora['modelVersionName'] = target_lora['civitai']['name']
-                        lora['modelVersionId'] = target_lora['civitai']['id']
-                        
-                    # Keep original fields for identification
-                    
-                    # Mark as found and store updated lora
-                    found = True
-                    updated_lora = dict(lora)  # Make a copy for response
-                    break
-                    
-            if not found:
-                return web.json_response({"error": "Could not find matching deleted LoRA in recipe"}, status=404)
+            # Update with information from the target LoRA
+            if 'sha256' in target_lora:
+                lora['hash'] = target_lora['sha256'].lower()
+            if target_lora.get("civitai"):
+                lora['modelName'] = target_lora['civitai']['model']['name']
+                lora['modelVersionName'] = target_lora['civitai']['name']
+                lora['modelVersionId'] = target_lora['civitai']['id']
             
+            updated_lora = dict(lora)  # Make a copy for response
+
             # Recalculate recipe fingerprint after updating LoRA
             from ..utils.utils import calculate_recipe_fingerprint
             recipe_data['fingerprint'] = calculate_recipe_fingerprint(recipe_data.get('loras', []))

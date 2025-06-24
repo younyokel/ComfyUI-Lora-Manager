@@ -141,8 +141,8 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                     if resource.get("type") in ["lora", "lycoris"] or "type" not in resource:
                         # Initialize lora entry with the same structure as in automatic.py
                         lora_entry = {
-                            'id': str(resource.get("modelVersionId")),
-                            'modelId': str(resource.get("modelId")) if resource.get("modelId") else None,
+                            'id': resource.get("modelVersionId", 0),
+                            'modelId': resource.get("modelId", 0),
                             'name': resource.get("modelName", "Unknown LoRA"),
                             'version': resource.get("modelVersionName", ""),
                             'type': resource.get("type", "lora"),

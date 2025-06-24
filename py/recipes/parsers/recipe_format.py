@@ -43,7 +43,7 @@ class RecipeFormatParser(RecipeMetadataParser):
             for lora in recipe_metadata.get('loras', []):
                 # Convert recipe lora format to frontend format
                 lora_entry = {
-                    'id': lora.get('modelVersionId', ''),
+                    'id': int(lora.get('modelVersionId', 0)),
                     'name': lora.get('modelName', ''),
                     'version': lora.get('modelVersionName', ''),
                     'type': 'lora',

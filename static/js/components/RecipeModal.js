@@ -950,13 +950,6 @@ class RecipeModal {
             // Remove .safetensors extension if present
             fileName = fileName.replace(/\.safetensors$/, '');
             
-            // Get the deleted lora data
-            const deletedLora = this.currentRecipe.loras[loraIndex];
-            if (!deletedLora) {
-                showToast('Error: Could not find the LoRA in the recipe', 'error');
-                return;
-            }
-            
             state.loadingManager.showSimpleLoading('Reconnecting LoRA...');
             
             // Call API to reconnect the LoRA
@@ -967,7 +960,7 @@ class RecipeModal {
                 },
                 body: JSON.stringify({
                     recipe_id: this.recipeId,
-                    lora_data: deletedLora,
+                    lora_index: loraIndex,
                     target_name: fileName
                 })
             });

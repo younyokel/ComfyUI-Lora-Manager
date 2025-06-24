@@ -2,6 +2,7 @@
 import { showToast, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpers.js';
 import { modalManager } from '../managers/ModalManager.js';
 import { getCurrentPageState } from '../state/index.js';
+import { state } from '../state/index.js';
 
 class RecipeCard {
     constructor(recipe, clickHandler) {
@@ -141,6 +142,7 @@ class RecipeCard {
         try {
             // Get recipe ID
             const recipeId = this.recipe.id;
+            const filePath = this.recipe.file_path;
             if (!recipeId) {
                 showToast('Cannot delete recipe: Missing recipe ID', 'error');
                 return;
@@ -184,6 +186,7 @@ class RecipeCard {
             
             // Store recipe ID in the modal for the delete confirmation handler
             deleteModal.dataset.recipeId = recipeId;
+            deleteModal.dataset.filePath = filePath;
             
             // Update button event handlers
             cancelBtn.onclick = () => modalManager.closeModal('deleteModal');
@@ -227,7 +230,7 @@ class RecipeCard {
         .then(data => {
             showToast('Recipe deleted successfully', 'success');
             
-            window.recipeManager.loadRecipes();
+            state.virtualScroller.removeItemByFilePath(deleteModal.dataset.filePath);
             
             modalManager.closeModal('deleteModal');
         })
