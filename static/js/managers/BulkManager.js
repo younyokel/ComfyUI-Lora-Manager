@@ -41,6 +41,12 @@ export class BulkManager {
                     return; // Exit early - let the browser handle Ctrl+A within the modal
                 }
 
+                // Check if search input is currently focused - if so, don't handle Ctrl+A
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && document.activeElement === searchInput) {
+                    return; // Exit early - let the browser handle Ctrl+A within the search input
+                }
+
                 // Prevent default browser "Select All" behavior
                 e.preventDefault();
                 
