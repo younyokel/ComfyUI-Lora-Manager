@@ -49,7 +49,7 @@ app.registerExtension({
 
                 // Restore saved value if exists
                 if (node.widgets_values && node.widgets_values.length > 0) {
-                    // 0 is group mode, 1 is default_active, 2 is input, 3 is tag widget, 4 is original message
+                    // 0 is group mode, 1 is default_active, 2 is tag widget, 3 is original message
                     const savedValue = node.widgets_values[2];
                     if (savedValue) {
                         result.widget.value = Array.isArray(savedValue) ? savedValue : [];

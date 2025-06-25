@@ -50,14 +50,8 @@ class TriggerWordToggle:
 
     def process_trigger_words(self, id, group_mode, default_active, **kwargs):
         # Handle both old and new formats for trigger_words
-        trigger_words_data = self._get_toggle_data(kwargs, 'trigger_words')
+        trigger_words_data = self._get_toggle_data(kwargs, 'orinalMessage')
         trigger_words = trigger_words_data if isinstance(trigger_words_data, str) else ""
-        
-        # Send trigger words to frontend
-        # PromptServer.instance.send_sync("trigger_word_update", {
-        #     "id": id,
-        #     "message": trigger_words
-        # })
         
         filtered_triggers = trigger_words
         
