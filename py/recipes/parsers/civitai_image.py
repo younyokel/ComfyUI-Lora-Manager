@@ -235,7 +235,7 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                             except Exception as e:
                                 logger.error(f"Error fetching Civitai info for model ID {model_id}: {e}")
                         
-                        result["loras"].append(lora_entry)
+                            result["loras"].append(lora_entry)
             
             # If base model wasn't found earlier, use the most common one from LoRAs
             if not result["base_model"] and base_model_counts:
