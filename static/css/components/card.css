@@ -254,13 +254,15 @@
 
 /* New styles for hover reveal mode */
 .hover-reveal .card-header,
-.hover-reveal .card-footer {
+.hover-reveal .card-footer,
+.hover-reveal .recipe-indicator {
     opacity: 0;
     transition: opacity 0.2s ease;
 }
 
 .hover-reveal .lora-card:hover .card-header,
-.hover-reveal .lora-card:hover .card-footer {
+.hover-reveal .lora-card:hover .card-footer,
+.hover-reveal .lora-card:hover .recipe-indicator {
     opacity: 1;
 }
 

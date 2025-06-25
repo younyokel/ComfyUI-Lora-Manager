@@ -69,6 +69,30 @@ class ExampleImagesManager {
                 pathInput.value = savedPath;
                 // Enable download button if path is set
                 this.updateDownloadButtonState(true);
+                
+                // Sync the saved path with the backend
+                try {
+                    const response = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            example_images_path: savedPath
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (!data.success) {
+                        console.error('Failed to sync example images path with backend:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Failed to sync saved path with backend:', error);
+                }
             } else {
                 // Disable download button if no path is set
                 this.updateDownloadButtonState(false);
