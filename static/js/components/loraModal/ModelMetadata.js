@@ -4,7 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { updateModelCard } from '../../utils/cardUpdater.js';
+import { state } from '../../state/index.js';
 import { saveModelMetadata, renameLoraFile } from '../../api/loraApi.js';
 
 /**
@@ -420,8 +420,8 @@ export function setupFileNameEditing(filePath) {
                 
                 // Get the new file path and update the card
                 const newFilePath = filePath.replace(originalValue, newFileName);
-                // Pass the new file_name in the updates object for proper card update
-                updateModelCard(filePath, { file_name: newFileName, filepath: newFilePath });
+;
+                state.virtualScroller.updateSingleItem(filePath, { file_name: newFileName, file_path: newFilePath });
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

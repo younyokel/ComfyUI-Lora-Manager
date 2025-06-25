@@ -56,6 +56,7 @@ class CheckpointsRoutes:
         app.router.add_post('/api/checkpoints/replace-preview', self.replace_preview)
         app.router.add_post('/api/checkpoints/download', self.download_checkpoint)
         app.router.add_post('/api/checkpoints/save-metadata', self.save_metadata) # Add new route
+        app.router.add_post('/api/checkpoints/rename', self.rename_checkpoint)  # Add new rename endpoint
         
         # Add new WebSocket endpoint for checkpoint progress
         app.router.add_get('/ws/checkpoint-progress', ws_manager.handle_checkpoint_connection)
@@ -836,3 +837,7 @@ class CheckpointsRoutes:
     async def verify_duplicates(self, request: web.Request) -> web.Response:
         """Handle verification of duplicate checkpoint hashes"""
         return await ModelRouteUtils.handle_verify_duplicates(request, self.scanner)
+
+    async def rename_checkpoint(self, request: web.Request) -> web.Response:
+        """Handle renaming a checkpoint file and its associated files"""
+        return await ModelRouteUtils.handle_rename_model(request, self.scanner)

@@ -2,7 +2,6 @@ import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { modalManager } from './ModalManager.js';
 import { getStorageItem } from '../utils/storageHelpers.js';
-import { updateModelCard } from '../utils/cardUpdater.js';
 
 class MoveManager {
     constructor() {
@@ -151,8 +150,8 @@ class MoveManager {
                         const filename = filePath.substring(filePath.lastIndexOf('/') + 1);
                         // Construct new filepath
                         const newFilePath = `${targetPath}/${filename}`;
-                        // Update the card with new filepath
-                        updateModelCard(filePath, {filepath: newFilePath});
+
+                        state.virtualScroller.updateSingleItem(filePath, {file_path: newFilePath});
                     });
                 }
             } else {
@@ -169,8 +168,8 @@ class MoveManager {
                     const filename = this.currentFilePath.substring(this.currentFilePath.lastIndexOf('/') + 1);
                     // Construct new filepath
                     const newFilePath = `${targetPath}/${filename}`;
-                    // Update the card with new filepath
-                    updateModelCard(this.currentFilePath, {filepath: newFilePath});
+
+                    state.virtualScroller.updateSingleItem(this.currentFilePath, {file_path: newFilePath});
                 }
             }
 

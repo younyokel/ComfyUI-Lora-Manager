@@ -4,7 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { updateModelCard } from '../../utils/cardUpdater.js';
+import { state } from '../../state/index.js';
 import { saveModelMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
 
 /**
@@ -412,30 +412,10 @@ export function setupFileNameEditing(filePath) {
             if (result.success) {
                 showToast('File name updated successfully', 'success');
                 
-                // Get the new file path from the result
-                const pathParts = filePath.split(/[\\/]/);
-                pathParts.pop(); // Remove old filename
-                const newFilePath = [...pathParts, newFileName].join('/');
+                const newFilePath = filePath.replace(originalValue, newFileName);
                 
-                // Update the checkpoint card with new file path
-                updateModelCard(filePath, { 
-                    filepath: newFilePath,
-                    file_name: newFileName 
-                });
-                
-                // Update the file name display in the modal
-                document.querySelector('#file-name').textContent = newFileName;
-                
-                // Update the modal's data-filepath attribute
-                const modalContent = document.querySelector('#checkpointModal .modal-content');
-                if (modalContent) {
-                    modalContent.dataset.filepath = newFilePath;
-                }
-                
-                // Reload the page after a short delay to reflect changes
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                state.virtualScroller.updateSingleItem(filePath, { file_name: newFileName, file_path: newFilePath });
+                this.textContent = newFileName;
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

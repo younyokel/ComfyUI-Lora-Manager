@@ -140,7 +140,7 @@ export async function renameCheckpointFile(filePath, newFileName) {
         // Show loading indicator
         state.loadingManager.showSimpleLoading('Renaming checkpoint file...');
         
-        const response = await fetch('/api/rename_checkpoint', {
+        const response = await fetch('/api/checkpoints/rename', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -160,7 +160,6 @@ export async function renameCheckpointFile(filePath, newFileName) {
         console.error('Error renaming checkpoint file:', error);
         throw error;
     } finally {
-        // Hide loading indicator
         state.loadingManager.hide();
     }
 }

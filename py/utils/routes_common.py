@@ -836,3 +836,132 @@ class ModelRouteUtils:
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+    @staticmethod
+    async def handle_rename_model(request: web.Request, scanner) -> web.Response:
+        """Handle renaming a model file and its associated files
+        
+        Args:
+            request: The aiohttp request
+            scanner: The model scanner instance
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            new_file_name = data.get('new_file_name')
+            
+            if not file_path or not new_file_name:
+                return web.json_response({
+                    'success': False,
+                    'error': 'File path and new file name are required'
+                }, status=400)
+            
+            # Validate the new file name (no path separators or invalid characters)
+            invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+            if any(char in new_file_name for char in invalid_chars):
+                return web.json_response({
+                    'success': False,
+                    'error': 'Invalid characters in file name'
+                }, status=400)
+            
+            # Get the directory and current file name
+            target_dir = os.path.dirname(file_path)
+            old_file_name = os.path.splitext(os.path.basename(file_path))[0]
+            
+            # Check if the target file already exists
+            new_file_path = os.path.join(target_dir, f"{new_file_name}.safetensors").replace(os.sep, '/')
+            if os.path.exists(new_file_path):
+                return web.json_response({
+                    'success': False,
+                    'error': 'A file with this name already exists'
+                }, status=400)
+            
+            # Define the patterns for associated files
+            patterns = [
+                f"{old_file_name}.safetensors",  # Required
+                f"{old_file_name}.metadata.json",
+                f"{old_file_name}.metadata.json.bak",
+            ]
+            
+            # Add all preview file extensions
+            for ext in PREVIEW_EXTENSIONS:
+                patterns.append(f"{old_file_name}{ext}")
+            
+            # Find all matching files
+            existing_files = []
+            for pattern in patterns:
+                path = os.path.join(target_dir, pattern)
+                if os.path.exists(path):
+                    existing_files.append((path, pattern))
+            
+            # Get the hash from the main file to update hash index
+            hash_value = None
+            metadata = None
+            metadata_path = os.path.join(target_dir, f"{old_file_name}.metadata.json")
+            
+            if os.path.exists(metadata_path):
+                metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+                hash_value = metadata.get('sha256')
+            
+            # Rename all files
+            renamed_files = []
+            new_metadata_path = None
+            
+            for old_path, pattern in existing_files:
+                # Get the file extension like .safetensors or .metadata.json
+                ext = ModelRouteUtils.get_multipart_ext(pattern)
+
+                # Create the new path
+                new_path = os.path.join(target_dir, f"{new_file_name}{ext}").replace(os.sep, '/')
+                
+                # Rename the file
+                os.rename(old_path, new_path)
+                renamed_files.append(new_path)
+                
+                # Keep track of metadata path for later update
+                if ext == '.metadata.json':
+                    new_metadata_path = new_path
+            
+            # Update the metadata file with new file name and paths
+            if new_metadata_path and metadata:
+                # Update file_name, file_path and preview_url in metadata
+                metadata['file_name'] = new_file_name
+                metadata['file_path'] = new_file_path
+                
+                # Update preview_url if it exists
+                if 'preview_url' in metadata and metadata['preview_url']:
+                    old_preview = metadata['preview_url']
+                    ext = ModelRouteUtils.get_multipart_ext(old_preview)
+                    new_preview = os.path.join(target_dir, f"{new_file_name}{ext}").replace(os.sep, '/')
+                    metadata['preview_url'] = new_preview
+                
+                # Save updated metadata
+                await MetadataManager.save_metadata(new_file_path, metadata)
+            
+            # Update the scanner cache
+            if metadata:
+                await scanner.update_single_model_cache(file_path, new_file_path, metadata)
+                
+                # Update recipe files and cache if hash is available and recipe_scanner exists
+                if hash_value and hasattr(scanner, 'update_lora_filename_by_hash'):
+                    recipe_scanner = await ServiceRegistry.get_recipe_scanner()
+                    if recipe_scanner:
+                        recipes_updated, cache_updated = await recipe_scanner.update_lora_filename_by_hash(hash_value, new_file_name)
+                        logger.info(f"Updated {recipes_updated} recipe files and {cache_updated} cache entries for renamed model")
+            
+            return web.json_response({
+                'success': True,
+                'new_file_path': new_file_path,
+                'renamed_files': renamed_files,
+                'reload_required': False
+            })
+            
+        except Exception as e:
+            logger.error(f"Error renaming model: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)

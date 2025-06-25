@@ -149,7 +149,7 @@ export async function renameLoraFile(filePath, newFileName) {
         // Show loading indicator
         state.loadingManager.showSimpleLoading('Renaming LoRA file...');
         
-        const response = await fetch('/api/rename_lora', {
+        const response = await fetch('/api/loras/rename', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
