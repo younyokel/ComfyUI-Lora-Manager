@@ -792,9 +792,13 @@ class ApiRoutes:
                             
                             metadata['modelDescription'] = description
                             metadata['tags'] = tags
-                            metadata['creator'] = creator
+                            # Ensure the civitai dict exists
+                            if 'civitai' not in metadata:
+                                metadata['civitai'] = {}
+                            # Store creator in the civitai nested structure
+                            metadata['civitai']['creator'] = creator
                             
-                            await MetadataManager.save_metadata(file_path, metadata)
+                            await MetadataManager.save_metadata(file_path, metadata, True)
                         except Exception as e:
                             logger.error(f"Error saving model metadata: {e}")
             

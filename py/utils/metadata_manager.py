@@ -91,14 +91,14 @@ class MetadataManager:
         return None
     
     @staticmethod
-    async def save_metadata(path: str, metadata: Union[BaseModelMetadata, Dict], create_backup: bool = True) -> bool:
+    async def save_metadata(path: str, metadata: Union[BaseModelMetadata, Dict], create_backup: bool = False) -> bool:
         """
         Save metadata with atomic write operations and backup creation.
         
         Args:
           path: Path to the model file or directly to the metadata file
           metadata: Metadata to save (either BaseModelMetadata object or dict)
-          create_backup: Whether to create a backup of existing file
+          create_backup: Whether to create a new backup of existing file if a backup doesn't already exist
           
         Returns:
           bool: Success or failure
@@ -114,10 +114,13 @@ class MetadataManager:
         backup_path = f"{metadata_path}.bak"
         
         try:
-            # Create backup if requested and file exists
-            if create_backup and os.path.exists(metadata_path):
+            # Create backup if file exists and either:
+            # 1. create_backup is True, OR
+            # 2. backup file doesn't already exist
+            if os.path.exists(metadata_path) and (create_backup or not os.path.exists(backup_path)):
                 try:
                     shutil.copy2(metadata_path, backup_path)
+                    logger.debug(f"Created metadata backup at: {backup_path}")
                 except Exception as e:
                     logger.warning(f"Failed to create metadata backup: {str(e)}")
             

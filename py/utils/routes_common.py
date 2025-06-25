@@ -154,7 +154,7 @@ class ModelRouteUtils:
                                 local_metadata['preview_nsfw_level'] = first_preview.get('nsfwLevel', 0)
 
         # Save updated metadata
-        await MetadataManager.save_metadata(metadata_path, local_metadata)
+        await MetadataManager.save_metadata(metadata_path, local_metadata, True)
 
     @staticmethod
     async def fetch_and_update_model(
