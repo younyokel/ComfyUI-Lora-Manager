@@ -1,11 +1,31 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
+import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { showToast, copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { setSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
+import { updateRecipeMetadata } from '../../api/recipeApi.js';
 import { state } from '../../state/index.js';
 
 export class RecipeContextMenu extends BaseContextMenu {
     constructor() {
         super('recipeContextMenu', '.lora-card');
+        this.nsfwSelector = document.getElementById('nsfwLevelSelector');
+        this.modelType = 'recipe';
+        
+        // Initialize NSFW Level Selector events
+        if (this.nsfwSelector) {
+            this.initNSFWSelector();
+        }
+    }
+
+    // Use the updateRecipeMetadata implementation from recipeApi
+    async saveModelMetadata(filePath, data) {
+        return updateRecipeMetadata(filePath, data);
+    }
+
+    // Override resetAndReload for recipe context
+    async resetAndReload() {
+        const { resetAndReload } = await import('../../api/recipeApi.js');
+        return resetAndReload();
     }
     
     showMenu(x, y, card) {
@@ -31,6 +51,12 @@ export class RecipeContextMenu extends BaseContextMenu {
     }
     
     handleMenuAction(action) {
+        // First try to handle with common actions from ModelContextMenuMixin
+        if (ModelContextMenuMixin.handleCommonMenuActions.call(this, action)) {
+            return;
+        }
+
+        // Handle recipe-specific actions
         const recipeId = this.currentCard.dataset.id;
         
         switch(action) {
@@ -257,3 +283,6 @@ export class RecipeContextMenu extends BaseContextMenu {
         }
     }
 }
+
+// Mix in shared methods from ModelContextMenuMixin
+Object.assign(RecipeContextMenu.prototype, ModelContextMenuMixin);

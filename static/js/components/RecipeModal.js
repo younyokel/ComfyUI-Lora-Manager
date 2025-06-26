@@ -3,6 +3,7 @@ import { showToast, copyToClipboard } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { setSessionItem, removeSessionItem } from '../utils/storageHelpers.js';
 import { updateRecipeCard } from '../utils/cardUpdater.js';
+import { updateRecipeMetadata } from '../api/recipeApi.js';
 
 class RecipeModal {
     constructor() {
@@ -117,6 +118,7 @@ class RecipeModal {
         
         // Store the recipe ID for copy syntax API call
         this.recipeId = recipe.id;
+        this.filePath = recipe.file_path;
         
         // Set recipe tags if they exist
         const tagsCompactElement = document.getElementById('recipeTagsCompact');
@@ -522,7 +524,19 @@ class RecipeModal {
                 titleContainer.querySelector('.content-text').textContent = newTitle;
                 
                 // Update the recipe on the server
-                this.updateRecipeMetadata({ title: newTitle });
+                updateRecipeMetadata(this.filePath, { title: newTitle })
+                    .then(data => {
+                        // Show success toast
+                        showToast('Recipe name updated successfully', 'success');
+                        
+                        // Update the current recipe object
+                        this.currentRecipe.title = newTitle;
+                    })
+                    .catch(error => {
+                        // Error is handled in the API function
+                        // Reset the UI if needed
+                        titleContainer.querySelector('.content-text').textContent = this.currentRecipe.title || '';
+                    });
             }
             
             // Hide editor
@@ -580,69 +594,81 @@ class RecipeModal {
             
             if (tagsChanged) {
                 // Update the recipe on the server
-                this.updateRecipeMetadata({ tags: newTags });
-                
-                // Update tags in the UI
-                const tagsDisplay = tagsContainer.querySelector('.tags-display');
-                tagsDisplay.innerHTML = '';
-                
-                if (newTags.length > 0) {
-                    // Limit displayed tags to 5, show a "+X more" button if needed
-                    const maxVisibleTags = 5;
-                    const visibleTags = newTags.slice(0, maxVisibleTags);
-                    const remainingTags = newTags.length > maxVisibleTags ? newTags.slice(maxVisibleTags) : [];
-                    
-                    // Add visible tags
-                    visibleTags.forEach(tag => {
-                        const tagElement = document.createElement('div');
-                        tagElement.className = 'recipe-tag-compact';
-                        tagElement.textContent = tag;
-                        tagsDisplay.appendChild(tagElement);
+                updateRecipeMetadata(this.filePath, { tags: newTags })
+                    .then(data => {
+                        // Show success toast
+                        showToast('Recipe tags updated successfully', 'success');
+                        
+                        // Update the current recipe object
+                        this.currentRecipe.tags = newTags;
+                        
+                        // Update tags in the UI
+                        this.updateTagsDisplay(tagsContainer, newTags);
+                    })
+                    .catch(error => {
+                        // Error is handled in the API function
                     });
-                    
-                    // Add "more" button if needed
-                    if (remainingTags.length > 0) {
-                        const moreButton = document.createElement('div');
-                        moreButton.className = 'recipe-tag-more';
-                        moreButton.textContent = `+${remainingTags.length} more`;
-                        tagsDisplay.appendChild(moreButton);
-                        
-                        // Update tooltip content
-                        const tooltipContent = document.getElementById('recipeTagsTooltipContent');
-                        if (tooltipContent) {
-                            tooltipContent.innerHTML = '';
-                            newTags.forEach(tag => {
-                                const tooltipTag = document.createElement('div');
-                                tooltipTag.className = 'tooltip-tag';
-                                tooltipTag.textContent = tag;
-                                tooltipContent.appendChild(tooltipTag);
-                            });
-                        }
-                        
-                        // Re-add tooltip functionality
-                        moreButton.addEventListener('mouseenter', () => {
-                            document.getElementById('recipeTagsTooltip').classList.add('visible');
-                        });
-                        
-                        moreButton.addEventListener('mouseleave', () => {
-                            setTimeout(() => {
-                                if (!document.getElementById('recipeTagsTooltip').matches(':hover')) {
-                                    document.getElementById('recipeTagsTooltip').classList.remove('visible');
-                                }
-                            }, 300);
-                        });
-                    }
-                } else {
-                    tagsDisplay.innerHTML = '<div class="no-tags">No tags</div>';
-                }
-                
-                // Update the current recipe object
-                this.currentRecipe.tags = newTags;
             }
             
             // Hide editor
             editor.classList.remove('active');
             tagsContainer.querySelector('.editable-content').classList.remove('hide');
+        }
+    }
+    
+    // Helper method to update tags display
+    updateTagsDisplay(tagsContainer, tags) {
+        const tagsDisplay = tagsContainer.querySelector('.tags-display');
+        tagsDisplay.innerHTML = '';
+        
+        if (tags.length > 0) {
+            // Limit displayed tags to 5, show a "+X more" button if needed
+            const maxVisibleTags = 5;
+            const visibleTags = tags.slice(0, maxVisibleTags);
+            const remainingTags = tags.length > maxVisibleTags ? tags.slice(maxVisibleTags) : [];
+            
+            // Add visible tags
+            visibleTags.forEach(tag => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'recipe-tag-compact';
+                tagElement.textContent = tag;
+                tagsDisplay.appendChild(tagElement);
+            });
+            
+            // Add "more" button if needed
+            if (remainingTags.length > 0) {
+                const moreButton = document.createElement('div');
+                moreButton.className = 'recipe-tag-more';
+                moreButton.textContent = `+${remainingTags.length} more`;
+                tagsDisplay.appendChild(moreButton);
+                
+                // Update tooltip content
+                const tooltipContent = document.getElementById('recipeTagsTooltipContent');
+                if (tooltipContent) {
+                    tooltipContent.innerHTML = '';
+                    tags.forEach(tag => {
+                        const tooltipTag = document.createElement('div');
+                        tooltipTag.className = 'tooltip-tag';
+                        tooltipTag.textContent = tag;
+                        tooltipContent.appendChild(tooltipTag);
+                    });
+                }
+                
+                // Re-add tooltip functionality
+                moreButton.addEventListener('mouseenter', () => {
+                    document.getElementById('recipeTagsTooltip').classList.add('visible');
+                });
+                
+                moreButton.addEventListener('mouseleave', () => {
+                    setTimeout(() => {
+                        if (!document.getElementById('recipeTagsTooltip').matches(':hover')) {
+                            document.getElementById('recipeTagsTooltip').classList.remove('visible');
+                        }
+                    }, 300);
+                });
+            }
+        } else {
+            tagsDisplay.innerHTML = '<div class="no-tags">No tags</div>';
         }
     }
     
@@ -660,41 +686,66 @@ class RecipeModal {
         }
     }
     
-    // Update recipe metadata on the server
-    async updateRecipeMetadata(updates) {
-        try {
-            const response = await fetch(`/api/recipe/${this.recipeId}/update`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updates)
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // 显示保存成功的提示
-                if (updates.title) {
-                    showToast('Recipe name updated successfully', 'success');
-                } else if (updates.tags) {
-                    showToast('Recipe tags updated successfully', 'success');
-                } else {
-                    showToast('Recipe updated successfully', 'success');
-                }
-                
-                // 更新当前recipe对象的属性
-                Object.assign(this.currentRecipe, updates);
-                
-                // Update the recipe card in the UI
-                updateRecipeCard(this.recipeId, updates);
-            } else {
-                showToast(`Failed to update recipe: ${data.error}`, 'error');
+    // Setup source URL handlers
+    setupSourceUrlHandlers() {
+        const sourceUrlContainer = document.querySelector('.source-url-container');
+        const sourceUrlEditor = document.querySelector('.source-url-editor');
+        const sourceUrlText = sourceUrlContainer.querySelector('.source-url-text');
+        const sourceUrlEditBtn = sourceUrlContainer.querySelector('.source-url-edit-btn');
+        const sourceUrlCancelBtn = sourceUrlEditor.querySelector('.source-url-cancel-btn');
+        const sourceUrlSaveBtn = sourceUrlEditor.querySelector('.source-url-save-btn');
+        const sourceUrlInput = sourceUrlEditor.querySelector('.source-url-input');
+        
+        // Show editor on edit button click
+        sourceUrlEditBtn.addEventListener('click', () => {
+            sourceUrlContainer.classList.add('hide');
+            sourceUrlEditor.classList.add('active');
+            sourceUrlInput.focus();
+        });
+        
+        // Cancel editing
+        sourceUrlCancelBtn.addEventListener('click', () => {
+            sourceUrlEditor.classList.remove('active');
+            sourceUrlContainer.classList.remove('hide');
+            sourceUrlInput.value = this.currentRecipe.source_path || '';
+        });
+        
+        // Save new source URL
+        sourceUrlSaveBtn.addEventListener('click', () => {
+            const newSourceUrl = sourceUrlInput.value.trim();
+            if (newSourceUrl !== this.currentRecipe.source_path) {
+                // Update the recipe on the server
+                updateRecipeMetadata(this.filePath, { source_path: newSourceUrl })
+                    .then(data => {
+                        // Show success toast
+                        showToast('Source URL updated successfully', 'success');
+                        
+                        // Update source URL in the UI
+                        sourceUrlText.textContent = newSourceUrl || 'No source URL';
+                        sourceUrlText.title = newSourceUrl && (newSourceUrl.startsWith('http://') || 
+                                             newSourceUrl.startsWith('https://')) ? 
+                                             'Click to open source URL' : 'No valid URL';
+                        
+                        // Update the current recipe object
+                        this.currentRecipe.source_path = newSourceUrl;
+                    })
+                    .catch(error => {
+                        // Error is handled in the API function
+                    });
             }
-        } catch (error) {
-            console.error('Error updating recipe:', error);
-            showToast(`Error updating recipe: ${error.message}`, 'error');
-        }
+            
+            // Hide editor
+            sourceUrlEditor.classList.remove('active');
+            sourceUrlContainer.classList.remove('hide');
+        });
+        
+        // Open source URL in a new tab if it's valid
+        sourceUrlText.addEventListener('click', () => {
+            const url = sourceUrlText.textContent.trim();
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                window.open(url, '_blank');
+            }
+        });
     }
     
     // Setup copy buttons for prompts and recipe syntax
@@ -1053,56 +1104,6 @@ class RecipeModal {
                 // Navigate to the LoRAs page with the specific LoRA index
                 this.navigateToLorasPage(loraIndex);
             });
-        });
-    }
-
-    // New method to set up source URL handlers
-    setupSourceUrlHandlers() {
-        const sourceUrlContainer = document.querySelector('.source-url-container');
-        const sourceUrlEditor = document.querySelector('.source-url-editor');
-        const sourceUrlText = sourceUrlContainer.querySelector('.source-url-text');
-        const sourceUrlEditBtn = sourceUrlContainer.querySelector('.source-url-edit-btn');
-        const sourceUrlCancelBtn = sourceUrlEditor.querySelector('.source-url-cancel-btn');
-        const sourceUrlSaveBtn = sourceUrlEditor.querySelector('.source-url-save-btn');
-        const sourceUrlInput = sourceUrlEditor.querySelector('.source-url-input');
-        
-        // Show editor on edit button click
-        sourceUrlEditBtn.addEventListener('click', () => {
-            sourceUrlContainer.classList.add('hide');
-            sourceUrlEditor.classList.add('active');
-            sourceUrlInput.focus();
-        });
-        
-        // Cancel editing
-        sourceUrlCancelBtn.addEventListener('click', () => {
-            sourceUrlEditor.classList.remove('active');
-            sourceUrlContainer.classList.remove('hide');
-            sourceUrlInput.value = this.currentRecipe.source_path || '';
-        });
-        
-        // Save new source URL
-        sourceUrlSaveBtn.addEventListener('click', () => {
-            const newSourceUrl = sourceUrlInput.value.trim();
-            if (newSourceUrl && newSourceUrl !== this.currentRecipe.source_path) {
-                // Update source URL in the UI
-                sourceUrlText.textContent = newSourceUrl;
-                sourceUrlText.title = newSourceUrl.startsWith('http://') || newSourceUrl.startsWith('https://') ? 'Click to open source URL' : 'No valid URL';
-                
-                // Update the recipe on the server
-                this.updateRecipeMetadata({ source_path: newSourceUrl });
-            }
-            
-            // Hide editor
-            sourceUrlEditor.classList.remove('active');
-            sourceUrlContainer.classList.remove('hide');
-        });
-        
-        // Open source URL in a new tab if it's valid
-        sourceUrlText.addEventListener('click', () => {
-            const url = sourceUrlText.textContent.trim();
-            if (url.startsWith('http://') || url.startsWith('https://')) {
-                window.open(url, '_blank');
-            }
         });
     }
 }

@@ -171,3 +171,44 @@ export function createRecipeCard(recipe) {
     });
     return recipeCard.element;
 }
+
+/**
+ * Update recipe metadata on the server
+ * @param {string} filePath - The file path of the recipe (e.g. D:/Workspace/ComfyUI/models/loras/recipes/86b4c335-ecfc-4791-89d2-3746e55a7614.webp)
+ * @param {Object} updates - The metadata updates to apply
+ * @returns {Promise<Object>} The updated recipe data
+ */
+export async function updateRecipeMetadata(filePath, updates) {
+    try {
+        state.loadingManager.showSimpleLoading('Saving metadata...');
+
+        // Extract recipeId from filePath (basename without extension)
+        const basename = filePath.split('/').pop().split('\\').pop();
+        const recipeId = basename.substring(0, basename.lastIndexOf('.'));
+        
+        const response = await fetch(`/api/recipe/${recipeId}/update`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            showToast(`Failed to update recipe: ${data.error}`, 'error');
+            throw new Error(data.error || 'Failed to update recipe');
+        }
+
+        state.virtualScroller.updateSingleItem(filePath, updates);
+        
+        return data;
+    } catch (error) {
+        console.error('Error updating recipe:', error);
+        showToast(`Error updating recipe: ${error.message}`, 'error');
+        throw error;
+    } finally {
+        state.loadingManager.hide();
+    }
+}

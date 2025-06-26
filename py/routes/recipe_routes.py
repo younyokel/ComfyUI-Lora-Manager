@@ -1266,9 +1266,9 @@ class RecipeRoutes:
             data = await request.json()
             
             # Validate required fields
-            if 'title' not in data and 'tags' not in data and 'source_path' not in data:
+            if 'title' not in data and 'tags' not in data and 'source_path' not in data and 'preview_nsfw_level' not in data:
                 return web.json_response({
-                    "error": "At least one field to update must be provided (title or tags or source_path)"
+                    "error": "At least one field to update must be provided (title or tags or source_path or preview_nsfw_level)"
                 }, status=400)
             
             # Use the recipe scanner's update method

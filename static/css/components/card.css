@@ -254,15 +254,13 @@
 
 /* New styles for hover reveal mode */
 .hover-reveal .card-header,
-.hover-reveal .card-footer,
-.hover-reveal .recipe-indicator {
+.hover-reveal .card-footer {
     opacity: 0;
     transition: opacity 0.2s ease;
 }
 
 .hover-reveal .lora-card:hover .card-header,
-.hover-reveal .lora-card:hover .card-footer,
-.hover-reveal .lora-card:hover .recipe-indicator {
+.hover-reveal .lora-card:hover .card-footer {
     opacity: 1;
 }
 
@@ -443,30 +441,6 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-}
-
-/* Recipe specific elements - migrated from recipe-card.css */
-.recipe-indicator {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    width: 24px;
-    height: 24px;
-    background: var(--lora-primary);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    z-index: 2;
-}
-
-.base-model-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: 32px; /* For accommodating the recipe indicator */
 }
 
 .lora-count {

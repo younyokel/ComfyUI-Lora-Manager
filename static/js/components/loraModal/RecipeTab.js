@@ -102,13 +102,10 @@ function renderRecipes(tabElement, recipes, loraName, loraHash) {
         card.dataset.id = recipe.id || '';
         
         card.innerHTML = `
-            <div class="recipe-indicator" title="Recipe">R</div>
             <div class="card-preview">
                 <img src="${imageUrl}" alt="${recipe.title}" loading="lazy">
                 <div class="card-header">
-                    <div class="base-model-wrapper">
-                        ${baseModel ? `<span class="base-model-label" title="${baseModel}">${baseModel}</span>` : ''}
-                    </div>
+                    ${baseModel ? `<span class="base-model-label" title="${baseModel}">${baseModel}</span>` : ''}
                     <div class="card-actions">
                         <i class="fas fa-copy" title="Copy Recipe Syntax"></i>
                     </div>

@@ -3,6 +3,7 @@ import { showToast, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpe
 import { modalManager } from '../managers/ModalManager.js';
 import { getCurrentPageState } from '../state/index.js';
 import { state } from '../state/index.js';
+import { NSFW_LEVELS } from '../utils/constants.js';
 
 class RecipeCard {
     constructor(recipe, clickHandler) {
@@ -17,8 +18,9 @@ class RecipeCard {
     createCardElement() {
         const card = document.createElement('div');
         card.className = 'lora-card';
-        card.dataset.filePath = this.recipe.file_path;
+        card.dataset.filepath = this.recipe.file_path;
         card.dataset.title = this.recipe.title;
+        card.dataset.nsfwLevel = this.recipe.preview_nsfw_level || 0;
         card.dataset.created = this.recipe.created_date;
         card.dataset.id = this.recipe.id || '';
         
@@ -42,21 +44,48 @@ class RecipeCard {
         const pageState = getCurrentPageState();
         const isDuplicatesMode = pageState.duplicatesMode;
 
+        // NSFW blur logic - similar to LoraCard
+        const nsfwLevel = this.recipe.preview_nsfw_level !== undefined ? this.recipe.preview_nsfw_level : 0;
+        const shouldBlur = state.settings.blurMatureContent && nsfwLevel > NSFW_LEVELS.PG13;
+        
+        if (shouldBlur) {
+            card.classList.add('nsfw-content');
+        }
+
+        // Determine NSFW warning text based on level
+        let nsfwText = "Mature Content";
+        if (nsfwLevel >= NSFW_LEVELS.XXX) {
+            nsfwText = "XXX-rated Content";
+        } else if (nsfwLevel >= NSFW_LEVELS.X) {
+            nsfwText = "X-rated Content";
+        } else if (nsfwLevel >= NSFW_LEVELS.R) {
+            nsfwText = "R-rated Content";
+        }
+
         card.innerHTML = `
-            ${!isDuplicatesMode ? `<div class="recipe-indicator" title="Recipe">R</div>` : ''}
-            <div class="card-preview">
+            <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
                 <img src="${imageUrl}" alt="${this.recipe.title}">
                 ${!isDuplicatesMode ? `
                 <div class="card-header">
-                    <div class="base-model-wrapper">
-                        ${baseModel ? `<span class="base-model-label" title="${baseModel}">${baseModel}</span>` : ''}
-                    </div>
+                    ${shouldBlur ? 
+                      `<button class="toggle-blur-btn" title="Toggle blur">
+                          <i class="fas fa-eye"></i>
+                      </button>` : ''}
+                    ${baseModel ? `<span class="base-model-label ${shouldBlur ? 'with-toggle' : ''}" title="${baseModel}">${baseModel}</span>` : ''}
                     <div class="card-actions">
                         <i class="fas fa-share-alt" title="Share Recipe"></i>
                         <i class="fas fa-paper-plane" title="Send Recipe to Workflow (Click: Append, Shift+Click: Replace)"></i>
                         <i class="fas fa-trash" title="Delete Recipe"></i>
                     </div>
                 </div>
+                ` : ''}
+                ${shouldBlur ? `
+                    <div class="nsfw-overlay">
+                        <div class="nsfw-warning">
+                            <p>${nsfwText}</p>
+                            <button class="show-content-btn">Show</button>
+                        </div>
+                    </div>
                 ` : ''}
                 <div class="card-footer">
                     <div class="model-info">
@@ -72,7 +101,7 @@ class RecipeCard {
             </div>
         `;
         
-        this.attachEventListeners(card, isDuplicatesMode);
+        this.attachEventListeners(card, isDuplicatesMode, shouldBlur);
         return card;
     }
     
@@ -82,7 +111,27 @@ class RecipeCard {
         return `${missingCount} of ${totalCount} LoRAs missing`;
     }
     
-    attachEventListeners(card, isDuplicatesMode) {
+    attachEventListeners(card, isDuplicatesMode, shouldBlur) {
+        // Add blur toggle functionality if content should be blurred
+        if (shouldBlur) {
+            const toggleBtn = card.querySelector('.toggle-blur-btn');
+            const showBtn = card.querySelector('.show-content-btn');
+            
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleBlurContent(card);
+                });
+            }
+            
+            if (showBtn) {
+                showBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showBlurredContent(card);
+                });
+            }
+        }
+
         // Recipe card click event - only attach if not in duplicates mode
         if (!isDuplicatesMode) {
             card.addEventListener('click', () => {
@@ -109,7 +158,42 @@ class RecipeCard {
         }
     }
     
-    // Replace copyRecipeSyntax with sendRecipeToWorkflow
+    toggleBlurContent(card) {
+        const preview = card.querySelector('.card-preview');
+        const isBlurred = preview.classList.toggle('blurred');
+        const icon = card.querySelector('.toggle-blur-btn i');
+        
+        // Update the icon based on blur state
+        if (isBlurred) {
+            icon.className = 'fas fa-eye';
+        } else {
+            icon.className = 'fas fa-eye-slash';
+        }
+        
+        // Toggle the overlay visibility
+        const overlay = card.querySelector('.nsfw-overlay');
+        if (overlay) {
+            overlay.style.display = isBlurred ? 'flex' : 'none';
+        }
+    }
+
+    showBlurredContent(card) {
+        const preview = card.querySelector('.card-preview');
+        preview.classList.remove('blurred');
+        
+        // Update the toggle button icon
+        const toggleBtn = card.querySelector('.toggle-blur-btn');
+        if (toggleBtn) {
+            toggleBtn.querySelector('i').className = 'fas fa-eye-slash';
+        }
+        
+        // Hide the overlay
+        const overlay = card.querySelector('.nsfw-overlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    }
+
     sendRecipeToWorkflow(replaceMode = false) {
         try {
             // Get recipe ID
