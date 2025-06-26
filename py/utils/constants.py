@@ -7,6 +7,15 @@ NSFW_LEVELS = {
     "Blocked": 32, # Probably not actually visible through the API without being logged in on model owner account?
 }
 
+# Node type constants
+NODE_TYPES = {
+    "Lora Loader (LoraManager)": 1,
+    "Lora Stacker (LoraManager)": 2
+}
+
+# Default ComfyUI node color when bgcolor is null
+DEFAULT_NODE_COLOR = "#353535"
+
 # preview extensions
 PREVIEW_EXTENSIONS = [
     '.webp',

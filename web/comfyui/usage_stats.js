@@ -13,6 +13,11 @@ app.registerExtension({
                 this.updateUsageStats(detail.prompt_id);
             }
         });
+
+        // Listen for registry refresh requests
+        api.addEventListener("lora_registry_refresh", () => {
+            this.refreshRegistry();
+        });
     },
     
     async updateUsageStats(promptId) {
@@ -31,6 +36,47 @@ app.registerExtension({
             }
         } catch (error) {
             console.error("Error updating usage statistics:", error);
+        }
+    },
+
+    async refreshRegistry() {
+        try {
+            // Get current workflow nodes
+            const prompt = await app.graphToPrompt();
+            const workflow = prompt.workflow;
+            if (!workflow || !workflow.nodes) {
+                console.warn("No workflow nodes found for registry refresh");
+                return;
+            }
+
+            // Find all Lora nodes
+            const loraNodes = [];
+            for (const node of workflow.nodes.values()) {
+                if (node.type === "Lora Loader (LoraManager)" || node.type === "Lora Stacker (LoraManager)") {
+                    loraNodes.push({
+                        node_id: node.id,
+                        bgcolor: node.bgcolor || null,
+                        title: node.title || node.type,
+                        type: node.type
+                    });
+                }
+            }
+
+            const response = await fetch('/api/register-nodes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ nodes: loraNodes }),
+            });
+
+            if (!response.ok) {
+                console.warn("Failed to register Lora nodes:", response.statusText);
+            } else {
+                console.log(`Successfully registered ${loraNodes.length} Lora nodes`);
+            }
+        } catch (error) {
+            console.error("Error refreshing registry:", error);
         }
     }
 });

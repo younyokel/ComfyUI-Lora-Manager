@@ -147,9 +147,9 @@ app.registerExtension({
                 };
 
                 // Call registration
-                setTimeout(() => {
-                    this.registerNode();
-                }, 0);
+                // setTimeout(() => {
+                //     this.registerNode();
+                // }, 0);
             });
         }
     },

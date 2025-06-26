@@ -1,7 +1,7 @@
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
 import { getStorageItem, setStorageItem } from './storageHelpers.js';
-import { NSFW_LEVELS } from './constants.js';
+import { NODE_TYPES, NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
 
 /**
  * Utility function to copy text to clipboard with fallback for older browsers
@@ -263,56 +263,6 @@ export function updatePanelPositions() {
         }
       }
     }
-  }
-
-// Update the toggleFolderTags function
-export function toggleFolderTags() {
-    const folderTags = document.querySelector('.folder-tags');
-    const toggleBtn = document.querySelector('.toggle-folders-btn i');
-    
-    if (folderTags) {
-        folderTags.classList.toggle('collapsed');
-        
-        if (folderTags.classList.contains('collapsed')) {
-            // Change icon to indicate folders are hidden
-            toggleBtn.className = 'fas fa-folder-plus';
-            toggleBtn.parentElement.title = 'Show folder tags';
-            setStorageItem('folderTagsCollapsed', 'true');
-        } else {
-            // Change icon to indicate folders are visible
-            toggleBtn.className = 'fas fa-folder-minus';
-            toggleBtn.parentElement.title = 'Hide folder tags';
-            setStorageItem('folderTagsCollapsed', 'false');
-        }
-        
-        // Update panel positions after toggling
-        // Use a small delay to ensure the DOM has updated
-        setTimeout(() => {
-            updatePanelPositions();
-        }, 50);
-    }
-}
-
-// Add this to your existing initialization code
-export function initFolderTagsVisibility() {
-    const isCollapsed = getStorageItem('folderTagsCollapsed');
-    if (isCollapsed) {
-        const folderTags = document.querySelector('.folder-tags');
-        const toggleBtn = document.querySelector('.toggle-folders-btn i');
-        if (folderTags) {
-            folderTags.classList.add('collapsed');
-        }
-        if (toggleBtn) {
-            toggleBtn.className = 'fas fa-folder-plus';
-            toggleBtn.parentElement.title = 'Show folder tags';
-        }
-    } else {
-        const toggleBtn = document.querySelector('.toggle-folders-btn i');
-        if (toggleBtn) {
-            toggleBtn.className = 'fas fa-folder-minus';
-            toggleBtn.parentElement.title = 'Hide folder tags';
-        }
-    }
 }
 
 export function initBackToTop() {
@@ -367,33 +317,53 @@ export function getNSFWLevelName(level) {
  */
 export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntaxType = 'lora') {
   try {
-    let loraNodes = [];
-    let isDesktopMode = false;
+    // Get registry information from the new endpoint
+    const registryResponse = await fetch('/api/get-registry');
+    const registryData = await registryResponse.json();
     
-    // Get the current workflow from localStorage
-    const workflowData = localStorage.getItem('workflow');
-    if (workflowData) {
-      // Web browser mode - extract node IDs from workflow
-      const workflow = JSON.parse(workflowData);
-      
-      // Find all Lora Loader (LoraManager) nodes
-      if (workflow.nodes && Array.isArray(workflow.nodes)) {
-        for (const node of workflow.nodes) {
-          if (node.type === "Lora Loader (LoraManager)") {
-            loraNodes.push(node.id);
-          }
-        }
-      }
-      
-      if (loraNodes.length === 0) {
-        showToast('No Lora Loader nodes found in the workflow', 'warning');
+    if (!registryData.success) {
+      // Handle specific error cases
+      if (registryData.error === 'Standalone Mode Active') {
+        // Standalone mode - show warning with specific message
+        showToast(registryData.message || 'Cannot interact with ComfyUI in standalone mode', 'warning');
+        return false;
+      } else {
+        // Other errors - show error toast
+        showToast(registryData.message || registryData.error || 'Failed to get workflow information', 'error');
         return false;
       }
-    } else {
-      // ComfyUI Desktop mode - don't specify node IDs and let backend handle it
-      isDesktopMode = true;
     }
     
+    // Success case - check node count
+    if (registryData.data.node_count === 0) {
+      // No nodes found - show warning
+      showToast('No Lora Loader or Lora Stacker nodes found in workflow', 'warning');
+      return false;
+    } else if (registryData.data.node_count > 1) {
+      // Multiple nodes - show selector
+      showNodeSelector(registryData.data.nodes, loraSyntax, replaceMode, syntaxType);
+      return true;
+    } else {
+      // Single node - send directly
+      const nodeId = Object.keys(registryData.data.nodes)[0];
+      return await sendToSpecificNode([nodeId], loraSyntax, replaceMode, syntaxType);
+    }
+  } catch (error) {
+    console.error('Failed to get registry:', error);
+    showToast('Failed to communicate with ComfyUI', 'error');
+    return false;
+  }
+}
+
+/**
+ * Send LoRA to specific nodes
+ * @param {Array|undefined} nodeIds - Array of node IDs or undefined for desktop mode
+ * @param {string} loraSyntax - The LoRA syntax to send
+ * @param {boolean} replaceMode - Whether to replace existing LoRAs
+ * @param {string} syntaxType - The type of syntax ('lora' or 'recipe')
+ */
+async function sendToSpecificNode(nodeIds, loraSyntax, replaceMode, syntaxType) {
+  try {
     // Call the backend API to update the lora code
     const response = await fetch('/api/update-lora-code', {
       method: 'POST',
@@ -401,7 +371,7 @@ export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntax
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        node_ids: isDesktopMode ? undefined : loraNodes,
+        node_ids: nodeIds,
         lora_code: loraSyntax,
         mode: replaceMode ? 'replace' : 'append'
       })
@@ -427,6 +397,188 @@ export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntax
     return false;
   }
 }
+
+// Global variable to track active node selector state
+let nodeSelectorState = {
+  isActive: false,
+  clickHandler: null,
+  selectorClickHandler: null
+};
+
+/**
+ * Show node selector popup near mouse position
+ * @param {Object} nodes - Registry nodes data
+ * @param {string} loraSyntax - The LoRA syntax to send
+ * @param {boolean} replaceMode - Whether to replace existing LoRAs
+ * @param {string} syntaxType - The type of syntax ('lora' or 'recipe')
+ */
+function showNodeSelector(nodes, loraSyntax, replaceMode, syntaxType) {
+  const selector = document.getElementById('nodeSelector');
+  if (!selector) return;
+  
+  // Clean up any existing state
+  hideNodeSelector();
+  
+  // Generate node list HTML with icons and proper colors
+  const nodeItems = Object.values(nodes).map(node => {
+    const iconClass = NODE_TYPE_ICONS[node.type] || 'fas fa-question-circle';
+    const bgColor = node.bgcolor || DEFAULT_NODE_COLOR;
+    
+    return `
+      <div class="node-item" data-node-id="${node.id}">
+        <div class="node-icon-indicator" style="background-color: ${bgColor}">
+          <i class="${iconClass}"></i>
+        </div>
+        <span>#${node.id} ${node.title}</span>
+      </div>
+    `;
+  }).join('');
+  
+  selector.innerHTML = `
+    ${nodeItems}
+    <div class="node-item send-all-item" data-action="send-all">
+      <div class="node-icon-indicator all-nodes">
+        <i class="fas fa-broadcast-tower"></i>
+      </div>
+      <span>Send to All</span>
+    </div>
+  `;
+  
+  // Position near mouse
+  positionNearMouse(selector);
+  
+  // Show selector
+  selector.style.display = 'block';
+  nodeSelectorState.isActive = true;
+  
+  // Setup event listeners with proper cleanup
+  setupNodeSelectorEvents(selector, nodes, loraSyntax, replaceMode, syntaxType);
+}
+
+/**
+ * Setup event listeners for node selector
+ * @param {HTMLElement} selector - The selector element
+ * @param {Object} nodes - Registry nodes data
+ * @param {string} loraSyntax - The LoRA syntax to send
+ * @param {boolean} replaceMode - Whether to replace existing LoRAs
+ * @param {string} syntaxType - The type of syntax ('lora' or 'recipe')
+ */
+function setupNodeSelectorEvents(selector, nodes, loraSyntax, replaceMode, syntaxType) {
+  // Clean up any existing event listeners
+  cleanupNodeSelectorEvents();
+  
+  // Handle clicks outside to close
+  nodeSelectorState.clickHandler = (e) => {
+    if (!selector.contains(e.target)) {
+      hideNodeSelector();
+    }
+  };
+  
+  // Handle node selection
+  nodeSelectorState.selectorClickHandler = async (e) => {
+    const nodeItem = e.target.closest('.node-item');
+    if (!nodeItem) return;
+    
+    e.stopPropagation();
+    
+    const action = nodeItem.dataset.action;
+    const nodeId = nodeItem.dataset.nodeId;
+    
+    if (action === 'send-all') {
+      // Send to all nodes
+      const allNodeIds = Object.keys(nodes);
+      await sendToSpecificNode(allNodeIds, loraSyntax, replaceMode, syntaxType);
+    } else if (nodeId) {
+      // Send to specific node
+      await sendToSpecificNode([nodeId], loraSyntax, replaceMode, syntaxType);
+    }
+    
+    hideNodeSelector();
+  };
+  
+  // Add event listeners with a small delay to prevent immediate triggering
+  setTimeout(() => {
+    if (nodeSelectorState.isActive) {
+      document.addEventListener('click', nodeSelectorState.clickHandler);
+      selector.addEventListener('click', nodeSelectorState.selectorClickHandler);
+    }
+  }, 100);
+}
+
+/**
+ * Clean up node selector event listeners
+ */
+function cleanupNodeSelectorEvents() {
+  if (nodeSelectorState.clickHandler) {
+    document.removeEventListener('click', nodeSelectorState.clickHandler);
+    nodeSelectorState.clickHandler = null;
+  }
+  
+  if (nodeSelectorState.selectorClickHandler) {
+    const selector = document.getElementById('nodeSelector');
+    if (selector) {
+      selector.removeEventListener('click', nodeSelectorState.selectorClickHandler);
+    }
+    nodeSelectorState.selectorClickHandler = null;
+  }
+}
+
+/**
+ * Hide node selector
+ */
+function hideNodeSelector() {
+  const selector = document.getElementById('nodeSelector');
+  if (selector) {
+    selector.style.display = 'none';
+    selector.innerHTML = ''; // Clear content to prevent memory leaks
+  }
+  
+  // Clean up event listeners
+  cleanupNodeSelectorEvents();
+  nodeSelectorState.isActive = false;
+}
+
+/**
+ * Position element near mouse cursor
+ * @param {HTMLElement} element - Element to position
+ */
+function positionNearMouse(element) {
+  // Get current mouse position from last mouse event or use default
+  const mouseX = window.lastMouseX || window.innerWidth / 2;
+  const mouseY = window.lastMouseY || window.innerHeight / 2;
+  
+  // Show element temporarily to get dimensions
+  element.style.visibility = 'hidden';
+  element.style.display = 'block';
+  
+  const rect = element.getBoundingClientRect();
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+  
+  // Calculate position with offset from mouse
+  let x = mouseX + 10;
+  let y = mouseY + 10;
+  
+  // Ensure element doesn't go offscreen
+  if (x + rect.width > viewportWidth) {
+    x = mouseX - rect.width - 10;
+  }
+  
+  if (y + rect.height > viewportHeight) {
+    y = mouseY - rect.height - 10;
+  }
+  
+  // Apply position
+  element.style.left = `${x}px`;
+  element.style.top = `${y}px`;
+  element.style.visibility = 'visible';
+}
+
+// Track mouse position for node selector positioning
+document.addEventListener('mousemove', (e) => {
+  window.lastMouseX = e.clientX;
+  window.lastMouseY = e.clientY;
+});
 
 /**
  * Opens the example images folder for a specific model

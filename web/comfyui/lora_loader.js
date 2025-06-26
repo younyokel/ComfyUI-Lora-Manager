@@ -76,7 +76,7 @@ app.registerExtension({
         
         // Standard mode - update a specific node
         const node = app.graph.getNodeById(+id);
-        if (!node || node.comfyClass !== "Lora Loader (LoraManager)") {
+        if (!node || (node.comfyClass !== "Lora Loader (LoraManager)" && node.comfyClass !== "Lora Stacker (LoraManager)")) {
             console.warn("Node not found or not a LoraLoader:", id);
             return;
         }
@@ -218,9 +218,9 @@ app.registerExtension({
 
             // Ensure the node is registered after creation
             // Call registration
-            setTimeout(() => {
-              this.registerNode();
-            }, 0);
+            // setTimeout(() => {
+            //   this.registerNode();
+            // }, 0);
           });
         }
     },

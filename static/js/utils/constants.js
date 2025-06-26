@@ -102,3 +102,24 @@ export const NSFW_LEVELS = {
     XXX: 16,
     BLOCKED: 32
 };
+
+// Node type constants
+export const NODE_TYPES = {
+    LORA_LOADER: 1,
+    LORA_STACKER: 2
+};
+
+// Node type names to IDs mapping
+export const NODE_TYPE_NAMES = {
+    "Lora Loader (LoraManager)": NODE_TYPES.LORA_LOADER,
+    "Lora Stacker (LoraManager)": NODE_TYPES.LORA_STACKER
+};
+
+// Node type icons
+export const NODE_TYPE_ICONS = {
+    [NODE_TYPES.LORA_LOADER]: "fas fa-l",
+    [NODE_TYPES.LORA_STACKER]: "fas fa-s"
+};
+
+// Default ComfyUI node color when bgcolor is null
+export const DEFAULT_NODE_COLOR = "#353535";
