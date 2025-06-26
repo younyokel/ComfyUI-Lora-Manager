@@ -4,9 +4,9 @@ import { api } from "../../scripts/api.js";
 
 // Register the extension
 app.registerExtension({
-    name: "Lora-Manager.UsageStats",
+    name: "LoraManager.UsageStats",
     
-    init() {
+    setup() {
         // Listen for successful executions
         api.addEventListener("execution_success", ({ detail }) => {
             if (detail && detail.prompt_id) {
