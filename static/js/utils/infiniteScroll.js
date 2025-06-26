@@ -1,7 +1,7 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { VirtualScroller } from './VirtualScroller.js';
 import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
-import { createCheckpointCard } from '../components/CheckpointCard.js';
+import { createCheckpointCard, setupCheckpointCardEventDelegation } from '../components/CheckpointCard.js';
 import { fetchLorasPage } from '../api/loraApi.js';
 import { fetchCheckpointsPage } from '../api/checkpointApi.js';
 import { showToast } from './uiHelpers.js';
@@ -68,6 +68,8 @@ export async function initializeInfiniteScroll(pageType = 'loras') {
     // Setup event delegation for lora cards if on the loras page
     if (pageType === 'loras') {
         setupLoraCardEventDelegation();
+    } else if (pageType === 'checkpoints') {
+        setupCheckpointCardEventDelegation();
     }
 }
 

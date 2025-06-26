@@ -196,16 +196,14 @@ function filterByFolder(folderPath) {
     });
 }
 
-export function openCivitai(modelName) {
-    // 从卡片的data-meta属性中获取civitai ID
-    const loraCard = document.querySelector(`.lora-card[data-name="${modelName}"]`);
+export function openCivitai(filePath) {
+    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
     if (!loraCard) return;
     
     const metaData = JSON.parse(loraCard.dataset.meta);
-    const civitaiId = metaData.modelId;  // 使用modelId作为civitai模型ID
-    const versionId = metaData.id;       // 使用id作为版本ID
+    const civitaiId = metaData.modelId;
+    const versionId = metaData.id;
     
-    // 构建URL
     if (civitaiId) {
         let url = `https://civitai.com/models/${civitaiId}`;
         if (versionId) {
@@ -214,6 +212,7 @@ export function openCivitai(modelName) {
         window.open(url, '_blank');
     } else {
         // 如果没有ID，尝试使用名称搜索
+        const modelName = loraCard.dataset.name;
         window.open(`https://civitai.com/models?query=${encodeURIComponent(modelName)}`, '_blank');
     }
 }

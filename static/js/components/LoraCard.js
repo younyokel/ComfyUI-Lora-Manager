@@ -45,7 +45,7 @@ function handleLoraCardEvent(event) {
     if (event.target.closest('.fa-globe')) {
         event.stopPropagation();
         if (card.dataset.from_civitai === 'true') {
-            openCivitai(card.dataset.name);
+            openCivitai(card.dataset.filepath);
         }
         return;
     }
