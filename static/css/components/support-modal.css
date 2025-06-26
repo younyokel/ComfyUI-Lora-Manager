@@ -7,9 +7,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin-bottom: var(--space-3);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--lora-border);
 }
 
 .support-icon {
@@ -33,13 +30,11 @@
 .support-content {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
 }
 
 .support-content > p {
     font-size: 1.1em;
     text-align: center;
-    margin-bottom: var(--space-1);
 }
 
 .support-section {
@@ -112,6 +107,28 @@
 }
 
 .kofi-button:hover {
+    background: #E04946;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Patreon button style */
+.patreon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: #F96854;
+    color: white;
+    border-radius: var(--border-radius-sm);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-top: var(--space-1);
+}
+
+.patreon-button:hover {
     background: #E04946;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
