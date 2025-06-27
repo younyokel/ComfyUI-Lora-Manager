@@ -406,6 +406,9 @@ async function handleImportFiles(files, modelHash, importContainer) {
             const customImages = result.custom_images || [];
             // Combine both arrays for rendering
             const allImages = [...regularImages, ...customImages];
+            console.log("Regular images:", regularImages);
+            console.log("Custom images:", customImages);
+            console.log("Combined images:", allImages);
             showcaseTab.innerHTML = renderShowcaseContent(allImages, updatedFilesResult.files, true);
             
             // Re-initialize showcase functionality
