@@ -196,3 +196,25 @@
     width: 16px;
     text-align: center;
 }
+
+/* Node Selector Header */
+.node-selector-header {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.selector-action-type {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--lora-accent);
+}
+
+.selector-instruction {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+}

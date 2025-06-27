@@ -434,7 +434,15 @@ function showNodeSelector(nodes, loraSyntax, replaceMode, syntaxType) {
     `;
   }).join('');
   
+  // Add header with action mode indicator
+  const actionType = syntaxType === 'recipe' ? 'Recipe' : 'LoRA';
+  const actionMode = replaceMode ? 'Replace' : 'Append';
+  
   selector.innerHTML = `
+    <div class="node-selector-header">
+      <span class="selector-action-type">${actionMode} ${actionType}</span>
+      <span class="selector-instruction">Select target node</span>
+    </div>
     ${nodeItems}
     <div class="node-item send-all-item" data-action="send-all">
       <div class="node-icon-indicator all-nodes">
