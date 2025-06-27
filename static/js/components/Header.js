@@ -130,9 +130,24 @@ export class HeaderManager {
       const headerSearch = document.getElementById('headerSearch');
       
       if (this.currentPage === 'statistics' && headerSearch) {
-        headerSearch.style.display = 'none';
+        headerSearch.classList.add('disabled');
+        // Disable search functionality
+        const searchInput = headerSearch.querySelector('#searchInput');
+        const searchButtons = headerSearch.querySelectorAll('button');
+        if (searchInput) {
+          searchInput.disabled = true;
+          searchInput.placeholder = 'Search not available on statistics page';
+        }
+        searchButtons.forEach(btn => btn.disabled = true);
       } else if (headerSearch) {
-        headerSearch.style.display = 'flex';
+        headerSearch.classList.remove('disabled');
+        // Re-enable search functionality
+        const searchInput = headerSearch.querySelector('#searchInput');
+        const searchButtons = headerSearch.querySelectorAll('button');
+        if (searchInput) {
+          searchInput.disabled = false;
+        }
+        searchButtons.forEach(btn => btn.disabled = false);
       }
     }
 }
