@@ -4,7 +4,7 @@
     width: 100%;
     position: relative;
     overflow-x: hidden; /* Prevent horizontal scrolling */
-    overflow-y: auto; /* Enable vertical scrolling */
+    overflow-y: scroll; /* Enable vertical scrolling */
 }
 
 .container {
