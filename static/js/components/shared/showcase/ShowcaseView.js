@@ -71,10 +71,10 @@ export async function loadExampleImages(images, modelHash) {
  * Render showcase content
  * @param {Array} images - Array of images/videos to show
  * @param {Array} exampleFiles - Local example files
- * @param {Object} options - Options for rendering
+ * @param {boolean} startExpanded - Whether to start in expanded state
  * @returns {string} HTML content
  */
-export function renderShowcaseContent(images, exampleFiles = []) {
+export function renderShowcaseContent(images, exampleFiles = [], startExpanded = false) {
     if (!images?.length) {
         // Show empty state with import interface
         return renderImportInterface(true);
@@ -113,10 +113,10 @@ export function renderShowcaseContent(images, exampleFiles = []) {
     
     return `
         <div class="scroll-indicator" onclick="toggleShowcase(this)">
-            <i class="fas fa-chevron-down"></i>
-            <span>Scroll or click to show ${filteredImages.length} examples</span>
+            <i class="fas fa-chevron-${startExpanded ? 'up' : 'down'}"></i>
+            <span>Scroll or click to ${startExpanded ? 'hide' : 'show'} ${filteredImages.length} examples</span>
         </div>
-        <div class="carousel collapsed">
+        <div class="carousel ${startExpanded ? '' : 'collapsed'}">
             ${hiddenNotification}
             <div class="carousel-container">
                 ${filteredImages.map((img, index) => renderMediaItem(img, index, exampleFiles)).join('')}
@@ -406,7 +406,7 @@ async function handleImportFiles(files, modelHash, importContainer) {
             const customImages = result.custom_images || [];
             // Combine both arrays for rendering
             const allImages = [...regularImages, ...customImages];
-            showcaseTab.innerHTML = renderShowcaseContent(allImages, updatedFilesResult.files);
+            showcaseTab.innerHTML = renderShowcaseContent(allImages, updatedFilesResult.files, true);
             
             // Re-initialize showcase functionality
             const carousel = showcaseTab.querySelector('.carousel');
