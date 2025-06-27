@@ -295,10 +295,15 @@ class DownloadManager:
             # Update current model info
             download_progress['current_model'] = f"{model_name} ({model_hash[:8]})"
             
-            # Skip if already processed
+            # Skip if already processed AND directory exists with files
             if model_hash in download_progress['processed_models']:
-                logger.debug(f"Skipping already processed model: {model_name}")
-                return False
+                model_dir = os.path.join(output_dir, model_hash)
+                has_files = os.path.exists(model_dir) and any(os.listdir(model_dir))
+                if has_files:
+                    logger.debug(f"Skipping already processed model: {model_name}")
+                    return False
+                else:
+                    logger.info(f"Model {model_name} marked as processed but folder empty or missing, reprocessing")
             
             # Create model directory
             model_dir = os.path.join(output_dir, model_hash)
