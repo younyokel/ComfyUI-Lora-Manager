@@ -24,6 +24,7 @@ export const BASE_MODELS = {
     // Other models
     FLUX_1_D: "Flux.1 D",
     FLUX_1_S: "Flux.1 S",
+    FLUX_1_KONTEXT: "Flux.1 Kontext",
     AURAFLOW: "AuraFlow",
     PIXART_A: "PixArt a",
     PIXART_E: "PixArt E",
@@ -78,6 +79,7 @@ export const BASE_MODEL_CLASSES = {
     // Other models
     [BASE_MODELS.FLUX_1_D]: "flux-d",
     [BASE_MODELS.FLUX_1_S]: "flux-s",
+    [BASE_MODELS.FLUX_1_KONTEXT]: "flux-kontext",
     [BASE_MODELS.AURAFLOW]: "auraflow",
     [BASE_MODELS.PIXART_A]: "pixart-a",
     [BASE_MODELS.PIXART_E]: "pixart-e",
