@@ -22,6 +22,13 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 ## Release Notes
 
+### v0.8.19
+* **Analytics Dashboard** - Added new Statistics page providing comprehensive visual analysis of model collection and usage patterns for better library insights
+* **Target Node Selection** - Enhanced workflow integration with intelligent target choosing when sending LoRAs/recipes to workflows with multiple loader/stacker nodes; a visual selector now appears showing node color, type, ID, and title for precise targeting
+* **Enhanced NSFW Controls** - Added support for setting NSFW levels on recipes with automatic content blurring based on user preferences
+* **Customizable Card Display** - New display settings allowing users to choose whether card information and action buttons are always visible or only revealed on hover
+* **Expanded Compatibility** - Added support for efficiency-nodes-comfyui in Save Recipe and Save Image nodes, plus fixed compatibility with ComfyUI_Custom_Nodes_AlekPet
+
 ### v0.8.18
 * **Custom Example Images** - Added ability to import your own example images for LoRAs and checkpoints with automatic metadata extraction from embedded information
 * **Enhanced Example Management** - New action buttons to set specific examples as previews or delete custom examples
@@ -101,13 +108,6 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 - 🚀 **High Performance**
   - Fast model loading and browsing
   - Smooth scrolling through large collections
-  - Real-time updates when files change
-  
-- 📂 **Advanced Organization**
-  - Quick search with fuzzy matching
-  - Folder-based categorization
-  - Move LoRAs between folders
-  - Sort by name or date
   
 - 🌐 **Rich Model Integration**
   - Direct download from CivitAI

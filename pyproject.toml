@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-lora-manager"
 description = "LoRA Manager for ComfyUI - Access it at http://localhost:8188/loras for managing LoRA models with previews and metadata integration."
-version = "0.8.18"
+version = "0.8.19"
 license = {file = "LICENSE"}
 dependencies = [
     "aiohttp",
