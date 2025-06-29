@@ -35,7 +35,12 @@ any_type = AnyType("*")
 # Common methods extracted from lora_loader.py and lora_stacker.py
 import os
 import logging
-import asyncio
+import copy
+import folder_paths
+import torch
+import safetensors.torch
+from diffusers.utils.state_dict_utils import convert_unet_state_dict_to_peft
+from diffusers.loaders import FluxLoraLoaderMixin
 from ..services.lora_scanner import LoraScanner
 from ..config import config
 
@@ -82,3 +87,63 @@ def get_loras_list(kwargs):
     else:
         logger.warning(f"Unexpected loras format: {type(loras_data)}")
         return []
+
+def load_state_dict_in_safetensors(path, device="cpu", filter_prefix=""):
+    """Simplified version of load_state_dict_in_safetensors that just loads from a local path"""  
+    state_dict = {}
+    with safetensors.torch.safe_open(path, framework="pt", device=device) as f:
+        for k in f.keys():
+            if filter_prefix and not k.startswith(filter_prefix):
+                continue
+            state_dict[k.removeprefix(filter_prefix)] = f.get_tensor(k)
+    return state_dict
+
+def to_diffusers(input_lora):
+    """Simplified version of to_diffusers for Flux LoRA conversion"""
+    if isinstance(input_lora, str):
+        tensors = load_state_dict_in_safetensors(input_lora, device="cpu")
+    else:
+        tensors = {k: v for k, v in input_lora.items()}
+
+    # Convert FP8 tensors to BF16
+    for k, v in tensors.items():
+        if v.dtype not in [torch.float64, torch.float32, torch.bfloat16, torch.float16]:
+            tensors[k] = v.to(torch.bfloat16)
+    
+    new_tensors = FluxLoraLoaderMixin.lora_state_dict(tensors)
+    new_tensors = convert_unet_state_dict_to_peft(new_tensors)
+
+    return new_tensors
+
+def nunchaku_load_lora(model, lora_name, lora_strength):
+    """Load a Flux LoRA for Nunchaku model"""   
+    model_wrapper = model.model.diffusion_model
+    transformer = model_wrapper.model
+    
+    # Save the transformer temporarily
+    model_wrapper.model = None
+    ret_model = copy.deepcopy(model)  # copy everything except the model
+    ret_model_wrapper = ret_model.model.diffusion_model
+    
+    # Restore the model and set it for the copy
+    model_wrapper.model = transformer
+    ret_model_wrapper.model = transformer
+    
+    # Get full path to the LoRA file
+    lora_path = folder_paths.get_full_path("loras", lora_name)
+    ret_model_wrapper.loras.append((lora_path, lora_strength))
+    
+    # Convert the LoRA to diffusers format
+    sd = to_diffusers(lora_path)
+    
+    # Handle embedding adjustment if needed
+    if "transformer.x_embedder.lora_A.weight" in sd:
+        new_in_channels = sd["transformer.x_embedder.lora_A.weight"].shape[1]
+        assert new_in_channels % 4 == 0
+        new_in_channels = new_in_channels // 4
+        
+        old_in_channels = ret_model.model.model_config.unet_config["in_channels"]
+        if old_in_channels < new_in_channels:
+            ret_model.model.model_config.unet_config["in_channels"] = new_in_channels
+    
+    return ret_model

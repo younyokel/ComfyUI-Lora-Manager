@@ -2,14 +2,14 @@ import logging
 from nodes import LoraLoader
 from comfy.comfy_types import IO # type: ignore
 import asyncio
-from .utils import FlexibleOptionalInputType, any_type, get_lora_info, extract_lora_name, get_loras_list
+from .utils import FlexibleOptionalInputType, any_type, get_lora_info, extract_lora_name, get_loras_list, nunchaku_load_lora
 
 logger = logging.getLogger(__name__)
 
 class LoraManagerLoader:
     NAME = "Lora Loader (LoraManager)"
     CATEGORY = "Lora Manager/loaders"
-
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -37,19 +37,39 @@ class LoraManagerLoader:
         
         clip = kwargs.get('clip', None)
         lora_stack = kwargs.get('lora_stack', None)
+        
+        # Check if model is a Nunchaku Flux model - simplified approach
+        is_nunchaku_model = False
+        
+        try:
+            model_wrapper = model.model.diffusion_model
+            # Check if model is a Nunchaku Flux model using only class name
+            if model_wrapper.__class__.__name__ == "ComfyFluxWrapper":
+                is_nunchaku_model = True
+                logger.info("Detected Nunchaku Flux model")
+        except (AttributeError, TypeError):
+            # Not a model with the expected structure
+            pass
+        
         # First process lora_stack if available
         if lora_stack:
             for lora_path, model_strength, clip_strength in lora_stack:
-                # Apply the LoRA using the provided path and strengths
-                model, clip = LoraLoader().load_lora(model, clip, lora_path, model_strength, clip_strength)
+                # Apply the LoRA using the appropriate loader
+                if is_nunchaku_model:
+                    # Use our custom function for Flux models
+                    model = nunchaku_load_lora(model, lora_path, model_strength)
+                    # clip remains unchanged for Nunchaku models
+                else:
+                    # Use default loader for standard models
+                    model, clip = LoraLoader().load_lora(model, clip, lora_path, model_strength, clip_strength)
                 
                 # Extract lora name for trigger words lookup
                 lora_name = extract_lora_name(lora_path)
                 _, trigger_words = asyncio.run(get_lora_info(lora_name))
                 
                 all_trigger_words.extend(trigger_words)
-                # Add clip strength to output if different from model strength
-                if abs(model_strength - clip_strength) > 0.001:
+                # Add clip strength to output if different from model strength (except for Nunchaku models)
+                if not is_nunchaku_model and abs(model_strength - clip_strength) > 0.001:
                     loaded_loras.append(f"{lora_name}: {model_strength},{clip_strength}")
                 else:
                     loaded_loras.append(f"{lora_name}: {model_strength}")
@@ -68,11 +88,17 @@ class LoraManagerLoader:
             # Get lora path and trigger words
             lora_path, trigger_words = asyncio.run(get_lora_info(lora_name))
             
-            # Apply the LoRA using the resolved path with separate strengths
-            model, clip = LoraLoader().load_lora(model, clip, lora_path, model_strength, clip_strength)
+            # Apply the LoRA using the appropriate loader
+            if is_nunchaku_model:
+                # For Nunchaku models, use our custom function
+                model = nunchaku_load_lora(model, lora_path, model_strength)
+                # clip remains unchanged
+            else:
+                # Use default loader for standard models
+                model, clip = LoraLoader().load_lora(model, clip, lora_path, model_strength, clip_strength)
             
-            # Include clip strength in output if different from model strength
-            if abs(model_strength - clip_strength) > 0.001:
+            # Include clip strength in output if different from model strength and not a Nunchaku model
+            if not is_nunchaku_model and abs(model_strength - clip_strength) > 0.001:
                 loaded_loras.append(f"{lora_name}: {model_strength},{clip_strength}")
             else:
                 loaded_loras.append(f"{lora_name}: {model_strength}")
