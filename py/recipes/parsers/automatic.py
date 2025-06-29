@@ -19,7 +19,7 @@ class AutomaticMetadataParser(RecipeMetadataParser):
     LORA_HASHES_REGEX = r', Lora hashes:\s*"([^"]+)"'
     CIVITAI_RESOURCES_REGEX = r', Civitai resources:\s*(\[\{.*?\}\])'
     CIVITAI_METADATA_REGEX = r', Civitai metadata:\s*(\{.*?\})'
-    EXTRANETS_REGEX = r'<(lora|hypernet):([a-zA-Z0-9_\.\-]+):([0-9.]+)>'
+    EXTRANETS_REGEX = r'<(lora|hypernet):([^:]+):(-?[0-9.]+)>'
     MODEL_HASH_PATTERN = r'Model hash: ([a-zA-Z0-9]+)'
     VAE_HASH_PATTERN = r'VAE hash: ([a-zA-Z0-9]+)'
     
