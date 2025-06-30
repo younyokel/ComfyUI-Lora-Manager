@@ -6,7 +6,7 @@ from typing import Dict
 from server import PromptServer # type: ignore
 
 from ..utils.routes_common import ModelRouteUtils
-from ..nodes.utils import get_lora_info
+from ..utils.utils import get_lora_info
 
 from ..config import config
 from ..services.websocket_manager import ws_manager

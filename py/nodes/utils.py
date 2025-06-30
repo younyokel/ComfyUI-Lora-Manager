@@ -41,29 +41,8 @@ import torch
 import safetensors.torch
 from diffusers.utils.state_dict_utils import convert_unet_state_dict_to_peft
 from diffusers.loaders import FluxLoraLoaderMixin
-from ..services.lora_scanner import LoraScanner
-from ..config import config
 
 logger = logging.getLogger(__name__)
-
-async def get_lora_info(lora_name):
-    """Get the lora path and trigger words from cache"""
-    scanner = await LoraScanner.get_instance()
-    cache = await scanner.get_cached_data()
-    
-    for item in cache.raw_data:
-        if item.get('file_name') == lora_name:
-            file_path = item.get('file_path')
-            if file_path:
-                for root in config.loras_roots:
-                    root = root.replace(os.sep, '/')
-                    if file_path.startswith(root):
-                        relative_path = os.path.relpath(file_path, root).replace(os.sep, '/')
-                        # Get trigger words from civitai metadata
-                        civitai = item.get('civitai', {})
-                        trigger_words = civitai.get('trainedWords', []) if civitai else []
-                        return relative_path, trigger_words
-    return lora_name, []  # Fallback if not found
 
 def extract_lora_name(lora_path):
     """Extract the lora name from a lora path (e.g., 'IL\\aorunIllstrious.safetensors' -> 'aorunIllstrious')"""

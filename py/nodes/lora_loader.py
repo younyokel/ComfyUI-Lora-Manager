@@ -2,7 +2,8 @@ import logging
 from nodes import LoraLoader
 from comfy.comfy_types import IO # type: ignore
 import asyncio
-from .utils import FlexibleOptionalInputType, any_type, get_lora_info, extract_lora_name, get_loras_list, nunchaku_load_lora
+from ..utils.utils import get_lora_info
+from .utils import FlexibleOptionalInputType, any_type, extract_lora_name, get_loras_list, nunchaku_load_lora
 
 logger = logging.getLogger(__name__)
 

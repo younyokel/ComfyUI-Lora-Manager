@@ -1,11 +1,7 @@
-import json
 import os
 import logging
 import asyncio
-import shutil
-import time
-import re
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional
 
 from ..utils.models import LoraMetadata
 from ..config import config
@@ -14,7 +10,6 @@ from .model_hash_index import ModelHashIndex  # Changed from LoraHashIndex to Mo
 from .settings_manager import settings
 from ..utils.constants import NSFW_LEVELS
 from ..utils.utils import fuzzy_match
-from .service_registry import ServiceRegistry
 import sys
 
 logger = logging.getLogger(__name__)

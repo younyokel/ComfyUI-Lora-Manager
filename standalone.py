@@ -3,6 +3,26 @@ import os
 import sys
 import json
 
+# Create mock modules for py/nodes directory - add this before any other imports
+def mock_nodes_directory():
+    """Create mock modules for all Python files in the py/nodes directory"""
+    nodes_dir = os.path.join(os.path.dirname(__file__), 'py', 'nodes')
+    if os.path.exists(nodes_dir):
+        # Create a mock module for the nodes package itself
+        sys.modules['py.nodes'] = type('MockNodesModule', (), {})
+        
+        # Create mock modules for all Python files in the nodes directory
+        for file in os.listdir(nodes_dir):
+            if file.endswith('.py') and file != '__init__.py':
+                module_name = file[:-3]  # Remove .py extension
+                full_module_name = f'py.nodes.{module_name}'
+                # Create empty module object
+                sys.modules[full_module_name] = type(f'Mock{module_name.capitalize()}Module', (), {})
+                print(f"Created mock module for: {full_module_name}")
+
+# Run the mocking function before any other imports
+mock_nodes_directory()
+
 # Create mock folder_paths module BEFORE any other imports
 class MockFolderPaths:
     @staticmethod

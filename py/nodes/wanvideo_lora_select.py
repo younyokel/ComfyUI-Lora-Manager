@@ -1,7 +1,8 @@
 from comfy.comfy_types import IO # type: ignore
 import asyncio
 import folder_paths # type: ignore
-from .utils import FlexibleOptionalInputType, any_type, get_lora_info, extract_lora_name, get_loras_list
+from ..utils.utils import get_lora_info
+from .utils import FlexibleOptionalInputType, any_type, get_loras_list
 import logging
 
 logger = logging.getLogger(__name__)
