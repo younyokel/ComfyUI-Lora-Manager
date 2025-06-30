@@ -337,7 +337,7 @@ export async function sendLoraToWorkflow(loraSyntax, replaceMode = false, syntax
     // Success case - check node count
     if (registryData.data.node_count === 0) {
       // No nodes found - show warning
-      showToast('No Lora Loader or Lora Stacker nodes found in workflow', 'warning');
+      showToast('No supported target nodes found in workflow', 'warning');
       return false;
     } else if (registryData.data.node_count > 1) {
       // Multiple nodes - show selector

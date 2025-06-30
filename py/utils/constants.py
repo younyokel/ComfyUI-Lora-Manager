@@ -10,7 +10,8 @@ NSFW_LEVELS = {
 # Node type constants
 NODE_TYPES = {
     "Lora Loader (LoraManager)": 1,
-    "Lora Stacker (LoraManager)": 2
+    "Lora Stacker (LoraManager)": 2,
+    "WanVideo Lora Select (LoraManager)": 3
 }
 
 # Default ComfyUI node color when bgcolor is null

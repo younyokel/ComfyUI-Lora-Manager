@@ -76,7 +76,9 @@ app.registerExtension({
         
         // Standard mode - update a specific node
         const node = app.graph.getNodeById(+id);
-        if (!node || (node.comfyClass !== "Lora Loader (LoraManager)" && node.comfyClass !== "Lora Stacker (LoraManager)")) {
+        if (!node || (node.comfyClass !== "Lora Loader (LoraManager)" && 
+                node.comfyClass !== "Lora Stacker (LoraManager)" && 
+                node.comfyClass !== "WanVideo Lora Select (LoraManager)")) {
             console.warn("Node not found or not a LoraLoader:", id);
             return;
         }
@@ -87,7 +89,7 @@ app.registerExtension({
     // Helper method to update a single node's lora code
     updateNodeLoraCode(node, loraCode, mode) {
         // Update the input widget with new lora code
-        const inputWidget = node.widgets[0];
+        const inputWidget = node.inputWidget;
         if (!inputWidget) return;
         
         // Get the current lora code
@@ -182,6 +184,7 @@ app.registerExtension({
 
             // Update input widget callback
             const inputWidget = this.widgets[0];
+            this.inputWidget = inputWidget;
             inputWidget.callback = (value) => {
               if (isUpdating) return;
               isUpdating = true;

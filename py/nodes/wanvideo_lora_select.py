@@ -1,19 +1,20 @@
 from comfy.comfy_types import IO # type: ignore
 import asyncio
-import os
+import folder_paths # type: ignore
 from .utils import FlexibleOptionalInputType, any_type, get_lora_info, extract_lora_name, get_loras_list
 import logging
 
 logger = logging.getLogger(__name__)
 
-class LoraStacker:
-    NAME = "Lora Stacker (LoraManager)"
+class WanVideoLoraSelect:
+    NAME = "WanVideo Lora Select (LoraManager)"
     CATEGORY = "Lora Manager/stackers"
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
+                "low_mem_load": ("BOOLEAN", {"default": False, "tooltip": "Load the LORA model with less VRAM usage, slower loading"}),
                 "text": (IO.STRING, {
                     "multiline": True, 
                     "dynamicPrompts": True, 
@@ -24,52 +25,59 @@ class LoraStacker:
             "optional": FlexibleOptionalInputType(any_type),
         }
 
-    RETURN_TYPES = ("LORA_STACK", IO.STRING, IO.STRING)
-    RETURN_NAMES = ("LORA_STACK", "trigger_words", "active_loras")
-    FUNCTION = "stack_loras"
+    RETURN_TYPES = ("WANVIDLORA", IO.STRING, IO.STRING)
+    RETURN_NAMES = ("lora", "trigger_words", "active_loras")
+    FUNCTION = "process_loras"
     
-    def stack_loras(self, text, **kwargs):
-        """Stacks multiple LoRAs based on the kwargs input without loading them."""
-        stack = []
-        active_loras = []
+    def process_loras(self, text, low_mem_load=False, **kwargs):
+        loras_list = []
         all_trigger_words = []
+        active_loras = []
         
-        # Process existing lora_stack if available
-        lora_stack = kwargs.get('lora_stack', None)
-        if (lora_stack):
-            stack.extend(lora_stack)
-            # Get trigger words from existing stack entries
-            for lora_path, _, _ in lora_stack:
-                lora_name = extract_lora_name(lora_path)
-                _, trigger_words = asyncio.run(get_lora_info(lora_name))
-                all_trigger_words.extend(trigger_words)
+        # Process existing prev_lora if available
+        prev_lora = kwargs.get('prev_lora', None)
+        if prev_lora is not None:
+            loras_list.extend(prev_lora)
+        
+        # Get blocks if available
+        blocks = kwargs.get('blocks', {})
+        selected_blocks = blocks.get("selected_blocks", {})
+        layer_filter = blocks.get("layer_filter", "")
         
         # Process loras from kwargs with support for both old and new formats
-        loras_list = get_loras_list(kwargs)
-        for lora in loras_list:
+        loras_from_widget = get_loras_list(kwargs)
+        for lora in loras_from_widget:
             if not lora.get('active', False):
                 continue
                 
             lora_name = lora['name']
             model_strength = float(lora['strength'])
-            # Get clip strength - use model strength as default if not specified
             clip_strength = float(lora.get('clipStrength', model_strength))
             
             # Get lora path and trigger words
             lora_path, trigger_words = asyncio.run(get_lora_info(lora_name))
             
-            # Add to stack without loading
-            # replace '/' with os.sep to avoid different OS path format
-            stack.append((lora_path.replace('/', os.sep), model_strength, clip_strength))
+            # Create lora item for WanVideo format
+            lora_item = {
+                "path": folder_paths.get_full_path("loras", lora_path),
+                "strength": model_strength,
+                "name": lora_path.split(".")[0],
+                "blocks": selected_blocks,
+                "layer_filter": layer_filter,
+                "low_mem_load": low_mem_load,
+            }
+            
+            # Add to list and collect active loras
+            loras_list.append(lora_item)
             active_loras.append((lora_name, model_strength, clip_strength))
             
             # Add trigger words to collection
             all_trigger_words.extend(trigger_words)
         
-        # use ',, ' to separate trigger words for group mode
+        # Format trigger_words for output
         trigger_words_text = ",, ".join(all_trigger_words) if all_trigger_words else ""
         
-        # Format active_loras with support for both formats
+        # Format active_loras for output
         formatted_loras = []
         for name, model_strength, clip_strength in active_loras:
             if abs(model_strength - clip_strength) > 0.001:
@@ -81,4 +89,4 @@ class LoraStacker:
                 
         active_loras_text = " ".join(formatted_loras)
 
-        return (stack, trigger_words_text, active_loras_text)
+        return (loras_list, trigger_words_text, active_loras_text)

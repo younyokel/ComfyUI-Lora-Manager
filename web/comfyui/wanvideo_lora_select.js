@@ -38,27 +38,32 @@ function mergeLoras(lorasText, lorasArr) {
 }
 
 app.registerExtension({
-    name: "LoraManager.LoraStacker",
+    name: "LoraManager.WanVideoLoraSelect",
     
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeType.comfyClass === "Lora Stacker (LoraManager)") {
+        if (nodeType.comfyClass === "WanVideo Lora Select (LoraManager)") {
             chainCallback(nodeType.prototype, "onNodeCreated", async function() {
                 // Enable widget serialization
                 this.serialize_widgets = true;
 
-                this.addInput("lora_stack", 'LORA_STACK', {
+                // Add optional inputs
+                this.addInput("prev_lora", 'WANVIDLORA', {
+                    "shape": 7  // 7 is the shape of the optional input
+                });
+                
+                this.addInput("blocks", 'SELECTEDBLOCKS', {
                     "shape": 7  // 7 is the shape of the optional input
                 });
 
                 // Restore saved value if exists
                 let existingLoras = [];
                 if (this.widgets_values && this.widgets_values.length > 0) {
-                    // 0 for input widget, 1 for loras widget
-                    const savedValue = this.widgets_values[1];
+                    // 0 for low_mem_load, 1 for text widget, 2 for loras widget
+                    const savedValue = this.widgets_values[2];
                     existingLoras = savedValue || [];
                 }
                 // Merge the loras data
-                const mergedLoras = mergeLoras(this.widgets[0].value, existingLoras);
+                const mergedLoras = mergeLoras(this.widgets[1].value, existingLoras);
                 
                 // Add flag to prevent callback loops
                 let isUpdating = false;
@@ -72,7 +77,7 @@ app.registerExtension({
                     
                     try {
                         // Remove loras that are not in the value array
-                        const inputWidget = this.widgets[0];
+                        const inputWidget = this.widgets[1];
                         const currentLoras = value.map(l => l.name);
                         
                         // Use the constant pattern here as well
@@ -85,7 +90,7 @@ app.registerExtension({
                         
                         inputWidget.value = newText;
                         
-                        // Update this stacker's direct trigger toggles with its own active loras
+                        // Update this node's direct trigger toggles with its own active loras
                         const activeLoraNames = new Set();
                         value.forEach(lora => {
                             if (lora.active) {
@@ -93,9 +98,6 @@ app.registerExtension({
                             }
                         });
                         updateConnectedTriggerWords(this, activeLoraNames);
-                        
-                        // Find all Lora Loader nodes in the chain that might need updates
-                        updateDownstreamLoaders(this);
                     } finally {
                         isUpdating = false;
                     }
@@ -104,7 +106,7 @@ app.registerExtension({
                 this.lorasWidget = result.widget;
 
                 // Update input widget callback
-                const inputWidget = this.widgets[0];
+                const inputWidget = this.widgets[1];
                 this.inputWidget = inputWidget;
                 inputWidget.callback = (value) => {
                     if (isUpdating) return;
@@ -116,72 +118,14 @@ app.registerExtension({
                         
                         this.lorasWidget.value = mergedLoras;
                         
-                        // Update this stacker's direct trigger toggles with its own active loras
+                        // Update this node's direct trigger toggles with its own active loras
                         const activeLoraNames = getActiveLorasFromNode(this);
                         updateConnectedTriggerWords(this, activeLoraNames);
-                        
-                        // Find all Lora Loader nodes in the chain that might need updates
-                        updateDownstreamLoaders(this);
                     } finally {
                         isUpdating = false;
                     }
                 };
-
-                // Register this node with the backend
-                this.registerNode = async () => {
-                    try {
-                        await fetch('/api/register-node', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                node_id: this.id,
-                                bgcolor: this.bgcolor,
-                                title: this.title,
-                                graph_id: this.graph.id
-                            })
-                        });
-                    } catch (error) {
-                        console.warn('Failed to register node:', error);
-                    }
-                };
-
-                // Call registration
-                // setTimeout(() => {
-                //     this.registerNode();
-                // }, 0);
             });
         }
     },
 });
-
-// Helper function to find and update downstream Lora Loader nodes
-function updateDownstreamLoaders(startNode, visited = new Set()) {
-    if (visited.has(startNode.id)) return;
-    visited.add(startNode.id);
-    
-    // Check each output link
-    if (startNode.outputs) {
-        for (const output of startNode.outputs) {
-            if (output.links) {
-                for (const linkId of output.links) {
-                    const link = app.graph.links[linkId];
-                    if (link) {
-                        const targetNode = app.graph.getNodeById(link.target_id);
-                        
-                        // If target is a Lora Loader, collect all active loras in the chain and update
-                        if (targetNode && targetNode.comfyClass === "Lora Loader (LoraManager)") {
-                            const allActiveLoraNames = collectActiveLorasFromChain(targetNode);
-                            updateConnectedTriggerWords(targetNode, allActiveLoraNames);
-                        }
-                        // If target is another Lora Stacker, recursively check its outputs
-                        else if (targetNode && targetNode.comfyClass === "Lora Stacker (LoraManager)") {
-                            updateDownstreamLoaders(targetNode, visited);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}

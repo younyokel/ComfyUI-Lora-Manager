@@ -108,19 +108,22 @@ export const NSFW_LEVELS = {
 // Node type constants
 export const NODE_TYPES = {
     LORA_LOADER: 1,
-    LORA_STACKER: 2
+    LORA_STACKER: 2,
+    WAN_VIDEO_LORA_SELECT: 3
 };
 
 // Node type names to IDs mapping
 export const NODE_TYPE_NAMES = {
     "Lora Loader (LoraManager)": NODE_TYPES.LORA_LOADER,
-    "Lora Stacker (LoraManager)": NODE_TYPES.LORA_STACKER
+    "Lora Stacker (LoraManager)": NODE_TYPES.LORA_STACKER,
+    "WanVideo Lora Select (LoraManager)": NODE_TYPES.WAN_VIDEO_LORA_SELECT
 };
 
 // Node type icons
 export const NODE_TYPE_ICONS = {
     [NODE_TYPES.LORA_LOADER]: "fas fa-l",
-    [NODE_TYPES.LORA_STACKER]: "fas fa-s"
+    [NODE_TYPES.LORA_STACKER]: "fas fa-s",
+    [NODE_TYPES.WAN_VIDEO_LORA_SELECT]: "fas fa-w"
 };
 
 // Default ComfyUI node color when bgcolor is null

@@ -52,7 +52,9 @@ app.registerExtension({
             // Find all Lora nodes
             const loraNodes = [];
             for (const node of workflow.nodes.values()) {
-                if (node.type === "Lora Loader (LoraManager)" || node.type === "Lora Stacker (LoraManager)") {
+                if (node.type === "Lora Loader (LoraManager)" || 
+                    node.type === "Lora Stacker (LoraManager)" || 
+                    node.type === "WanVideo Lora Select (LoraManager)") {
                     loraNodes.push({
                         node_id: node.id,
                         bgcolor: node.bgcolor || null,
