@@ -8,6 +8,7 @@ from .model_utils import determine_base_model
 from .constants import PREVIEW_EXTENSIONS, CARD_PREVIEW_WIDTH
 from ..config import config
 from ..services.civitai_client import CivitaiClient
+from ..services.service_registry import ServiceRegistry
 from ..utils.exif_utils import ExifUtils
 from ..utils.metadata_manager import MetadataManager
 from ..services.download_manager import DownloadManager
