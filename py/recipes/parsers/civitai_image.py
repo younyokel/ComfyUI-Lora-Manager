@@ -50,6 +50,9 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                 'from_civitai_image': True
             }
             
+            # Track already added LoRAs to prevent duplicates
+            added_loras = {}  # key: model_version_id or hash, value: index in result["loras"]
+            
             # Extract prompt and negative prompt
             if "prompt" in metadata:
                 result["gen_params"]["prompt"] = metadata["prompt"]
@@ -96,11 +99,17 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                 for resource in metadata["resources"]:
                     # Modified to process resources without a type field as potential LoRAs
                     if resource.get("type", "lora") == "lora":
+                        lora_hash = resource.get("hash", "")
+                        
+                        # Skip if we've already added this LoRA by hash
+                        if lora_hash and lora_hash in added_loras:
+                            continue
+                        
                         lora_entry = {
                             'name': resource.get("name", "Unknown LoRA"),
                             'type': "lora",
                             'weight': float(resource.get("weight", 1.0)),
-                            'hash': resource.get("hash", ""),
+                            'hash': lora_hash,
                             'existsLocally': False,
                             'localPath': None,
                             'file_name': resource.get("name", "Unknown"),
@@ -114,7 +123,6 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                         # Try to get info from Civitai if hash is available
                         if lora_entry['hash'] and civitai_client:
                             try:
-                                lora_hash = lora_entry['hash']
                                 civitai_info = await civitai_client.get_model_by_hash(lora_hash)
                                 
                                 populated_entry = await self.populate_lora_from_civitai(
@@ -129,43 +137,124 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                                     continue  # Skip invalid LoRA types
                                     
                                 lora_entry = populated_entry
+                                
+                                # If we have a version ID from Civitai, track it for deduplication
+                                if 'id' in lora_entry and lora_entry['id']:
+                                    added_loras[str(lora_entry['id'])] = len(result["loras"])
                             except Exception as e:
                                 logger.error(f"Error fetching Civitai info for LoRA hash {lora_entry['hash']}: {e}")
                         
+                        # Track by hash if we have it
+                        if lora_hash:
+                            added_loras[lora_hash] = len(result["loras"])
+                            
                         result["loras"].append(lora_entry)
             
             # Process civitaiResources array
             if "civitaiResources" in metadata and isinstance(metadata["civitaiResources"], list):
                 for resource in metadata["civitaiResources"]:
-                    # Modified to process resources without a type field as potential LoRAs
-                    if resource.get("type") in ["lora", "lycoris"] or "type" not in resource:
-                        # Initialize lora entry with the same structure as in automatic.py
-                        lora_entry = {
-                            'id': resource.get("modelVersionId", 0),
-                            'modelId': resource.get("modelId", 0),
-                            'name': resource.get("modelName", "Unknown LoRA"),
-                            'version': resource.get("modelVersionName", ""),
-                            'type': resource.get("type", "lora"),
-                            'weight': round(float(resource.get("weight", 1.0)), 2),
-                            'existsLocally': False,
-                            'thumbnailUrl': '/loras_static/images/no-preview.png',
-                            'baseModel': '',
-                            'size': 0,
-                            'downloadUrl': '',
-                            'isDeleted': False
-                        }
+                    # Skip resources that aren't LoRAs or LyCORIS
+                    if resource.get("type") not in ["lora", "lycoris"] and "type" not in resource:
+                        continue
                         
-                        # Try to get info from Civitai if modelVersionId is available
-                        if resource.get('modelVersionId') and civitai_client:
-                            try:
-                                version_id = str(resource.get('modelVersionId'))
-                                # Use get_model_version_info instead of get_model_version
-                                civitai_info, error = await civitai_client.get_model_version_info(version_id)
+                    # Get unique identifier for deduplication
+                    version_id = str(resource.get("modelVersionId", ""))
+                    
+                    # Skip if we've already added this LoRA
+                    if version_id and version_id in added_loras:
+                        continue
+                    
+                    # Initialize lora entry
+                    lora_entry = {
+                        'id': resource.get("modelVersionId", 0),
+                        'modelId': resource.get("modelId", 0),
+                        'name': resource.get("modelName", "Unknown LoRA"),
+                        'version': resource.get("modelVersionName", ""),
+                        'type': resource.get("type", "lora"),
+                        'weight': round(float(resource.get("weight", 1.0)), 2),
+                        'existsLocally': False,
+                        'thumbnailUrl': '/loras_static/images/no-preview.png',
+                        'baseModel': '',
+                        'size': 0,
+                        'downloadUrl': '',
+                        'isDeleted': False
+                    }
+                    
+                    # Try to get info from Civitai if modelVersionId is available
+                    if version_id and civitai_client:
+                        try:
+                            # Use get_model_version_info instead of get_model_version
+                            civitai_info, error = await civitai_client.get_model_version_info(version_id)
+                            
+                            if error:
+                                logger.warning(f"Error getting model version info: {error}")
+                                continue
+                            
+                            populated_entry = await self.populate_lora_from_civitai(
+                                lora_entry,
+                                civitai_info,
+                                recipe_scanner,
+                                base_model_counts
+                            )
+                            
+                            if populated_entry is None:
+                                continue  # Skip invalid LoRA types
                                 
-                                if error:
-                                    logger.warning(f"Error getting model version info: {error}")
-                                    continue
-                                
+                            lora_entry = populated_entry
+                        except Exception as e:
+                            logger.error(f"Error fetching Civitai info for model version {version_id}: {e}")
+                    
+                    # Track this LoRA in our deduplication dict
+                    if version_id:
+                        added_loras[version_id] = len(result["loras"])
+                        
+                    result["loras"].append(lora_entry)
+            
+            # Process additionalResources array
+            if "additionalResources" in metadata and isinstance(metadata["additionalResources"], list):
+                for resource in metadata["additionalResources"]:
+                    # Skip resources that aren't LoRAs or LyCORIS
+                    if resource.get("type") not in ["lora", "lycoris"] and "type" not in resource:
+                        continue
+                        
+                    lora_type = resource.get("type", "lora")
+                    name = resource.get("name", "")
+                    
+                    # Extract ID from URN format if available
+                    version_id = None
+                    if name and "civitai:" in name:
+                        parts = name.split("@")
+                        if len(parts) > 1:
+                            version_id = parts[1]
+                            
+                            # Skip if we've already added this LoRA
+                            if version_id in added_loras:
+                                continue
+                    
+                    lora_entry = {
+                        'name': name,
+                        'type': lora_type,
+                        'weight': float(resource.get("strength", 1.0)),
+                        'hash': "",
+                        'existsLocally': False,
+                        'localPath': None,
+                        'file_name': name,
+                        'thumbnailUrl': '/loras_static/images/no-preview.png',
+                        'baseModel': '',
+                        'size': 0,
+                        'downloadUrl': '',
+                        'isDeleted': False
+                    }
+                    
+                    # If we have a version ID and civitai client, try to get more info
+                    if version_id and civitai_client:
+                        try:
+                            # Use get_model_version_info with the version ID
+                            civitai_info, error = await civitai_client.get_model_version_info(version_id)
+                            
+                            if error:
+                                logger.warning(f"Error getting model version info: {error}")
+                            else:
                                 populated_entry = await self.populate_lora_from_civitai(
                                     lora_entry,
                                     civitai_info,
@@ -177,65 +266,14 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                                     continue  # Skip invalid LoRA types
                                     
                                 lora_entry = populated_entry
-                            except Exception as e:
-                                logger.error(f"Error fetching Civitai info for model version {resource.get('modelVersionId')}: {e}")
-                        
-                        result["loras"].append(lora_entry)
-            
-            # Process additionalResources array
-            if "additionalResources" in metadata and isinstance(metadata["additionalResources"], list):
-                for resource in metadata["additionalResources"]:
-                    # Modified to process resources without a type field as potential LoRAs
-                    if resource.get("type") in ["lora", "lycoris"] or "type" not in resource:
-                        lora_type = resource.get("type", "lora")
-                        name = resource.get("name", "")
-                        
-                        # Extract ID from URN format if available
-                        model_id = None
-                        if name and "civitai:" in name:
-                            parts = name.split("@")
-                            if len(parts) > 1:
-                                model_id = parts[1]
-                        
-                        lora_entry = {
-                            'name': name,
-                            'type': lora_type,
-                            'weight': float(resource.get("strength", 1.0)),
-                            'hash': "",
-                            'existsLocally': False,
-                            'localPath': None,
-                            'file_name': name,
-                            'thumbnailUrl': '/loras_static/images/no-preview.png',
-                            'baseModel': '',
-                            'size': 0,
-                            'downloadUrl': '',
-                            'isDeleted': False
-                        }
-                        
-                        # If we have a model ID and civitai client, try to get more info
-                        if model_id and civitai_client:
-                            try:
-                                # Use get_model_version_info with the model ID
-                                civitai_info, error = await civitai_client.get_model_version_info(model_id)
                                 
-                                if error:
-                                    logger.warning(f"Error getting model version info: {error}")
-                                else:
-                                    populated_entry = await self.populate_lora_from_civitai(
-                                        lora_entry,
-                                        civitai_info,
-                                        recipe_scanner,
-                                        base_model_counts
-                                    )
-                                    
-                                    if populated_entry is None:
-                                        continue  # Skip invalid LoRA types
-                                        
-                                    lora_entry = populated_entry
-                            except Exception as e:
-                                logger.error(f"Error fetching Civitai info for model ID {model_id}: {e}")
-                        
-                            result["loras"].append(lora_entry)
+                                # Track this LoRA for deduplication
+                                if version_id:
+                                    added_loras[version_id] = len(result["loras"])
+                        except Exception as e:
+                            logger.error(f"Error fetching Civitai info for model ID {version_id}: {e}")
+                    
+                        result["loras"].append(lora_entry)
             
             # If base model wasn't found earlier, use the most common one from LoRAs
             if not result["base_model"] and base_model_counts:
