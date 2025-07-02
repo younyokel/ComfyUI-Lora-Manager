@@ -12,6 +12,7 @@ from ..services.service_registry import ServiceRegistry
 from ..utils.exif_utils import ExifUtils
 from ..utils.metadata_manager import MetadataManager
 from ..services.download_manager import DownloadManager
+from ..services.websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -565,13 +566,12 @@ class ModelRouteUtils:
             return web.Response(text=str(e), status=500)
 
     @staticmethod
-    async def handle_download_model(request: web.Request, download_manager: DownloadManager, model_type=None) -> web.Response:
+    async def handle_download_model(request: web.Request, download_manager: DownloadManager) -> web.Response:
         """Handle model download request
         
         Args:
             request: The aiohttp request
             download_manager: Instance of DownloadManager
-            model_type: Type of model ('lora' or 'checkpoint')
             
         Returns:
             web.Response: The HTTP response
@@ -579,12 +579,15 @@ class ModelRouteUtils:
         try:
             data = await request.json()
             
-            # Create progress callback
+            # Get or generate a download ID
+            download_id = data.get('download_id', ws_manager.generate_download_id())
+            
+            # Create progress callback with download ID
             async def progress_callback(progress):
-                from ..services.websocket_manager import ws_manager
-                await ws_manager.broadcast({
+                await ws_manager.broadcast_download_progress(download_id, {
                     'status': 'progress',
-                    'progress': progress
+                    'progress': progress,
+                    'download_id': download_id
                 })
             
             # Check which identifier is provided
@@ -598,14 +601,19 @@ class ModelRouteUtils:
                     text="Missing required parameter: Please provide 'model_id'"
                 )
             
+            use_default_paths = data.get('use_default_paths', False)
+            
             result = await download_manager.download_from_civitai(
                 model_id=model_id,
                 model_version_id=model_version_id,
                 save_dir=data.get('model_root'),
                 relative_path=data.get('relative_path', ''),
-                progress_callback=progress_callback,
-                model_type=model_type
+                use_default_paths=use_default_paths,
+                progress_callback=progress_callback
             )
+            
+            # Include download_id in the response
+            result['download_id'] = download_id
             
             if not result.get('success', False):
                 error_message = result.get('error', 'Unknown error')

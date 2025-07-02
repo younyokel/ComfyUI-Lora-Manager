@@ -128,9 +128,12 @@ export class DownloadManager {
             targetPath += '/' + newFolder;
         }
         
+        // Generate a unique ID for this batch download
+        const batchDownloadId = Date.now().toString();
+        
         // Set up WebSocket for progress updates
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+        const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/download-progress?id=${batchDownloadId}`);
         
         // Show enhanced loading with progress details for multiple items
         const updateProgress = this.importManager.loadingManager.showDownloadProgress(
@@ -145,7 +148,15 @@ export class DownloadManager {
         // Set up progress tracking for current download
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (data.status === 'progress') {
+            
+            // Handle download ID confirmation
+            if (data.type === 'download_id') {
+                console.log(`Connected to batch download progress with ID: ${data.download_id}`);
+                return;
+            }
+            
+            // Process progress updates for our current active download
+            if (data.status === 'progress' && data.download_id && data.download_id.startsWith(batchDownloadId)) {
                 // Update current LoRA progress
                 currentLoraProgress = data.progress;
                 
@@ -188,16 +199,16 @@ export class DownloadManager {
             updateProgress(0, completedDownloads, lora.name);
             
             try {
-                // Download the LoRA
+                // Download the LoRA with download ID
                 const response = await fetch('/api/download-model', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        download_url: lora.downloadUrl,
-                        model_version_id: lora.modelVersionId,
-                        model_hash: lora.hash,
+                        model_id: lora.modelId,
+                        model_version_id: lora.id,
                         model_root: loraRoot,
-                        relative_path: targetPath.replace(loraRoot + '/', '')
+                        relative_path: targetPath.replace(loraRoot + '/', ''),
+                        download_id: batchDownloadId
                     })
                 });
                 

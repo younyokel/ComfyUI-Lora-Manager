@@ -301,13 +301,24 @@ export class CheckpointDownloadManager {
             const updateProgress = this.loadingManager.showDownloadProgress(1);
             updateProgress(0, 0, this.currentVersion.name);
 
-            // Setup WebSocket for progress updates using checkpoint-specific endpoint
+            // Generate a unique ID for this download
+            const downloadId = Date.now().toString();
+            
+            // Setup WebSocket for progress updates using download-specific endpoint
             const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/download-progress?id=${downloadId}`);
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.status === 'progress') {
+                
+                // Handle download ID confirmation
+                if (data.type === 'download_id') {
+                    console.log(`Connected to checkpoint download progress with ID: ${data.download_id}`);
+                    return;
+                }
+                
+                // Only process progress updates for our download
+                if (data.status === 'progress' && data.download_id === downloadId) {
                     // Update progress display with current progress
                     updateProgress(data.progress, 0, this.currentVersion.name);
                     
@@ -329,7 +340,7 @@ export class CheckpointDownloadManager {
                 // Continue with download even if WebSocket fails
             };
 
-            // Start download using checkpoint download endpoint
+            // Start download using checkpoint download endpoint with download ID
             const response = await fetch('/api/download-model', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -337,7 +348,8 @@ export class CheckpointDownloadManager {
                     model_id: this.modelId,
                     model_version_id: this.currentVersion.id,
                     model_root: checkpointRoot,
-                    relative_path: targetFolder
+                    relative_path: targetFolder,
+                    download_id: downloadId
                 })
             });
 

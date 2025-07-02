@@ -311,13 +311,24 @@ export class DownloadManager {
             const updateProgress = this.loadingManager.showDownloadProgress(1);
             updateProgress(0, 0, this.currentVersion.name);
 
-            // Setup WebSocket for progress updates
+            // Generate a unique ID for this download
+            const downloadId = Date.now().toString();
+            
+            // Setup WebSocket for progress updates - use download-specific endpoint
             const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/fetch-progress`);
+            const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/download-progress?id=${downloadId}`);
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.status === 'progress') {
+                
+                // Handle download ID confirmation
+                if (data.type === 'download_id') {
+                    console.log(`Connected to download progress with ID: ${data.download_id}`);
+                    return;
+                }
+                
+                // Only process progress updates for our download
+                if (data.status === 'progress' && data.download_id === downloadId) {
                     // Update progress display with current progress
                     updateProgress(data.progress, 0, this.currentVersion.name);
                     
@@ -339,7 +350,7 @@ export class DownloadManager {
                 // Continue with download even if WebSocket fails
             };
 
-            // Start download
+            // Start download with our download ID
             const response = await fetch('/api/download-model', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -347,7 +358,8 @@ export class DownloadManager {
                     model_id: this.modelId,
                     model_version_id: this.currentVersion.id,
                     model_root: loraRoot,
-                    relative_path: targetFolder
+                    relative_path: targetFolder,
+                    download_id: downloadId
                 })
             });
 
@@ -357,6 +369,9 @@ export class DownloadManager {
 
             showToast('Download completed successfully', 'success');
             modalManager.closeModal('downloadModal');
+            
+            // Close WebSocket after download completes
+            ws.close();
             
             // Update state and trigger reload with folder update
             state.activeFolder = targetFolder;

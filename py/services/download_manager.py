@@ -7,6 +7,7 @@ from ..utils.constants import CARD_PREVIEW_WIDTH, VALID_LORA_TYPES
 from ..utils.exif_utils import ExifUtils
 from ..utils.metadata_manager import MetadataManager
 from .service_registry import ServiceRegistry
+from .settings_manager import settings
 
 # Download to temporary file first
 import tempfile
@@ -49,8 +50,7 @@ class DownloadManager:
 
     async def download_from_civitai(self, model_id: str = None, 
                                   model_version_id: str = None, save_dir: str = None, 
-                                  relative_path: str = '', progress_callback=None, 
-                                  model_type: str = None) -> Dict:
+                                  relative_path: str = '', progress_callback=None, use_default_paths: bool = False) -> Dict:
         """Download model from Civitai
         
         Args:
@@ -59,18 +59,12 @@ class DownloadManager:
             save_dir: Directory to save the model to
             relative_path: Relative path within save_dir
             progress_callback: Callback function for progress updates
-            model_type: Type of model ('lora' or 'checkpoint')
+            use_default_paths: Flag to indicate whether to use default paths
             
         Returns:
             Dict with download result
         """
         try:
-            # Update save directory with relative path if provided
-            if relative_path:
-                save_dir = os.path.join(save_dir, relative_path)
-                # Create directory if it doesn't exist
-                os.makedirs(save_dir, exist_ok=True)
-
             # Get civitai client
             civitai_client = await self._get_civitai_client()
 
@@ -80,15 +74,38 @@ class DownloadManager:
             if not version_info:
                 return {'success': False, 'error': 'Failed to fetch model metadata'}
 
-            # Infer model_type if not provided
-            if model_type is None:
-                model_type_from_info = version_info.get('model', {}).get('type', '').lower()
-                if model_type_from_info == 'checkpoint':
-                    model_type = 'checkpoint'
-                elif model_type_from_info in VALID_LORA_TYPES:
-                    model_type = 'lora'
-                else:
-                    return {'success': False, 'error': f'Model type "{model_type_from_info}" is not supported for download'}
+            model_type_from_info = version_info.get('model', {}).get('type', '').lower()
+            if model_type_from_info == 'checkpoint':
+                model_type = 'checkpoint'
+            elif model_type_from_info in VALID_LORA_TYPES:
+                model_type = 'lora'
+            else:
+                return {'success': False, 'error': f'Model type "{model_type_from_info}" is not supported for download'}
+            
+            # Handle use_default_paths
+            if use_default_paths:
+                # Set save_dir based on model type
+                if model_type == 'checkpoint':
+                    default_path = settings.get('default_checkpoint_root')
+                    if not default_path:
+                        return {'success': False, 'error': 'Default checkpoint root path not set in settings'}
+                    save_dir = default_path
+                else:  # model_type == 'lora'
+                    default_path = settings.get('default_lora_root')
+                    if not default_path:
+                        return {'success': False, 'error': 'Default lora root path not set in settings'}
+                    save_dir = default_path
+                    
+                # Set relative_path to the first tag if available
+                model_tags = version_info.get('model', {}).get('tags', [])
+                if model_tags:
+                    relative_path = model_tags[0]
+
+            # Update save directory with relative path if provided
+            if relative_path:
+                save_dir = os.path.join(save_dir, relative_path)
+                # Create directory if it doesn't exist
+                os.makedirs(save_dir, exist_ok=True)
 
             # Check if this is an early access model
             if version_info.get('earlyAccessEndsAt'):
