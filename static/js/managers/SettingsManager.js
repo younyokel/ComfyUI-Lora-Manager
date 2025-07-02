@@ -42,6 +42,11 @@ export class SettingsManager {
             state.global.settings.cardInfoDisplay = 'always';
         }
 
+        // Set default for defaultCheckpointRoot if undefined
+        if (state.global.settings.default_checkpoint_root === undefined) {
+            state.global.settings.default_checkpoint_root = '';
+        }
+
         // Convert old boolean compactMode to new displayDensity string
         if (typeof state.global.settings.displayDensity === 'undefined') {
             if (state.global.settings.compactMode === true) {
@@ -123,6 +128,9 @@ export class SettingsManager {
         // Load default lora root
         await this.loadLoraRoots();
         
+        // Load default checkpoint root
+        await this.loadCheckpointRoots();
+        
         // Backend settings are loaded from the template directly
     }
 
@@ -162,6 +170,45 @@ export class SettingsManager {
         } catch (error) {
             console.error('Error loading LoRA roots:', error);
             showToast('Failed to load LoRA roots: ' + error.message, 'error');
+        }
+    }
+
+    async loadCheckpointRoots() {
+        try {
+            const defaultCheckpointRootSelect = document.getElementById('defaultCheckpointRoot');
+            if (!defaultCheckpointRootSelect) return;
+            
+            // Fetch checkpoint roots
+            const response = await fetch('/api/checkpoints/roots');
+            if (!response.ok) {
+                throw new Error('Failed to fetch checkpoint roots');
+            }
+            
+            const data = await response.json();
+            if (!data.roots || data.roots.length === 0) {
+                throw new Error('No checkpoint roots found');
+            }
+            
+            // Clear existing options except the first one (No Default)
+            const noDefaultOption = defaultCheckpointRootSelect.querySelector('option[value=""]');
+            defaultCheckpointRootSelect.innerHTML = '';
+            defaultCheckpointRootSelect.appendChild(noDefaultOption);
+            
+            // Add options for each root
+            data.roots.forEach(root => {
+                const option = document.createElement('option');
+                option.value = root;
+                option.textContent = root;
+                defaultCheckpointRootSelect.appendChild(option);
+            });
+            
+            // Set selected value from settings
+            const defaultRoot = state.global.settings.default_checkpoint_root || '';
+            defaultCheckpointRootSelect.value = defaultRoot;
+            
+        } catch (error) {
+            console.error('Error loading checkpoint roots:', error);
+            showToast('Failed to load checkpoint roots: ' + error.message, 'error');
         }
     }
 
@@ -251,6 +298,8 @@ export class SettingsManager {
         // Update frontend state
         if (settingKey === 'default_lora_root') {
             state.global.settings.default_loras_root = value;
+        } else if (settingKey === 'default_checkpoint_root') {
+            state.global.settings.default_checkpoint_root = value;
         } else if (settingKey === 'display_density') {
             state.global.settings.displayDensity = value;
             
@@ -268,7 +317,7 @@ export class SettingsManager {
         
         try {
             // For backend settings, make API call
-            if (settingKey === 'default_lora_root') {
+            if (settingKey === 'default_lora_root' || settingKey === 'default_checkpoint_root') {
                 const payload = {};
                 payload[settingKey] = value;
                 
@@ -414,6 +463,7 @@ export class SettingsManager {
         const blurMatureContent = document.getElementById('blurMatureContent').checked;
         const showOnlySFW = document.getElementById('showOnlySFW').checked;
         const defaultLoraRoot = document.getElementById('defaultLoraRoot').value;
+        const defaultCheckpointRoot = document.getElementById('defaultCheckpointRoot').value;
         const autoplayOnHover = document.getElementById('autoplayOnHover').checked;
         const optimizeExampleImages = document.getElementById('optimizeExampleImages').checked;
         
@@ -424,6 +474,7 @@ export class SettingsManager {
         state.global.settings.blurMatureContent = blurMatureContent;
         state.global.settings.show_only_sfw = showOnlySFW;
         state.global.settings.default_loras_root = defaultLoraRoot;
+        state.global.settings.default_checkpoint_root = defaultCheckpointRoot;
         state.global.settings.autoplayOnHover = autoplayOnHover;
         state.global.settings.optimizeExampleImages = optimizeExampleImages;
         
@@ -440,7 +491,8 @@ export class SettingsManager {
                 body: JSON.stringify({
                     civitai_api_key: apiKey,
                     show_only_sfw: showOnlySFW,
-                    optimize_example_images: optimizeExampleImages
+                    optimize_example_images: optimizeExampleImages,
+                    default_checkpoint_root: defaultCheckpointRoot
                 })
             });
 

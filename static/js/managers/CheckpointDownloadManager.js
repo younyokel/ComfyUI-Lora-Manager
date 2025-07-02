@@ -255,7 +255,7 @@ export class CheckpointDownloadManager {
             ).join('');
 
             // Set default checkpoint root if available
-            const defaultRoot = getStorageItem('settings', {}).default_checkpoints_root;
+            const defaultRoot = getStorageItem('settings', {}).default_checkpoint_root;
             if (defaultRoot && data.roots.includes(defaultRoot)) {
                 checkpointRoot.value = defaultRoot;
             }
