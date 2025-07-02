@@ -330,13 +330,13 @@ export class CheckpointDownloadManager {
             };
 
             // Start download using checkpoint download endpoint
-            const response = await fetch('/api/checkpoints/download', {
+            const response = await fetch('/api/download-model', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model_id: this.modelId,
                     model_version_id: this.currentVersion.id,
-                    checkpoint_root: checkpointRoot,
+                    model_root: checkpointRoot,
                     relative_path: targetFolder
                 })
             });

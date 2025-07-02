@@ -7,7 +7,7 @@ export const apiRoutes = {
         delete: (id) => `/api/loras/${id}`,
         update: (id) => `/api/loras/${id}`,
         civitai: (id) => `/api/loras/${id}/civitai`,
-        download: '/api/download-lora',
+        download: '/api/download-model',
         move: '/api/move-lora',
         scan: '/api/scan-loras'
     },

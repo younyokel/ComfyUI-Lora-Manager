@@ -56,7 +56,7 @@ class ApiRoutes:
         app.router.add_get('/api/civitai/versions/{model_id}', routes.get_civitai_versions)
         app.router.add_get('/api/civitai/model/version/{modelVersionId}', routes.get_civitai_model_by_version)
         app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
-        app.router.add_post('/api/download-lora', routes.download_lora)
+        app.router.add_post('/api/download-model', routes.download_model)
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
         app.router.add_post('/api/loras/save-metadata', routes.save_metadata)
@@ -436,8 +436,8 @@ class ApiRoutes:
                 "error": str(e)
             }, status=500)
 
-    async def download_lora(self, request: web.Request) -> web.Response:
-        return await ModelRouteUtils.handle_download_model(request, self.download_manager, model_type="lora")
+    async def download_model(self, request: web.Request) -> web.Response:
+        return await ModelRouteUtils.handle_download_model(request, self.download_manager)
 
 
     async def move_model(self, request: web.Request) -> web.Response:

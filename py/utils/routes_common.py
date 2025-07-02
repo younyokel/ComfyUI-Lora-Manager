@@ -564,7 +564,7 @@ class ModelRouteUtils:
             return web.Response(text=str(e), status=500)
 
     @staticmethod
-    async def handle_download_model(request: web.Request, download_manager: DownloadManager, model_type="lora") -> web.Response:
+    async def handle_download_model(request: web.Request, download_manager: DownloadManager, model_type=None) -> web.Response:
         """Handle model download request
         
         Args:
@@ -597,14 +597,10 @@ class ModelRouteUtils:
                     text="Missing required parameter: Please provide 'model_id'"
                 )
             
-            # Use the correct root directory based on model type
-            root_key = 'checkpoint_root' if model_type == 'checkpoint' else 'lora_root'
-            save_dir = data.get(root_key)
-            
             result = await download_manager.download_from_civitai(
                 model_id=model_id,
                 model_version_id=model_version_id,
-                save_dir=save_dir,
+                save_dir=data.get('model_root'),
                 relative_path=data.get('relative_path', ''),
                 progress_callback=progress_callback,
                 model_type=model_type
@@ -636,7 +632,7 @@ class ModelRouteUtils:
                     text="Early Access Restriction: This model requires purchase. Please buy early access on Civitai.com."
                 )
             
-            logger.error(f"Error downloading {model_type}: {error_message}")
+            logger.error(f"Error downloading model: {error_message}")
             return web.Response(status=500, text=error_message)
 
     @staticmethod

@@ -1,10 +1,9 @@
 import logging
 import os
-import json
 import asyncio
 from typing import Dict
 from ..utils.models import LoraMetadata, CheckpointMetadata
-from ..utils.constants import CARD_PREVIEW_WIDTH
+from ..utils.constants import CARD_PREVIEW_WIDTH, VALID_LORA_TYPES
 from ..utils.exif_utils import ExifUtils
 from ..utils.metadata_manager import MetadataManager
 from .service_registry import ServiceRegistry
@@ -51,7 +50,7 @@ class DownloadManager:
     async def download_from_civitai(self, model_id: str = None, 
                                   model_version_id: str = None, save_dir: str = None, 
                                   relative_path: str = '', progress_callback=None, 
-                                  model_type: str = "lora") -> Dict:
+                                  model_type: str = None) -> Dict:
         """Download model from Civitai
         
         Args:
@@ -80,6 +79,16 @@ class DownloadManager:
             
             if not version_info:
                 return {'success': False, 'error': 'Failed to fetch model metadata'}
+
+            # Infer model_type if not provided
+            if model_type is None:
+                model_type_from_info = version_info.get('model', {}).get('type', '').lower()
+                if model_type_from_info == 'checkpoint':
+                    model_type = 'checkpoint'
+                elif model_type_from_info in VALID_LORA_TYPES:
+                    model_type = 'lora'
+                else:
+                    return {'success': False, 'error': f'Model type "{model_type_from_info}" is not supported for download'}
 
             # Check if this is an early access model
             if version_info.get('earlyAccessEndsAt'):

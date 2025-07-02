@@ -54,7 +54,6 @@ class CheckpointsRoutes:
         app.router.add_post('/api/checkpoints/fetch-civitai', self.fetch_civitai)
         app.router.add_post('/api/checkpoints/relink-civitai', self.relink_civitai)  # Add new relink endpoint
         app.router.add_post('/api/checkpoints/replace-preview', self.replace_preview)
-        app.router.add_post('/api/checkpoints/download', self.download_checkpoint)
         app.router.add_post('/api/checkpoints/save-metadata', self.save_metadata) # Add new route
         app.router.add_post('/api/checkpoints/rename', self.rename_checkpoint)  # Add new rename endpoint
 
@@ -538,10 +537,6 @@ class CheckpointsRoutes:
     async def replace_preview(self, request: web.Request) -> web.Response:
         """Handle preview image replacement for checkpoints"""
         return await ModelRouteUtils.handle_replace_preview(request, self.scanner)
-
-    async def download_checkpoint(self, request: web.Request) -> web.Response:
-        """Handle checkpoint download request"""
-        return await ModelRouteUtils.handle_download_model(request, self.download_manager, model_type="checkpoint")
 
     async def get_checkpoint_roots(self, request):
         """Return the checkpoint root directories"""

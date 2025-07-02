@@ -189,14 +189,14 @@ export class DownloadManager {
             
             try {
                 // Download the LoRA
-                const response = await fetch('/api/download-lora', {
+                const response = await fetch('/api/download-model', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         download_url: lora.downloadUrl,
                         model_version_id: lora.modelVersionId,
                         model_hash: lora.hash,
-                        lora_root: loraRoot,
+                        model_root: loraRoot,
                         relative_path: targetPath.replace(loraRoot + '/', '')
                     })
                 });
