@@ -1,7 +1,6 @@
 import logging
 from ..utils.example_images_download_manager import DownloadManager
 from ..utils.example_images_processor import ExampleImagesProcessor
-from ..utils.example_images_metadata import MetadataUpdater
 from ..utils.example_images_file_manager import ExampleImagesFileManager
 
 logger = logging.getLogger(__name__)
