@@ -437,68 +437,7 @@ class ApiRoutes:
             }, status=500)
 
     async def download_lora(self, request: web.Request) -> web.Response:
-        async with self._download_lock:
-            try:
-                if self.download_manager is None:
-                    self.download_manager = await ServiceRegistry.get_download_manager()
-                
-                data = await request.json()
-                
-                # Create progress callback
-                async def progress_callback(progress):
-                    await ws_manager.broadcast({
-                        'status': 'progress',
-                        'progress': progress
-                    })
-                
-                # Check which identifier is provided
-                download_url = data.get('download_url')
-                model_hash = data.get('model_hash')
-                model_version_id = data.get('model_version_id')
-                
-                # Validate that at least one identifier is provided
-                if not any([download_url, model_hash, model_version_id]):
-                    return web.Response(
-                        status=400, 
-                        text="Missing required parameter: Please provide either 'download_url', 'hash', or 'modelVersionId'"
-                    )
-                
-                result = await self.download_manager.download_from_civitai(
-                    download_url=download_url,
-                    model_hash=model_hash,
-                    model_version_id=model_version_id,
-                    save_dir=data.get('lora_root'),
-                    relative_path=data.get('relative_path'),
-                    progress_callback=progress_callback
-                )
-                
-                if not result.get('success', False):
-                    error_message = result.get('error', 'Unknown error')
-                    
-                    # Return 401 for early access errors
-                    if 'early access' in error_message.lower():
-                        logger.warning(f"Early access download failed: {error_message}")
-                        return web.Response(
-                            status=401,  # Use 401 status code to match Civitai's response
-                            text=error_message
-                        )
-                    
-                    return web.Response(status=500, text=error_message)
-                
-                return web.json_response(result)
-            except Exception as e:
-                error_message = str(e)
-                
-                # Check if this might be an early access error
-                if '401' in error_message:
-                    logger.warning(f"Early access error (401): {error_message}")
-                    return web.Response(
-                        status=401,
-                        text="Early Access Restriction: This LoRA requires purchase. Please buy early access on Civitai.com."
-                    )
-                
-                logger.error(f"Error downloading LoRA: {error_message}")
-                return web.Response(status=500, text=error_message)
+        return await ModelRouteUtils.handle_download_model(request, self.download_manager, model_type="lora")
 
 
     async def move_model(self, request: web.Request) -> web.Response:

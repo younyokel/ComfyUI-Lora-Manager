@@ -587,15 +587,14 @@ class ModelRouteUtils:
                 })
             
             # Check which identifier is provided
-            download_url = data.get('download_url')
-            model_hash = data.get('model_hash')
+            model_id = data.get('model_id')
             model_version_id = data.get('model_version_id')
             
-            # Validate that at least one identifier is provided
-            if not any([download_url, model_hash, model_version_id]):
+            # Only model_id is required, model_version_id is optional
+            if not model_id:
                 return web.Response(
                     status=400, 
-                    text="Missing required parameter: Please provide either 'download_url', 'hash', or 'modelVersionId'"
+                    text="Missing required parameter: Please provide 'model_id'"
                 )
             
             # Use the correct root directory based on model type
@@ -603,8 +602,7 @@ class ModelRouteUtils:
             save_dir = data.get(root_key)
             
             result = await download_manager.download_from_civitai(
-                download_url=download_url,
-                model_hash=model_hash,
+                model_id=model_id,
                 model_version_id=model_version_id,
                 save_dir=save_dir,
                 relative_path=data.get('relative_path', ''),

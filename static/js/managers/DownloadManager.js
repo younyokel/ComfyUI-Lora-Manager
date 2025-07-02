@@ -63,6 +63,7 @@ export class DownloadManager {
         this.currentVersion = null;
         this.versions = [];
         this.modelInfo = null;
+        this.modelId = null;
         this.modelVersionId = null;
         
         // Clear selected folder and remove selection from UI
@@ -81,12 +82,12 @@ export class DownloadManager {
         try {
             this.loadingManager.showSimpleLoading('Fetching model versions...');
             
-            const modelId = this.extractModelId(url);
-            if (!modelId) {
+            this.modelId = this.extractModelId(url);
+            if (!this.modelId) {
                 throw new Error('Invalid Civitai URL format');
             }
 
-            const response = await fetch(`/api/civitai/versions/${modelId}`);
+            const response = await fetch(`/api/civitai/versions/${this.modelId}`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
@@ -306,11 +307,6 @@ export class DownloadManager {
         }
 
         try {
-            const downloadUrl = this.currentVersion.downloadUrl;
-            if (!downloadUrl) {
-                throw new Error('No download URL available');
-            }
-
             // Show enhanced loading with progress details
             const updateProgress = this.loadingManager.showDownloadProgress(1);
             updateProgress(0, 0, this.currentVersion.name);
@@ -348,7 +344,8 @@ export class DownloadManager {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    download_url: downloadUrl,
+                    model_id: this.modelId,
+                    model_version_id: this.currentVersion.id,
                     lora_root: loraRoot,
                     relative_path: targetFolder
                 })

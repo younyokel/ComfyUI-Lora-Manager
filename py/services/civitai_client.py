@@ -267,7 +267,7 @@ class CivitaiClient:
                 # Replace index with modelId
                 if 'index' in result:
                     del result['index']
-                result['modelId'] = model_id
+                result['modelId'] = int(model_id)
                 
                 # Add model field with metadata from top level
                 result['model'] = {

@@ -61,6 +61,7 @@ export class CheckpointDownloadManager {
         this.currentVersion = null;
         this.versions = [];
         this.modelInfo = null;
+        this.modelId = null;
         this.modelVersionId = null;
         
         // Clear selected folder and remove selection from UI
@@ -79,12 +80,12 @@ export class CheckpointDownloadManager {
         try {
             this.loadingManager.showSimpleLoading('Fetching model versions...');
             
-            const modelId = this.extractModelId(url);
-            if (!modelId) {
+            this.modelId = this.extractModelId(url);
+            if (!this.modelId) {
                 throw new Error('Invalid Civitai URL format');
             }
 
-            const response = await fetch(`/api/checkpoints/civitai/versions/${modelId}`);
+            const response = await fetch(`/api/checkpoints/civitai/versions/${this.modelId}`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
@@ -296,11 +297,6 @@ export class CheckpointDownloadManager {
         }
 
         try {
-            const downloadUrl = this.currentVersion.downloadUrl;
-            if (!downloadUrl) {
-                throw new Error('No download URL available');
-            }
-
             // Show enhanced loading with progress details
             const updateProgress = this.loadingManager.showDownloadProgress(1);
             updateProgress(0, 0, this.currentVersion.name);
@@ -338,7 +334,8 @@ export class CheckpointDownloadManager {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    download_url: downloadUrl,
+                    model_id: this.modelId,
+                    model_version_id: this.currentVersion.id,
                     checkpoint_root: checkpointRoot,
                     relative_path: targetFolder
                 })
