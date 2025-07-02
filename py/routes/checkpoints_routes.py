@@ -57,9 +57,6 @@ class CheckpointsRoutes:
         app.router.add_post('/api/checkpoints/download', self.download_checkpoint)
         app.router.add_post('/api/checkpoints/save-metadata', self.save_metadata) # Add new route
         app.router.add_post('/api/checkpoints/rename', self.rename_checkpoint)  # Add new rename endpoint
-        
-        # Add new WebSocket endpoint for checkpoint progress
-        app.router.add_get('/ws/checkpoint-progress', ws_manager.handle_checkpoint_connection)
 
         # Add new routes for finding duplicates and filename conflicts
         app.router.add_get('/api/checkpoints/find-duplicates', self.find_duplicate_checkpoints)

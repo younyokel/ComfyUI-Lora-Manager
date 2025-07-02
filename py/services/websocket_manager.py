@@ -40,20 +40,6 @@ class WebSocketManager:
             self._init_websockets.discard(ws)
         return ws
         
-    async def handle_checkpoint_connection(self, request: web.Request) -> web.WebSocketResponse:
-        """Handle new WebSocket connection for checkpoint download progress"""
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
-        self._checkpoint_websockets.add(ws)
-        
-        try:
-            async for msg in ws:
-                if msg.type == web.WSMsgType.ERROR:
-                    logger.error(f'Checkpoint WebSocket error: {ws.exception()}')
-        finally:
-            self._checkpoint_websockets.discard(ws)
-        return ws
-        
     async def broadcast(self, data: Dict):
         """Broadcast message to all connected clients"""
         if not self._websockets:
