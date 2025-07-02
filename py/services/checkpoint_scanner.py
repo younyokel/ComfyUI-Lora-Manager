@@ -33,7 +33,6 @@ class CheckpointScanner(ModelScanner):
                 file_extensions=file_extensions,
                 hash_index=ModelHashIndex()
             )
-            self._checkpoint_roots = self._init_checkpoint_roots()
             self._initialized = True
 
     @classmethod
@@ -44,27 +43,9 @@ class CheckpointScanner(ModelScanner):
                 cls._instance = cls()
             return cls._instance
     
-    def _init_checkpoint_roots(self) -> List[str]:
-        """Initialize checkpoint roots from ComfyUI settings"""
-        # Get both checkpoint and diffusion_models paths
-        checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
-        diffusion_paths = folder_paths.get_folder_paths("diffusion_models")
-        
-        # Combine, normalize and deduplicate paths
-        all_paths = set()
-        for path in checkpoint_paths + diffusion_paths:
-            if os.path.exists(path):
-                norm_path = path.replace(os.sep, "/")
-                all_paths.add(norm_path)
-        
-        # Sort for consistent order
-        sorted_paths = sorted(all_paths, key=lambda p: p.lower())
-        
-        return sorted_paths
-    
     def get_model_roots(self) -> List[str]:
         """Get checkpoint root directories"""
-        return self._checkpoint_roots
+        return config.base_models_roots
         
     async def scan_all_models(self) -> List[Dict]:
         """Scan all checkpoint directories and return metadata"""
@@ -72,7 +53,7 @@ class CheckpointScanner(ModelScanner):
         
         # Create scan tasks for each directory
         scan_tasks = []
-        for root in self._checkpoint_roots:
+        for root in self.get_model_roots():
             task = asyncio.create_task(self._scan_directory(root))
             scan_tasks.append(task)
             

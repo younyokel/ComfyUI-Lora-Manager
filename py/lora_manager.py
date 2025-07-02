@@ -62,7 +62,7 @@ class LoraManager:
             added_targets.add(real_root)
         
         # Add static routes for each checkpoint root
-        for idx, root in enumerate(config.checkpoints_roots, start=1):
+        for idx, root in enumerate(config.base_models_roots, start=1):
             preview_path = f'/checkpoints_static/root{idx}/preview'
             
             real_root = root
@@ -88,8 +88,8 @@ class LoraManager:
         for target_path, link_path in config._path_mappings.items():
             if target_path not in added_targets:
                 # Determine if this is a checkpoint or lora link based on path
-                is_checkpoint = any(cp_root in link_path for cp_root in config.checkpoints_roots)
-                is_checkpoint = is_checkpoint or any(cp_root in target_path for cp_root in config.checkpoints_roots)
+                is_checkpoint = any(cp_root in link_path for cp_root in config.base_models_roots)
+                is_checkpoint = is_checkpoint or any(cp_root in target_path for cp_root in config.base_models_roots)
                 
                 if is_checkpoint:
                     route_path = f'/checkpoints_static/link_{link_idx["checkpoint"]}/preview'

@@ -252,7 +252,7 @@ class StandaloneLoraManager(LoraManager):
             added_targets.add(os.path.normpath(real_root))
         
         # Add static routes for each checkpoint root
-        for idx, root in enumerate(config.checkpoints_roots, start=1):
+        for idx, root in enumerate(config.base_models_roots, start=1):
             if not os.path.exists(root):
                 logger.warning(f"Checkpoint root path does not exist: {root}")
                 continue
@@ -288,8 +288,8 @@ class StandaloneLoraManager(LoraManager):
             norm_target = os.path.normpath(target_path)
             if norm_target not in added_targets:
                 # Determine if this is a checkpoint or lora link based on path
-                is_checkpoint = any(os.path.normpath(cp_root) in os.path.normpath(link_path) for cp_root in config.checkpoints_roots)
-                is_checkpoint = is_checkpoint or any(os.path.normpath(cp_root) in norm_target for cp_root in config.checkpoints_roots)
+                is_checkpoint = any(os.path.normpath(cp_root) in os.path.normpath(link_path) for cp_root in config.base_models_roots)
+                is_checkpoint = is_checkpoint or any(os.path.normpath(cp_root) in norm_target for cp_root in config.base_models_roots)
                 
                 if is_checkpoint:
                     route_path = f'/checkpoints_static/link_{link_idx["checkpoint"]}/preview'
