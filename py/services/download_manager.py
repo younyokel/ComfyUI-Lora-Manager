@@ -96,10 +96,14 @@ class DownloadManager:
                         return {'success': False, 'error': 'Default lora root path not set in settings'}
                     save_dir = default_path
                     
-                # Set relative_path to the first tag if available
+                # Set relative_path to version_info.baseModel/first_tag if available
+                base_model = version_info.get('baseModel', '')
                 model_tags = version_info.get('model', {}).get('tags', [])
-                if model_tags:
-                    relative_path = model_tags[0]
+                if base_model:
+                    if model_tags:
+                        relative_path = os.path.join(base_model, model_tags[0])
+                    else:
+                        relative_path = base_model
 
             # Update save directory with relative path if provided
             if relative_path:
