@@ -91,6 +91,8 @@ class MiscRoutes:
         # Add new route for clearing cache
         app.router.add_post('/api/clear-cache', MiscRoutes.clear_cache)
 
+        app.router.add_get('/api/health-check', lambda request: web.json_response({'status': 'ok'}))
+
         # Usage stats routes
         app.router.add_post('/api/update-usage-stats', MiscRoutes.update_usage_stats)
         app.router.add_get('/api/get-usage-stats', MiscRoutes.get_usage_stats)
