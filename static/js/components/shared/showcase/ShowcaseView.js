@@ -245,11 +245,6 @@ function findLocalFile(img, index, exampleFiles) {
             const match = file.name.match(/image_(\d+)\./);
             return match && parseInt(match[1]) === index;
         });
-        
-        // If not found by index, just use the same position in the array if available
-        if (!localFile && index < exampleFiles.length) {
-            localFile = exampleFiles[index];
-        }
     }
     
     return localFile;
@@ -406,9 +401,6 @@ async function handleImportFiles(files, modelHash, importContainer) {
             const customImages = result.custom_images || [];
             // Combine both arrays for rendering
             const allImages = [...regularImages, ...customImages];
-            console.log("Regular images:", regularImages);
-            console.log("Custom images:", customImages);
-            console.log("Combined images:", allImages);
             showcaseTab.innerHTML = renderShowcaseContent(allImages, updatedFilesResult.files, true);
             
             // Re-initialize showcase functionality
