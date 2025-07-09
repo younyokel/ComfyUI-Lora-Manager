@@ -594,6 +594,7 @@ NODE_EXTRACTORS = {
     "CLIPTextEncodeFlux": CLIPTextEncodeFluxExtractor,  # Add CLIPTextEncodeFlux
     "WAS_Text_to_Conditioning": CLIPTextEncodeExtractor,
     "AdvancedCLIPTextEncode": CLIPTextEncodeExtractor,  # From https://github.com/BlenderNeko/ComfyUI_ADV_CLIP_emb
+    "smZ_CLIPTextEncode": CLIPTextEncodeExtractor,  # From https://github.com/shiimizu/ComfyUI_smZNodes
     # Latent
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux
