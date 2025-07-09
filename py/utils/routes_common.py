@@ -590,9 +590,25 @@ class ModelRouteUtils:
                     'download_id': download_id
                 })
             
-            # Check which identifier is provided
-            model_id = data.get('model_id')
-            model_version_id = data.get('model_version_id')
+            # Check which identifier is provided and convert to int
+            try:
+                model_id = int(data.get('model_id'))
+            except (TypeError, ValueError):
+                return web.Response(
+                    status=400,
+                    text="Invalid model_id: Must be an integer"
+                )
+
+            # Convert model_version_id to int if provided
+            model_version_id = None 
+            if data.get('model_version_id'):
+                try:
+                    model_version_id = int(data.get('model_version_id'))
+                except (TypeError, ValueError):
+                    return web.Response(
+                        status=400,
+                        text="Invalid model_version_id: Must be an integer"
+                    )
             
             # Only model_id is required, model_version_id is optional
             if not model_id:
@@ -696,8 +712,10 @@ class ModelRouteUtils:
         try:
             data = await request.json()
             file_path = data.get('file_path')
-            model_id = data.get('model_id')
-            model_version_id = data.get('model_version_id')
+            model_id = int(data.get('model_id'))
+            model_version_id = None 
+            if data.get('model_version_id'):
+                model_version_id = int(data.get('model_version_id'))
             
             if not file_path or not model_id:
                 return web.json_response({"success": False, "error": "Both file_path and model_id are required"}, status=400)

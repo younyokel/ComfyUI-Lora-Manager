@@ -52,9 +52,6 @@ class WebSocketManager:
         if not download_id:
             # Generate a new download ID if not provided
             download_id = str(uuid4())
-            logger.info(f"Created new download ID: {download_id}")
-        else:
-            logger.info(f"Using provided download ID: {download_id}")
         
         # Store the websocket with its download ID
         self._download_websockets[download_id] = ws

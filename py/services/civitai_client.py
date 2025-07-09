@@ -225,7 +225,7 @@ class CivitaiClient:
             logger.error(f"Error fetching model versions: {e}")
             return None
             
-    async def get_model_version(self, model_id: str, version_id: str = "") -> Optional[Dict]:
+    async def get_model_version(self, model_id: int, version_id: int) -> Optional[Dict]:
         """Get specific model version with additional metadata
         
         Args:
@@ -250,7 +250,7 @@ class CivitaiClient:
                 if version_id:
                     # If version_id provided, find exact match
                     for version in model_versions:
-                        if str(version.get('id')) == str(version_id):
+                        if version.get('id') == version_id:
                             matched_version = version
                             break
                 else:
@@ -267,7 +267,7 @@ class CivitaiClient:
                 # Replace index with modelId
                 if 'index' in result:
                     del result['index']
-                result['modelId'] = int(model_id)
+                result['modelId'] = model_id
                 
                 # Add model field with metadata from top level
                 result['model'] = {
