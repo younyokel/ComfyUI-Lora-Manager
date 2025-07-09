@@ -253,24 +253,39 @@ export class DownloadManager {
         document.getElementById('locationStep').style.display = 'block';
         
         try {
-            const response = await fetch('/api/lora-roots');
-            if (!response.ok) {
+            // Fetch LoRA roots
+            const rootsResponse = await fetch('/api/lora-roots');
+            if (!rootsResponse.ok) {
                 throw new Error('Failed to fetch LoRA roots');
             }
             
-            const data = await response.json();
+            const rootsData = await rootsResponse.json();
             const loraRoot = document.getElementById('loraRoot');
-            loraRoot.innerHTML = data.roots.map(root => 
+            loraRoot.innerHTML = rootsData.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
 
             // Set default lora root if available
             const defaultRoot = getStorageItem('settings', {}).default_loras_root;
-            if (defaultRoot && data.roots.includes(defaultRoot)) {
+            if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
                 loraRoot.value = defaultRoot;
             }
 
-            // Initialize folder browser after loading roots
+            // Fetch folders dynamically
+            const foldersResponse = await fetch('/api/folders');
+            if (!foldersResponse.ok) {
+                throw new Error('Failed to fetch folders');
+            }
+            
+            const foldersData = await foldersResponse.json();
+            const folderBrowser = document.getElementById('folderBrowser');
+            
+            // Update folder browser with dynamic content
+            folderBrowser.innerHTML = foldersData.folders.map(folder => 
+                `<div class="folder-item" data-folder="${folder}">${folder}</div>`
+            ).join('');
+
+            // Initialize folder browser after loading roots and folders
             this.initializeFolderBrowser();
         } catch (error) {
             showToast(error.message, 'error');

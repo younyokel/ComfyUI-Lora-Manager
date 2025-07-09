@@ -48,13 +48,7 @@
                 <div class="input-group">
                     <label>Target Folder:</label>
                     <div class="folder-browser" id="folderBrowser">
-                        {% for folder in folders %}
-                            {% if folder %}
-                            <div class="folder-item" data-folder="{{ folder }}">
-                                {{ folder }}
-                            </div>
-                            {% endif %}
-                        {% endfor %}
+                        <!-- Folders will be loaded dynamically -->
                     </div>
                 </div>
                 <div class="input-group">
@@ -92,13 +86,7 @@
             <div class="input-group">
                 <label>Target Folder:</label>
                 <div class="folder-browser" id="moveFolderBrowser">
-                    {% for folder in folders %}
-                        {% if folder %}
-                        <div class="folder-item" data-folder="{{ folder }}">
-                            {{ folder }}
-                        </div>
-                        {% endif %}
-                    {% endfor %}
+                    <!-- Folders will be loaded dynamically -->
                 </div>
             </div>
             <div class="input-group">

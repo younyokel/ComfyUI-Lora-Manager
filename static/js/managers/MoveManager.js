@@ -2,6 +2,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { modalManager } from './ModalManager.js';
 import { getStorageItem } from '../utils/storageHelpers.js';
+import { updateFolderTags } from '../api/baseModelApi.js';
 
 class MoveManager {
     constructor() {
@@ -72,32 +73,46 @@ class MoveManager {
         this.newFolderInput.value = '';
 
         try {
-            const response = await fetch('/api/lora-roots');
-            if (!response.ok) {
+            // Fetch LoRA roots
+            const rootsResponse = await fetch('/api/lora-roots');
+            if (!rootsResponse.ok) {
                 throw new Error('Failed to fetch LoRA roots');
             }
             
-            const data = await response.json();
-            if (!data.roots || data.roots.length === 0) {
+            const rootsData = await rootsResponse.json();
+            if (!rootsData.roots || rootsData.roots.length === 0) {
                 throw new Error('No LoRA roots found');
             }
 
             // 填充LoRA根目录选择器
-            this.loraRootSelect.innerHTML = data.roots.map(root => 
+            this.loraRootSelect.innerHTML = rootsData.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
 
             // Set default lora root if available
             const defaultRoot = getStorageItem('settings', {}).default_loras_root;
-            if (defaultRoot && data.roots.includes(defaultRoot)) {
+            if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
                 this.loraRootSelect.value = defaultRoot;
             }
+
+            // Fetch folders dynamically
+            const foldersResponse = await fetch('/api/folders');
+            if (!foldersResponse.ok) {
+                throw new Error('Failed to fetch folders');
+            }
+            
+            const foldersData = await foldersResponse.json();
+            
+            // Update folder browser with dynamic content
+            this.folderBrowser.innerHTML = foldersData.folders.map(folder => 
+                `<div class="folder-item" data-folder="${folder}">${folder}</div>`
+            ).join('');
 
             this.updatePathPreview();
             modalManager.showModal('moveModal');
             
         } catch (error) {
-            console.error('Error fetching LoRA roots:', error);
+            console.error('Error fetching LoRA roots or folders:', error);
             showToast(error.message, 'error');
         }
     }
@@ -171,6 +186,17 @@ class MoveManager {
 
                     state.virtualScroller.updateSingleItem(this.currentFilePath, {file_path: newFilePath});
                 }
+            }
+
+            // Refresh folder tags after successful move
+            try {
+                const foldersResponse = await fetch('/api/folders');
+                if (foldersResponse.ok) {
+                    const foldersData = await foldersResponse.json();
+                    updateFolderTags(foldersData.folders);
+                }
+            } catch (error) {
+                console.error('Error refreshing folder tags:', error);
             }
 
             modalManager.closeModal('moveModal');
