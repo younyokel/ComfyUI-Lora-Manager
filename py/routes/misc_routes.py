@@ -636,32 +636,18 @@ class MiscRoutes:
                         'error': 'Parameter modelVersionId must be an integer'
                     }, status=400)
                 
-                # Check if the specific version exists in either scanner's cache
+                # Check if the specific version exists in either scanner
                 exists = False
                 model_type = None
                 
-                # First check lora cache
-                lora_cache = await lora_scanner.get_cached_data()
-                if lora_cache and lora_cache.raw_data:
-                    for item in lora_cache.raw_data:
-                        if (item.get('civitai') and 
-                            item['civitai'].get('modelId') == model_id and 
-                            item['civitai'].get('id') == model_version_id):
-                            exists = True
-                            model_type = 'lora'
-                            break
-                
-                # If not found in lora cache, check checkpoint cache
-                if not exists and checkpoint_scanner:
-                    checkpoint_cache = await checkpoint_scanner.get_cached_data()
-                    if checkpoint_cache and checkpoint_cache.raw_data:
-                        for item in checkpoint_cache.raw_data:
-                            if (item.get('civitai') and 
-                                item['civitai'].get('modelId') == model_id and 
-                                item['civitai'].get('id') == model_version_id):
-                                exists = True
-                                model_type = 'checkpoint'
-                                break
+                # Check lora scanner first
+                if await lora_scanner.check_model_version_exists(model_id, model_version_id):
+                    exists = True
+                    model_type = 'lora'
+                # If not found in lora, check checkpoint scanner
+                elif checkpoint_scanner and await checkpoint_scanner.check_model_version_exists(model_id, model_version_id):
+                    exists = True
+                    model_type = 'checkpoint'
                 
                 return web.json_response({
                     'success': True,
@@ -671,35 +657,13 @@ class MiscRoutes:
             
             # If modelVersionId is not provided, return all version IDs for the model
             else:
-                # Lists to collect version IDs from both scanners
-                lora_versions = []
+                # Get versions from lora scanner first
+                lora_versions = await lora_scanner.get_model_versions_by_id(model_id)
                 checkpoint_versions = []
                 
-                # Check lora cache
-                lora_cache = await lora_scanner.get_cached_data()
-                if lora_cache and lora_cache.raw_data:
-                    for item in lora_cache.raw_data:
-                        if (item.get('civitai') and 
-                            item['civitai'].get('modelId') == model_id and 
-                            item['civitai'].get('id')):
-                            lora_versions.append({
-                                'versionId': item['civitai'].get('id'),
-                                'name': item['civitai'].get('name'),
-                                'fileName': item.get('file_name', '')
-                            })
-                
-                # Check checkpoint cache
-                checkpoint_cache = await checkpoint_scanner.get_cached_data()
-                if checkpoint_cache and checkpoint_cache.raw_data:
-                    for item in checkpoint_cache.raw_data:
-                        if (item.get('civitai') and 
-                            item['civitai'].get('modelId') == model_id and 
-                            item['civitai'].get('id')):
-                            checkpoint_versions.append({
-                                'versionId': item['civitai'].get('id'),
-                                'name': item['civitai'].get('name'),
-                                'fileName': item.get('file_name', '')
-                            })
+                # Only check checkpoint scanner if no lora versions found
+                if not lora_versions:
+                    checkpoint_versions = await checkpoint_scanner.get_model_versions_by_id(model_id)
                 
                 # Determine model type and combine results
                 model_type = None

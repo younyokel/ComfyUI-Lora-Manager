@@ -82,6 +82,11 @@ class DownloadManager:
             else:
                 return {'success': False, 'error': f'Model type "{model_type_from_info}" is not supported for download'}
             
+            scanner = model_type == 'checkpoint' and await self._get_checkpoint_scanner() or await self._get_lora_scanner()
+
+            if scanner.check_model_version_exists(model_id, model_version_id):
+                return {'success': False, 'error': 'Model version already exists in library'}
+            
             # Handle use_default_paths
             if use_default_paths:
                 # Set save_dir based on model type
