@@ -1,7 +1,6 @@
 aiohttp
 jinja2
 safetensors
-watchdog
 beautifulsoup4
 piexif
 Pillow
@@ -9,7 +8,5 @@ olefile
 requests
 toml
 numpy
-torch
 natsort
 msgpack
-diffusers>=0.33.1

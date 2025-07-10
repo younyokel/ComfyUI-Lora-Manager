@@ -37,10 +37,6 @@ import os
 import logging
 import copy
 import folder_paths
-import torch
-import safetensors.torch
-from diffusers.utils.state_dict_utils import convert_unet_state_dict_to_peft
-from diffusers.loaders import FluxLoraLoaderMixin
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +65,8 @@ def get_loras_list(kwargs):
 
 def load_state_dict_in_safetensors(path, device="cpu", filter_prefix=""):
     """Simplified version of load_state_dict_in_safetensors that just loads from a local path"""  
+    import safetensors.torch
+    
     state_dict = {}
     with safetensors.torch.safe_open(path, framework="pt", device=device) as f:
         for k in f.keys():
@@ -79,6 +77,10 @@ def load_state_dict_in_safetensors(path, device="cpu", filter_prefix=""):
 
 def to_diffusers(input_lora):
     """Simplified version of to_diffusers for Flux LoRA conversion"""
+    import torch
+    from diffusers.utils.state_dict_utils import convert_unet_state_dict_to_peft
+    from diffusers.loaders import FluxLoraLoaderMixin
+    
     if isinstance(input_lora, str):
         tensors = load_state_dict_in_safetensors(input_lora, device="cpu")
     else:

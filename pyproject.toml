@@ -7,8 +7,6 @@ dependencies = [
     "aiohttp",
     "jinja2", 
     "safetensors",
-    "diffusers",
-    "watchdog",
     "beautifulsoup4",
     "piexif",
     "Pillow",

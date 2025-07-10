@@ -3,7 +3,6 @@ import time
 import base64
 import numpy as np
 from PIL import Image
-import torch
 import io
 import logging
 from aiohttp import web
@@ -1017,6 +1016,8 @@ class RecipeRoutes:
                 if hasattr(tensor_image, 'shape'):
                     shape_info = tensor_image.shape
                     logger.debug(f"Tensor shape: {shape_info}, dtype: {tensor_image.dtype}")
+                
+                import torch
                 
                 # Convert tensor to numpy array
                 if isinstance(tensor_image, torch.Tensor):
