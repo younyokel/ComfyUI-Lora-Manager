@@ -1,7 +1,6 @@
 import logging
 from nodes import LoraLoader
 from comfy.comfy_types import IO # type: ignore
-import asyncio
 from ..utils.utils import get_lora_info
 from .utils import FlexibleOptionalInputType, any_type, extract_lora_name, get_loras_list, nunchaku_load_lora
 
@@ -66,7 +65,7 @@ class LoraManagerLoader:
                 
                 # Extract lora name for trigger words lookup
                 lora_name = extract_lora_name(lora_path)
-                _, trigger_words = asyncio.run(get_lora_info(lora_name))
+                _, trigger_words = get_lora_info(lora_name)
                 
                 all_trigger_words.extend(trigger_words)
                 # Add clip strength to output if different from model strength (except for Nunchaku models)
@@ -87,7 +86,7 @@ class LoraManagerLoader:
             clip_strength = float(lora.get('clipStrength', model_strength))
             
             # Get lora path and trigger words
-            lora_path, trigger_words = asyncio.run(get_lora_info(lora_name))
+            lora_path, trigger_words = get_lora_info(lora_name)
             
             # Apply the LoRA using the appropriate loader
             if is_nunchaku_model:

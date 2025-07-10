@@ -1,5 +1,4 @@
 from comfy.comfy_types import IO # type: ignore
-import asyncio
 import os
 from ..utils.utils import get_lora_info
 from .utils import FlexibleOptionalInputType, any_type, extract_lora_name, get_loras_list
@@ -43,7 +42,7 @@ class LoraStacker:
             # Get trigger words from existing stack entries
             for lora_path, _, _ in lora_stack:
                 lora_name = extract_lora_name(lora_path)
-                _, trigger_words = asyncio.run(get_lora_info(lora_name))
+                _, trigger_words = get_lora_info(lora_name)
                 all_trigger_words.extend(trigger_words)
         
         # Process loras from kwargs with support for both old and new formats
@@ -58,7 +57,7 @@ class LoraStacker:
             clip_strength = float(lora.get('clipStrength', model_strength))
             
             # Get lora path and trigger words
-            lora_path, trigger_words = asyncio.run(get_lora_info(lora_name))
+            lora_path, trigger_words = get_lora_info(lora_name)
             
             # Add to stack without loading
             # replace '/' with os.sep to avoid different OS path format

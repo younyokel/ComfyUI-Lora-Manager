@@ -5,25 +5,50 @@ import os
 from bs4 import BeautifulSoup
 from ..services.service_registry import ServiceRegistry
 from ..config import config
+import asyncio
 
-async def get_lora_info(lora_name):
+def get_lora_info(lora_name):
     """Get the lora path and trigger words from cache"""
-    scanner = await ServiceRegistry.get_lora_scanner()
-    cache = await scanner.get_cached_data()
+    async def _get_lora_info_async():
+        scanner = await ServiceRegistry.get_lora_scanner()
+        cache = await scanner.get_cached_data()
+        
+        for item in cache.raw_data:
+            if item.get('file_name') == lora_name:
+                file_path = item.get('file_path')
+                if file_path:
+                    for root in config.loras_roots:
+                        root = root.replace(os.sep, '/')
+                        if file_path.startswith(root):
+                            relative_path = os.path.relpath(file_path, root).replace(os.sep, '/')
+                            # Get trigger words from civitai metadata
+                            civitai = item.get('civitai', {})
+                            trigger_words = civitai.get('trainedWords', []) if civitai else []
+                            return relative_path, trigger_words
+        return lora_name, []
     
-    for item in cache.raw_data:
-        if item.get('file_name') == lora_name:
-            file_path = item.get('file_path')
-            if file_path:
-                for root in config.loras_roots:
-                    root = root.replace(os.sep, '/')
-                    if file_path.startswith(root):
-                        relative_path = os.path.relpath(file_path, root).replace(os.sep, '/')
-                        # Get trigger words from civitai metadata
-                        civitai = item.get('civitai', {})
-                        trigger_words = civitai.get('trainedWords', []) if civitai else []
-                        return relative_path, trigger_words
-    return lora_name, []
+    try:
+        # Check if we're already in an event loop
+        loop = asyncio.get_running_loop()
+        # If we're in a running loop, we need to use a different approach
+        # Create a new thread to run the async code
+        import concurrent.futures
+        
+        def run_in_thread():
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                return new_loop.run_until_complete(_get_lora_info_async())
+            finally:
+                new_loop.close()
+        
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(run_in_thread)
+            return future.result()
+            
+    except RuntimeError:
+        # No event loop is running, we can use asyncio.run()
+        return asyncio.run(_get_lora_info_async())
 
 def download_twitter_image(url):
     """Download image from a URL containing twitter:image meta tag

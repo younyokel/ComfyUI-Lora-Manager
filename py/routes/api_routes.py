@@ -827,7 +827,7 @@ class ApiRoutes:
             
             all_trigger_words = []
             for lora_name in lora_names:
-                _, trigger_words = await get_lora_info(lora_name)
+                _, trigger_words = get_lora_info(lora_name)
                 all_trigger_words.extend(trigger_words)
             
             # Format the trigger words

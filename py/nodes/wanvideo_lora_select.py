@@ -1,5 +1,4 @@
 from comfy.comfy_types import IO # type: ignore
-import asyncio
 import folder_paths # type: ignore
 from ..utils.utils import get_lora_info
 from .utils import FlexibleOptionalInputType, any_type, get_loras_list
@@ -56,7 +55,7 @@ class WanVideoLoraSelect:
             clip_strength = float(lora.get('clipStrength', model_strength))
             
             # Get lora path and trigger words
-            lora_path, trigger_words = asyncio.run(get_lora_info(lora_name))
+            lora_path, trigger_words = get_lora_info(lora_name)
             
             # Create lora item for WanVideo format
             lora_item = {
