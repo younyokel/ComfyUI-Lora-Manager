@@ -18,12 +18,12 @@ Watch this quick tutorial to learn how to use the new one-click LoRA integration
 
 [![One-Click LoRA Integration Tutorial](https://img.youtube.com/vi/hvKw31YpE-U/0.jpg)](https://youtu.be/hvKw31YpE-U)
 
-## 🌐 LM Civitai Extension for Chrome
+## 🌐 Browser Extension
 Enhance your Civitai browsing experience with our companion browser extension! See which models you already have, download new ones with a single click, and manage your downloads efficiently.
 
 ![LM Civitai Extension Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/wiki-images/civitai-models-page.png)
 
-<div align="center">
+<div>
   <a href="https://chromewebstore.google.com/detail/lm-civitai-extension/capigligggeijgmocnaflanlbghnamgm?utm_source=item-share-cb" style="display: inline-block; background-color: #4285F4; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 10px 0;">
     <img src="https://www.google.com/chrome/static/images/chrome-logo.svg" width="20" style="vertical-align: middle; margin-right: 8px;"> Get Extension from Chrome Web Store
   </a>
