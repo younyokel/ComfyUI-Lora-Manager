@@ -225,7 +225,7 @@ class CivitaiClient:
             logger.error(f"Error fetching model versions: {e}")
             return None
             
-    async def get_model_version(self, model_id: int, version_id: int) -> Optional[Dict]:
+    async def get_model_version(self, model_id: int, version_id: int = None) -> Optional[Dict]:
         """Get specific model version with additional metadata
         
         Args:
@@ -237,6 +237,8 @@ class CivitaiClient:
         """
         try:
             session = await self._ensure_fresh_session()
+            
+            # Step 1: Get model data to find version_id if not provided and get additional metadata
             async with session.get(f"{self.base_url}/models/{model_id}") as response:
                 if response.status != 200:
                     return None
@@ -244,45 +246,28 @@ class CivitaiClient:
                 data = await response.json()
                 model_versions = data.get('modelVersions', [])
                 
-                # Find matching version
-                matched_version = None
-                
-                if version_id:
-                    # If version_id provided, find exact match
-                    for version in model_versions:
-                        if version.get('id') == version_id:
-                            matched_version = version
-                            break
-                else:
-                    # If no version_id then use the first version
-                    matched_version = model_versions[0] if model_versions else None
-                
-                # If no match found, return None
-                if not matched_version:
+                # Step 2: Determine the version_id to use
+                target_version_id = version_id
+                if target_version_id is None:
+                    target_version_id = model_versions[0].get('id')
+            
+            # Step 3: Get detailed version info using the version_id
+            headers = self._get_request_headers()
+            async with session.get(f"{self.base_url}/model-versions/{target_version_id}", headers=headers) as response:
+                if response.status != 200:
                     return None
-                    
-                # Build result with modified fields
-                result = matched_version.copy()  # Copy to avoid modifying original
                 
-                # Replace index with modelId
-                if 'index' in result:
-                    del result['index']
-                result['modelId'] = model_id
+                version = await response.json()
                 
-                # Add model field with metadata from top level
-                result['model'] = {
-                    "name": data.get("name"),
-                    "type": data.get("type"),
-                    "nsfw": data.get("nsfw", False),
-                    "poi": data.get("poi", False),
-                    "description": data.get("description"),
-                    "tags": data.get("tags", [])
-                }
+                # Step 4: Enrich version_info with model data
+                # Add description and tags from model data
+                version['model']['description'] = data.get("description")
+                version['model']['tags'] = data.get("tags", [])
                 
-                # Add creator field from top level
-                result['creator'] = data.get("creator")
+                # Add creator from model data
+                version['creator'] = data.get("creator")
                 
-                return result
+                return version
                 
         except Exception as e:
             logger.error(f"Error fetching model version: {e}")
