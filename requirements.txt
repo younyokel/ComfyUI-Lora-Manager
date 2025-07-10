@@ -12,4 +12,4 @@ numpy
 torch
 natsort
 msgpack
-diffusers
+diffusers>=0.33.1
