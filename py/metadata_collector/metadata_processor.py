@@ -238,25 +238,45 @@ class MetadataProcessor:
             
             pos_conditioning = metadata[PROMPTS][sampler_id].get("pos_conditioning")
             neg_conditioning = metadata[PROMPTS][sampler_id].get("neg_conditioning")
-                
-            # Try to match conditioning objects with those stored by CLIPTextEncodeExtractor
-            for prompt_node_id, prompt_data in metadata[PROMPTS].items():
-                # For nodes with single conditioning output
-                if "conditioning" in prompt_data:
-                    if pos_conditioning is not None and id(prompt_data["conditioning"]) == id(pos_conditioning):
-                        result["prompt"] = prompt_data.get("text", "")
+            
+            # Helper function to recursively find prompt text for a conditioning object
+            def find_prompt_text_for_conditioning(conditioning_obj, is_positive=True):
+                if conditioning_obj is None:
+                    return ""
                     
-                    if neg_conditioning is not None and id(prompt_data["conditioning"]) == id(neg_conditioning):
-                        result["negative_prompt"] = prompt_data.get("text", "")
+                # Try to match conditioning objects with those stored by extractors
+                for prompt_node_id, prompt_data in metadata[PROMPTS].items():
+                    # For nodes with single conditioning output
+                    if "conditioning" in prompt_data:
+                        if id(prompt_data["conditioning"]) == id(conditioning_obj):
+                            return prompt_data.get("text", "")
+                    
+                    # For nodes with separate pos_conditioning and neg_conditioning outputs (like TSC_EfficientLoader)
+                    if is_positive and "positive_encoded" in prompt_data:
+                        if id(prompt_data["positive_encoded"]) == id(conditioning_obj):
+                            if "positive_text" in prompt_data:
+                                return prompt_data["positive_text"]
+                            else:
+                                orig_conditioning = prompt_data.get("orig_pos_cond", None)
+                                if orig_conditioning is not None:
+                                    # Recursively find the prompt text for the original conditioning
+                                    return find_prompt_text_for_conditioning(orig_conditioning, is_positive=True)
+                    
+                    if not is_positive and "negative_encoded" in prompt_data:
+                        if id(prompt_data["negative_encoded"]) == id(conditioning_obj):
+                            if "negative_text" in prompt_data:
+                                return prompt_data["negative_text"]
+                            else:
+                                orig_conditioning = prompt_data.get("orig_neg_cond", None)
+                                if orig_conditioning is not None:
+                                    # Recursively find the prompt text for the original conditioning
+                                    return find_prompt_text_for_conditioning(orig_conditioning, is_positive=False)
                 
-                # For nodes with separate pos_conditioning and neg_conditioning outputs (like TSC_EfficientLoader)
-                if "positive_encoded" in prompt_data:
-                    if pos_conditioning is not None and id(prompt_data["positive_encoded"]) == id(pos_conditioning):
-                        result["prompt"] = prompt_data.get("positive_text", "")
-                
-                if "negative_encoded" in prompt_data:
-                    if neg_conditioning is not None and id(prompt_data["negative_encoded"]) == id(neg_conditioning):
-                        result["negative_prompt"] = prompt_data.get("negative_text", "")
+                return ""
+            
+            # Find prompt texts using the helper function
+            result["prompt"] = find_prompt_text_for_conditioning(pos_conditioning, is_positive=True)
+            result["negative_prompt"] = find_prompt_text_for_conditioning(neg_conditioning, is_positive=False)
             
         return result
     

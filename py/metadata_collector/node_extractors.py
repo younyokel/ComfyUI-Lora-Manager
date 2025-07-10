@@ -569,6 +569,40 @@ class CFGGuiderExtractor(NodeMetadataExtractor):
             
         metadata[SAMPLING][node_id]["parameters"]["cfg"] = cfg_value
 
+class CR_ApplyControlNetStackExtractor(NodeMetadataExtractor):
+    @staticmethod
+    def extract(node_id, inputs, outputs, metadata):
+        if not inputs:
+            return
+            
+        # Save the original conditioning inputs
+        base_positive = inputs.get("base_positive")
+        base_negative = inputs.get("base_negative")
+        
+        if base_positive is not None or base_negative is not None:
+            if node_id not in metadata[PROMPTS]:
+                metadata[PROMPTS][node_id] = {"node_id": node_id}
+            
+            metadata[PROMPTS][node_id]["orig_pos_cond"] = base_positive
+            metadata[PROMPTS][node_id]["orig_neg_cond"] = base_negative
+
+    @staticmethod
+    def update(node_id, outputs, metadata):
+        # Extract transformed conditionings from outputs
+        # outputs structure: [(base_positive, base_negative, show_help, )]
+        if outputs and isinstance(outputs, list) and len(outputs) > 0:
+            first_output = outputs[0]
+            if isinstance(first_output, tuple) and len(first_output) >= 2:
+                transformed_positive = first_output[0]
+                transformed_negative = first_output[1]
+                
+                # Save transformed conditioning objects in metadata
+                if node_id not in metadata[PROMPTS]:
+                    metadata[PROMPTS][node_id] = {"node_id": node_id}
+                    
+                metadata[PROMPTS][node_id]["positive_encoded"] = transformed_positive
+                metadata[PROMPTS][node_id]["negative_encoded"] = transformed_negative
+
 # Registry of node-specific extractors
 # Keys are node class names
 NODE_EXTRACTORS = {
@@ -595,6 +629,7 @@ NODE_EXTRACTORS = {
     "WAS_Text_to_Conditioning": CLIPTextEncodeExtractor,
     "AdvancedCLIPTextEncode": CLIPTextEncodeExtractor,  # From https://github.com/BlenderNeko/ComfyUI_ADV_CLIP_emb
     "smZ_CLIPTextEncode": CLIPTextEncodeExtractor,  # From https://github.com/shiimizu/ComfyUI_smZNodes
+    "CR_ApplyControlNetStack": CR_ApplyControlNetStackExtractor,  # Add CR_ApplyControlNetStack
     # Latent
     "EmptyLatentImage": ImageSizeExtractor,
     # Flux
