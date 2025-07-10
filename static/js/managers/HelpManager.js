@@ -6,7 +6,7 @@ import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 export class HelpManager {
     constructor() {
         this.lastViewedTimestamp = getStorageItem('help_last_viewed', 0);
-        this.latestContentTimestamp = 0; // Will be updated from server or config
+        this.latestContentTimestamp = new Date('2025-07-09').getTime(); // Will be updated from server or config
         this.isInitialized = false;
         
         // Default latest content data - could be fetched from server
@@ -81,11 +81,24 @@ export class HelpManager {
         if (window.modalManager) {
             window.modalManager.toggleModal('helpModal');
             
+            // Add visual indicator to Documentation tab if there's new content
+            this.updateDocumentationTabIndicator();
+            
             // Update the last viewed timestamp
             this.markContentAsViewed();
             
             // Hide the badge
             this.hideHelpBadge();
+        }
+    }
+
+    /**
+     * Add visual indicator to Documentation tab for new content
+     */
+    updateDocumentationTabIndicator() {
+        const docTab = document.querySelector('.tab-btn[data-tab="documentation"]');
+        if (docTab && this.hasNewContent()) {
+            docTab.classList.add('has-new-content');
         }
     }
     
@@ -105,7 +118,7 @@ export class HelpManager {
         // For now, we'll just use the hardcoded data from constructor
         
         // Update the timestamp with the latest data
-        this.latestContentTimestamp = this.latestVideoData.timestamp;
+        this.latestContentTimestamp = Math.max(this.latestContentTimestamp, this.latestVideoData.timestamp);
         
         // Check again if we need to show the badge with this new data
         this.updateHelpBadge();
