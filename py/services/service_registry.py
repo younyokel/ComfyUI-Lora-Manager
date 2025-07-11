@@ -38,6 +38,15 @@ class ServiceRegistry:
                 return None
             return registry._services[service_name]
     
+    @classmethod
+    def get_service_sync(cls, service_name: str) -> Any:
+        """Get a service instance by name (synchronous version)"""
+        registry = cls.get_instance()
+        if service_name not in registry._services:
+            logger.debug(f"Service {service_name} not found in registry")
+            return None
+        return registry._services[service_name]
+    
     # Convenience methods for common services
     @classmethod
     async def get_lora_scanner(cls):
