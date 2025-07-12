@@ -58,6 +58,7 @@ class ApiRoutes:
         app.router.add_get('/api/civitai/model/version/{modelVersionId}', routes.get_civitai_model_by_version)
         app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
         app.router.add_post('/api/download-model', routes.download_model)
+        app.router.add_get('/api/download-model-get', routes.download_model_get)  # Add new GET endpoint
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
         app.router.add_post('/api/loras/save-metadata', routes.save_metadata)
@@ -440,6 +441,64 @@ class ApiRoutes:
     async def download_model(self, request: web.Request) -> web.Response:
         return await ModelRouteUtils.handle_download_model(request, self.download_manager)
 
+    async def download_model_get(self, request: web.Request) -> web.Response:
+        """Handle model download request via GET method
+        
+        Converts GET parameters to POST format and calls the existing download handler
+        
+        Args:
+            request: The aiohttp request with query parameters
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            # Extract query parameters
+            model_id = request.query.get('model_id')
+            if not model_id:
+                return web.Response(
+                    status=400, 
+                    text="Missing required parameter: Please provide 'model_id'"
+                )
+            
+            # Get optional parameters
+            model_version_id = request.query.get('model_version_id')
+            download_id = request.query.get('download_id')
+            use_default_paths = request.query.get('use_default_paths', 'false').lower() == 'true'
+            
+            # Create a data dictionary that mimics what would be received from a POST request
+            data = {
+                'model_id': model_id
+            }
+            
+            # Add optional parameters only if they are provided
+            if model_version_id:
+                data['model_version_id'] = model_version_id
+                
+            if download_id:
+                data['download_id'] = download_id
+                
+            data['use_default_paths'] = use_default_paths
+            
+            # Create a mock request object with the data
+            # Fix: Create a proper Future object and set its result
+            future = asyncio.get_event_loop().create_future()
+            future.set_result(data)
+            
+            mock_request = type('MockRequest', (), {
+                'json': lambda self=None: future
+            })()
+            
+            # Call the existing download handler
+            if self.download_manager is None:
+                self.download_manager = await ServiceRegistry.get_download_manager()
+                
+            return await ModelRouteUtils.handle_download_model(mock_request, self.download_manager)
+            
+        except Exception as e:
+            error_message = str(e)
+            logger.error(f"Error downloading model via GET: {error_message}", exc_info=True)
+            return web.Response(status=500, text=error_message)
 
     async def move_model(self, request: web.Request) -> web.Response:
         """Handle model move request"""
