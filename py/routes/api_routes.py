@@ -59,6 +59,7 @@ class ApiRoutes:
         app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
         app.router.add_post('/api/download-model', routes.download_model)
         app.router.add_get('/api/download-model-get', routes.download_model_get)  # Add new GET endpoint
+        app.router.add_get('/api/download-progress/{download_id}', routes.get_download_progress)  # Add new endpoint for download progress
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
         app.router.add_post('/api/loras/save-metadata', routes.save_metadata)
@@ -499,6 +500,37 @@ class ApiRoutes:
             error_message = str(e)
             logger.error(f"Error downloading model via GET: {error_message}", exc_info=True)
             return web.Response(status=500, text=error_message)
+
+    async def get_download_progress(self, request: web.Request) -> web.Response:
+        """Handle request for download progress by download_id"""
+        try:
+            # Get download_id from URL path
+            download_id = request.match_info.get('download_id')
+            if not download_id:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID is required'
+                }, status=400)
+            
+            # Get progress information from websocket manager
+            progress_data = ws_manager.get_download_progress(download_id)
+            
+            if progress_data is None:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID not found'
+                }, status=404)
+            
+            return web.json_response({
+                'success': True,
+                'progress': progress_data.get('progress', 0)
+            })
+        except Exception as e:
+            logger.error(f"Error getting download progress: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
 
     async def move_model(self, request: web.Request) -> web.Response:
         """Handle model move request"""
