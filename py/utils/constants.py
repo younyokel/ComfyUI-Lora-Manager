@@ -47,3 +47,10 @@ SUPPORTED_MEDIA_EXTENSIONS = {
 
 # Valid Lora types
 VALID_LORA_TYPES = ['lora', 'locon', 'dora']
+
+# Civitai model tags in priority order for subfolder organization
+CIVITAI_MODEL_TAGS = [
+    'character', 'style', 'concept', 'clothing', 'base model', 
+    'poses', 'background', 'tool', 'vehicle', 'buildings', 
+    'objects', 'assets', 'animal', 'action'
+]

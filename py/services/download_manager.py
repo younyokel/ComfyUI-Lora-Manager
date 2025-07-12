@@ -3,7 +3,7 @@ import os
 import asyncio
 from typing import Dict
 from ..utils.models import LoraMetadata, CheckpointMetadata
-from ..utils.constants import CARD_PREVIEW_WIDTH, VALID_LORA_TYPES
+from ..utils.constants import CARD_PREVIEW_WIDTH, VALID_LORA_TYPES, CIVITAI_MODEL_TAGS
 from ..utils.exif_utils import ExifUtils
 from ..utils.metadata_manager import MetadataManager
 from .service_registry import ServiceRegistry
@@ -126,12 +126,24 @@ class DownloadManager:
                         return {'success': False, 'error': 'Default lora root path not set in settings'}
                     save_dir = default_path
                     
-                # Set relative_path to version_info.baseModel/first_tag if available
+                # Set relative_path to version_info.baseModel/prioritized_tag
                 base_model = version_info.get('baseModel', '')
                 model_tags = version_info.get('model', {}).get('tags', [])
+                
                 if base_model:
-                    if model_tags:
-                        relative_path = os.path.join(base_model, model_tags[0])
+                    # Find the first Civitai model tag that exists in model_tags
+                    prioritized_tag = None
+                    for civitai_tag in CIVITAI_MODEL_TAGS:
+                        if civitai_tag in model_tags:
+                            prioritized_tag = civitai_tag
+                            break
+                    
+                    # If no Civitai model tag found, fallback to first tag
+                    if prioritized_tag is None and model_tags:
+                        prioritized_tag = model_tags[0]
+                    
+                    if prioritized_tag:
+                        relative_path = os.path.join(base_model, prioritized_tag)
                     else:
                         relative_path = base_model
 
