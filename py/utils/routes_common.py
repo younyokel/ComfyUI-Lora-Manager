@@ -567,15 +567,7 @@ class ModelRouteUtils:
 
     @staticmethod
     async def handle_download_model(request: web.Request, download_manager: DownloadManager) -> web.Response:
-        """Handle model download request
-        
-        Args:
-            request: The aiohttp request
-            download_manager: Instance of DownloadManager
-            
-        Returns:
-            web.Response: The HTTP response
-        """
+        """Handle model download request"""
         try:
             data = await request.json()
             
@@ -594,10 +586,10 @@ class ModelRouteUtils:
             try:
                 model_id = int(data.get('model_id'))
             except (TypeError, ValueError):
-                return web.Response(
-                    status=400,
-                    text="Invalid model_id: Must be an integer"
-                )
+                return web.json_response({
+                    'success': False,
+                    'error': "Invalid model_id: Must be an integer"
+                }, status=400)
 
             # Convert model_version_id to int if provided
             model_version_id = None 
@@ -605,17 +597,17 @@ class ModelRouteUtils:
                 try:
                     model_version_id = int(data.get('model_version_id'))
                 except (TypeError, ValueError):
-                    return web.Response(
-                        status=400,
-                        text="Invalid model_version_id: Must be an integer"
-                    )
+                    return web.json_response({
+                        'success': False,
+                        'error': "Invalid model_version_id: Must be an integer"
+                    }, status=400)
             
             # Only model_id is required, model_version_id is optional
             if not model_id:
-                return web.Response(
-                    status=400, 
-                    text="Missing required parameter: Please provide 'model_id'"
-                )
+                return web.json_response({
+                    'success': False,
+                    'error': "Missing required parameter: Please provide 'model_id'"
+                }, status=400)
             
             use_default_paths = data.get('use_default_paths', False)
             
@@ -637,12 +629,15 @@ class ModelRouteUtils:
                 # Return 401 for early access errors
                 if 'early access' in error_message.lower():
                     logger.warning(f"Early access download failed: {error_message}")
-                    return web.Response(
-                        status=401,  # Use 401 status code to match Civitai's response
-                        text=f"Early Access Restriction: {error_message}"
-                    )
+                    return web.json_response({
+                        'success': False,
+                        'error': f"Early Access Restriction: {error_message}"
+                    }, status=401)
                 
-                return web.Response(status=500, text=error_message)
+                return web.json_response({
+                    'success': False,
+                    'error': error_message
+                }, status=500)
             
             return web.json_response(result)
             
@@ -652,13 +647,16 @@ class ModelRouteUtils:
             # Check if this might be an early access error
             if '401' in error_message:
                 logger.warning(f"Early access error (401): {error_message}")
-                return web.Response(
-                    status=401,
-                    text="Early Access Restriction: This model requires purchase. Please buy early access on Civitai.com."
-                )
+                return web.json_response({
+                    'success': False,
+                    'error': "Early Access Restriction: This model requires purchase. Please buy early access on Civitai.com."
+                }, status=401)
             
             logger.error(f"Error downloading model: {error_message}")
-            return web.Response(status=500, text=error_message)
+            return web.json_response({
+                'success': False,
+                'error': error_message
+            }, status=500)
 
     @staticmethod
     async def handle_bulk_delete_models(request: web.Request, scanner) -> web.Response:
