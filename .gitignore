@@ -4,3 +4,4 @@ output/*
 py/run_test.py
 .vscode/
 cache/
+path_mappings.yaml
