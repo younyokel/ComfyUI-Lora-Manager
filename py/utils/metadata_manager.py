@@ -266,6 +266,12 @@ class MetadataManager:
         """
         need_update = False
         
+        # Check if file_name matches the actual file name
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        if metadata.file_name != base_name:
+            metadata.file_name = base_name
+            need_update = True
+        
         # Check if file path is different from what's in metadata
         if normalize_path(file_path) != metadata.file_path:
             metadata.file_path = normalize_path(file_path)
