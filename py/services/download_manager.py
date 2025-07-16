@@ -1,6 +1,7 @@
 import logging
 import os
 import asyncio
+import yaml
 from typing import Dict
 from ..utils.models import LoraMetadata, CheckpointMetadata
 from ..utils.constants import CARD_PREVIEW_WIDTH, VALID_LORA_TYPES, CIVITAI_MODEL_TAGS
@@ -33,6 +34,36 @@ class DownloadManager:
         self._initialized = True
         
         self._civitai_client = None  # Will be lazily initialized
+        self._path_mappings = self._load_path_mappings()
+
+    def _load_path_mappings(self):
+        """Load path mappings from YAML configuration"""
+        path_mappings = {
+            'base_models': {},
+            'model_tags': {}
+        }
+        
+        # Path to the configuration file
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'path_mappings.yaml')
+        
+        try:
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    mappings = yaml.safe_load(f)
+                    
+                if mappings and isinstance(mappings, dict):
+                    if 'base_models' in mappings and isinstance(mappings['base_models'], dict):
+                        path_mappings['base_models'] = mappings['base_models']
+                    if 'model_tags' in mappings and isinstance(mappings['model_tags'], dict):
+                        path_mappings['model_tags'] = mappings['model_tags']
+                
+                logger.info(f"Loaded path mappings from {config_path}")
+            else:
+                logger.info(f"Path mappings configuration file not found at {config_path}, using default mappings")
+        except Exception as e:
+            logger.error(f"Error loading path mappings: {e}", exc_info=True)
+            
+        return path_mappings
 
     async def _get_civitai_client(self):
         """Lazily initialize CivitaiClient from registry"""
@@ -131,6 +162,9 @@ class DownloadManager:
                 model_tags = version_info.get('model', {}).get('tags', [])
                 
                 if base_model:
+                    # Apply base model mapping if available
+                    mapped_base_model = self._path_mappings['base_models'].get(base_model, base_model)
+                    
                     # Find the first Civitai model tag that exists in model_tags
                     prioritized_tag = None
                     for civitai_tag in CIVITAI_MODEL_TAGS:
@@ -143,9 +177,11 @@ class DownloadManager:
                         prioritized_tag = model_tags[0]
                     
                     if prioritized_tag:
-                        relative_path = os.path.join(base_model, prioritized_tag)
+                        # Apply tag mapping if available
+                        mapped_tag = self._path_mappings['model_tags'].get(prioritized_tag, prioritized_tag)
+                        relative_path = os.path.join(mapped_base_model, mapped_tag)
                     else:
-                        relative_path = base_model
+                        relative_path = mapped_base_model
 
             # Update save directory with relative path if provided
             if relative_path:
