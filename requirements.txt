@@ -10,3 +10,4 @@ toml
 numpy
 natsort
 msgpack
+pyyaml
