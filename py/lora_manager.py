@@ -155,12 +155,6 @@ class LoraManager:
             # Initialize recipe scanner if needed
             recipe_scanner = await ServiceRegistry.get_recipe_scanner()
             
-            # Initialize metadata collector if not in standalone mode
-            if not STANDALONE_MODE:
-                from .metadata_collector import init as init_metadata
-                init_metadata()
-                logger.debug("Metadata collector initialized")
-            
             # Create low-priority initialization tasks
             asyncio.create_task(lora_scanner.initialize_in_background(), name='lora_cache_init')
             asyncio.create_task(checkpoint_scanner.initialize_in_background(), name='checkpoint_cache_init')
