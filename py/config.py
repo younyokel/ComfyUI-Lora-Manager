@@ -171,23 +171,33 @@ class Config:
         """Initialize and validate checkpoint paths from ComfyUI settings"""
         try:
             # Get checkpoint paths from folder_paths
-            checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
-            unet_paths = folder_paths.get_folder_paths("unet")
+            raw_checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
+            raw_unet_paths = folder_paths.get_folder_paths("unet")
             
-            # Sort each list individually
-            checkpoint_paths = sorted(set(path.replace(os.sep, "/") 
-                    for path in checkpoint_paths 
-                    if os.path.exists(path)), key=lambda p: p.lower())
+            # Normalize and resolve symlinks for checkpoints, store mapping from resolved -> original
+            checkpoint_map = {}
+            for path in raw_checkpoint_paths:
+                if os.path.exists(path):
+                    real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                    checkpoint_map[real_path] = checkpoint_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
             
-            unet_paths = sorted(set(path.replace(os.sep, "/") 
-                    for path in unet_paths 
-                    if os.path.exists(path)), key=lambda p: p.lower())
+            # Normalize and resolve symlinks for unet, store mapping from resolved -> original
+            unet_map = {}
+            for path in raw_unet_paths:
+                if os.path.exists(path):
+                    real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                    unet_map[real_path] = unet_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
             
-            # Combine all checkpoint-related paths, ensuring checkpoint_paths are first
-            all_paths = checkpoint_paths + unet_paths
-
-            self.checkpoints_roots = checkpoint_paths
-            self.unet_roots = unet_paths
+            # Now sort and use only the deduplicated real paths
+            unique_checkpoint_paths = sorted(checkpoint_map.values(), key=lambda p: p.lower())
+            unique_unet_paths = sorted(unet_map.values(), key=lambda p: p.lower())
+            
+            # Store individual paths in class properties
+            self.checkpoints_roots = unique_checkpoint_paths
+            self.unet_roots = unique_unet_paths
+            
+            # Combine all checkpoint-related paths for return value
+            all_paths = unique_checkpoint_paths + unique_unet_paths
             
             logger.info("Found checkpoint roots:" + ("\n - " + "\n - ".join(all_paths) if all_paths else "[]"))
             
@@ -195,11 +205,11 @@ class Config:
                 logger.warning("No valid checkpoint folders found in ComfyUI configuration")
                 return []
             
-            # Initialize path mappings, similar to LoRA path handling
-            for path in all_paths:
-                real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
-                if real_path != path:
-                    self.add_path_mapping(path, real_path)
+            # Initialize path mappings
+            for original_path in all_paths:
+                real_path = os.path.normpath(os.path.realpath(original_path)).replace(os.sep, '/')
+                if real_path != original_path:
+                    self.add_path_mapping(original_path, real_path)
             
             return all_paths
         except Exception as e:
