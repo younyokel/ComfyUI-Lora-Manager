@@ -3,6 +3,7 @@ import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
 import { setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
+import { DOWNLOAD_PATH_TEMPLATES, MAPPABLE_BASE_MODELS } from '../utils/constants.js';
 
 export class SettingsManager {
     constructor() {
@@ -55,6 +56,16 @@ export class SettingsManager {
                 state.global.settings.displayDensity = 'default';
             }
             // We can delete the old setting, but keeping it for backwards compatibility
+        }
+
+        // Set default for download path template if undefined
+        if (state.global.settings.download_path_template === undefined) {
+            state.global.settings.download_path_template = DOWNLOAD_PATH_TEMPLATES.BASE_MODEL_TAG.value;
+        }
+
+        // Set default for base model path mappings if undefined
+        if (state.global.settings.base_model_path_mappings === undefined) {
+            state.global.settings.base_model_path_mappings = {};
         }
     }
 
@@ -124,6 +135,16 @@ export class SettingsManager {
         if (optimizeExampleImagesCheckbox) {
             optimizeExampleImagesCheckbox.checked = state.global.settings.optimizeExampleImages || false;
         }
+
+        // Set download path template setting
+        const downloadPathTemplateSelect = document.getElementById('downloadPathTemplate');
+        if (downloadPathTemplateSelect) {
+            downloadPathTemplateSelect.value = state.global.settings.download_path_template || '';
+            this.updatePathTemplatePreview();
+        }
+
+        // Load base model path mappings
+        this.loadBaseModelMappings();
 
         // Load default lora root
         await this.loadLoraRoots();
@@ -212,6 +233,197 @@ export class SettingsManager {
         }
     }
 
+    loadBaseModelMappings() {
+        const mappingsContainer = document.getElementById('baseModelMappingsContainer');
+        if (!mappingsContainer) return;
+
+        const mappings = state.global.settings.base_model_path_mappings || {};
+        
+        // Clear existing mappings
+        mappingsContainer.innerHTML = '';
+
+        // Add existing mappings
+        Object.entries(mappings).forEach(([baseModel, pathValue]) => {
+            this.addMappingRow(baseModel, pathValue);
+        });
+
+        // Add empty row for new mappings if none exist
+        if (Object.keys(mappings).length === 0) {
+            this.addMappingRow('', '');
+        }
+    }
+
+    addMappingRow(baseModel = '', pathValue = '') {
+        const mappingsContainer = document.getElementById('baseModelMappingsContainer');
+        if (!mappingsContainer) return;
+
+        const row = document.createElement('div');
+        row.className = 'mapping-row';
+        
+        const availableModels = MAPPABLE_BASE_MODELS.filter(model => {
+            const existingMappings = state.global.settings.base_model_path_mappings || {};
+            return !existingMappings.hasOwnProperty(model) || model === baseModel;
+        });
+
+        row.innerHTML = `
+            <div class="mapping-controls">
+                <select class="base-model-select">
+                    <option value="">Select Base Model</option>
+                    ${availableModels.map(model => 
+                        `<option value="${model}" ${model === baseModel ? 'selected' : ''}>${model}</option>`
+                    ).join('')}
+                </select>
+                <input type="text" class="path-value-input" placeholder="Custom path (e.g., flux)" value="${pathValue}">
+                <button type="button" class="remove-mapping-btn" title="Remove mapping">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Add event listeners
+        const baseModelSelect = row.querySelector('.base-model-select');
+        const pathValueInput = row.querySelector('.path-value-input');
+        const removeBtn = row.querySelector('.remove-mapping-btn');
+
+        // Save on select change immediately
+        baseModelSelect.addEventListener('change', () => this.updateBaseModelMappings());
+        
+        // Save on input blur or Enter key
+        pathValueInput.addEventListener('blur', () => this.updateBaseModelMappings());
+        pathValueInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        });
+        
+        removeBtn.addEventListener('click', () => {
+            row.remove();
+            this.updateBaseModelMappings();
+        });
+
+        mappingsContainer.appendChild(row);
+    }
+
+    updateBaseModelMappings() {
+        const mappingsContainer = document.getElementById('baseModelMappingsContainer');
+        if (!mappingsContainer) return;
+
+        const rows = mappingsContainer.querySelectorAll('.mapping-row');
+        const newMappings = {};
+        let hasValidMapping = false;
+
+        rows.forEach(row => {
+            const baseModelSelect = row.querySelector('.base-model-select');
+            const pathValueInput = row.querySelector('.path-value-input');
+            
+            const baseModel = baseModelSelect.value.trim();
+            const pathValue = pathValueInput.value.trim();
+            
+            if (baseModel && pathValue) {
+                newMappings[baseModel] = pathValue;
+                hasValidMapping = true;
+            }
+        });
+
+        // Check if mappings have actually changed
+        const currentMappings = state.global.settings.base_model_path_mappings || {};
+        const mappingsChanged = JSON.stringify(currentMappings) !== JSON.stringify(newMappings);
+
+        if (mappingsChanged) {
+            // Update state and save
+            state.global.settings.base_model_path_mappings = newMappings;
+            this.saveBaseModelMappings();
+        }
+
+        // Add empty row if no valid mappings exist
+        const hasEmptyRow = Array.from(rows).some(row => {
+            const baseModelSelect = row.querySelector('.base-model-select');
+            const pathValueInput = row.querySelector('.path-value-input');
+            return !baseModelSelect.value && !pathValueInput.value;
+        });
+
+        if (!hasEmptyRow) {
+            this.addMappingRow('', '');
+        }
+
+        // Update available options in all selects
+        this.updateAvailableBaseModels();
+    }
+
+    updateAvailableBaseModels() {
+        const mappingsContainer = document.getElementById('baseModelMappingsContainer');
+        if (!mappingsContainer) return;
+
+        const existingMappings = state.global.settings.base_model_path_mappings || {};
+        const rows = mappingsContainer.querySelectorAll('.mapping-row');
+
+        rows.forEach(row => {
+            const select = row.querySelector('.base-model-select');
+            const currentValue = select.value;
+            
+            // Get available models (not already mapped, except current)
+            const availableModels = MAPPABLE_BASE_MODELS.filter(model => 
+                !existingMappings.hasOwnProperty(model) || model === currentValue
+            );
+
+            // Rebuild options
+            select.innerHTML = '<option value="">Select Base Model</option>' +
+                availableModels.map(model => 
+                    `<option value="${model}" ${model === currentValue ? 'selected' : ''}>${model}</option>`
+                ).join('');
+        });
+    }
+
+    async saveBaseModelMappings() {
+        try {
+            // Save to localStorage
+            setStorageItem('settings', state.global.settings);
+
+            // Save to backend
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    base_model_path_mappings: JSON.stringify(state.global.settings.base_model_path_mappings)
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save base model mappings');
+            }
+
+            // Show success toast
+            const mappingCount = Object.keys(state.global.settings.base_model_path_mappings).length;
+            if (mappingCount > 0) {
+                showToast(`Base model path mappings updated (${mappingCount} mapping${mappingCount !== 1 ? 's' : ''})`, 'success');
+            } else {
+                showToast('Base model path mappings cleared', 'success');
+            }
+
+        } catch (error) {
+            console.error('Error saving base model mappings:', error);
+            showToast('Failed to save base model mappings: ' + error.message, 'error');
+        }
+    }
+
+    updatePathTemplatePreview() {
+        const templateSelect = document.getElementById('downloadPathTemplate');
+        const previewElement = document.getElementById('pathTemplatePreview');
+        if (!templateSelect || !previewElement) return;
+
+        const template = templateSelect.value;
+        const templateInfo = Object.values(DOWNLOAD_PATH_TEMPLATES).find(t => t.value === template);
+        
+        if (templateInfo) {
+            previewElement.textContent = templateInfo.example;
+            previewElement.style.display = 'block';
+        } else {
+            previewElement.style.display = 'none';
+        }
+    }
+
     toggleSettings() {
         if (this.isOpen) {
             modalManager.closeModal('settingsModal');
@@ -221,9 +433,6 @@ export class SettingsManager {
         this.isOpen = !this.isOpen;
     }
 
-    // Auto-save methods for different control types
-
-    // For toggle switches
     async saveToggleSetting(elementId, settingKey) {
         const element = document.getElementById(elementId);
         if (!element) return;
@@ -288,7 +497,6 @@ export class SettingsManager {
         }
     }
     
-    // For select dropdowns
     async saveSelectSetting(elementId, settingKey) {
         const element = document.getElementById(elementId);
         if (!element) return;
@@ -307,6 +515,9 @@ export class SettingsManager {
             state.global.settings.compactMode = (value !== 'default');
         } else if (settingKey === 'card_info_display') {
             state.global.settings.cardInfoDisplay = value;
+        } else if (settingKey === 'download_path_template') {
+            state.global.settings.download_path_template = value;
+            this.updatePathTemplatePreview();
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;
@@ -317,7 +528,7 @@ export class SettingsManager {
         
         try {
             // For backend settings, make API call
-            if (settingKey === 'default_lora_root' || settingKey === 'default_checkpoint_root') {
+            if (settingKey === 'default_lora_root' || settingKey === 'default_checkpoint_root' || settingKey === 'download_path_template') {
                 const payload = {};
                 payload[settingKey] = value;
                 
@@ -355,7 +566,6 @@ export class SettingsManager {
         }
     }
     
-    // For input fields
     async saveInputSetting(elementId, settingKey) {
         const element = document.getElementById(elementId);
         if (!element) return;

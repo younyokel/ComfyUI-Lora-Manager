@@ -40,10 +40,13 @@ export const BASE_MODELS = {
     SVD: "SVD",
     LTXV: "LTXV",
     WAN_VIDEO: "Wan Video",
+    WAN_VIDEO_1_3B_T2V: "Wan Video 1.3B t2v",
+    WAN_VIDEO_14B_T2V: "Wan Video 14B t2v",
+    WAN_VIDEO_14B_I2V_480P: "Wan Video 14B i2v 480p",
+    WAN_VIDEO_14B_I2V_720P: "Wan Video 14B i2v 720p",
     HUNYUAN_VIDEO: "Hunyuan Video",
-    
     // Default
-    UNKNOWN: "Unknown"
+    UNKNOWN: "Other"
 };
 
 // Base model display names and their corresponding class names (for styling)
@@ -94,6 +97,37 @@ export const BASE_MODEL_CLASSES = {
     // Default
     [BASE_MODELS.UNKNOWN]: "unknown"
 };
+
+// Path template constants for download organization
+export const DOWNLOAD_PATH_TEMPLATES = {
+    FLAT: {
+        value: '',
+        label: 'Flat Structure',
+        description: 'Download directly to root folder',
+        example: 'model-name.safetensors'
+    },
+    BASE_MODEL: {
+        value: '{base_model}',
+        label: 'By Base Model',
+        description: 'Organize by base model type',
+        example: 'Flux.1 D/model-name.safetensors'
+    },
+    FIRST_TAG: {
+        value: '{first_tag}',
+        label: 'By First Tag',
+        description: 'Organize by primary tag/category',
+        example: 'style/model-name.safetensors'
+    },
+    BASE_MODEL_TAG: {
+        value: '{base_model}/{first_tag}',
+        label: 'Base Model + First Tag',
+        description: 'Organize by base model and primary tag',
+        example: 'Flux.1 D/style/model-name.safetensors'
+    }
+};
+
+// Base models available for path mapping (for UI selection)
+export const MAPPABLE_BASE_MODELS = Object.values(BASE_MODELS).sort();
 
 export const NSFW_LEVELS = {
     UNKNOWN: 0,
