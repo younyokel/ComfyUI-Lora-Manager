@@ -50,6 +50,13 @@ class Config:
                 'unet': self.unet_roots,
             }
             
+            # Add default roots if there's only one item and key doesn't exist
+            if len(self.loras_roots) == 1 and "default_lora_root" not in settings:
+                settings["default_lora_root"] = self.loras_roots[0]
+            
+            if self.checkpoints_roots and len(self.checkpoints_roots) == 1 and "default_checkpoint_root" not in settings:
+                settings["default_checkpoint_root"] = self.checkpoints_roots[0]
+            
             # Save settings
             with open(settings_path, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, indent=2)
