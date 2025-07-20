@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -178,6 +179,16 @@ class MiscRoutes:
                     old_path = settings.get('example_images_path')
                     if old_path != value:
                         logger.info(f"Example images path changed to {value} - server restart required")
+                
+                # Special handling for base_model_path_mappings - parse JSON string
+                if key == 'base_model_path_mappings' and value:
+                    try:
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        return web.json_response({
+                            'success': False,
+                            'error': f"Invalid JSON format for base_model_path_mappings: {value}"
+                        })
                 
                 # Save to settings
                 settings.set(key, value)
