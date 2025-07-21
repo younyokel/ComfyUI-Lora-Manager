@@ -611,13 +611,15 @@ class ModelRouteUtils:
             
             use_default_paths = data.get('use_default_paths', False)
             
+            # Pass the download_id to download_from_civitai
             result = await download_manager.download_from_civitai(
                 model_id=model_id,
                 model_version_id=model_version_id,
                 save_dir=data.get('model_root'),
                 relative_path=data.get('relative_path', ''),
                 use_default_paths=use_default_paths,
-                progress_callback=progress_callback
+                progress_callback=progress_callback,
+                download_id=download_id  # Pass download_id explicitly
             )
             
             # Include download_id in the response
@@ -631,12 +633,14 @@ class ModelRouteUtils:
                     logger.warning(f"Early access download failed: {error_message}")
                     return web.json_response({
                         'success': False,
-                        'error': f"Early Access Restriction: {error_message}"
+                        'error': f"Early Access Restriction: {error_message}",
+                        'download_id': download_id
                     }, status=401)
                 
                 return web.json_response({
                     'success': False,
-                    'error': error_message
+                    'error': error_message,
+                    'download_id': download_id
                 }, status=500)
             
             return web.json_response(result)
@@ -656,6 +660,65 @@ class ModelRouteUtils:
             return web.json_response({
                 'success': False,
                 'error': error_message
+            }, status=500)
+
+    @staticmethod
+    async def handle_cancel_download(request: web.Request, download_manager: DownloadManager) -> web.Response:
+        """Handle cancellation of a download task
+        
+        Args:
+            request: The aiohttp request
+            download_manager: The download manager instance
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            download_id = request.match_info.get('download_id')
+            if not download_id:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID is required'
+                }, status=400)
+            
+            result = await download_manager.cancel_download(download_id)
+            
+            # Notify clients about cancellation via WebSocket
+            await ws_manager.broadcast_download_progress(download_id, {
+                'status': 'cancelled',
+                'progress': 0,
+                'download_id': download_id,
+                'message': 'Download cancelled by user'
+            })
+            
+            return web.json_response(result)
+            
+        except Exception as e:
+            logger.error(f"Error cancelling download: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+            
+    @staticmethod
+    async def handle_list_downloads(request: web.Request, download_manager: DownloadManager) -> web.Response:
+        """Get list of active downloads
+        
+        Args:
+            request: The aiohttp request
+            download_manager: The download manager instance
+            
+        Returns:
+            web.Response: The HTTP response with list of downloads
+        """
+        try:
+            result = await download_manager.get_active_downloads()
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"Error listing downloads: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)
 
     @staticmethod

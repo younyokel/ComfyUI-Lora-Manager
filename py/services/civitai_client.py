@@ -45,14 +45,14 @@ class CivitaiClient:
             # Optimize TCP connection parameters
             connector = aiohttp.TCPConnector(
                 ssl=True,
-                limit=3,  # Further reduced from 5 to 3
-                ttl_dns_cache=0,  # Disabled DNS caching completely
+                limit=8,  # Increase from 3 to 8 for better parallelism
+                ttl_dns_cache=300,  # Enable DNS caching with reasonable timeout
                 force_close=False,  # Keep connections for reuse
                 enable_cleanup_closed=True
             )
             trust_env = True  # Allow using system environment proxy settings
-            # Configure timeout parameters
-            timeout = aiohttp.ClientTimeout(total=None, connect=60, sock_read=60)
+            # Configure timeout parameters - increase read timeout for large files
+            timeout = aiohttp.ClientTimeout(total=None, connect=60, sock_read=120)
             self._session = aiohttp.ClientSession(
                 connector=connector, 
                 trust_env=trust_env,
@@ -165,7 +165,7 @@ class CivitaiClient:
                             now = datetime.now()
                             time_diff = (now - last_progress_report_time).total_seconds()
                             
-                            if progress_callback and total_size and time_diff >= 0.5:
+                            if progress_callback and total_size and time_diff >= 1.0:
                                 progress = (current_size / total_size) * 100
                                 await progress_callback(progress)
                                 last_progress_report_time = now

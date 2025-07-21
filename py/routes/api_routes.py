@@ -59,6 +59,7 @@ class ApiRoutes:
         app.router.add_get('/api/civitai/model/hash/{hash}', routes.get_civitai_model_by_hash)
         app.router.add_post('/api/download-model', routes.download_model)
         app.router.add_get('/api/download-model-get', routes.download_model_get)  # Add new GET endpoint
+        app.router.add_get('/api/cancel-download-get', routes.cancel_download_get)
         app.router.add_get('/api/download-progress/{download_id}', routes.get_download_progress)  # Add new endpoint for download progress
         app.router.add_post('/api/move_model', routes.move_model)
         app.router.add_get('/api/lora-model-description', routes.get_lora_model_description)  # Add new route
@@ -500,6 +501,29 @@ class ApiRoutes:
             error_message = str(e)
             logger.error(f"Error downloading model via GET: {error_message}", exc_info=True)
             return web.Response(status=500, text=error_message)
+        
+    async def cancel_download_get(self, request: web.Request) -> web.Response:
+        """Handle GET request for cancelling a download by download_id"""
+        try:
+            download_id = request.query.get('download_id')
+            if not download_id:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID is required'
+                }, status=400)
+            if self.download_manager is None:
+                self.download_manager = await ServiceRegistry.get_download_manager()
+            # Create a mock request with match_info for compatibility
+            mock_request = type('MockRequest', (), {
+                'match_info': {'download_id': download_id}
+            })()
+            return await ModelRouteUtils.handle_cancel_download(mock_request, self.download_manager)
+        except Exception as e:
+            logger.error(f"Error cancelling download via GET: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
 
     async def get_download_progress(self, request: web.Request) -> web.Response:
         """Handle request for download progress by download_id"""
