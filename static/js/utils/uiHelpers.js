@@ -118,11 +118,8 @@ export function toggleTheme() {
     const currentTheme = getStorageItem('theme') || 'auto';
     let newTheme;
     
-    // Cycle through themes: light → dark → auto → light
     if (currentTheme === 'light') {
         newTheme = 'dark';
-    } else if (currentTheme === 'dark') {
-        newTheme = 'auto';
     } else {
         newTheme = 'light';
     }

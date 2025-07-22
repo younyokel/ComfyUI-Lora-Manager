@@ -97,9 +97,9 @@ export function showModelModal(model, modelType) {
 
                 <div class="creator-actions">
                     ${model.from_civitai ? `
-                    <button class="civitai-view-btn" title="View on Civitai" data-action="view-civitai" data-filepath="${model.file_path}">
+                    <div class="civitai-view" title="View on Civitai" data-action="view-civitai" data-filepath="${model.file_path}">
                         <i class="fas fa-globe"></i> View on Civitai
-                    </button>` : ''}
+                    </div>` : ''}
 
                     ${model.civitai?.creator ? `
                     <div class="creator-info" data-username="${model.civitai.creator.username}" data-action="view-creator" title="View Creator Profile">
