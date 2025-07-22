@@ -184,7 +184,7 @@ export class ModelDuplicatesManager {
         document.body.classList.remove('duplicate-mode');
         
         // Clear the model grid first
-        const modelGrid = document.getElementById(this.modelType === 'loras' ? 'loraGrid' : 'checkpointGrid');
+        const modelGrid = document.getElementById('modelGrid');
         if (modelGrid) {
             modelGrid.innerHTML = '';
         }
@@ -241,7 +241,7 @@ export class ModelDuplicatesManager {
     }
     
     renderDuplicateGroups() {
-        const modelGrid = document.getElementById(this.modelType === 'loras' ? 'loraGrid' : 'checkpointGrid');
+        const modelGrid = document.getElementById('modelGrid');
         if (!modelGrid) return;
         
         // Clear existing content

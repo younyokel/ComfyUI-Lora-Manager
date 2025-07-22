@@ -1,13 +1,13 @@
 /**
  * PresetTags.js
- * 处理LoRA模型预设参数标签相关的功能模块
+ * Handles LoRA model preset parameter tags - Shared version
  */
 import { saveModelMetadata } from '../../api/loraApi.js';
 
 /**
- * 解析预设参数
- * @param {string} usageTips - 包含预设参数的JSON字符串
- * @returns {Object} 解析后的预设参数对象
+ * Parse preset parameters
+ * @param {string} usageTips - JSON string containing preset parameters
+ * @returns {Object} Parsed preset parameters object
  */
 export function parsePresets(usageTips) {
     if (!usageTips) return {};
@@ -19,9 +19,9 @@ export function parsePresets(usageTips) {
 }
 
 /**
- * 渲染预设标签
- * @param {Object} presets - 预设参数对象
- * @returns {string} HTML内容
+ * Render preset tags
+ * @param {Object} presets - Preset parameters object
+ * @returns {string} HTML content
  */
 export function renderPresetTags(presets) {
     return Object.entries(presets).map(([key, value]) => `
@@ -33,9 +33,9 @@ export function renderPresetTags(presets) {
 }
 
 /**
- * 格式化预设键名
- * @param {string} key - 预设键名
- * @returns {string} 格式化后的键名
+ * Format preset key name
+ * @param {string} key - Preset key name
+ * @returns {string} Formatted key name
  */
 function formatPresetKey(key) {
     return key.split('_').map(word => 
@@ -44,13 +44,13 @@ function formatPresetKey(key) {
 }
 
 /**
- * 移除预设参数
- * @param {string} key - 要移除的预设键名
+ * Remove preset parameter
+ * @param {string} key - Preset key name to remove
  */
 window.removePreset = async function(key) {
-    const filePath = document.querySelector('#loraModal .modal-content')
+    const filePath = document.querySelector('#modelModal .modal-content')
             .querySelector('.file-path').textContent + 
-            document.querySelector('#loraModal .modal-content')
+            document.querySelector('#modelModal .modal-content')
             .querySelector('#file-name').textContent + '.safetensors';
     const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
     const currentPresets = parsePresets(loraCard.dataset.usage_tips);

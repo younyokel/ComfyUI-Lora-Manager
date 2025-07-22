@@ -1,8 +1,7 @@
 /**
  * ModelDescription.js
- * Handles checkpoint model descriptions
+ * Handles model description related functionality - General version
  */
-import { showToast } from '../../utils/uiHelpers.js';
 
 /**
  * Set up tab switching functionality
@@ -25,7 +24,7 @@ export function setupTabSwitching() {
             const tabId = `${button.dataset.tab}-tab`;
             document.getElementById(tabId).classList.add('active');
             
-            // If switching to description tab, make sure content is properly loaded and displayed
+            // If switching to description tab, make sure content is properly sized
             if (button.dataset.tab === 'description') {
                 const descriptionContent = document.querySelector('.model-description-content');
                 if (descriptionContent) {
@@ -44,9 +43,9 @@ export function setupTabSwitching() {
 }
 
 /**
- * Load model description from API
- * @param {string} modelId - The Civitai model ID
- * @param {string} filePath - File path for the model
+ * Load model description - General version supports both LoRA and Checkpoint
+ * @param {string} modelId - Model ID
+ * @param {string} filePath - File path
  */
 export async function loadModelDescription(modelId, filePath) {
     try {
@@ -59,8 +58,17 @@ export async function loadModelDescription(modelId, filePath) {
         loadingElement.classList.remove('hidden');
         descriptionContainer.classList.add('hidden');
         
+        // Determine API endpoint based on file path or context
+        let apiEndpoint = `/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`;
+        
+        // If this is a checkpoint (can be determined from file path or other context)
+        if (filePath.includes('.safetensors') || filePath.includes('.ckpt')) {
+            // For now, use the same endpoint - can be updated later if checkpoint-specific endpoint is needed
+            apiEndpoint = `/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`;
+        }
+        
         // Try to get model description from API
-        const response = await fetch(`/api/checkpoint-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`);
+        const response = await fetch(apiEndpoint);
         
         if (!response.ok) {
             throw new Error(`Failed to fetch model description: ${response.statusText}`);

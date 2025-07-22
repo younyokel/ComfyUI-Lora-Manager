@@ -1,5 +1,6 @@
 /**
- * RecipeTab - Handles the recipes tab in the Lora Modal
+ * RecipeTab - Handles the recipes tab in model modals (LoRA specific functionality)
+ * Moved to shared directory for consistency
  */
 import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { setSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
@@ -189,7 +190,7 @@ function copyRecipeSyntax(recipeId) {
 function navigateToRecipesPage(loraName, loraHash) {
     // Close the current modal
     if (window.modalManager) {
-        modalManager.closeModal('loraModal');
+        modalManager.closeModal('modelModal');
     }
     
     // Clear any previous filters first
@@ -212,7 +213,7 @@ function navigateToRecipesPage(loraName, loraHash) {
 function navigateToRecipeDetails(recipeId) {
     // Close the current modal
     if (window.modalManager) {
-        modalManager.closeModal('loraModal');
+        modalManager.closeModal('modelModal');
     }
     
     // Clear any previous filters first

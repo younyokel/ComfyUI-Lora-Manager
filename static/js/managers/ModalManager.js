@@ -12,25 +12,12 @@ export class ModalManager {
         this.boundHandleEscape = this.handleEscape.bind(this);
         
         // Register all modals - only if they exist in the current page
-        const loraModal = document.getElementById('loraModal');
-        if (loraModal) {
-            this.registerModal('loraModal', {
-                element: loraModal,
+        const modelModal = document.getElementById('modelModal');
+        if (modelModal) {
+            this.registerModal('modelModal', {
+                element: modelModal,
                 onClose: () => {
-                    this.getModal('loraModal').element.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                },
-                closeOnOutsideClick: true
-            });
-        }
-        
-        // Add checkpointModal registration
-        const checkpointModal = document.getElementById('checkpointModal');
-        if (checkpointModal) {
-            this.registerModal('checkpointModal', {
-                element: checkpointModal,
-                onClose: () => {
-                    this.getModal('checkpointModal').element.style.display = 'none';
+                    this.getModal('modelModal').element.style.display = 'none';
                     document.body.classList.remove('modal-open');
                 },
                 closeOnOutsideClick: true

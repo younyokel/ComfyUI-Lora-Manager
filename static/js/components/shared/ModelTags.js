@@ -1,9 +1,10 @@
 /**
  * ModelTags.js
- * Module for handling model tag editing functionality
+ * Module for handling model tag editing functionality - 共享版本
  */
 import { showToast } from '../../utils/uiHelpers.js';
-import { saveModelMetadata } from '../../api/loraApi.js';
+import { saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
+import { saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
 
 // Preset tag suggestions
 const PRESET_TAGS = [
@@ -133,6 +134,98 @@ export function setupTagEditMode() {
     
     // Add the new handler
     document.addEventListener('click', saveTagsHandler);
+}
+
+// ...existing helper functions...
+
+/**
+ * Save tags - 支持LoRA和Checkpoint
+ */
+async function saveTags() {
+    const editBtn = document.querySelector('.edit-tags-btn');
+    if (!editBtn) return;
+    
+    const filePath = editBtn.dataset.filePath;
+    const tagElements = document.querySelectorAll('.metadata-item');
+    const tags = Array.from(tagElements).map(tag => tag.dataset.tag);
+
+    // Get original tags to compare
+    const originalTagElements = document.querySelectorAll('.tooltip-tag');
+    const originalTags = Array.from(originalTagElements).map(tag => tag.textContent);
+    
+    // Check if tags have actually changed
+    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(originalTags);
+    
+    if (!tagsChanged) {
+        // No changes made, just exit edit mode without API call
+        editBtn.dataset.skipRestore = "true";
+        editBtn.click();
+        return;
+    }
+    
+    try {
+        // Determine model type and use appropriate save function
+        const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
+        const saveFunction = isCheckpoint ? saveCheckpointMetadata : saveLoraMetadata;
+        
+        // Save tags metadata
+        await saveFunction(filePath, { tags: tags });
+        
+        // Set flag to skip restoring original tags when exiting edit mode
+        editBtn.dataset.skipRestore = "true";
+        
+        // Update the compact tags display
+        const compactTagsContainer = document.querySelector('.model-tags-container');
+        if (compactTagsContainer) {
+            // Generate new compact tags HTML
+            const compactTagsDisplay = compactTagsContainer.querySelector('.model-tags-compact');
+            
+            if (compactTagsDisplay) {
+                // Clear current tags
+                compactTagsDisplay.innerHTML = '';
+                
+                // Add visible tags (up to 5)
+                const visibleTags = tags.slice(0, 5);
+                visibleTags.forEach(tag => {
+                    const span = document.createElement('span');
+                    span.className = 'model-tag-compact';
+                    span.textContent = tag;
+                    compactTagsDisplay.appendChild(span);
+                });
+                
+                // Add more indicator if needed
+                const remainingCount = Math.max(0, tags.length - 5);
+                if (remainingCount > 0) {
+                    const more = document.createElement('span');
+                    more.className = 'model-tag-more';
+                    more.dataset.count = remainingCount;
+                    more.textContent = `+${remainingCount}`;
+                    compactTagsDisplay.appendChild(more);
+                }
+            }
+            
+            // Update tooltip content
+            const tooltipContent = compactTagsContainer.querySelector('.tooltip-content');
+            if (tooltipContent) {
+                tooltipContent.innerHTML = '';
+                
+                tags.forEach(tag => {
+                    const span = document.createElement('span');
+                    span.className = 'tooltip-tag';
+                    span.textContent = tag;
+                    tooltipContent.appendChild(span);
+                });
+            }
+        }
+        
+        // Exit edit mode
+        editBtn.click();
+        
+        showToast('Tags updated successfully', 'success');
+    } catch (error) {
+        console.error('Error saving tags:', error);
+        showToast('Failed to update tags', 'error');
+    }
 }
 
 /**
@@ -382,90 +475,4 @@ function updateSuggestionsDropdown() {
 function restoreOriginalTags(section, originalTags) {
     // Nothing to do here as we're just hiding the edit UI
     // and showing the original compact tags which weren't modified
-}
-
-/**
- * Save tags
- */
-async function saveTags() {
-    const editBtn = document.querySelector('.edit-tags-btn');
-    if (!editBtn) return;
-    
-    const filePath = editBtn.dataset.filePath;
-    const tagElements = document.querySelectorAll('.metadata-item');
-    const tags = Array.from(tagElements).map(tag => tag.dataset.tag);
-
-    // Get original tags to compare
-    const originalTagElements = document.querySelectorAll('.tooltip-tag');
-    const originalTags = Array.from(originalTagElements).map(tag => tag.textContent);
-    
-    // Check if tags have actually changed
-    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(originalTags);
-    
-    if (!tagsChanged) {
-        // No changes made, just exit edit mode without API call
-        editBtn.dataset.skipRestore = "true";
-        editBtn.click();
-        return;
-    }
-    
-    try {
-        // Save tags metadata
-        await saveModelMetadata(filePath, { tags: tags });
-        
-        // Set flag to skip restoring original tags when exiting edit mode
-        editBtn.dataset.skipRestore = "true";
-        
-        // Update the compact tags display
-        const compactTagsContainer = document.querySelector('.model-tags-container');
-        if (compactTagsContainer) {
-            // Generate new compact tags HTML
-            const compactTagsDisplay = compactTagsContainer.querySelector('.model-tags-compact');
-            
-            if (compactTagsDisplay) {
-                // Clear current tags
-                compactTagsDisplay.innerHTML = '';
-                
-                // Add visible tags (up to 5)
-                const visibleTags = tags.slice(0, 5);
-                visibleTags.forEach(tag => {
-                    const span = document.createElement('span');
-                    span.className = 'model-tag-compact';
-                    span.textContent = tag;
-                    compactTagsDisplay.appendChild(span);
-                });
-                
-                // Add more indicator if needed
-                const remainingCount = Math.max(0, tags.length - 5);
-                if (remainingCount > 0) {
-                    const more = document.createElement('span');
-                    more.className = 'model-tag-more';
-                    more.dataset.count = remainingCount;
-                    more.textContent = `+${remainingCount}`;
-                    compactTagsDisplay.appendChild(more);
-                }
-            }
-            
-            // Update tooltip content
-            const tooltipContent = compactTagsContainer.querySelector('.tooltip-content');
-            if (tooltipContent) {
-                tooltipContent.innerHTML = '';
-                
-                tags.forEach(tag => {
-                    const span = document.createElement('span');
-                    span.className = 'tooltip-tag';
-                    span.textContent = tag;
-                    tooltipContent.appendChild(span);
-                });
-            }
-        }
-        
-        // Exit edit mode
-        editBtn.click();
-        
-        showToast('Tags updated successfully', 'success');
-    } catch (error) {
-        console.error('Error saving tags:', error);
-        showToast('Failed to update tags', 'error');
-    }
 }

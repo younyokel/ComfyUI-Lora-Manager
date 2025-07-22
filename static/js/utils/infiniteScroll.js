@@ -82,11 +82,9 @@ async function initializeVirtualScroll(pageType) {
             gridId = 'recipeGrid';
             break;
         case 'checkpoints':
-            gridId = 'checkpointGrid';
-            break;
         case 'loras':
         default:
-            gridId = 'loraGrid';
+            gridId = 'modelGrid';
             break;
     }
 

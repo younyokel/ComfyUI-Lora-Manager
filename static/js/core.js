@@ -10,7 +10,6 @@ import { helpManager } from './managers/HelpManager.js';
 import { showToast, initTheme, initBackToTop } from './utils/uiHelpers.js';
 import { initializeInfiniteScroll } from './utils/infiniteScroll.js';
 import { migrateStorageItems } from './utils/storageHelpers.js';
-import { setupLoraCardEventDelegation } from './components/LoraCard.js';
 
 // Core application class
 export class AppCore {
@@ -67,11 +66,6 @@ export class AppCore {
     // Initialize common UI features based on page type
     initializePageFeatures() {
         const pageType = this.getPageType();
-        
-        // Setup event delegation for lora cards if on the loras page
-        if (pageType === 'loras') {
-            setupLoraCardEventDelegation();
-        }
         
         // Initialize virtual scroll for pages that need it
         if (['loras', 'recipes', 'checkpoints'].includes(pageType)) {

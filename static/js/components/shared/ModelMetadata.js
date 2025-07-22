@@ -1,15 +1,16 @@
 /**
  * ModelMetadata.js
- * Handles checkpoint model metadata editing functionality
+ * Handles model metadata editing functionality - General version
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
 import { state } from '../../state/index.js';
-import { saveModelMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
+import { saveModelMetadata as saveLoraMetadata, renameLoraFile } from '../../api/loraApi.js';
+import { saveModelMetadata as saveCheckpointMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
 
 /**
  * Set up model name editing functionality
- * @param {string} filePath - The full file path of the model.
+ * @param {string} filePath - File path
  */
 export function setupModelNameEditing(filePath) {
     const modelNameContent = document.querySelector('.model-name-content');
@@ -72,6 +73,7 @@ export function setupModelNameEditing(filePath) {
     modelNameContent.addEventListener('input', function() {
         if (!this.getAttribute('contenteditable')) return;
         
+        // Limit model name length
         if (this.textContent.length > 100) {
             this.textContent = this.textContent.substring(0, 100);
             // Place cursor at the end
@@ -112,7 +114,11 @@ export function setupModelNameEditing(filePath) {
             // Get the file path from the dataset
             const filePath = this.dataset.filePath;
             
-            await saveModelMetadata(filePath, { model_name: newModelName });
+            // Determine model type based on file extension
+            const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
+            const saveFunction = isCheckpoint ? saveCheckpointMetadata : saveLoraMetadata;
+            
+            await saveFunction(filePath, { model_name: newModelName });
             
             showToast('Model name updated successfully', 'success');
         } catch (error) {
@@ -133,7 +139,7 @@ export function setupModelNameEditing(filePath) {
 
 /**
  * Set up base model editing functionality
- * @param {string} filePath - The full file path of the model.
+ * @param {string} filePath - File path
  */
 export function setupBaseModelEditing(filePath) {
     const baseModelContent = document.querySelector('.base-model-content');
@@ -242,7 +248,10 @@ export function setupBaseModelEditing(filePath) {
             
             // Only save if the value has actually changed
             if (valueChanged || baseModelContent.textContent.trim() !== originalValue) {
-                // Use the passed filePath for saving
+                // Get file path from the dataset
+                const filePath = baseModelContent.dataset.filePath;
+                
+                // Save the changes, passing the original value for comparison
                 saveBaseModel(filePath, originalValue);
             }
             
@@ -288,7 +297,11 @@ async function saveBaseModel(filePath, originalValue) {
     }
     
     try {
-        await saveModelMetadata(filePath, { base_model: newBaseModel });
+        // Determine model type based on file extension
+        const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
+        const saveFunction = isCheckpoint ? saveCheckpointMetadata : saveLoraMetadata;
+        
+        await saveFunction(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -298,7 +311,7 @@ async function saveBaseModel(filePath, originalValue) {
 
 /**
  * Set up file name editing functionality
- * @param {string} filePath - The full file path of the model.
+ * @param {string} filePath - File path
  */
 export function setupFileNameEditing(filePath) {
     const fileNameContent = document.querySelector('.file-name-content');
@@ -405,17 +418,38 @@ export function setupFileNameEditing(filePath) {
         }
         
         try {
-            // Use the passed filePath (which includes the original filename)
-            // Call API to rename the file using the new function from checkpointApi.js
-            const result = await renameCheckpointFile(filePath, newFileName);
+            // Get the file path from the dataset
+            const filePath = this.dataset.filePath;
+            
+            // Determine model type and use appropriate rename function
+            const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
+            let result;
+            
+            if (isCheckpoint) {
+                // Use checkpoint rename function if it exists, otherwise fallback to generic approach
+                if (typeof renameCheckpointFile === 'function') {
+                    result = await renameCheckpointFile(filePath, newFileName);
+                } else {
+                    // Fallback: use checkpoint metadata save function
+                    await saveCheckpointMetadata(filePath, { file_name: newFileName });
+                    result = { success: true };
+                }
+            } else {
+                // Use LoRA rename function
+                result = await renameLoraFile(filePath, newFileName);
+            }
             
             if (result.success) {
                 showToast('File name updated successfully', 'success');
                 
-                const newFilePath = filePath.replace(originalValue, newFileName);
-                
-                state.virtualScroller.updateSingleItem(filePath, { file_name: newFileName, file_path: newFilePath });
-                this.textContent = newFileName;
+                // Update virtual scroller if available (mainly for LoRAs)
+                if (state.virtualScroller && typeof state.virtualScroller.updateSingleItem === 'function') {
+                    const newFilePath = filePath.replace(originalValue, newFileName);
+                    state.virtualScroller.updateSingleItem(filePath, { 
+                        file_name: newFileName, 
+                        file_path: newFilePath 
+                    });
+                }
             } else {
                 throw new Error(result.error || 'Unknown error');
             }

@@ -1,13 +1,12 @@
 /**
  * utils.js
- * LoraModal组件的辅助函数集合
+ * Helper functions for the Model Modal component - General version
  */
-import { showToast } from '../../utils/uiHelpers.js';
 
 /**
- * 格式化文件大小
- * @param {number} bytes - 字节数
- * @returns {string} 格式化后的文件大小
+ * Format file size
+ * @param {number} bytes - Number of bytes
+ * @returns {string} Formatted file size
  */
 export function formatFileSize(bytes) {
     if (!bytes) return 'N/A';
@@ -24,10 +23,10 @@ export function formatFileSize(bytes) {
 }
 
 /**
- * 渲染紧凑标签
- * @param {Array} tags - 标签数组
- * @param {string} filePath - 文件路径，用于编辑按钮
- * @returns {string} HTML内容
+ * Render compact tags
+ * @param {Array} tags - Array of tags
+ * @param {string} filePath - File path for the edit button
+ * @returns {string} HTML content
  */
 export function renderCompactTags(tags, filePath = '') {
     // Remove the early return and always render the container
@@ -63,7 +62,7 @@ export function renderCompactTags(tags, filePath = '') {
 }
 
 /**
- * 设置标签提示功能
+ * Set up tag tooltip functionality
  */
 export function setupTagTooltip() {
     const tagsContainer = document.querySelector('.model-tags-container');

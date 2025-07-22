@@ -1,6 +1,7 @@
 /**
  * TriggerWords.js
  * Module that handles trigger word functionality for LoRA models
+ * Moved to shared directory for consistency
  */
 import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
 import { saveModelMetadata } from '../../api/loraApi.js';

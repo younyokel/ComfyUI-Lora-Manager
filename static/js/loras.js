@@ -1,6 +1,5 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
-import { showLoraModal } from './components/loraModal/index.js';
 import { loadMoreLoras } from './api/loraApi.js';
 import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
@@ -36,7 +35,6 @@ class LoraPageManager {
         // Only expose what's still needed globally
         // Most functionality is now handled by the PageControls component
         window.loadMoreLoras = loadMoreLoras;
-        window.showLoraModal = showLoraModal;
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
         window.confirmExclude = confirmExclude;
@@ -70,12 +68,6 @@ class LoraPageManager {
         
         // Initialize common page features (virtual scroll)
         appCore.initializePageFeatures();
-        
-        // Add virtual scroll class to grid for CSS adjustments
-        const loraGrid = document.getElementById('loraGrid');
-        if (loraGrid && state.virtualScroller) {
-            loraGrid.classList.add('virtual-scroll');
-        }
     }
 }
 
