@@ -854,9 +854,7 @@ class ModelScanner:
                     model_id = str(model_id)
                     tags_missing = not model_data.get('tags') or len(model_data.get('tags', [])) == 0
                     desc_missing = not model_data.get('modelDescription') or model_data.get('modelDescription') in (None, "")
-                    # TODO: not for now, but later we should check if the creator is missing
-                    # creator_missing = not model_data.get('civitai', {}).get('creator')
-                    creator_missing = False
+                    creator_missing = not model_data.get('civitai', {}).get('creator')
                     needs_metadata_update = tags_missing or desc_missing or creator_missing
             
             if needs_metadata_update and model_id:
