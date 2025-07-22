@@ -11,7 +11,7 @@ class BaseModelMetadata:
     model_name: str             # The model's name defined by the creator
     file_path: str              # Full path to the model file
     size: int                   # File size in bytes
-    modified: float             # Last modified timestamp
+    modified: float             # Timestamp when the model was added to the management system
     sha256: str                 # SHA256 hash of the file
     base_model: str             # Base model type (SD1.5/SD2.1/SDXL/etc.)
     preview_url: str            # Preview image URL
@@ -72,11 +72,6 @@ class BaseModelMetadata:
             result.update(self._unknown_fields)
             
         return result
-
-    @property
-    def modified_datetime(self) -> datetime:
-        """Convert modified timestamp to datetime object"""
-        return datetime.fromtimestamp(self.modified)
 
     def update_civitai_info(self, civitai_data: Dict) -> None:
         """Update Civitai information"""

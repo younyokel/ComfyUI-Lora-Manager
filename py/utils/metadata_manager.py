@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import json
 import shutil
@@ -196,7 +197,7 @@ class MetadataManager:
                     model_name=base_name,
                     file_path=normalize_path(file_path),
                     size=os.path.getsize(real_path),
-                    modified=os.path.getmtime(real_path),
+                    modified=datetime.now().timestamp(),
                     sha256=sha256,
                     base_model="Unknown",
                     preview_url=normalize_path(preview_url),
@@ -211,7 +212,7 @@ class MetadataManager:
                     model_name=base_name,
                     file_path=normalize_path(file_path),
                     size=os.path.getsize(real_path),
-                    modified=os.path.getmtime(real_path),
+                    modified=datetime.now().timestamp(),
                     sha256=sha256,
                     base_model="Unknown",
                     preview_url=normalize_path(preview_url),
@@ -222,7 +223,7 @@ class MetadataManager:
                 )
             
             # Try to extract model-specific metadata
-            await MetadataManager._enrich_metadata(metadata, real_path)
+            # await MetadataManager._enrich_metadata(metadata, real_path)
             
             # Save the created metadata
             await MetadataManager.save_metadata(file_path, metadata, create_backup=False)
