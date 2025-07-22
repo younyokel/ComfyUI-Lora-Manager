@@ -1,4 +1,4 @@
-import { showToast } from '../../utils/uiHelpers.js';
+import { showToast, openCivitai } from '../../utils/uiHelpers.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { 
     toggleShowcase,
@@ -95,18 +95,25 @@ export function showModelModal(model, modelType) {
                     </button>
                 </div>
 
-                ${model.civitai?.creator ? `
-                <div class="creator-info">
-                    ${model.civitai.creator.image ? 
-                        `<div class="creator-avatar">
-                            <img src="${model.civitai.creator.image}" alt="${model.civitai.creator.username}" onerror="this.onerror=null; this.src='static/icons/user-placeholder.png';">
-                        </div>` : 
-                        `<div class="creator-avatar creator-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>`
-                    }
-                    <span class="creator-username">${model.civitai.creator.username}</span>
-                </div>` : ''}
+                <div class="creator-actions">
+                    ${model.from_civitai ? `
+                    <button class="civitai-view-btn" title="View on Civitai" data-action="view-civitai" data-filepath="${model.file_path}">
+                        <i class="fas fa-globe"></i> View on Civitai
+                    </button>` : ''}
+
+                    ${model.civitai?.creator ? `
+                    <div class="creator-info" data-username="${model.civitai.creator.username}" data-action="view-creator" title="View Creator Profile">
+                        ${model.civitai.creator.image ? 
+                            `<div class="creator-avatar">
+                                <img src="${model.civitai.creator.image}" alt="${model.civitai.creator.username}" onerror="this.onerror=null; this.src='static/icons/user-placeholder.png';">
+                            </div>` : 
+                            `<div class="creator-avatar creator-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>`
+                        }
+                        <span class="creator-username">${model.civitai.creator.username}</span>
+                    </div>` : ''}
+                </div>
 
                 ${renderCompactTags(model.tags || [], model.file_path)}
             </header>
@@ -268,6 +275,15 @@ function setupEventHandlers(filePath) {
                 break;
             case 'scroll-to-top':
                 scrollToTop(target);
+                break;
+            case 'view-civitai':
+                openCivitai(target.dataset.filepath);
+                break;
+            case 'view-creator':
+                const username = target.dataset.username;
+                if (username) {
+                    window.open(`https://civitai.com/user/${username}`, '_blank');
+                }
                 break;
         }
     }

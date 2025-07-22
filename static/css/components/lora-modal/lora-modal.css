@@ -436,12 +436,13 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: var(--space-1);
-    padding: 6px 10px;
+    padding: 2px 10px;
     background: rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: var(--border-radius-sm);
     max-width: fit-content;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 [data-theme="dark"] .creator-info {
@@ -482,8 +483,43 @@
     color: var(--text-color);
 }
 
-/* Optional: add hover effect for creator info */
+/* Add hover effect for creator info */
 .creator-info:hover {
     background: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.1);
     border-color: var(--lora-accent);
+    transform: translateY(-1px);
+}
+
+.creator-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: var(--space-1);
+    flex-wrap: wrap;
+}
+
+.civitai-view-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--lora-accent);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.civitai-view-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.civitai-view-btn i {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
