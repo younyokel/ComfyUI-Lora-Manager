@@ -61,12 +61,6 @@ export async function loadModelDescription(modelId, filePath) {
         // Determine API endpoint based on file path or context
         let apiEndpoint = `/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`;
         
-        // If this is a checkpoint (can be determined from file path or other context)
-        if (filePath.includes('.safetensors') || filePath.includes('.ckpt')) {
-            // For now, use the same endpoint - can be updated later if checkpoint-specific endpoint is needed
-            apiEndpoint = `/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`;
-        }
-        
         // Try to get model description from API
         const response = await fetch(apiEndpoint);
         

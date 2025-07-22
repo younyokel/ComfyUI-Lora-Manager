@@ -5,6 +5,7 @@
 import { showToast } from '../../utils/uiHelpers.js';
 import { saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
 import { saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
+import { state } from '../../state/index.js';
 
 // Preset tag suggestions
 const PRESET_TAGS = [
@@ -164,9 +165,7 @@ async function saveTags() {
     }
     
     try {
-        // Determine model type and use appropriate save function
-        const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
-        const saveFunction = isCheckpoint ? saveCheckpointMetadata : saveLoraMetadata;
+        const saveFunction = state.currentPageType === 'checkpoints' ? saveCheckpointMetadata : saveLoraMetadata;
         
         // Save tags metadata
         await saveFunction(filePath, { tags: tags });

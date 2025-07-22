@@ -114,9 +114,7 @@ export function setupModelNameEditing(filePath) {
             // Get the file path from the dataset
             const filePath = this.dataset.filePath;
             
-            // Determine model type based on file extension
-            const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
-            const saveFunction = isCheckpoint ? saveCheckpointMetadata : saveLoraMetadata;
+            const saveFunction = state.currentPageType === 'checkpoints' ? saveCheckpointMetadata : saveLoraMetadata;
             
             await saveFunction(filePath, { model_name: newModelName });
             
@@ -297,9 +295,7 @@ async function saveBaseModel(filePath, originalValue) {
     }
     
     try {
-        // Determine model type based on file extension
-        const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
-        const saveFunction = isCheckpoint ? saveCheckpointMetadata : saveLoraMetadata;
+        const saveFunction = state.currentPageType === 'checkpoints' ? saveCheckpointMetadata : saveLoraMetadata;
         
         await saveFunction(filePath, { base_model: newBaseModel });
         
@@ -421,19 +417,10 @@ export function setupFileNameEditing(filePath) {
             // Get the file path from the dataset
             const filePath = this.dataset.filePath;
             
-            // Determine model type and use appropriate rename function
-            const isCheckpoint = filePath.includes('.safetensors') || filePath.includes('.ckpt');
             let result;
             
-            if (isCheckpoint) {
-                // Use checkpoint rename function if it exists, otherwise fallback to generic approach
-                if (typeof renameCheckpointFile === 'function') {
-                    result = await renameCheckpointFile(filePath, newFileName);
-                } else {
-                    // Fallback: use checkpoint metadata save function
-                    await saveCheckpointMetadata(filePath, { file_name: newFileName });
-                    result = { success: true };
-                }
+            if (state.currentPageType === 'checkpoints') {
+                result = await renameCheckpointFile(filePath, newFileName);
             } else {
                 // Use LoRA rename function
                 result = await renameLoraFile(filePath, newFileName);

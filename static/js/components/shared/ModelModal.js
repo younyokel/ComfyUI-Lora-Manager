@@ -150,12 +150,9 @@ export function showModelModal(model, modelType) {
                         </div>
                         ${typeSpecificContent}
                         <div class="info-item notes">
-                            <label>Additional Notes ${modelType === 'lora' ? '<i class="fas fa-info-circle notes-hint" title="Press Enter to save, Shift+Enter for new line"></i>' : ''}</label>
+                            <label>Additional Notes <i class="fas fa-info-circle notes-hint" title="Press Enter to save, Shift+Enter for new line"></i></label>
                             <div class="editable-field">
                                 <div class="notes-content" contenteditable="true" spellcheck="false">${model.notes || 'Add your notes here...'}</div>
-                                ${modelType === 'checkpoint' ? `<button class="save-btn" onclick="saveModelNotes('${model.file_path}', '${modelType}')">
-                                    <i class="fas fa-save"></i>
-                                </button>` : ''}
                             </div>
                         </div>
                         <div class="info-item full-width">
@@ -283,7 +280,7 @@ function setupEventHandlers(filePath) {
 }
 
 /**
- * Set up editable fields in the model modal
+ * Set up editable fields (notes and usage tips) in the model modal
  * @param {string} filePath - The full file path of the model
  * @param {string} modelType - Type of model ('lora' or 'checkpoint')
  */
