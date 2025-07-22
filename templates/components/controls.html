@@ -41,8 +41,8 @@
             <!-- Conditional buttons based on page -->
             {% if request.path == '/loras' %}
             <div class="control-group">
-                <button id="bulkOperationsBtn" data-action="bulk" title="Bulk Operations">
-                    <i class="fas fa-th-large"></i> Bulk
+                <button id="bulkOperationsBtn" data-action="bulk" title="Bulk Operations (Press B)">
+                    <i class="fas fa-th-large"></i> <span>Bulk <div class="shortcut-key">B</div></span>
                 </button>
             </div>
             {% endif %}

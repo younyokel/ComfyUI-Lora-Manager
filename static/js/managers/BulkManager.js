@@ -34,18 +34,19 @@ export class BulkManager {
 
         // Add global keyboard event listener for Ctrl+A
         document.addEventListener('keydown', (e) => {
-            // Check if it's Ctrl+A (or Cmd+A on Mac)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-                // First check if any modal is currently open - if so, don't handle Ctrl+A
-                if (modalManager.isAnyModalOpen()) {
-                    return; // Exit early - let the browser handle Ctrl+A within the modal
-                }
+            // First check if any modal is currently open - if so, don't handle Ctrl+A
+            if (modalManager.isAnyModalOpen()) {
+                return; // Exit early - let the browser handle Ctrl+A within the modal
+            }
 
-                // Check if search input is currently focused - if so, don't handle Ctrl+A
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput && document.activeElement === searchInput) {
-                    return; // Exit early - let the browser handle Ctrl+A within the search input
-                }
+            // Check if search input is currently focused - if so, don't handle Ctrl+A
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput && document.activeElement === searchInput) {
+                return; // Exit early - let the browser handle Ctrl+A within the search input
+            }
+
+            // Check if it's Ctrl+A (or Cmd+A on Mac)
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
 
                 // Prevent default browser "Select All" behavior
                 e.preventDefault();
@@ -58,6 +59,12 @@ export class BulkManager {
                 } else {
                     this.selectAllVisibleLoras();
                 }
+            } else if (e.key === 'Escape' && state.bulkMode) {
+                // If in bulk mode, exit it on Escape
+                this.toggleBulkMode();
+            } else if (e.key.toLowerCase() === 'b') {
+                // If 'b' is pressed, toggle bulk mode
+                this.toggleBulkMode();
             }
         });
     }

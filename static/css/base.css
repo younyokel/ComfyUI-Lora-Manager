@@ -70,6 +70,11 @@ html, body {
     --border-radius-xs: 4px;
 
     --scrollbar-width: 8px; /* 添加滚动条宽度变量 */
+    
+    /* Shortcut styles */
+    --shortcut-bg: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.12);
+    --shortcut-border: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.25);
+    --shortcut-text: var(--text-color);
 }
 
 html[data-theme="dark"] {
