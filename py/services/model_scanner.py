@@ -29,7 +29,30 @@ CACHE_VERSION = 3
 class ModelScanner:
     """Base service for scanning and managing model files"""
     
-    _lock = asyncio.Lock()
+    _instances = {}  # Dictionary to store instances by class
+    _locks = {}  # Dictionary to store locks by class
+    
+    def __new__(cls, *args, **kwargs):
+        """Implement singleton pattern for each subclass"""
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__new__(cls)
+        return cls._instances[cls]
+    
+    @classmethod
+    def _get_lock(cls):
+        """Get or create a lock for this class"""
+        if cls not in cls._locks:
+            cls._locks[cls] = asyncio.Lock()
+        return cls._locks[cls]
+    
+    @classmethod
+    async def get_instance(cls):
+        """Get singleton instance with async support"""
+        lock = cls._get_lock()
+        async with lock:
+            if cls not in cls._instances:
+                cls._instances[cls] = cls()
+            return cls._instances[cls]
     
     def __init__(self, model_type: str, model_class: Type[BaseModelMetadata], file_extensions: Set[str], hash_index: Optional[ModelHashIndex] = None):
         """Initialize the scanner
@@ -40,6 +63,10 @@ class ModelScanner:
             file_extensions: Set of supported file extensions including the dot (e.g. {'.safetensors'})
             hash_index: Hash index instance (optional)
         """
+        # Ensure initialization happens only once per instance
+        if hasattr(self, '_initialized'):
+            return
+            
         self.model_type = model_type
         self.model_class = model_class
         self.file_extensions = file_extensions
@@ -50,6 +77,7 @@ class ModelScanner:
         self._excluded_models = []  # List to track excluded models
         self._dirs_last_modified = {}  # Track directory modification times
         self._use_cache_files = False  # Flag to control cache file usage, default to disabled
+        self._initialized = True
         
         # Clear cache files if disabled
         if not self._use_cache_files:
@@ -744,10 +772,68 @@ class ModelScanner:
         finally:
             self._is_initializing = False # Unset flag
 
-    # These methods should be implemented in child classes
     async def scan_all_models(self) -> List[Dict]:
         """Scan all model directories and return metadata"""
-        raise NotImplementedError("Subclasses must implement scan_all_models")
+        all_models = []
+        
+        # Create scan tasks for each directory
+        scan_tasks = []
+        for model_root in self.get_model_roots():
+            task = asyncio.create_task(self._scan_directory(model_root))
+            scan_tasks.append(task)
+            
+        # Wait for all tasks to complete
+        for task in scan_tasks:
+            try:
+                models = await task
+                all_models.extend(models)
+            except Exception as e:
+                logger.error(f"Error scanning directory: {e}")
+                
+        return all_models
+    
+    async def _scan_directory(self, root_path: str) -> List[Dict]:
+        """Scan a single directory for model files"""
+        models = []
+        original_root = root_path  # Save original root path
+
+        async def scan_recursive(path: str, visited_paths: set):
+            """Recursively scan directory, avoiding circular symlinks"""
+            try:
+                real_path = os.path.realpath(path)
+                if real_path in visited_paths:
+                    logger.debug(f"Skipping already visited path: {path}")
+                    return
+                visited_paths.add(real_path)
+
+                with os.scandir(path) as it:
+                    entries = list(it)
+                    for entry in entries:
+                        try:
+                            if entry.is_file(follow_symlinks=True) and any(entry.name.endswith(ext) for ext in self.file_extensions):
+                                # Use original path instead of real path
+                                file_path = entry.path.replace(os.sep, "/")
+                                await self._process_single_file(file_path, original_root, models)
+                                await asyncio.sleep(0)
+                            elif entry.is_dir(follow_symlinks=True):
+                                # For directories, continue scanning with original path
+                                await scan_recursive(entry.path, visited_paths)
+                        except Exception as e:
+                            logger.error(f"Error processing entry {entry.path}: {e}")
+            except Exception as e:
+                logger.error(f"Error scanning {path}: {e}")
+
+        await scan_recursive(root_path, set())
+        return models
+
+    async def _process_single_file(self, file_path: str, root_path: str, models: list):
+        """Process a single file and add to results list"""
+        try:
+            result = await self._process_model_file(file_path, root_path)
+            if result:
+                models.append(result)
+        except Exception as e:
+            logger.error(f"Error processing {file_path}: {e}")
     
     def is_initializing(self) -> bool:
         """Check if the scanner is currently initializing"""

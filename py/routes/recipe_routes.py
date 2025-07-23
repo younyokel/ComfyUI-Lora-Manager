@@ -1148,7 +1148,7 @@ class RecipeRoutes:
             for lora_name, lora_strength in lora_matches:
                 try:
                     # Get lora info from scanner
-                    lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora_name)
+                    lora_info = await self.recipe_scanner._lora_scanner.get_model_info_by_name(lora_name)
                     
                     # Create lora entry
                     lora_entry = {
@@ -1167,7 +1167,7 @@ class RecipeRoutes:
             # Get base model from lora scanner for the available loras
             base_model_counts = {}
             for lora in loras_data:
-                lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora.get("file_name", ""))
+                lora_info = await self.recipe_scanner._lora_scanner.get_model_info_by_name(lora.get("file_name", ""))
                 if lora_info and "base_model" in lora_info:
                     base_model = lora_info["base_model"]
                     base_model_counts[base_model] = base_model_counts.get(base_model, 0) + 1
@@ -1365,7 +1365,7 @@ class RecipeRoutes:
                 return web.json_response({"error": "Recipe not found"}, status=404)
                 
             # Find target LoRA by name
-            target_lora = await lora_scanner.get_lora_info_by_name(target_name)
+            target_lora = await lora_scanner.get_model_info_by_name(target_name)
             if not target_lora:
                 return web.json_response({"error": f"Local LoRA not found with name: {target_name}"}, status=404)
                 
