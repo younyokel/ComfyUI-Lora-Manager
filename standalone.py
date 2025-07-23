@@ -103,9 +103,6 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("lora-manager-standalone")
 
-# Configure aiohttp access logger to be less verbose
-logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
-
 # Now we can import the global config from our local modules
 from py.config import config
 
@@ -124,7 +121,7 @@ class StandaloneServer:
     
     async def _configure_access_logger(self, app):
         """Configure access logger to reduce verbosity"""
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
+        logging.getLogger("asyncio").setLevel(logging.WARNING)
         
         # If using aiohttp>=3.8.0, configure access logger through app directly
         if hasattr(app, 'access_logger'):
@@ -219,9 +216,6 @@ class StandaloneLoraManager(LoraManager):
         # Store app in a global-like location for compatibility
         sys.modules['server'].PromptServer.instance = server_instance
 
-        # Configure aiohttp access logger to be less verbose
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
-        
         added_targets = set()  # Track already added target paths
         
         # Add static routes for each lora root
@@ -371,8 +365,8 @@ async def main():
     # Set log level
     logging.getLogger().setLevel(getattr(logging, args.log_level))
     
-    # Explicitly configure aiohttp access logger regardless of selected log level
-    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
+    # Explicitly configure asyncio logger regardless of selected log level
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
     
     # Create the server instance
     server = StandaloneServer()
