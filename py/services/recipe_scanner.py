@@ -393,8 +393,8 @@ class RecipeScanner:
             if 'hash' in lora and (not lora.get('file_name') or not lora['file_name']):
                 hash_value = lora['hash']
                 
-                if self._lora_scanner.has_lora_hash(hash_value):
-                    lora_path = self._lora_scanner.get_lora_path_by_hash(hash_value)
+                if self._lora_scanner.has_hash(hash_value):
+                    lora_path = self._lora_scanner.get_path_by_hash(hash_value)
                     if lora_path:
                         file_name = os.path.splitext(os.path.basename(lora_path))[0]
                         lora['file_name'] = file_name
@@ -465,7 +465,7 @@ class RecipeScanner:
         # Count occurrences of each base model
         for lora in loras:
             if 'hash' in lora:
-                lora_path = self._lora_scanner.get_lora_path_by_hash(lora['hash'])
+                lora_path = self._lora_scanner.get_path_by_hash(lora['hash'])
                 if lora_path:
                     base_model = await self._get_base_model_for_lora(lora_path)
                     if base_model:
@@ -603,9 +603,9 @@ class RecipeScanner:
             if 'loras' in item:
                 for lora in item['loras']:
                     if 'hash' in lora and lora['hash']:
-                        lora['inLibrary'] = self._lora_scanner.has_lora_hash(lora['hash'].lower())
+                        lora['inLibrary'] = self._lora_scanner.has_hash(lora['hash'].lower())
                         lora['preview_url'] = self._lora_scanner.get_preview_url_by_hash(lora['hash'].lower())
-                        lora['localPath'] = self._lora_scanner.get_lora_path_by_hash(lora['hash'].lower())
+                        lora['localPath'] = self._lora_scanner.get_path_by_hash(lora['hash'].lower())
         
         result = {
             'items': paginated_items,
@@ -655,9 +655,9 @@ class RecipeScanner:
             for lora in formatted_recipe['loras']:
                 if 'hash' in lora and lora['hash']:
                     lora_hash = lora['hash'].lower()
-                    lora['inLibrary'] = self._lora_scanner.has_lora_hash(lora_hash)
+                    lora['inLibrary'] = self._lora_scanner.has_hash(lora_hash)
                     lora['preview_url'] = self._lora_scanner.get_preview_url_by_hash(lora_hash)
-                    lora['localPath'] = self._lora_scanner.get_lora_path_by_hash(lora_hash)
+                    lora['localPath'] = self._lora_scanner.get_path_by_hash(lora_hash)
                     
         return formatted_recipe
         

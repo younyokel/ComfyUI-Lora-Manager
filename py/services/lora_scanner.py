@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List
 
 from ..utils.models import LoraMetadata
 from ..config import config
@@ -27,19 +27,6 @@ class LoraScanner(ModelScanner):
     def get_model_roots(self) -> List[str]:
         """Get lora root directories"""
         return config.loras_roots
-
-    # Lora-specific hash index functionality
-    def has_lora_hash(self, sha256: str) -> bool:
-        """Check if a LoRA with given hash exists"""
-        return self.has_hash(sha256)
-        
-    def get_lora_path_by_hash(self, sha256: str) -> Optional[str]:
-        """Get file path for a LoRA by its hash"""
-        return self.get_path_by_hash(sha256)
-        
-    def get_lora_hash_by_path(self, file_path: str) -> Optional[str]:
-        """Get hash for a LoRA by its file path"""
-        return self.get_hash_by_path(file_path)
 
     async def diagnose_hash_index(self):
         """Diagnostic method to verify hash index functionality"""

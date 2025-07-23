@@ -1257,7 +1257,7 @@ class RecipeRoutes:
                 if lora.get("isDeleted", False):
                     continue
 
-                if not self.recipe_scanner._lora_scanner.has_lora_hash(lora.get("hash", "")):
+                if not self.recipe_scanner._lora_scanner.has_hash(lora.get("hash", "")):
                     continue
                 
                 # Get the strength
@@ -1477,9 +1477,9 @@ class RecipeRoutes:
                 if 'loras' in recipe:
                     for lora in recipe['loras']:
                         if 'hash' in lora and lora['hash']:
-                            lora['inLibrary'] = self.recipe_scanner._lora_scanner.has_lora_hash(lora['hash'].lower())
+                            lora['inLibrary'] = self.recipe_scanner._lora_scanner.has_hash(lora['hash'].lower())
                             lora['preview_url'] = self.recipe_scanner._lora_scanner.get_preview_url_by_hash(lora['hash'].lower())
-                            lora['localPath'] = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(lora['hash'].lower())
+                            lora['localPath'] = self.recipe_scanner._lora_scanner.get_path_by_hash(lora['hash'].lower())
                 
                 # Ensure file_url is set (needed by frontend)
                 if 'file_path' in recipe:
