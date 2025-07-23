@@ -8,7 +8,6 @@ from typing import Dict
 import jinja2
 
 from ..utils.routes_common import ModelRouteUtils
-from ..services.service_registry import ServiceRegistry
 from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 from ..config import config
@@ -516,8 +515,6 @@ class BaseModelRoutes(ABC):
                     'error': 'Download ID is required'
                 }, status=400)
             
-            # Get progress information from websocket manager
-            from ..services.websocket_manager import ws_manager
             progress_data = ws_manager.get_download_progress(download_id)
             
             if progress_data is None:

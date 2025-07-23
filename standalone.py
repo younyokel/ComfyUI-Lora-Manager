@@ -320,6 +320,7 @@ class StandaloneLoraManager(LoraManager):
         from py.routes.misc_routes import MiscRoutes
         from py.routes.example_images_routes import ExampleImagesRoutes
         from py.routes.stats_routes import StatsRoutes
+        from py.services.websocket_manager import ws_manager
         
 
         register_default_model_types()
@@ -335,6 +336,11 @@ class StandaloneLoraManager(LoraManager):
         UpdateRoutes.setup_routes(app)
         MiscRoutes.setup_routes(app)
         ExampleImagesRoutes.setup_routes(app)
+
+        # Setup WebSocket routes that are shared across all model types
+        app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
+        app.router.add_get('/ws/download-progress', ws_manager.handle_download_connection)
+        app.router.add_get('/ws/init-progress', ws_manager.handle_init_connection)
         
         # Schedule service initialization
         app.on_startup.append(lambda app: cls._initialize_services())
