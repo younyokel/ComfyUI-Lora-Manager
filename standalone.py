@@ -314,22 +314,23 @@ class StandaloneLoraManager(LoraManager):
         app.router.add_static('/loras_static', config.static_path)
         
         # Setup feature routes
-        from py.routes.lora_routes import LoraRoutes
+        from py.services.model_service_factory import ModelServiceFactory, register_default_model_types
         from py.routes.api_routes import ApiRoutes
         from py.routes.recipe_routes import RecipeRoutes
-        from py.routes.checkpoints_routes import CheckpointsRoutes
         from py.routes.update_routes import UpdateRoutes
         from py.routes.misc_routes import MiscRoutes
         from py.routes.example_images_routes import ExampleImagesRoutes
         from py.routes.stats_routes import StatsRoutes
         
-        lora_routes = LoraRoutes()
-        checkpoints_routes = CheckpointsRoutes()
+
+        register_default_model_types()
+
+        # Setup all model routes using the factory
+        ModelServiceFactory.setup_all_routes(app)
+
         stats_routes = StatsRoutes()
         
         # Initialize routes
-        lora_routes.setup_routes(app)
-        checkpoints_routes.setup_routes(app)
         stats_routes.setup_routes(app)
         ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)

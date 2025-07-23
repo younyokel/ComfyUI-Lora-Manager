@@ -1,6 +1,7 @@
 import os
 import time
 import base64
+import jinja2
 import numpy as np
 from PIL import Image
 import io
@@ -15,6 +16,7 @@ from ..utils.exif_utils import ExifUtils
 from ..recipes import RecipeParserFactory
 from ..utils.constants import CARD_PREVIEW_WIDTH
 
+from ..services.settings_manager import settings
 from ..config import config
 
 # Check if running in standalone mode
@@ -39,7 +41,10 @@ class RecipeRoutes:
         # Initialize service references as None, will be set during async init
         self.recipe_scanner = None
         self.civitai_client = None
-        # Remove WorkflowParser instance
+        self.template_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(config.templates_path),
+            autoescape=True
+        )
         
         # Pre-warm the cache
         self._init_cache_task = None
@@ -53,6 +58,8 @@ class RecipeRoutes:
     def setup_routes(cls, app: web.Application):
         """Register API routes"""
         routes = cls()
+        app.router.add_get('/loras/recipes', routes.handle_recipes_page)
+
         app.router.add_get('/api/recipes', routes.get_recipes)
         app.router.add_get('/api/recipe/{recipe_id}', routes.get_recipe_detail)
         app.router.add_post('/api/recipes/analyze-image', routes.analyze_recipe_image)
@@ -114,6 +121,46 @@ class RecipeRoutes:
             await self.recipe_scanner.get_cached_data(force_refresh=True)
         except Exception as e:
             logger.error(f"Error pre-warming recipe cache: {e}", exc_info=True)
+
+    async def handle_recipes_page(self, request: web.Request) -> web.Response:
+        """Handle GET /loras/recipes request"""
+        try:
+            # Ensure services are initialized
+            await self.init_services()
+            
+            # Skip initialization check and directly try to get cached data
+            try:
+                # Recipe scanner will initialize cache if needed
+                await self.recipe_scanner.get_cached_data(force_refresh=False)
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    recipes=[],  # Frontend will load recipes via API
+                    is_initializing=False,
+                    settings=settings,
+                    request=request
+                )
+            except Exception as cache_error:
+                logger.error(f"Error loading recipe cache data: {cache_error}")
+                # Still keep error handling - show initializing page on error
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    is_initializing=True,
+                    settings=settings,
+                    request=request
+                )
+                logger.info("Recipe cache error, returning initialization page")
+            
+            return web.Response(
+                text=rendered,
+                content_type='text/html'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error handling recipes request: {e}", exc_info=True)
+            return web.Response(
+                text="Error loading recipes page",
+                status=500
+            )
     
     async def get_recipes(self, request: web.Request) -> web.Response:
         """API endpoint for getting paginated recipes"""

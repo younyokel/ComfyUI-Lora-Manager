@@ -6,10 +6,8 @@ from pathlib import Path
 from server import PromptServer # type: ignore
 
 from .config import config
-from .routes.lora_routes import LoraRoutes
-from .routes.api_routes import ApiRoutes
+from .services.model_service_factory import ModelServiceFactory, register_default_model_types
 from .routes.recipe_routes import RecipeRoutes
-from .routes.checkpoints_routes import CheckpointsRoutes
 from .routes.stats_routes import StatsRoutes
 from .routes.update_routes import UpdateRoutes
 from .routes.misc_routes import MiscRoutes
@@ -17,6 +15,7 @@ from .routes.example_images_routes import ExampleImagesRoutes
 from .services.service_registry import ServiceRegistry
 from .services.settings_manager import settings
 from .utils.example_images_migration import ExampleImagesMigration
+from .services.websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class LoraManager:
     
     @classmethod
     def add_routes(cls):
-        """Initialize and register all routes"""
+        """Initialize and register all routes using the new refactored architecture"""
         app = PromptServer.instance.app
 
         # Configure aiohttp access logger to be less verbose
@@ -110,27 +109,32 @@ class LoraManager:
         # Add static route for plugin assets
         app.router.add_static('/loras_static', config.static_path)
         
-        # Setup feature routes
-        lora_routes = LoraRoutes()
-        checkpoints_routes = CheckpointsRoutes()
-        stats_routes = StatsRoutes()
+        # Register default model types with the factory
+        register_default_model_types()
         
-        # Initialize routes
-        lora_routes.setup_routes(app)
-        checkpoints_routes.setup_routes(app)
-        stats_routes.setup_routes(app)  # Add statistics routes
-        ApiRoutes.setup_routes(app)
+        # Setup all model routes using the factory
+        ModelServiceFactory.setup_all_routes(app)
+        
+        # Setup non-model-specific routes
+        stats_routes = StatsRoutes()
+        stats_routes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)  
-        MiscRoutes.setup_routes(app)  # Register miscellaneous routes
-        ExampleImagesRoutes.setup_routes(app)  # Register example images routes
+        MiscRoutes.setup_routes(app)
+        ExampleImagesRoutes.setup_routes(app)
+        
+        # Setup WebSocket routes that are shared across all model types
+        app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
+        app.router.add_get('/ws/download-progress', ws_manager.handle_download_connection)
+        app.router.add_get('/ws/init-progress', ws_manager.handle_init_connection)
         
         # Schedule service initialization 
         app.on_startup.append(lambda app: cls._initialize_services())
         
         # Add cleanup
         app.on_shutdown.append(cls._cleanup)
-        app.on_shutdown.append(ApiRoutes.cleanup)
+        
+        logger.info(f"LoRA Manager: Set up routes for {len(ModelServiceFactory.get_registered_types())} model types: {', '.join(ModelServiceFactory.get_registered_types())}")
     
     @classmethod
     async def _initialize_services(cls):

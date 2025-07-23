@@ -1,14 +1,12 @@
 import os
 import logging
 import asyncio
-from typing import List, Dict, Optional, Set
-import folder_paths # type: ignore
+from typing import List, Dict
 
 from ..utils.models import CheckpointMetadata
 from ..config import config
 from .model_scanner import ModelScanner
 from .model_hash_index import ModelHashIndex
-from .service_registry import ServiceRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -110,3 +108,30 @@ class CheckpointScanner(ModelScanner):
                 checkpoints.append(result)
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}")
+
+    # Checkpoint-specific hash index functionality
+    def has_checkpoint_hash(self, sha256: str) -> bool:
+        """Check if a checkpoint with given hash exists"""
+        return self.has_hash(sha256)
+        
+    def get_checkpoint_path_by_hash(self, sha256: str) -> str:
+        """Get file path for a checkpoint by its hash"""
+        return self.get_path_by_hash(sha256)
+        
+    def get_checkpoint_hash_by_path(self, file_path: str) -> str:
+        """Get hash for a checkpoint by its file path"""
+        return self.get_hash_by_path(file_path)
+
+    async def get_checkpoint_info_by_name(self, name):
+        """Get checkpoint information by name"""
+        try:
+            cache = await self.get_cached_data()
+            
+            for checkpoint in cache.raw_data:
+                if checkpoint.get("file_name") == name:
+                    return checkpoint
+                    
+            return None
+        except Exception as e:
+            logger.error(f"Error getting checkpoint info by name: {e}", exc_info=True)
+            return None
