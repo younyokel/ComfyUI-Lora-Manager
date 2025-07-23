@@ -52,60 +52,100 @@ class LoraService(BaseModelService):
         return data
     
     def _filter_by_first_letter(self, data: List[Dict], letter: str) -> List[Dict]:
-        """Filter LoRAs by first letter"""
-        if letter == '#':
-            # Filter for non-alphabetic characters
-            return [
-                item for item in data
-                if not item.get('model_name', '')[0].isalpha()
-            ]
-        elif letter == 'CJK':
-            # Filter for CJK characters
-            return [
-                item for item in data
-                if item.get('model_name', '') and self._is_cjk_character(item['model_name'][0])
-            ]
-        else:
-            # Filter for specific letter
-            return [
-                item for item in data
-                if item.get('model_name', '').lower().startswith(letter.lower())
-            ]
+        """Filter data by first letter of model name
+        
+        Special handling:
+        - '#': Numbers (0-9)
+        - '@': Special characters (not alphanumeric)
+        - '漢': CJK characters
+        """
+        filtered_data = []
+        
+        for lora in data:
+            model_name = lora.get('model_name', '')
+            if not model_name:
+                continue
+                
+            first_char = model_name[0].upper()
+            
+            if letter == '#' and first_char.isdigit():
+                filtered_data.append(lora)
+            elif letter == '@' and not first_char.isalnum():
+                # Special characters (not alphanumeric)
+                filtered_data.append(lora)
+            elif letter == '漢' and self._is_cjk_character(first_char):
+                # CJK characters
+                filtered_data.append(lora)
+            elif letter.upper() == first_char:
+                # Regular alphabet matching
+                filtered_data.append(lora)
+                
+        return filtered_data
     
     def _is_cjk_character(self, char: str) -> bool:
-        """Check if character is CJK (Chinese, Japanese, Korean)"""
+        """Check if character is a CJK character"""
+        # Define Unicode ranges for CJK characters
         cjk_ranges = [
             (0x4E00, 0x9FFF),   # CJK Unified Ideographs
-            (0x3400, 0x4DBF),   # CJK Extension A
-            (0x20000, 0x2A6DF), # CJK Extension B
-            (0x2A700, 0x2B73F), # CJK Extension C
-            (0x2B740, 0x2B81F), # CJK Extension D
+            (0x3400, 0x4DBF),   # CJK Unified Ideographs Extension A
+            (0x20000, 0x2A6DF), # CJK Unified Ideographs Extension B
+            (0x2A700, 0x2B73F), # CJK Unified Ideographs Extension C
+            (0x2B740, 0x2B81F), # CJK Unified Ideographs Extension D
+            (0x2B820, 0x2CEAF), # CJK Unified Ideographs Extension E
+            (0x2CEB0, 0x2EBEF), # CJK Unified Ideographs Extension F
+            (0x30000, 0x3134F), # CJK Unified Ideographs Extension G
+            (0xF900, 0xFAFF),   # CJK Compatibility Ideographs
+            (0x3300, 0x33FF),   # CJK Compatibility
+            (0x3200, 0x32FF),   # Enclosed CJK Letters and Months
+            (0x3100, 0x312F),   # Bopomofo
+            (0x31A0, 0x31BF),   # Bopomofo Extended
             (0x3040, 0x309F),   # Hiragana
             (0x30A0, 0x30FF),   # Katakana
+            (0x31F0, 0x31FF),   # Katakana Phonetic Extensions
             (0xAC00, 0xD7AF),   # Hangul Syllables
+            (0x1100, 0x11FF),   # Hangul Jamo
+            (0xA960, 0xA97F),   # Hangul Jamo Extended-A
+            (0xD7B0, 0xD7FF),   # Hangul Jamo Extended-B
         ]
         
-        char_code = ord(char)
-        return any(start <= char_code <= end for start, end in cjk_ranges)
+        code_point = ord(char)
+        return any(start <= code_point <= end for start, end in cjk_ranges)
     
     # LoRA-specific methods
     async def get_letter_counts(self) -> Dict[str, int]:
         """Get count of LoRAs for each letter of the alphabet"""
         cache = await self.scanner.get_cached_data()
-        letter_counts = {}
+        data = cache.sorted_by_name
         
-        for lora in cache.raw_data:
+        # Define letter categories
+        letters = {
+            '#': 0,  # Numbers
+            'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0, 'F': 0, 'G': 0, 'H': 0,
+            'I': 0, 'J': 0, 'K': 0, 'L': 0, 'M': 0, 'N': 0, 'O': 0, 'P': 0,
+            'Q': 0, 'R': 0, 'S': 0, 'T': 0, 'U': 0, 'V': 0, 'W': 0, 'X': 0,
+            'Y': 0, 'Z': 0,
+            '@': 0,  # Special characters
+            '漢': 0   # CJK characters
+        }
+        
+        # Count models for each letter
+        for lora in data:
             model_name = lora.get('model_name', '')
-            if model_name:
-                first_char = model_name[0].upper()
-                if first_char.isalpha():
-                    letter_counts[first_char] = letter_counts.get(first_char, 0) + 1
-                elif self._is_cjk_character(first_char):
-                    letter_counts['CJK'] = letter_counts.get('CJK', 0) + 1
-                else:
-                    letter_counts['#'] = letter_counts.get('#', 0) + 1
-        
-        return letter_counts
+            if not model_name:
+                continue
+                
+            first_char = model_name[0].upper()
+            
+            if first_char.isdigit():
+                letters['#'] += 1
+            elif first_char in letters:
+                letters[first_char] += 1
+            elif self._is_cjk_character(first_char):
+                letters['漢'] += 1
+            elif not first_char.isalnum():
+                letters['@'] += 1
+                
+        return letters
     
     async def get_lora_notes(self, lora_name: str) -> Optional[str]:
         """Get notes for a specific LoRA file"""
