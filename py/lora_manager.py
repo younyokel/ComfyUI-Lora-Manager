@@ -30,8 +30,8 @@ class LoraManager:
         """Initialize and register all routes using the new refactored architecture"""
         app = PromptServer.instance.app
 
-        # Configure aiohttp logger to be less verbose
-        logging.getLogger("asyncio").setLevel(logging.WARNING)
+        # Configure aiohttp access logger to be less verbose
+        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 
         added_targets = set()  # Track already added target paths
         
@@ -140,6 +140,9 @@ class LoraManager:
     async def _initialize_services(cls):
         """Initialize all services using the ServiceRegistry"""
         try:
+            # Ensure aiohttp access logger is configured with reduced verbosity
+            logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
+            
             # Initialize CivitaiClient first to ensure it's ready for other services
             await ServiceRegistry.get_civitai_client()
 

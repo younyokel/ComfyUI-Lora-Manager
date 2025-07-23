@@ -164,6 +164,23 @@ export class VirtualScroller {
         
         // Calculate the left offset to center the grid within the content area
         this.leftOffset = Math.max(0, (availableContentWidth - actualGridWidth) / 2);
+        
+        // Log layout info
+        console.log('Virtual Scroll Layout:', {
+            containerWidth,
+            availableContentWidth,
+            actualGridWidth,
+            columnsCount: this.columnsCount,
+            itemWidth: this.itemWidth,
+            itemHeight: this.itemHeight,
+            leftOffset: this.leftOffset,
+            paddingLeft,
+            paddingRight,
+            displayDensity,
+            maxColumns,
+            baseCardWidth,
+            rowGap: this.rowGap
+        });
 
         // Update grid element max-width to match available width
         this.gridElement.style.maxWidth = `${actualGridWidth}px`;
