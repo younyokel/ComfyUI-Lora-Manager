@@ -1,7 +1,5 @@
-import jinja2
 import asyncio
 import logging
-import os
 from aiohttp import web
 from typing import Dict
 from server import PromptServer  # type: ignore
@@ -9,8 +7,6 @@ from server import PromptServer  # type: ignore
 from .base_model_routes import BaseModelRoutes
 from ..services.lora_service import LoraService
 from ..services.service_registry import ServiceRegistry
-from ..services.settings_manager import settings
-from ..config import config
 from ..utils.routes_common import ModelRouteUtils
 from ..utils.utils import get_lora_info
 
@@ -26,10 +22,7 @@ class LoraRoutes(BaseModelRoutes):
         self.civitai_client = None
         self.download_manager = None
         self._download_lock = asyncio.Lock()
-        self.template_env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(config.templates_path),
-            autoescape=True
-        )
+        self.template_name = "loras.html"
     
     async def initialize_services(self):
         """Initialize services from ServiceRegistry"""
@@ -46,14 +39,11 @@ class LoraRoutes(BaseModelRoutes):
         # Schedule service initialization on app startup
         app.on_startup.append(lambda _: self.initialize_services())
         
-        # Setup common routes with 'loras' prefix
+        # Setup common routes with 'loras' prefix (includes page route)
         super().setup_routes(app, 'loras')
     
     def setup_specific_routes(self, app: web.Application, prefix: str):
         """Setup LoRA-specific routes"""
-        # Lora page route
-        app.router.add_get('/loras', self.handle_loras_page)
-
         # LoRA-specific query routes
         app.router.add_get(f'/api/{prefix}/letter-counts', self.get_letter_counts)
         app.router.add_get(f'/api/{prefix}/get-notes', self.get_lora_notes)
@@ -112,61 +102,6 @@ class LoraRoutes(BaseModelRoutes):
             params['hash_filters']['multiple_hashes'] = [h.lower() for h in request.query['lora_hashes'].split(',')]
         
         return params
-    
-    async def handle_loras_page(self, request: web.Request) -> web.Response:
-        """Handle GET /loras request"""
-        try:
-            # Check if the LoraScanner is initializing
-            # It's initializing if the cache object doesn't exist yet,
-            # OR if the scanner explicitly says it's initializing (background task running).
-            is_initializing = (
-                self.service.scanner._cache is None or self.service.scanner.is_initializing()
-            )
-
-            if is_initializing:
-                # If still initializing, return loading page
-                template = self.template_env.get_template('loras.html')
-                rendered = template.render(
-                    folders=[],
-                    is_initializing=True,
-                    settings=settings,
-                    request=request
-                )
-                
-                logger.info("Loras page is initializing, returning loading page")
-            else:
-                # Normal flow - get data from initialized cache
-                try:
-                    cache = await self.service.scanner.get_cached_data(force_refresh=False)
-                    template = self.template_env.get_template('loras.html')
-                    rendered = template.render(
-                        folders=cache.folders,
-                        is_initializing=False,
-                        settings=settings,
-                        request=request
-                    )
-                except Exception as cache_error:
-                    logger.error(f"Error loading cache data: {cache_error}")
-                    template = self.template_env.get_template('loras.html')
-                    rendered = template.render(
-                        folders=[],
-                        is_initializing=True,
-                        settings=settings,
-                        request=request
-                    )
-                    logger.info("Cache error, returning initialization page")
-            
-            return web.Response(
-                text=rendered,
-                content_type='text/html'
-            )
-            
-        except Exception as e:
-            logger.error(f"Error handling loras request: {e}", exc_info=True)
-            return web.Response(
-                text="Error loading loras page",
-                status=500
-            )
     
     # LoRA-specific route handlers
     async def get_letter_counts(self, request: web.Request) -> web.Response:

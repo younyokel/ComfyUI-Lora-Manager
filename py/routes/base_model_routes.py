@@ -4,8 +4,12 @@ import logging
 from aiohttp import web
 from typing import Dict
 
+import jinja2
+
 from ..utils.routes_common import ModelRouteUtils
 from ..services.websocket_manager import ws_manager
+from ..services.settings_manager import settings
+from ..config import config
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,10 @@ class BaseModelRoutes(ABC):
         """
         self.service = service
         self.model_type = service.model_type
+        self.template_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(config.templates_path),
+            autoescape=True
+        )
     
     def setup_routes(self, app: web.Application, prefix: str):
         """Setup common routes for the model type
@@ -52,6 +60,9 @@ class BaseModelRoutes(ABC):
         app.router.add_post(f'/api/{prefix}/fetch-all-civitai', self.fetch_all_civitai)
         app.router.add_get(f'/api/civitai/versions/{{model_id}}', self.get_civitai_versions)
         
+        # Add generic page route
+        app.router.add_get(f'/{prefix}', self.handle_models_page)
+        
         # Setup model-specific routes
         self.setup_specific_routes(app, prefix)
     
@@ -59,6 +70,58 @@ class BaseModelRoutes(ABC):
     def setup_specific_routes(self, app: web.Application, prefix: str):
         """Setup model-specific routes - to be implemented by subclasses"""
         pass
+    
+    async def handle_models_page(self, request: web.Request) -> web.Response:
+        """
+        Generic handler for model pages (e.g., /loras, /checkpoints).
+        Subclasses should set self.template_env and template_name.
+        """
+        try:
+            # Check if the scanner is initializing
+            is_initializing = (
+                self.service.scanner._cache is None or
+                (hasattr(self.service.scanner, 'is_initializing') and callable(self.service.scanner.is_initializing) and self.service.scanner.is_initializing()) or
+                (hasattr(self.service.scanner, '_is_initializing') and self.service.scanner._is_initializing)
+            )
+
+            template_name = getattr(self, "template_name", None)
+            if not self.template_env or not template_name:
+                return web.Response(text="Template environment or template name not set", status=500)
+
+            if is_initializing:
+                rendered = self.template_env.get_template(template_name).render(
+                    folders=[],
+                    is_initializing=True,
+                    settings=settings,
+                    request=request
+                )
+            else:
+                try:
+                    cache = await self.service.scanner.get_cached_data(force_refresh=False)
+                    rendered = self.template_env.get_template(template_name).render(
+                        folders=getattr(cache, "folders", []),
+                        is_initializing=False,
+                        settings=settings,
+                        request=request
+                    )
+                except Exception as cache_error:
+                    logger.error(f"Error loading cache data: {cache_error}")
+                    rendered = self.template_env.get_template(template_name).render(
+                        folders=[],
+                        is_initializing=True,
+                        settings=settings,
+                        request=request
+                    )
+            return web.Response(
+                text=rendered,
+                content_type='text/html'
+            )
+        except Exception as e:
+            logger.error(f"Error handling models page: {e}", exc_info=True)
+            return web.Response(
+                text="Error loading models page",
+                status=500
+            )
     
     async def get_models(self, request: web.Request) -> web.Response:
         """Get paginated model data"""

@@ -1,12 +1,9 @@
-import jinja2
 import logging
 from aiohttp import web
 
 from .base_model_routes import BaseModelRoutes
 from ..services.checkpoint_service import CheckpointService
 from ..services.service_registry import ServiceRegistry
-from ..config import config
-from ..services.settings_manager import settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +15,7 @@ class CheckpointRoutes(BaseModelRoutes):
         # Service will be initialized later via setup_routes
         self.service = None
         self.civitai_client = None
-        self.template_env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(config.templates_path),
-            autoescape=True
-        )
+        self.template_name = "checkpoints.html"
     
     async def initialize_services(self):
         """Initialize services from ServiceRegistry"""
@@ -37,75 +31,16 @@ class CheckpointRoutes(BaseModelRoutes):
         # Schedule service initialization on app startup
         app.on_startup.append(lambda _: self.initialize_services())
         
-        # Setup common routes with 'checkpoints' prefix
+        # Setup common routes with 'checkpoints' prefix (includes page route)
         super().setup_routes(app, 'checkpoints')
     
     def setup_specific_routes(self, app: web.Application, prefix: str):
         """Setup Checkpoint-specific routes"""
-        # Checkpoint page route
-        app.router.add_get('/checkpoints', self.handle_checkpoints_page)
-        
         # Checkpoint-specific CivitAI integration
         app.router.add_get(f'/api/civitai/versions/{{model_id}}', self.get_civitai_versions_checkpoint)
         
         # Checkpoint info by name
         app.router.add_get(f'/api/{prefix}/info/{{name}}', self.get_checkpoint_info)
-    
-    async def handle_checkpoints_page(self, request: web.Request) -> web.Response:
-        """Handle GET /checkpoints request"""
-        try:
-            # Check if the CheckpointScanner is initializing
-            # It's initializing if the cache object doesn't exist yet,
-            # OR if the scanner explicitly says it's initializing (background task running).
-            is_initializing = (
-                self.service.scanner._cache is None or
-                (hasattr(self.service.scanner, '_is_initializing') and self.service.scanner._is_initializing)
-            )
-
-            if is_initializing:
-                # If still initializing, return loading page
-                template = self.template_env.get_template('checkpoints.html')
-                rendered = template.render(
-                    folders=[],  # Empty folder list
-                    is_initializing=True,  # New flag
-                    settings=settings,  # Pass settings to template
-                    request=request  # Pass the request object to the template
-                )
-                
-                logger.info("Checkpoints page is initializing, returning loading page")
-            else:
-                # Normal flow - get initialized cache data
-                try:
-                    cache = await self.service.scanner.get_cached_data(force_refresh=False)
-                    template = self.template_env.get_template('checkpoints.html')
-                    rendered = template.render(
-                        folders=cache.folders,
-                        is_initializing=False,
-                        settings=settings,  # Pass settings to template
-                        request=request  # Pass the request object to the template
-                    )
-                except Exception as cache_error:
-                    logger.error(f"Error loading checkpoints cache data: {cache_error}")
-                    # If getting cache fails, also show initialization page
-                    template = self.template_env.get_template('checkpoints.html')
-                    rendered = template.render(
-                        folders=[],
-                        is_initializing=True,
-                        settings=settings,
-                        request=request
-                    )
-                    logger.info("Checkpoints cache error, returning initialization page")
-            
-            return web.Response(
-                text=rendered,
-                content_type='text/html'
-            )
-        except Exception as e:
-            logger.error(f"Error handling checkpoints request: {e}", exc_info=True)
-            return web.Response(
-                text="Error loading checkpoints page",
-                status=500
-            )
     
     async def get_checkpoint_info(self, request: web.Request) -> web.Response:
         """Get detailed information for a specific checkpoint by name"""
