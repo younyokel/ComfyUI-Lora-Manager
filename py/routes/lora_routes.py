@@ -48,15 +48,13 @@ class LoraRoutes(BaseModelRoutes):
         app.router.add_get(f'/api/lora-preview-url', self.get_lora_preview_url)
         app.router.add_get(f'/api/lora-civitai-url', self.get_lora_civitai_url)
         app.router.add_get(f'/api/lora-model-description', self.get_lora_model_description)
-        app.router.add_get(f'/api/folders', self.get_folders)
-        app.router.add_get(f'/api/lora-roots', self.get_lora_roots)
         
         # LoRA-specific management routes
         app.router.add_post(f'/api/move_model', self.move_model)
         app.router.add_post(f'/api/move_models_bulk', self.move_models_bulk)
         
         # CivitAI integration with LoRA-specific validation
-        app.router.add_get(f'/api/civitai/versions/{{model_id}}', self.get_civitai_versions_lora)
+        app.router.add_get(f'/api/{prefix}/civitai/versions/{{model_id}}', self.get_civitai_versions_lora)
         app.router.add_get(f'/api/civitai/model/version/{{modelVersionId}}', self.get_civitai_model_by_version)
         app.router.add_get(f'/api/civitai/model/hash/{{hash}}', self.get_civitai_model_by_hash)
         
@@ -196,33 +194,6 @@ class LoraRoutes(BaseModelRoutes):
                 
         except Exception as e:
             logger.error(f"Error getting lora Civitai URL: {e}", exc_info=True)
-            return web.json_response({
-                'success': False,
-                'error': str(e)
-            }, status=500)
-    
-    async def get_folders(self, request: web.Request) -> web.Response:
-        """Get all folders in the cache"""
-        try:
-            cache = await self.service.scanner.get_cached_data()
-            return web.json_response({
-                'folders': cache.folders
-            })
-        except Exception as e:
-            logger.error(f"Error getting folders: {e}")
-            return web.json_response({
-                'success': False,
-                'error': str(e)
-            }, status=500)
-    
-    async def get_lora_roots(self, request: web.Request) -> web.Response:
-        """Get all configured LoRA root directories"""
-        try:
-            return web.json_response({
-                'roots': self.service.get_model_roots()
-            })
-        except Exception as e:
-            logger.error(f"Error getting LoRA roots: {e}")
             return web.json_response({
                 'success': False,
                 'error': str(e)

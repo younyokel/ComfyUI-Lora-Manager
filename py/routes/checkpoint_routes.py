@@ -37,7 +37,7 @@ class CheckpointRoutes(BaseModelRoutes):
     def setup_specific_routes(self, app: web.Application, prefix: str):
         """Setup Checkpoint-specific routes"""
         # Checkpoint-specific CivitAI integration
-        app.router.add_get(f'/api/civitai/versions/{{model_id}}', self.get_civitai_versions_checkpoint)
+        app.router.add_get(f'/api/{prefix}/civitai/versions/{{model_id}}', self.get_civitai_versions_checkpoint)
         
         # Checkpoint info by name
         app.router.add_get(f'/api/{prefix}/info/{{name}}', self.get_checkpoint_info)

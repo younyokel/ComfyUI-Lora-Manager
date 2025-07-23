@@ -74,7 +74,7 @@ class MoveManager {
 
         try {
             // Fetch LoRA roots
-            const rootsResponse = await fetch('/api/lora-roots');
+            const rootsResponse = await fetch('/api/loras/roots');
             if (!rootsResponse.ok) {
                 throw new Error('Failed to fetch LoRA roots');
             }
@@ -96,7 +96,7 @@ class MoveManager {
             }
 
             // Fetch folders dynamically
-            const foldersResponse = await fetch('/api/folders');
+            const foldersResponse = await fetch('/api/loras/folders');
             if (!foldersResponse.ok) {
                 throw new Error('Failed to fetch folders');
             }
@@ -190,7 +190,7 @@ class MoveManager {
 
             // Refresh folder tags after successful move
             try {
-                const foldersResponse = await fetch('/api/folders');
+                const foldersResponse = await fetch('/api/loras/folders');
                 if (foldersResponse.ok) {
                     const foldersData = await foldersResponse.json();
                     updateFolderTags(foldersData.folders);

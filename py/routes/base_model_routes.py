@@ -55,6 +55,7 @@ class BaseModelRoutes(ABC):
         app.router.add_get(f'/api/{prefix}/base-models', self.get_base_models)
         app.router.add_get(f'/api/{prefix}/scan', self.scan_models)
         app.router.add_get(f'/api/{prefix}/roots', self.get_model_roots)
+        app.router.add_get(f'/api/{prefix}/folders', self.get_folders)
         app.router.add_get(f'/api/{prefix}/find-duplicates', self.find_duplicate_models)
         app.router.add_get(f'/api/{prefix}/find-filename-conflicts', self.find_filename_conflicts)
 
@@ -66,7 +67,7 @@ class BaseModelRoutes(ABC):
         
         # CivitAI integration routes
         app.router.add_post(f'/api/{prefix}/fetch-all-civitai', self.fetch_all_civitai)
-        app.router.add_get(f'/api/civitai/versions/{{model_id}}', self.get_civitai_versions)
+        # app.router.add_get(f'/api/civitai/versions/{{model_id}}', self.get_civitai_versions)
         
         # Add generic page route
         app.router.add_get(f'/{prefix}', self.handle_models_page)
@@ -327,6 +328,20 @@ class BaseModelRoutes(ABC):
             return web.json_response({
                 "success": False,
                 "error": str(e)
+            }, status=500)
+        
+    async def get_folders(self, request: web.Request) -> web.Response:
+        """Get all folders in the cache"""
+        try:
+            cache = await self.service.scanner.get_cached_data()
+            return web.json_response({
+                'folders': cache.folders
+            })
+        except Exception as e:
+            logger.error(f"Error getting folders: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)
     
     async def find_duplicate_models(self, request: web.Request) -> web.Response:

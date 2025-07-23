@@ -87,7 +87,7 @@ export class DownloadManager {
                 throw new Error('Invalid Civitai URL format');
             }
 
-            const response = await fetch(`/api/civitai/versions/${this.modelId}`);
+            const response = await fetch(`/api/loras/civitai/versions/${this.modelId}`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
@@ -254,7 +254,7 @@ export class DownloadManager {
         
         try {
             // Fetch LoRA roots
-            const rootsResponse = await fetch('/api/lora-roots');
+            const rootsResponse = await fetch('/api/loras/roots');
             if (!rootsResponse.ok) {
                 throw new Error('Failed to fetch LoRA roots');
             }
@@ -272,7 +272,7 @@ export class DownloadManager {
             }
 
             // Fetch folders dynamically
-            const foldersResponse = await fetch('/api/folders');
+            const foldersResponse = await fetch('/api/loras/folders');
             if (!foldersResponse.ok) {
                 throw new Error('Failed to fetch folders');
             }
