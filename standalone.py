@@ -315,7 +315,6 @@ class StandaloneLoraManager(LoraManager):
         
         # Setup feature routes
         from py.services.model_service_factory import ModelServiceFactory, register_default_model_types
-        from py.routes.api_routes import ApiRoutes
         from py.routes.recipe_routes import RecipeRoutes
         from py.routes.update_routes import UpdateRoutes
         from py.routes.misc_routes import MiscRoutes
@@ -332,7 +331,6 @@ class StandaloneLoraManager(LoraManager):
         
         # Initialize routes
         stats_routes.setup_routes(app)
-        ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)
         MiscRoutes.setup_routes(app)
@@ -343,7 +341,6 @@ class StandaloneLoraManager(LoraManager):
         
         # Add cleanup
         app.on_shutdown.append(cls._cleanup)
-        app.on_shutdown.append(ApiRoutes.cleanup)
 
 def parse_args():
     """Parse command line arguments"""
