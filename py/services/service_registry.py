@@ -67,7 +67,7 @@ class ServiceRegistry:
             
             scanner = await LoraScanner.get_instance()
             cls._services[service_name] = scanner
-            logger.info(f"Created and registered {service_name}")
+            logger.debug(f"Created and registered {service_name}")
             return scanner
     
     @classmethod
@@ -88,7 +88,7 @@ class ServiceRegistry:
             
             scanner = await CheckpointScanner.get_instance()
             cls._services[service_name] = scanner
-            logger.info(f"Created and registered {service_name}")
+            logger.debug(f"Created and registered {service_name}")
             return scanner
     
     @classmethod
@@ -109,7 +109,7 @@ class ServiceRegistry:
             
             scanner = await RecipeScanner.get_instance()
             cls._services[service_name] = scanner
-            logger.info(f"Created and registered {service_name}")
+            logger.debug(f"Created and registered {service_name}")
             return scanner
     
     @classmethod
@@ -130,7 +130,7 @@ class ServiceRegistry:
             
             client = await CivitaiClient.get_instance()
             cls._services[service_name] = client
-            logger.info(f"Created and registered {service_name}")
+            logger.debug(f"Created and registered {service_name}")
             return client
     
     @classmethod
@@ -151,7 +151,7 @@ class ServiceRegistry:
             
             manager = DownloadManager()
             cls._services[service_name] = manager
-            logger.info(f"Created and registered {service_name}")
+            logger.debug(f"Created and registered {service_name}")
             return manager
     
     @classmethod
@@ -171,7 +171,7 @@ class ServiceRegistry:
             from .websocket_manager import ws_manager
             
             cls._services[service_name] = ws_manager
-            logger.info(f"Registered {service_name}")
+            logger.debug(f"Registered {service_name}")
             return ws_manager
     
     @classmethod
