@@ -566,9 +566,10 @@ class ModelRouteUtils:
             return web.Response(text=str(e), status=500)
 
     @staticmethod
-    async def handle_download_model(request: web.Request, download_manager: DownloadManager) -> web.Response:
+    async def handle_download_model(request: web.Request) -> web.Response:
         """Handle model download request"""
         try:
+            download_manager = await ServiceRegistry.get_download_manager()
             data = await request.json()
             
             # Get or generate a download ID
@@ -663,17 +664,17 @@ class ModelRouteUtils:
             }, status=500)
 
     @staticmethod
-    async def handle_cancel_download(request: web.Request, download_manager: DownloadManager) -> web.Response:
+    async def handle_cancel_download(request: web.Request) -> web.Response:
         """Handle cancellation of a download task
         
         Args:
             request: The aiohttp request
-            download_manager: The download manager instance
             
         Returns:
             web.Response: The HTTP response
         """
         try:
+            download_manager = await ServiceRegistry.get_download_manager()
             download_id = request.match_info.get('download_id')
             if not download_id:
                 return web.json_response({
@@ -701,17 +702,17 @@ class ModelRouteUtils:
             }, status=500)
             
     @staticmethod
-    async def handle_list_downloads(request: web.Request, download_manager: DownloadManager) -> web.Response:
+    async def handle_list_downloads(request: web.Request) -> web.Response:
         """Get list of active downloads
         
         Args:
             request: The aiohttp request
-            download_manager: The download manager instance
             
         Returns:
             web.Response: The HTTP response with list of downloads
         """
         try:
+            download_manager = await ServiceRegistry.get_download_manager()
             result = await download_manager.get_active_downloads()
             return web.json_response(result)
         except Exception as e:

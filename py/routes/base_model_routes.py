@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import asyncio
 import json
 import logging
 from aiohttp import web
@@ -7,6 +8,7 @@ from typing import Dict
 import jinja2
 
 from ..utils.routes_common import ModelRouteUtils
+from ..services.service_registry import ServiceRegistry
 from ..services.websocket_manager import ws_manager
 from ..services.settings_manager import settings
 from ..config import config
@@ -55,6 +57,12 @@ class BaseModelRoutes(ABC):
         app.router.add_get(f'/api/{prefix}/roots', self.get_model_roots)
         app.router.add_get(f'/api/{prefix}/find-duplicates', self.find_duplicate_models)
         app.router.add_get(f'/api/{prefix}/find-filename-conflicts', self.find_filename_conflicts)
+
+        # Common Download management
+        app.router.add_post(f'/api/download-model', self.download_model)
+        app.router.add_get(f'/api/download-model-get', self.download_model_get)
+        app.router.add_get(f'/api/cancel-download-get', self.cancel_download_get)
+        app.router.add_get(f'/api/download-progress/{{download_id}}', self.get_download_progress)
         
         # CivitAI integration routes
         app.router.add_post(f'/api/{prefix}/fetch-all-civitai', self.fetch_all_civitai)
@@ -407,6 +415,111 @@ class BaseModelRoutes(ABC):
             return web.json_response({
                 "success": False,
                 "error": str(e)
+            }, status=500)
+        
+    # Download management methods
+    async def download_model(self, request: web.Request) -> web.Response:
+        """Handle model download request"""
+        return await ModelRouteUtils.handle_download_model(request)
+    
+    async def download_model_get(self, request: web.Request) -> web.Response:
+        """Handle model download request via GET method"""
+        try:
+            # Extract query parameters
+            model_id = request.query.get('model_id')
+            if not model_id:
+                return web.Response(
+                    status=400, 
+                    text="Missing required parameter: Please provide 'model_id'"
+                )
+            
+            # Get optional parameters
+            model_version_id = request.query.get('model_version_id')
+            download_id = request.query.get('download_id')
+            use_default_paths = request.query.get('use_default_paths', 'false').lower() == 'true'
+            
+            # Create a data dictionary that mimics what would be received from a POST request
+            data = {
+                'model_id': model_id
+            }
+            
+            # Add optional parameters only if they are provided
+            if model_version_id:
+                data['model_version_id'] = model_version_id
+                
+            if download_id:
+                data['download_id'] = download_id
+                
+            data['use_default_paths'] = use_default_paths
+            
+            # Create a mock request object with the data
+            future = asyncio.get_event_loop().create_future()
+            future.set_result(data)
+            
+            mock_request = type('MockRequest', (), {
+                'json': lambda self=None: future
+            })()
+            
+            # Call the existing download handler
+            return await ModelRouteUtils.handle_download_model(mock_request)
+            
+        except Exception as e:
+            error_message = str(e)
+            logger.error(f"Error downloading model via GET: {error_message}", exc_info=True)
+            return web.Response(status=500, text=error_message)
+    
+    async def cancel_download_get(self, request: web.Request) -> web.Response:
+        """Handle GET request for cancelling a download by download_id"""
+        try:
+            download_id = request.query.get('download_id')
+            if not download_id:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID is required'
+                }, status=400)
+            
+            # Create a mock request with match_info for compatibility
+            mock_request = type('MockRequest', (), {
+                'match_info': {'download_id': download_id}
+            })()
+            return await ModelRouteUtils.handle_cancel_download(mock_request)
+        except Exception as e:
+            logger.error(f"Error cancelling download via GET: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    async def get_download_progress(self, request: web.Request) -> web.Response:
+        """Handle request for download progress by download_id"""
+        try:
+            # Get download_id from URL path
+            download_id = request.match_info.get('download_id')
+            if not download_id:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID is required'
+                }, status=400)
+            
+            # Get progress information from websocket manager
+            from ..services.websocket_manager import ws_manager
+            progress_data = ws_manager.get_download_progress(download_id)
+            
+            if progress_data is None:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Download ID not found'
+                }, status=404)
+            
+            return web.json_response({
+                'success': True,
+                'progress': progress_data.get('progress', 0)
+            })
+        except Exception as e:
+            logger.error(f"Error getting download progress: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
             }, status=500)
     
     async def fetch_all_civitai(self, request: web.Request) -> web.Response:

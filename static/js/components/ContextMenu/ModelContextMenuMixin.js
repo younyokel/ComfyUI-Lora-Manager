@@ -125,7 +125,7 @@ export const ModelContextMenuMixin = {
                 
                 const endpoint = this.modelType === 'checkpoint' ? 
                     '/api/checkpoints/relink-civitai' : 
-                    '/api/relink-civitai';
+                    '/api/loras/relink-civitai';
                 
                 const response = await fetch(endpoint, {
                     method: 'POST',

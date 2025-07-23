@@ -20,8 +20,6 @@ class LoraRoutes(BaseModelRoutes):
         # Service will be initialized later via setup_routes
         self.service = None
         self.civitai_client = None
-        self.download_manager = None
-        self._download_lock = asyncio.Lock()
         self.template_name = "loras.html"
     
     async def initialize_services(self):
@@ -29,7 +27,6 @@ class LoraRoutes(BaseModelRoutes):
         lora_scanner = await ServiceRegistry.get_lora_scanner()
         self.service = LoraService(lora_scanner)
         self.civitai_client = await ServiceRegistry.get_civitai_client()
-        self.download_manager = await ServiceRegistry.get_download_manager()
         
         # Initialize parent with the service
         super().__init__(self.service)
@@ -63,21 +60,8 @@ class LoraRoutes(BaseModelRoutes):
         app.router.add_get(f'/api/civitai/model/version/{{modelVersionId}}', self.get_civitai_model_by_version)
         app.router.add_get(f'/api/civitai/model/hash/{{hash}}', self.get_civitai_model_by_hash)
         
-        # Download management
-        app.router.add_post(f'/api/download-model', self.download_model)
-        app.router.add_get(f'/api/download-model-get', self.download_model_get)
-        app.router.add_get(f'/api/cancel-download-get', self.cancel_download_get)
-        app.router.add_get(f'/api/download-progress/{{download_id}}', self.get_download_progress)
-        
         # ComfyUI integration
         app.router.add_post(f'/loramanager/get_trigger_words', self.get_trigger_words)
-        
-        # Legacy API compatibility
-        app.router.add_post(f'/api/delete_model', self.delete_model)
-        app.router.add_post(f'/api/fetch-civitai', self.fetch_civitai)
-        app.router.add_post(f'/api/relink-civitai', self.relink_civitai)
-        app.router.add_post(f'/api/replace_preview', self.replace_preview)
-        app.router.add_post(f'/api/fetch-all-civitai', self.fetch_all_civitai)
     
     def _parse_specific_params(self, request: web.Request) -> Dict:
         """Parse LoRA-specific parameters"""
@@ -356,111 +340,6 @@ class LoraRoutes(BaseModelRoutes):
             return web.json_response({
                 "success": False,
                 "error": str(e)
-            }, status=500)
-    
-    # Download management methods
-    async def download_model(self, request: web.Request) -> web.Response:
-        """Handle model download request"""
-        return await ModelRouteUtils.handle_download_model(request, self.download_manager)
-    
-    async def download_model_get(self, request: web.Request) -> web.Response:
-        """Handle model download request via GET method"""
-        try:
-            # Extract query parameters
-            model_id = request.query.get('model_id')
-            if not model_id:
-                return web.Response(
-                    status=400, 
-                    text="Missing required parameter: Please provide 'model_id'"
-                )
-            
-            # Get optional parameters
-            model_version_id = request.query.get('model_version_id')
-            download_id = request.query.get('download_id')
-            use_default_paths = request.query.get('use_default_paths', 'false').lower() == 'true'
-            
-            # Create a data dictionary that mimics what would be received from a POST request
-            data = {
-                'model_id': model_id
-            }
-            
-            # Add optional parameters only if they are provided
-            if model_version_id:
-                data['model_version_id'] = model_version_id
-                
-            if download_id:
-                data['download_id'] = download_id
-                
-            data['use_default_paths'] = use_default_paths
-            
-            # Create a mock request object with the data
-            future = asyncio.get_event_loop().create_future()
-            future.set_result(data)
-            
-            mock_request = type('MockRequest', (), {
-                'json': lambda self=None: future
-            })()
-            
-            # Call the existing download handler
-            return await ModelRouteUtils.handle_download_model(mock_request, self.download_manager)
-            
-        except Exception as e:
-            error_message = str(e)
-            logger.error(f"Error downloading model via GET: {error_message}", exc_info=True)
-            return web.Response(status=500, text=error_message)
-    
-    async def cancel_download_get(self, request: web.Request) -> web.Response:
-        """Handle GET request for cancelling a download by download_id"""
-        try:
-            download_id = request.query.get('download_id')
-            if not download_id:
-                return web.json_response({
-                    'success': False,
-                    'error': 'Download ID is required'
-                }, status=400)
-            
-            # Create a mock request with match_info for compatibility
-            mock_request = type('MockRequest', (), {
-                'match_info': {'download_id': download_id}
-            })()
-            return await ModelRouteUtils.handle_cancel_download(mock_request, self.download_manager)
-        except Exception as e:
-            logger.error(f"Error cancelling download via GET: {e}", exc_info=True)
-            return web.json_response({
-                'success': False,
-                'error': str(e)
-            }, status=500)
-    
-    async def get_download_progress(self, request: web.Request) -> web.Response:
-        """Handle request for download progress by download_id"""
-        try:
-            # Get download_id from URL path
-            download_id = request.match_info.get('download_id')
-            if not download_id:
-                return web.json_response({
-                    'success': False,
-                    'error': 'Download ID is required'
-                }, status=400)
-            
-            # Get progress information from websocket manager
-            from ..services.websocket_manager import ws_manager
-            progress_data = ws_manager.get_download_progress(download_id)
-            
-            if progress_data is None:
-                return web.json_response({
-                    'success': False,
-                    'error': 'Download ID not found'
-                }, status=404)
-            
-            return web.json_response({
-                'success': True,
-                'progress': progress_data.get('progress', 0)
-            })
-        except Exception as e:
-            logger.error(f"Error getting download progress: {e}", exc_info=True)
-            return web.json_response({
-                'success': False,
-                'error': str(e)
             }, status=500)
     
     # Model management methods

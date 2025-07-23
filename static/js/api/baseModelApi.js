@@ -277,7 +277,7 @@ export async function deleteModel(filePath, modelType = 'lora') {
 
         const endpoint = modelType === 'checkpoint' 
             ? '/api/checkpoints/delete' 
-            : '/api/delete_model';
+            : '/api/loras/delete';
             
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -454,7 +454,7 @@ export async function refreshSingleModelMetadata(filePath, modelType = 'lora') {
         
         const endpoint = modelType === 'checkpoint' 
             ? '/api/checkpoints/fetch-civitai'
-            : '/api/fetch-civitai';
+            : '/api/loras/fetch-civitai';
             
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -557,7 +557,7 @@ export async function uploadPreview(filePath, file, modelType = 'lora', nsfwLeve
         // Set endpoint based on model type
         const endpoint = modelType === 'checkpoint' 
             ? '/api/checkpoints/replace-preview'
-            : '/api/replace_preview';
+            : '/api/loras/replace_preview';
         
         const response = await fetch(endpoint, {
             method: 'POST',
