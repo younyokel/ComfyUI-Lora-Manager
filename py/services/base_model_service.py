@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Type, Set
+from typing import Dict, List, Optional, Type
 import logging
 
 from ..utils.models import BaseModelMetadata
@@ -34,7 +34,7 @@ class BaseModelService(ABC):
         Args:
             page: Page number (1-based)
             page_size: Number of items per page
-            sort_by: Sort criteria ('name' or 'date')
+            sort_by: Sort criteria, e.g. 'name', 'name:asc', 'name:desc', 'date', 'date:asc', 'date:desc'
             folder: Folder filter
             search: Search term
             fuzzy_search: Whether to use fuzzy search
@@ -50,6 +50,17 @@ class BaseModelService(ABC):
         """
         cache = await self.scanner.get_cached_data()
 
+        # Parse sort_by into sort_key and order
+        if ':' in sort_by:
+            sort_key, order = sort_by.split(':', 1)
+            sort_key = sort_key.strip()
+            order = order.strip().lower()
+            if order not in ('asc', 'desc'):
+                order = 'asc'
+        else:
+            sort_key = sort_by.strip()
+            order = 'asc'
+
         # Get default search options if not provided
         if search_options is None:
             search_options = {
@@ -59,8 +70,8 @@ class BaseModelService(ABC):
                 'recursive': False,
             }
 
-        # Get the base data set
-        filtered_data = cache.sorted_by_date if sort_by == 'date' else cache.sorted_by_name
+        # Get the base data set using new sort logic
+        filtered_data = await cache.get_sorted_data(sort_key, order)
         
         # Apply hash filtering if provided (highest priority)
         if hash_filters:

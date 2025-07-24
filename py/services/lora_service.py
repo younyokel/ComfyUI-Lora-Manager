@@ -115,7 +115,7 @@ class LoraService(BaseModelService):
     async def get_letter_counts(self) -> Dict[str, int]:
         """Get count of LoRAs for each letter of the alphabet"""
         cache = await self.scanner.get_cached_data()
-        data = cache.sorted_by_name
+        data = cache.raw_data
         
         # Define letter categories
         letters = {

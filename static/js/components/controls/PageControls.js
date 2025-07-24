@@ -1,5 +1,5 @@
 // PageControls.js - Manages controls for both LoRAs and Checkpoints pages
-import { state, getCurrentPageState, setCurrentPageType } from '../../state/index.js';
+import { getCurrentPageState, setCurrentPageType } from '../../state/index.js';
 import { getStorageItem, setStorageItem, getSessionItem, setSessionItem } from '../../utils/storageHelpers.js';
 import { showToast } from '../../utils/uiHelpers.js';
 
@@ -40,6 +40,9 @@ export class PageControls {
         this.pageState.pageSize = 100;
         this.pageState.isLoading = false;
         this.pageState.hasMore = true;
+        
+        // Set default sort based on page type
+        this.pageState.sortBy = this.pageType === 'loras' ? 'name:asc' : 'name:asc';
         
         // Load sort preference
         this.loadSortPreference();
@@ -326,11 +329,33 @@ export class PageControls {
     loadSortPreference() {
         const savedSort = getStorageItem(`${this.pageType}_sort`);
         if (savedSort) {
-            this.pageState.sortBy = savedSort;
+            // Handle legacy format conversion
+            const convertedSort = this.convertLegacySortFormat(savedSort);
+            this.pageState.sortBy = convertedSort;
             const sortSelect = document.getElementById('sortSelect');
             if (sortSelect) {
-                sortSelect.value = savedSort;
+                sortSelect.value = convertedSort;
             }
+        }
+    }
+    
+    /**
+     * Convert legacy sort format to new format
+     * @param {string} sortValue - The sort value to convert
+     * @returns {string} - Converted sort value
+     */
+    convertLegacySortFormat(sortValue) {
+        // Convert old format to new format with direction
+        switch (sortValue) {
+            case 'name':
+                return 'name:asc';
+            case 'date':
+                return 'date:desc'; // Newest first is more intuitive default
+            case 'size':
+                return 'size:desc'; // Largest first is more intuitive default
+            default:
+                // If it's already in new format or unknown, return as is
+                return sortValue.includes(':') ? sortValue : 'name:asc';
         }
     }
     

@@ -246,8 +246,6 @@ class ModelScanner:
             # Load data into memory
             self._cache = ModelCache(
                 raw_data=cache_data["raw_data"],
-                sorted_by_name=[],
-                sorted_by_date=[],
                 folders=[]
             )
             
@@ -280,8 +278,6 @@ class ModelScanner:
             if self._cache is None:
                 self._cache = ModelCache(
                     raw_data=[],
-                    sorted_by_name=[],
-                    sorted_by_date=[],
                     folders=[]
                 )
             
@@ -544,8 +540,6 @@ class ModelScanner:
         if self._cache is None and not force_refresh:
             return ModelCache(
                 raw_data=[],
-                sorted_by_name=[],
-                sorted_by_date=[],
                 folders=[]
             )
 
@@ -605,8 +599,6 @@ class ModelScanner:
             # Update cache
             self._cache = ModelCache(
                 raw_data=raw_data,
-                sorted_by_name=[],
-                sorted_by_date=[],
                 folders=[]
             )
             
@@ -620,8 +612,6 @@ class ModelScanner:
             if self._cache is None:
                 self._cache = ModelCache(
                     raw_data=[],
-                    sorted_by_name=[],
-                    sorted_by_date=[],
                     folders=[]
                 )
         finally:
