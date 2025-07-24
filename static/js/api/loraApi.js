@@ -125,7 +125,7 @@ export async function refreshSingleLoraMetadata(filePath) {
 
 export async function fetchModelDescription(modelId, filePath) {
     try {
-        const response = await fetch(`/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`);
+        const response = await fetch(`/api/loras/model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`);
         
         if (!response.ok) {
             throw new Error(`Failed to fetch model description: ${response.statusText}`);

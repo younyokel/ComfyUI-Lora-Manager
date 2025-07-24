@@ -831,9 +831,9 @@ class RecipeModal {
                 
                 // Determine which endpoint to use based on available data
                 if (lora.modelVersionId) {
-                    endpoint = `/api/civitai/model/version/${lora.modelVersionId}`;
+                    endpoint = `/api/loras/civitai/model/version/${lora.modelVersionId}`;
                 } else if (lora.hash) {
-                    endpoint = `/api/civitai/model/hash/${lora.hash}`;
+                    endpoint = `/api/loras/civitai/model/hash/${lora.hash}`;
                 } else {
                     console.error("Missing both hash and modelVersionId for lora:", lora);
                     return null;

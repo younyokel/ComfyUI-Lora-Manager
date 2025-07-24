@@ -219,7 +219,7 @@ class MoveManager {
             return;
         }
 
-        const response = await fetch('/api/move_model', {
+        const response = await fetch('/api/loras/move_model', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ class MoveManager {
             return;
         }
 
-        const response = await fetch('/api/move_models_bulk', {
+        const response = await fetch('/api/loras/move_models_bulk', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

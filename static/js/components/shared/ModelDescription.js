@@ -59,7 +59,7 @@ export async function loadModelDescription(modelId, filePath) {
         descriptionContainer.classList.add('hidden');
         
         // Determine API endpoint based on file path or context
-        let apiEndpoint = `/api/lora-model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`;
+        let apiEndpoint = `/api/loras/model-description?model_id=${modelId}&file_path=${encodeURIComponent(filePath)}`;
         
         // Try to get model description from API
         const response = await fetch(apiEndpoint);

@@ -45,21 +45,21 @@ class LoraRoutes(BaseModelRoutes):
         app.router.add_get(f'/api/{prefix}/letter-counts', self.get_letter_counts)
         app.router.add_get(f'/api/{prefix}/get-notes', self.get_lora_notes)
         app.router.add_get(f'/api/{prefix}/get-trigger-words', self.get_lora_trigger_words)
-        app.router.add_get(f'/api/lora-preview-url', self.get_lora_preview_url)
-        app.router.add_get(f'/api/lora-civitai-url', self.get_lora_civitai_url)
-        app.router.add_get(f'/api/lora-model-description', self.get_lora_model_description)
+        app.router.add_get(f'/api/{prefix}/preview-url', self.get_lora_preview_url)
+        app.router.add_get(f'/api/{prefix}/civitai-url', self.get_lora_civitai_url)
+        app.router.add_get(f'/api/{prefix}/model-description', self.get_lora_model_description)
         
         # LoRA-specific management routes
-        app.router.add_post(f'/api/move_model', self.move_model)
-        app.router.add_post(f'/api/move_models_bulk', self.move_models_bulk)
+        app.router.add_post(f'/api/{prefix}/move_model', self.move_model)
+        app.router.add_post(f'/api/{prefix}/move_models_bulk', self.move_models_bulk)
         
         # CivitAI integration with LoRA-specific validation
         app.router.add_get(f'/api/{prefix}/civitai/versions/{{model_id}}', self.get_civitai_versions_lora)
-        app.router.add_get(f'/api/civitai/model/version/{{modelVersionId}}', self.get_civitai_model_by_version)
-        app.router.add_get(f'/api/civitai/model/hash/{{hash}}', self.get_civitai_model_by_hash)
+        app.router.add_get(f'/api/{prefix}/civitai/model/version/{{modelVersionId}}', self.get_civitai_model_by_version)
+        app.router.add_get(f'/api/{prefix}/civitai/model/hash/{{hash}}', self.get_civitai_model_by_hash)
         
         # ComfyUI integration
-        app.router.add_post(f'/loramanager/get_trigger_words', self.get_trigger_words)
+        app.router.add_post(f'/api/{prefix}/get_trigger_words', self.get_trigger_words)
     
     def _parse_specific_params(self, request: web.Request) -> Dict:
         """Parse LoRA-specific parameters"""

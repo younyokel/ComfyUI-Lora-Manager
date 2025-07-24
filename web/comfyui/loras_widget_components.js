@@ -165,7 +165,7 @@ export class PreviewTooltip {
       this.currentLora = loraName;
       
       // Get preview URL
-      const response = await api.fetchApi(`/lora-preview-url?name=${encodeURIComponent(loraName)}`, {
+      const response = await api.fetchApi(`/loras/preview-url?name=${encodeURIComponent(loraName)}`, {
         method: 'GET'
       });
 
