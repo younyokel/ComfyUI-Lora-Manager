@@ -1094,7 +1094,7 @@ class ModelRouteUtils:
             # If model_name was updated, resort the cache
             if 'model_name' in metadata_updates:
                 cache = await scanner.get_cached_data()
-                await cache.resort(name_only=True)
+                await cache.resort()
 
             return web.json_response({'success': True})
 

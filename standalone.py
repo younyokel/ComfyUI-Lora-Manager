@@ -134,17 +134,6 @@ class StandaloneServer:
         
         # Ensure the app's access logger is configured to reduce verbosity
         self.app._subapps = []  # Ensure this exists to avoid AttributeError
-        
-        # Configure access logging for the app
-        self.app.on_startup.append(self._configure_access_logger)
-    
-    async def _configure_access_logger(self, app):
-        """Configure access logger to reduce verbosity"""
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
-        
-        # If using aiohttp>=3.8.0, configure access logger through app directly
-        if hasattr(app, 'access_logger'):
-            app.access_logger.setLevel(logging.WARNING)
     
     async def setup(self):
         """Set up the standalone server"""
@@ -234,9 +223,6 @@ class StandaloneLoraManager(LoraManager):
         
         # Store app in a global-like location for compatibility
         sys.modules['server'].PromptServer.instance = server_instance
-
-        # Configure aiohttp access logger to be less verbose
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
         
         added_targets = set()  # Track already added target paths
         
@@ -386,9 +372,6 @@ async def main():
     
     # Set log level
     logging.getLogger().setLevel(getattr(logging, args.log_level))
-    
-    # Explicitly configure aiohttp access logger regardless of selected log level
-    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
     
     # Create the server instance
     server = StandaloneServer()

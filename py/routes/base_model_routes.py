@@ -587,7 +587,7 @@ class BaseModelRoutes(ABC):
                     logger.error(f"Error fetching CivitAI data for {model['file_path']}: {e}")
             
             if needs_resort:
-                await cache.resort(name_only=True)
+                await cache.resort()
             
             # Send completion message
             await ws_manager.broadcast({

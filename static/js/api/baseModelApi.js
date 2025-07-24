@@ -54,25 +54,16 @@ export async function fetchModelsPage(options = {}) {
         if (pageState.filters) {
             // Handle tags filters
             if (pageState.filters.tags && pageState.filters.tags.length > 0) {
-                // Checkpoints API expects individual 'tag' parameters, Loras API expects comma-separated 'tags'
-                if (modelType === 'checkpoint') {
-                    pageState.filters.tags.forEach(tag => {
-                        params.append('tag', tag);
-                    });
-                } else {
-                    params.append('tags', pageState.filters.tags.join(','));
-                }
+                pageState.filters.tags.forEach(tag => {
+                    params.append('tag', tag);
+                });
             }
             
             // Handle base model filters
             if (pageState.filters.baseModel && pageState.filters.baseModel.length > 0) {
-                if (modelType === 'checkpoint') {
-                    pageState.filters.baseModel.forEach(model => {
-                        params.append('base_model', model);
-                    });
-                } else {
-                    params.append('base_models', pageState.filters.baseModel.join(','));
-                }
+                pageState.filters.baseModel.forEach(model => {
+                    params.append('base_model', model);
+                });
             }
         }
 
