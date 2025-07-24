@@ -161,7 +161,7 @@ export class SettingsManager {
             if (!defaultLoraRootSelect) return;
             
             // Fetch lora roots
-            const response = await fetch('/api/lora-roots');
+            const response = await fetch('/api/loras/roots');
             if (!response.ok) {
                 throw new Error('Failed to fetch LoRA roots');
             }

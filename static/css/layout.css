@@ -182,6 +182,31 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/* Style for optgroups */
+.control-group select optgroup {
+    font-weight: 600;
+    font-style: normal;
+    color: var(--text-color);
+    background-color: var(--card-bg);
+}
+
+.control-group select option {
+    padding: 4px 8px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* Dark theme optgroup styling */
+[data-theme="dark"] .control-group select optgroup {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .control-group select option {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
 .control-group select:hover {
     border-color: var(--lora-accent);
     background-color: var(--bg-color);

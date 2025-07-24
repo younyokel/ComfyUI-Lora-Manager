@@ -223,11 +223,6 @@
   opacity: 1;
 }
 
-.update-badge.hidden,
-.update-badge:not(.visible) {
-  opacity: 0;
-}
-
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .app-title {

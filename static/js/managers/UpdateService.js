@@ -3,7 +3,7 @@ import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 
 export class UpdateService {
     constructor() {
-        this.updateCheckInterval = 24 * 60 * 60 * 1000; // 24 hours
+        this.updateCheckInterval = 60 * 60 * 1000; // 1 hour
         this.currentVersion = "v0.0.0";  // Initialize with default values
         this.latestVersion = "v0.0.0";   // Initialize with default values
         this.updateInfo = null;
@@ -13,8 +13,10 @@ export class UpdateService {
             branch: "unknown",
             commit_date: "unknown"
         };
-        this.updateNotificationsEnabled = getStorageItem('show_update_notifications');
+        this.updateNotificationsEnabled = getStorageItem('show_update_notifications', true);
         this.lastCheckTime = parseInt(getStorageItem('last_update_check') || '0');
+        this.isUpdating = false;
+        this.nightlyMode = getStorageItem('nightly_updates', false);
     }
 
     initialize() {
@@ -28,21 +30,42 @@ export class UpdateService {
                 this.updateBadgeVisibility();
             });
         }
+
+        const updateBtn = document.getElementById('updateBtn');
+        if (updateBtn) {
+            updateBtn.addEventListener('click', () => this.performUpdate());
+        }
+        
+        // Register event listener for nightly update toggle
+        const nightlyCheckbox = document.getElementById('nightlyUpdateToggle');
+        if (nightlyCheckbox) {
+            nightlyCheckbox.checked = this.nightlyMode;
+            nightlyCheckbox.addEventListener('change', (e) => {
+                this.nightlyMode = e.target.checked;
+                setStorageItem('nightly_updates', e.target.checked);
+                this.updateNightlyWarning();
+                this.updateModalContent();
+                // Re-check for updates when switching channels
+                this.manualCheckForUpdates();
+            });
+            this.updateNightlyWarning();
+        }
         
         // Perform update check if needed
         this.checkForUpdates().then(() => {
             // Ensure badges are updated after checking
             this.updateBadgeVisibility();
         });
-        
-        // Set up event listener for update button
-        // const updateToggle = document.getElementById('updateToggleBtn');
-        // if (updateToggle) {
-        //     updateToggle.addEventListener('click', () => this.toggleUpdateModal());
-        // }
 
         // Immediately update modal content with current values (even if from default)
         this.updateModalContent();
+    }
+    
+    updateNightlyWarning() {
+        const warning = document.getElementById('nightlyWarning');
+        if (warning) {
+            warning.style.display = this.nightlyMode ? 'flex' : 'none';
+        }
     }
     
     async checkForUpdates() {
@@ -59,8 +82,8 @@ export class UpdateService {
         }
         
         try {
-            // Call backend API to check for updates
-            const response = await fetch('/api/check-updates');
+            // Call backend API to check for updates with nightly flag
+            const response = await fetch(`/api/check-updates?nightly=${this.nightlyMode}`);
             const data = await response.json();
             
             if (data.success) {
@@ -137,8 +160,8 @@ export class UpdateService {
         const shouldShow = this.updateNotificationsEnabled && this.updateAvailable;
         
         if (updateBadge) {
-            updateBadge.classList.toggle('hidden', !shouldShow);
-            console.log("Update badge visibility:", !shouldShow ? "hidden" : "visible");
+            updateBadge.classList.toggle('visible', shouldShow);
+            console.log("Update badge visibility:", shouldShow ? "visible" : "hidden");
         }
     }
     
@@ -157,7 +180,17 @@ export class UpdateService {
         const newVersionEl = modal.querySelector('.new-version .version-number');
         
         if (currentVersionEl) currentVersionEl.textContent = this.currentVersion;
-        if (newVersionEl) newVersionEl.textContent = this.latestVersion;
+        
+        if (newVersionEl) {
+            newVersionEl.textContent = this.latestVersion;
+        }
+        
+        // Update update button state
+        const updateBtn = modal.querySelector('#updateBtn');
+        if (updateBtn) {
+            updateBtn.classList.toggle('disabled', !this.updateAvailable || this.isUpdating);
+            updateBtn.disabled = !this.updateAvailable || this.isUpdating;
+        }
         
         // Update git info
         const gitInfoEl = modal.querySelector('.git-info');
@@ -216,6 +249,131 @@ export class UpdateService {
             const versionTag = this.latestVersion.replace(/^v/, '');
             githubLink.href = `https://github.com/willmiao/ComfyUI-Lora-Manager/releases/tag/v${versionTag}`;
         }
+    }
+    
+    async performUpdate() {
+        if (!this.updateAvailable || this.isUpdating) {
+            return;
+        }
+        
+        try {
+            this.isUpdating = true;
+            this.updateUpdateUI('updating', 'Updating...');
+            this.showUpdateProgress(true);
+            
+            // Update progress
+            this.updateProgress(10, 'Preparing update...');
+            
+            const response = await fetch('/api/perform-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nightly: this.nightlyMode
+                })
+            });
+            
+            this.updateProgress(50, 'Installing update...');
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.updateProgress(100, 'Update completed successfully!');
+                this.updateUpdateUI('success', 'Updated!');
+                
+                // Show success message and suggest restart
+                setTimeout(() => {
+                    this.showUpdateCompleteMessage(data.new_version);
+                }, 1000);
+                
+            } else {
+                throw new Error(data.error || 'Update failed');
+            }
+            
+        } catch (error) {
+            console.error('Update failed:', error);
+            this.updateUpdateUI('error', 'Update Failed');
+            this.updateProgress(0, `Update failed: ${error.message}`);
+            
+            // Hide progress after error
+            setTimeout(() => {
+                this.showUpdateProgress(false);
+            }, 3000);
+        } finally {
+            this.isUpdating = false;
+        }
+    }
+    
+    updateUpdateUI(state, text) {
+        const updateBtn = document.getElementById('updateBtn');
+        const updateBtnText = document.getElementById('updateBtnText');
+        
+        if (updateBtn && updateBtnText) {
+            // Remove existing state classes
+            updateBtn.classList.remove('updating', 'success', 'error', 'disabled');
+            
+            // Add new state class
+            if (state !== 'normal') {
+                updateBtn.classList.add(state);
+            }
+            
+            // Update button text
+            updateBtnText.textContent = text;
+            
+            // Update disabled state
+            updateBtn.disabled = (state === 'updating' || state === 'disabled');
+        }
+    }
+    
+    showUpdateProgress(show) {
+        const progressContainer = document.getElementById('updateProgress');
+        if (progressContainer) {
+            progressContainer.style.display = show ? 'block' : 'none';
+        }
+    }
+    
+    updateProgress(percentage, text) {
+        const progressFill = document.getElementById('updateProgressFill');
+        const progressText = document.getElementById('updateProgressText');
+        
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = text;
+        }
+    }
+    
+    showUpdateCompleteMessage(newVersion) {
+        const modal = document.getElementById('updateModal');
+        if (!modal) return;
+        
+        // Update the modal content to show completion
+        const progressText = document.getElementById('updateProgressText');
+        if (progressText) {
+            progressText.innerHTML = `
+                <div style="text-align: center; color: var(--lora-success);">
+                    <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                    Successfully updated to ${newVersion}!
+                    <br><br>
+                    <small style="opacity: 0.8;">
+                        Please restart ComfyUI to complete the update process.
+                    </small>
+                </div>
+            `;
+        }
+        
+        // Update current version display
+        this.currentVersion = newVersion;
+        this.updateAvailable = false;
+        
+        // Refresh the modal content
+        setTimeout(() => {
+            this.updateModalContent();
+            this.showUpdateProgress(false);
+        }, 2000);
     }
     
     // Simple markdown parser for changelog items

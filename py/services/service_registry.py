@@ -7,106 +7,176 @@ logger = logging.getLogger(__name__)
 T = TypeVar('T')  # Define a type variable for service types
 
 class ServiceRegistry:
-    """Centralized registry for service singletons"""
+    """Central registry for managing singleton services"""
     
-    _instance = None
     _services: Dict[str, Any] = {}
-    _lock = asyncio.Lock()
+    _locks: Dict[str, asyncio.Lock] = {}
     
     @classmethod
-    def get_instance(cls):
-        """Get singleton instance of the registry"""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    async def register_service(cls, name: str, service: Any) -> None:
+        """Register a service instance with the registry
+        
+        Args:
+            name: Service name identifier
+            service: Service instance to register
+        """
+        cls._services[name] = service
+        logger.debug(f"Registered service: {name}")
     
     @classmethod
-    async def register_service(cls, service_name: str, service_instance: Any) -> None:
-        """Register a service instance with the registry"""
-        registry = cls.get_instance()
-        async with cls._lock:
-            registry._services[service_name] = service_instance
-            logger.debug(f"Registered service: {service_name}")
+    async def get_service(cls, name: str) -> Optional[Any]:
+        """Get a service instance by name
+        
+        Args:
+            name: Service name identifier
+            
+        Returns:
+            Service instance or None if not found
+        """
+        return cls._services.get(name)
     
     @classmethod
-    async def get_service(cls, service_name: str) -> Any:
-        """Get a service instance by name"""
-        registry = cls.get_instance()
-        async with cls._lock:
-            if service_name not in registry._services:
-                logger.debug(f"Service {service_name} not found in registry")
-                return None
-            return registry._services[service_name]
+    def _get_lock(cls, name: str) -> asyncio.Lock:
+        """Get or create a lock for a service
+        
+        Args:
+            name: Service name identifier
+            
+        Returns:
+            AsyncIO lock for the service
+        """
+        if name not in cls._locks:
+            cls._locks[name] = asyncio.Lock()
+        return cls._locks[name]
     
-    @classmethod
-    def get_service_sync(cls, service_name: str) -> Any:
-        """Get a service instance by name (synchronous version)"""
-        registry = cls.get_instance()
-        if service_name not in registry._services:
-            logger.debug(f"Service {service_name} not found in registry")
-            return None
-        return registry._services[service_name]
-    
-    # Convenience methods for common services
     @classmethod
     async def get_lora_scanner(cls):
-        """Get the LoraScanner instance"""
-        from .lora_scanner import LoraScanner
-        scanner = await cls.get_service("lora_scanner")
-        if scanner is None:
-            scanner = await LoraScanner.get_instance()
-            await cls.register_service("lora_scanner", scanner)
-        return scanner
+        """Get or create LoRA scanner instance"""
+        service_name = "lora_scanner"
         
+        if service_name in cls._services:
+            return cls._services[service_name]
+        
+        async with cls._get_lock(service_name):
+            # Double-check after acquiring lock
+            if service_name in cls._services:
+                return cls._services[service_name]
+            
+            # Import here to avoid circular imports
+            from .lora_scanner import LoraScanner
+            
+            scanner = await LoraScanner.get_instance()
+            cls._services[service_name] = scanner
+            logger.debug(f"Created and registered {service_name}")
+            return scanner
+    
     @classmethod
     async def get_checkpoint_scanner(cls):
-        """Get the CheckpointScanner instance"""
-        from .checkpoint_scanner import CheckpointScanner
-        scanner = await cls.get_service("checkpoint_scanner")
-        if scanner is None:
+        """Get or create Checkpoint scanner instance"""
+        service_name = "checkpoint_scanner"
+        
+        if service_name in cls._services:
+            return cls._services[service_name]
+        
+        async with cls._get_lock(service_name):
+            # Double-check after acquiring lock
+            if service_name in cls._services:
+                return cls._services[service_name]
+            
+            # Import here to avoid circular imports
+            from .checkpoint_scanner import CheckpointScanner
+            
             scanner = await CheckpointScanner.get_instance()
-            await cls.register_service("checkpoint_scanner", scanner)
-        return scanner
-
-    @classmethod
-    async def get_civitai_client(cls):
-        """Get the CivitaiClient instance"""
-        from .civitai_client import CivitaiClient
-        client = await cls.get_service("civitai_client")
-        if client is None:
-            client = await CivitaiClient.get_instance()
-            await cls.register_service("civitai_client", client)
-        return client
-
-    @classmethod
-    async def get_download_manager(cls):
-        """Get the DownloadManager instance"""
-        from .download_manager import DownloadManager
-        manager = await cls.get_service("download_manager")
-        if manager is None:
-            manager = await DownloadManager.get_instance()
-            await cls.register_service("download_manager", manager)
-        return manager
-
+            cls._services[service_name] = scanner
+            logger.debug(f"Created and registered {service_name}")
+            return scanner
+    
     @classmethod
     async def get_recipe_scanner(cls):
-        """Get the RecipeScanner instance"""
-        from .recipe_scanner import RecipeScanner
-        scanner = await cls.get_service("recipe_scanner")
-        if scanner is None:
-            lora_scanner = await cls.get_lora_scanner()
-            scanner = RecipeScanner(lora_scanner)
-            await cls.register_service("recipe_scanner", scanner)
-        return scanner
-
+        """Get or create Recipe scanner instance"""
+        service_name = "recipe_scanner"
+        
+        if service_name in cls._services:
+            return cls._services[service_name]
+        
+        async with cls._get_lock(service_name):
+            # Double-check after acquiring lock
+            if service_name in cls._services:
+                return cls._services[service_name]
+            
+            # Import here to avoid circular imports
+            from .recipe_scanner import RecipeScanner
+            
+            scanner = await RecipeScanner.get_instance()
+            cls._services[service_name] = scanner
+            logger.debug(f"Created and registered {service_name}")
+            return scanner
+    
+    @classmethod
+    async def get_civitai_client(cls):
+        """Get or create CivitAI client instance"""
+        service_name = "civitai_client"
+        
+        if service_name in cls._services:
+            return cls._services[service_name]
+        
+        async with cls._get_lock(service_name):
+            # Double-check after acquiring lock
+            if service_name in cls._services:
+                return cls._services[service_name]
+            
+            # Import here to avoid circular imports
+            from .civitai_client import CivitaiClient
+            
+            client = await CivitaiClient.get_instance()
+            cls._services[service_name] = client
+            logger.debug(f"Created and registered {service_name}")
+            return client
+    
+    @classmethod
+    async def get_download_manager(cls):
+        """Get or create Download manager instance"""
+        service_name = "download_manager"
+        
+        if service_name in cls._services:
+            return cls._services[service_name]
+        
+        async with cls._get_lock(service_name):
+            # Double-check after acquiring lock
+            if service_name in cls._services:
+                return cls._services[service_name]
+            
+            # Import here to avoid circular imports
+            from .download_manager import DownloadManager
+            
+            manager = DownloadManager()
+            cls._services[service_name] = manager
+            logger.debug(f"Created and registered {service_name}")
+            return manager
+    
     @classmethod
     async def get_websocket_manager(cls):
-        """Get the WebSocketManager instance"""
-        from .websocket_manager import ws_manager
-        manager = await cls.get_service("websocket_manager")
-        if manager is None:
-            # ws_manager is already a global instance in websocket_manager.py
+        """Get or create WebSocket manager instance"""
+        service_name = "websocket_manager"
+        
+        if service_name in cls._services:
+            return cls._services[service_name]
+        
+        async with cls._get_lock(service_name):
+            # Double-check after acquiring lock
+            if service_name in cls._services:
+                return cls._services[service_name]
+            
+            # Import here to avoid circular imports
             from .websocket_manager import ws_manager
-            await cls.register_service("websocket_manager", ws_manager)
-            manager = ws_manager
-        return manager
+            
+            cls._services[service_name] = ws_manager
+            logger.debug(f"Registered {service_name}")
+            return ws_manager
+    
+    @classmethod
+    def clear_services(cls):
+        """Clear all registered services - mainly for testing"""
+        cls._services.clear()
+        cls._locks.clear()
+        logger.info("Cleared all registered services")

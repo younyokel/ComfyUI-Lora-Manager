@@ -89,7 +89,7 @@ export async function fetchLorasPage(page = 1, pageSize = 100) {
 export async function fetchCivitai() {
     return fetchCivitaiMetadata({
         modelType: 'lora',
-        fetchEndpoint: '/api/fetch-all-civitai',
+        fetchEndpoint: '/api/loras/fetch-all-civitai',
         resetAndReloadFunction: resetAndReload
     });
 }

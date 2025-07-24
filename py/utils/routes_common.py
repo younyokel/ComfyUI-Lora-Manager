@@ -566,9 +566,10 @@ class ModelRouteUtils:
             return web.Response(text=str(e), status=500)
 
     @staticmethod
-    async def handle_download_model(request: web.Request, download_manager: DownloadManager) -> web.Response:
+    async def handle_download_model(request: web.Request) -> web.Response:
         """Handle model download request"""
         try:
+            download_manager = await ServiceRegistry.get_download_manager()
             data = await request.json()
             
             # Get or generate a download ID
@@ -663,17 +664,17 @@ class ModelRouteUtils:
             }, status=500)
 
     @staticmethod
-    async def handle_cancel_download(request: web.Request, download_manager: DownloadManager) -> web.Response:
+    async def handle_cancel_download(request: web.Request) -> web.Response:
         """Handle cancellation of a download task
         
         Args:
             request: The aiohttp request
-            download_manager: The download manager instance
             
         Returns:
             web.Response: The HTTP response
         """
         try:
+            download_manager = await ServiceRegistry.get_download_manager()
             download_id = request.match_info.get('download_id')
             if not download_id:
                 return web.json_response({
@@ -701,17 +702,17 @@ class ModelRouteUtils:
             }, status=500)
             
     @staticmethod
-    async def handle_list_downloads(request: web.Request, download_manager: DownloadManager) -> web.Response:
+    async def handle_list_downloads(request: web.Request) -> web.Response:
         """Get list of active downloads
         
         Args:
             request: The aiohttp request
-            download_manager: The download manager instance
             
         Returns:
             web.Response: The HTTP response with list of downloads
         """
         try:
+            download_manager = await ServiceRegistry.get_download_manager()
             result = await download_manager.get_active_downloads()
             return web.json_response(result)
         except Exception as e:
@@ -1047,3 +1048,56 @@ class ModelRouteUtils:
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+    @staticmethod
+    async def handle_save_metadata(request: web.Request, scanner) -> web.Response:
+        """Handle saving metadata updates
+        
+        Args:
+            request: The aiohttp request
+            scanner: The model scanner instance
+            
+        Returns:
+            web.Response: The HTTP response
+        """
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            if not file_path:
+                return web.Response(text='File path is required', status=400)
+
+            # Remove file path from data to avoid saving it
+            metadata_updates = {k: v for k, v in data.items() if k != 'file_path'}
+            
+            # Get metadata file path
+            metadata_path = os.path.splitext(file_path)[0] + '.metadata.json'
+            
+            # Load existing metadata
+            metadata = await ModelRouteUtils.load_local_metadata(metadata_path)
+
+            # Handle nested updates (for civitai.trainedWords)
+            for key, value in metadata_updates.items():
+                if isinstance(value, dict) and key in metadata and isinstance(metadata[key], dict):
+                    # Deep update for nested dictionaries
+                    for nested_key, nested_value in value.items():
+                        metadata[key][nested_key] = nested_value
+                else:
+                    # Regular update for top-level keys
+                    metadata[key] = value
+
+            # Save updated metadata
+            await MetadataManager.save_metadata(file_path, metadata)
+
+            # Update cache
+            await scanner.update_single_model_cache(file_path, file_path, metadata)
+
+            # If model_name was updated, resort the cache
+            if 'model_name' in metadata_updates:
+                cache = await scanner.get_cached_data()
+                await cache.resort()
+
+            return web.json_response({'success': True})
+
+        except Exception as e:
+            logger.error(f"Error saving metadata: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)

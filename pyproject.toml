@@ -14,7 +14,7 @@ dependencies = [
     "requests",
     "toml",
     "natsort",
-    "msgpack"
+    "GitPython"
 ]
 
 [project.urls]

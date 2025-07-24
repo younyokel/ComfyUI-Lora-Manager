@@ -11,8 +11,18 @@
         <div class="action-buttons">
             <div title="Sort models by..." class="control-group">
                 <select id="sortSelect">
-                <option value="name">Name</option>
-                <option value="date">Date</option>
+                    <optgroup label="Name">
+                        <option value="name:asc">A - Z</option>
+                        <option value="name:desc">Z - A</option>
+                    </optgroup>
+                    <optgroup label="Date Added">
+                        <option value="date:desc">Newest</option>
+                        <option value="date:asc">Oldest</option>
+                    </optgroup>
+                    <optgroup label="File Size">
+                        <option value="size:desc">Largest</option>
+                        <option value="size:asc">Smallest</option>
+                    </optgroup>
                 </select>
             </div>
             <div title="Refresh model list" class="control-group dropdown-group">

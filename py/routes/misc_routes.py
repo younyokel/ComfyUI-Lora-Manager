@@ -633,9 +633,8 @@ class MiscRoutes:
                 }, status=400)
             
             # Get both lora and checkpoint scanners
-            registry = ServiceRegistry.get_instance()
-            lora_scanner = await registry.get_lora_scanner()
-            checkpoint_scanner = await registry.get_checkpoint_scanner()
+            lora_scanner = await ServiceRegistry.get_lora_scanner()
+            checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
             
             # If modelVersionId is provided, check for specific version
             if model_version_id_str:

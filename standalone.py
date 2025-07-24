@@ -106,6 +106,22 @@ logger = logging.getLogger("lora-manager-standalone")
 # Configure aiohttp access logger to be less verbose
 logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 
+# Add specific suppression for connection reset errors
+class ConnectionResetFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out connection reset errors that are not critical
+        if "ConnectionResetError" in str(record.getMessage()):
+            return False
+        if "_call_connection_lost" in str(record.getMessage()):
+            return False
+        if "WinError 10054" in str(record.getMessage()):
+            return False
+        return True
+
+# Apply the filter to asyncio logger
+asyncio_logger = logging.getLogger("asyncio")
+asyncio_logger.addFilter(ConnectionResetFilter())
+
 # Now we can import the global config from our local modules
 from py.config import config
 
@@ -118,17 +134,6 @@ class StandaloneServer:
         
         # Ensure the app's access logger is configured to reduce verbosity
         self.app._subapps = []  # Ensure this exists to avoid AttributeError
-        
-        # Configure access logging for the app
-        self.app.on_startup.append(self._configure_access_logger)
-    
-    async def _configure_access_logger(self, app):
-        """Configure access logger to reduce verbosity"""
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
-        
-        # If using aiohttp>=3.8.0, configure access logger through app directly
-        if hasattr(app, 'access_logger'):
-            app.access_logger.setLevel(logging.WARNING)
     
     async def setup(self):
         """Set up the standalone server"""
@@ -218,9 +223,6 @@ class StandaloneLoraManager(LoraManager):
         
         # Store app in a global-like location for compatibility
         sys.modules['server'].PromptServer.instance = server_instance
-
-        # Configure aiohttp access logger to be less verbose
-        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
         
         added_targets = set()  # Track already added target paths
         
@@ -314,35 +316,39 @@ class StandaloneLoraManager(LoraManager):
         app.router.add_static('/loras_static', config.static_path)
         
         # Setup feature routes
-        from py.routes.lora_routes import LoraRoutes
-        from py.routes.api_routes import ApiRoutes
+        from py.services.model_service_factory import ModelServiceFactory, register_default_model_types
         from py.routes.recipe_routes import RecipeRoutes
-        from py.routes.checkpoints_routes import CheckpointsRoutes
         from py.routes.update_routes import UpdateRoutes
         from py.routes.misc_routes import MiscRoutes
         from py.routes.example_images_routes import ExampleImagesRoutes
         from py.routes.stats_routes import StatsRoutes
+        from py.services.websocket_manager import ws_manager
         
-        lora_routes = LoraRoutes()
-        checkpoints_routes = CheckpointsRoutes()
+
+        register_default_model_types()
+
+        # Setup all model routes using the factory
+        ModelServiceFactory.setup_all_routes(app)
+
         stats_routes = StatsRoutes()
         
         # Initialize routes
-        lora_routes.setup_routes(app)
-        checkpoints_routes.setup_routes(app)
         stats_routes.setup_routes(app)
-        ApiRoutes.setup_routes(app)
         RecipeRoutes.setup_routes(app)
         UpdateRoutes.setup_routes(app)
         MiscRoutes.setup_routes(app)
         ExampleImagesRoutes.setup_routes(app)
+
+        # Setup WebSocket routes that are shared across all model types
+        app.router.add_get('/ws/fetch-progress', ws_manager.handle_connection)
+        app.router.add_get('/ws/download-progress', ws_manager.handle_download_connection)
+        app.router.add_get('/ws/init-progress', ws_manager.handle_init_connection)
         
         # Schedule service initialization
         app.on_startup.append(lambda app: cls._initialize_services())
         
         # Add cleanup
         app.on_shutdown.append(cls._cleanup)
-        app.on_shutdown.append(ApiRoutes.cleanup)
 
 def parse_args():
     """Parse command line arguments"""
@@ -366,9 +372,6 @@ async def main():
     
     # Set log level
     logging.getLogger().setLevel(getattr(logging, args.log_level))
-    
-    # Explicitly configure aiohttp access logger regardless of selected log level
-    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
     
     # Create the server instance
     server = StandaloneServer()

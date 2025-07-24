@@ -1,6 +1,7 @@
 import os
 import time
 import base64
+import jinja2
 import numpy as np
 from PIL import Image
 import io
@@ -15,6 +16,7 @@ from ..utils.exif_utils import ExifUtils
 from ..recipes import RecipeParserFactory
 from ..utils.constants import CARD_PREVIEW_WIDTH
 
+from ..services.settings_manager import settings
 from ..config import config
 
 # Check if running in standalone mode
@@ -39,7 +41,10 @@ class RecipeRoutes:
         # Initialize service references as None, will be set during async init
         self.recipe_scanner = None
         self.civitai_client = None
-        # Remove WorkflowParser instance
+        self.template_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(config.templates_path),
+            autoescape=True
+        )
         
         # Pre-warm the cache
         self._init_cache_task = None
@@ -53,6 +58,8 @@ class RecipeRoutes:
     def setup_routes(cls, app: web.Application):
         """Register API routes"""
         routes = cls()
+        app.router.add_get('/loras/recipes', routes.handle_recipes_page)
+
         app.router.add_get('/api/recipes', routes.get_recipes)
         app.router.add_get('/api/recipe/{recipe_id}', routes.get_recipe_detail)
         app.router.add_post('/api/recipes/analyze-image', routes.analyze_recipe_image)
@@ -114,6 +121,46 @@ class RecipeRoutes:
             await self.recipe_scanner.get_cached_data(force_refresh=True)
         except Exception as e:
             logger.error(f"Error pre-warming recipe cache: {e}", exc_info=True)
+
+    async def handle_recipes_page(self, request: web.Request) -> web.Response:
+        """Handle GET /loras/recipes request"""
+        try:
+            # Ensure services are initialized
+            await self.init_services()
+            
+            # Skip initialization check and directly try to get cached data
+            try:
+                # Recipe scanner will initialize cache if needed
+                await self.recipe_scanner.get_cached_data(force_refresh=False)
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    recipes=[],  # Frontend will load recipes via API
+                    is_initializing=False,
+                    settings=settings,
+                    request=request
+                )
+            except Exception as cache_error:
+                logger.error(f"Error loading recipe cache data: {cache_error}")
+                # Still keep error handling - show initializing page on error
+                template = self.template_env.get_template('recipes.html')
+                rendered = template.render(
+                    is_initializing=True,
+                    settings=settings,
+                    request=request
+                )
+                logger.info("Recipe cache error, returning initialization page")
+            
+            return web.Response(
+                text=rendered,
+                content_type='text/html'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error handling recipes request: {e}", exc_info=True)
+            return web.Response(
+                text="Error loading recipes page",
+                status=500
+            )
     
     async def get_recipes(self, request: web.Request) -> web.Response:
         """API endpoint for getting paginated recipes"""
@@ -1101,7 +1148,7 @@ class RecipeRoutes:
             for lora_name, lora_strength in lora_matches:
                 try:
                     # Get lora info from scanner
-                    lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora_name)
+                    lora_info = await self.recipe_scanner._lora_scanner.get_model_info_by_name(lora_name)
                     
                     # Create lora entry
                     lora_entry = {
@@ -1120,7 +1167,7 @@ class RecipeRoutes:
             # Get base model from lora scanner for the available loras
             base_model_counts = {}
             for lora in loras_data:
-                lora_info = await self.recipe_scanner._lora_scanner.get_lora_info_by_name(lora.get("file_name", ""))
+                lora_info = await self.recipe_scanner._lora_scanner.get_model_info_by_name(lora.get("file_name", ""))
                 if lora_info and "base_model" in lora_info:
                     base_model = lora_info["base_model"]
                     base_model_counts[base_model] = base_model_counts.get(base_model, 0) + 1
@@ -1210,7 +1257,7 @@ class RecipeRoutes:
                 if lora.get("isDeleted", False):
                     continue
 
-                if not self.recipe_scanner._lora_scanner.has_lora_hash(lora.get("hash", "")):
+                if not self.recipe_scanner._lora_scanner.has_hash(lora.get("hash", "")):
                     continue
                 
                 # Get the strength
@@ -1318,7 +1365,7 @@ class RecipeRoutes:
                 return web.json_response({"error": "Recipe not found"}, status=404)
                 
             # Find target LoRA by name
-            target_lora = await lora_scanner.get_lora_info_by_name(target_name)
+            target_lora = await lora_scanner.get_model_info_by_name(target_name)
             if not target_lora:
                 return web.json_response({"error": f"Local LoRA not found with name: {target_name}"}, status=404)
                 
@@ -1430,9 +1477,9 @@ class RecipeRoutes:
                 if 'loras' in recipe:
                     for lora in recipe['loras']:
                         if 'hash' in lora and lora['hash']:
-                            lora['inLibrary'] = self.recipe_scanner._lora_scanner.has_lora_hash(lora['hash'].lower())
+                            lora['inLibrary'] = self.recipe_scanner._lora_scanner.has_hash(lora['hash'].lower())
                             lora['preview_url'] = self.recipe_scanner._lora_scanner.get_preview_url_by_hash(lora['hash'].lower())
-                            lora['localPath'] = self.recipe_scanner._lora_scanner.get_lora_path_by_hash(lora['hash'].lower())
+                            lora['localPath'] = self.recipe_scanner._lora_scanner.get_path_by_hash(lora['hash'].lower())
                 
                 # Ensure file_url is set (needed by frontend)
                 if 'file_path' in recipe:
