@@ -5,7 +5,6 @@ import asyncio
 import time
 import shutil
 from typing import List, Dict, Optional, Type, Set
-import msgpack  # Add MessagePack import for efficient serialization
 
 from ..utils.models import BaseModelMetadata
 from ..config import config
@@ -18,13 +17,6 @@ from .service_registry import ServiceRegistry
 from .websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
-
-# Define cache version to handle future format changes
-# Version history:
-# 1 - Initial version
-# 2 - Added duplicate_filenames and duplicate_hashes tracking
-# 3 - Added _excluded_models list to cache
-CACHE_VERSION = 3
 
 class ModelScanner:
     """Base service for scanning and managing model files"""
@@ -75,201 +67,15 @@ class ModelScanner:
         self._tags_count = {}  # Dictionary to store tag counts
         self._is_initializing = False  # Flag to track initialization state
         self._excluded_models = []  # List to track excluded models
-        self._dirs_last_modified = {}  # Track directory modification times
-        self._use_cache_files = False  # Flag to control cache file usage, default to disabled
         self._initialized = True
-        
-        # Clear cache files if disabled
-        if not self._use_cache_files:
-            self._clear_cache_files()
         
         # Register this service
         asyncio.create_task(self._register_service())
-    
-    def _clear_cache_files(self):
-        """Clear existing cache files if they exist"""
-        try:
-            cache_path = self._get_cache_file_path()
-            if cache_path and os.path.exists(cache_path):
-                os.remove(cache_path)
-                logger.info(f"Cleared {self.model_type} cache file: {cache_path}")
-        except Exception as e:
-            logger.error(f"Error clearing {self.model_type} cache file: {e}")
     
     async def _register_service(self):
         """Register this instance with the ServiceRegistry"""
         service_name = f"{self.model_type}_scanner"
         await ServiceRegistry.register_service(service_name, self)
-    
-    def _get_cache_file_path(self) -> Optional[str]:
-        """Get the path to the cache file"""
-        # Get the directory where this module is located
-        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-        
-        # Create a cache directory within the project if it doesn't exist
-        cache_dir = os.path.join(current_dir, "cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        # Create filename based on model type
-        cache_filename = f"lm_{self.model_type}_cache.msgpack"
-        return os.path.join(cache_dir, cache_filename)
-
-    def _prepare_for_msgpack(self, data):
-        """Preprocess data to accommodate MessagePack serialization limitations
-        
-        Converts integers exceeding safe range to strings
-        
-        Args:
-            data: Any type of data structure
-            
-        Returns:
-            Preprocessed data structure with large integers converted to strings
-        """
-        if isinstance(data, dict):
-            return {k: self._prepare_for_msgpack(v) for k, v in data.items()}
-        elif isinstance(data, list):
-            return [self._prepare_for_msgpack(item) for item in data]
-        elif isinstance(data, int) and (data > 9007199254740991 or data < -9007199254740991):
-            # Convert integers exceeding JavaScript's safe integer range (2^53-1) to strings
-            return str(data)
-        else:
-            return data
-
-    async def _save_cache_to_disk(self) -> bool:
-        """Save cache data to disk using MessagePack"""
-        if not self._use_cache_files:
-            logger.debug(f"Cache files disabled for {self.model_type}, skipping save")
-            return False
-            
-        if self._cache is None or not self._cache.raw_data:
-            logger.debug(f"No {self.model_type} cache data to save")
-            return False
-            
-        cache_path = self._get_cache_file_path()
-        if not cache_path:
-            logger.warning(f"Cannot determine {self.model_type} cache file location")
-            return False
-            
-        try:
-            # Create cache data structure
-            cache_data = {
-                "version": CACHE_VERSION,
-                "timestamp": time.time(),
-                "model_type": self.model_type,
-                "raw_data": self._cache.raw_data,
-                "hash_index": {
-                    "hash_to_path": self._hash_index._hash_to_path,
-                    "filename_to_hash": self._hash_index._filename_to_hash,  # Fix: changed from path_to_hash to filename_to_hash
-                    "duplicate_hashes": self._hash_index._duplicate_hashes,
-                    "duplicate_filenames": self._hash_index._duplicate_filenames
-                },
-                "tags_count": self._tags_count,
-                "dirs_last_modified": self._get_dirs_last_modified(),
-                "excluded_models": self._excluded_models  # Add excluded_models to cache data
-            }
-            
-            # Preprocess data to handle large integers
-            processed_cache_data = self._prepare_for_msgpack(cache_data)
-            
-            # Write to temporary file first (atomic operation)
-            temp_path = f"{cache_path}.tmp"
-            with open(temp_path, 'wb') as f:
-                msgpack.pack(processed_cache_data, f)
-                
-            # Replace the old file with the new one
-            if os.path.exists(cache_path):
-                os.replace(temp_path, cache_path)
-            else:
-                os.rename(temp_path, cache_path)
-                
-            logger.info(f"Saved {self.model_type} cache with {len(self._cache.raw_data)} models to {cache_path}")
-            logger.debug(f"Hash index stats - hash_to_path: {len(self._hash_index._hash_to_path)}, filename_to_hash: {len(self._hash_index._filename_to_hash)}, duplicate_hashes: {len(self._hash_index._duplicate_hashes)}, duplicate_filenames: {len(self._hash_index._duplicate_filenames)}")
-            return True
-        except Exception as e:
-            logger.error(f"Error saving {self.model_type} cache to disk: {e}")
-            # Try to clean up temp file if it exists
-            if 'temp_path' in locals() and os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except:
-                    pass
-            return False
-    
-    def _get_dirs_last_modified(self) -> Dict[str, float]:
-        """Get last modified time for all model directories"""
-        dirs_info = {}
-        for root in self.get_model_roots():
-            if os.path.exists(root):
-                dirs_info[root] = os.path.getmtime(root)
-                # Also check immediate subdirectories for changes
-                try:
-                    with os.scandir(root) as it:
-                        for entry in it:
-                            if entry.is_dir(follow_symlinks=True):
-                                dirs_info[entry.path] = entry.stat().st_mtime
-                except Exception as e:
-                    logger.error(f"Error getting directory info for {root}: {e}")
-        return dirs_info
-                
-    def _is_cache_valid(self, cache_data: Dict) -> bool:
-        """Validate if the loaded cache is still valid"""
-        if not cache_data or cache_data.get("version") != CACHE_VERSION:
-            logger.info(f"Cache invalid - version mismatch. Got: {cache_data.get('version')}, Expected: {CACHE_VERSION}")
-            return False
-            
-        if cache_data.get("model_type") != self.model_type:
-            logger.info(f"Cache invalid - model type mismatch. Got: {cache_data.get('model_type')}, Expected: {self.model_type}")
-            return False
-                
-        return True
-        
-    async def _load_cache_from_disk(self) -> bool:
-        """Load cache data from disk using MessagePack"""
-        if not self._use_cache_files:
-            logger.info(f"Cache files disabled for {self.model_type}, skipping load")
-            return False
-            
-        start_time = time.time()
-        cache_path = self._get_cache_file_path()
-        if not cache_path or not os.path.exists(cache_path):
-            return False
-            
-        try:
-            with open(cache_path, 'rb') as f:
-                cache_data = msgpack.unpack(f)
-                
-            # Validate cache data
-            if not self._is_cache_valid(cache_data):
-                logger.info(f"{self.model_type.capitalize()} cache file found but invalid or outdated")
-                return False
-                
-            # Load data into memory
-            self._cache = ModelCache(
-                raw_data=cache_data["raw_data"],
-                folders=[]
-            )
-            
-            # Load hash index
-            hash_index_data = cache_data.get("hash_index", {})
-            self._hash_index._hash_to_path = hash_index_data.get("hash_to_path", {})
-            self._hash_index._filename_to_hash = hash_index_data.get("filename_to_hash", {})  # Fix: changed from path_to_hash to filename_to_hash
-            self._hash_index._duplicate_hashes = hash_index_data.get("duplicate_hashes", {})
-            self._hash_index._duplicate_filenames = hash_index_data.get("duplicate_filenames", {})
-            
-            # Load tags count
-            self._tags_count = cache_data.get("tags_count", {})
-            
-            # Load excluded models
-            self._excluded_models = cache_data.get("excluded_models", [])
-            
-            # Resort the cache
-            await self._cache.resort()
-            
-            logger.info(f"Loaded {self.model_type} cache from disk with {len(self._cache.raw_data)} models in {time.time() - start_time:.2f} seconds")
-            return True
-        except Exception as e:
-            logger.error(f"Error loading {self.model_type} cache from disk: {e}")
-            return False
 
     async def initialize_in_background(self) -> None:
         """Initialize cache in background using thread pool"""
@@ -295,21 +101,6 @@ class ModelScanner:
                 'scanner_type': self.model_type,
                 'pageType': page_type
             })
-            
-            cache_loaded = await self._load_cache_from_disk()
-            
-            if cache_loaded:
-                # Cache loaded successfully, broadcast complete message
-                await ws_manager.broadcast_init_progress({
-                    'stage': 'finalizing',
-                    'progress': 100,
-                    'status': 'complete',
-                    'details': f"Loaded {len(self._cache.raw_data)} {self.model_type} files from cache.",
-                    'scanner_type': self.model_type,
-                    'pageType': page_type
-                })
-                self._is_initializing = False
-                return
                 
             # If cache loading failed, proceed with full scan
             await ws_manager.broadcast_init_progress({
@@ -355,9 +146,6 @@ class ModelScanner:
             })
             
             logger.info(f"{self.model_type.capitalize()} cache initialized in {time.time() - start_time:.2f} seconds. Found {len(self._cache.raw_data)} models")
-            
-            # Save the cache to disk after initialization
-            await self._save_cache_to_disk()
             
             # Send completion message
             await asyncio.sleep(0.5)  # Small delay to ensure final progress message is sent
@@ -533,7 +321,7 @@ class ModelScanner:
         
         Args:
             force_refresh: Whether to refresh the cache
-            rebuild_cache: Whether to completely rebuild the cache by reloading from disk first
+            rebuild_cache: Whether to completely rebuild the cache
         """
         # If cache is not initialized, return an empty cache
         # Actual initialization should be done via initialize_in_background
@@ -545,26 +333,9 @@ class ModelScanner:
 
         # If force refresh is requested, initialize the cache directly
         if force_refresh:
-            # If rebuild_cache is True, try to reload from disk before reconciliation
             if rebuild_cache:
-                logger.info(f"{self.model_type.capitalize()} Scanner: Attempting to rebuild cache from disk...")
-                cache_loaded = await self._load_cache_from_disk()
-                if cache_loaded:
-                    logger.info(f"{self.model_type.capitalize()} Scanner: Successfully reloaded cache from disk")
-                else:
-                    logger.info(f"{self.model_type.capitalize()} Scanner: Could not reload cache from disk, proceeding with complete rebuild")
-                    # If loading from disk failed, do a complete rebuild and save to disk
-                    await self._initialize_cache()
-                    await self._save_cache_to_disk()
-                    return self._cache
-            
-            if self._cache is None:
-                # For initial creation, do a full initialization
                 await self._initialize_cache()
-                # Save the newly built cache
-                await self._save_cache_to_disk()
             else:
-                # For subsequent refreshes, use fast reconciliation
                 await self._reconcile_cache()
         
         return self._cache
@@ -752,9 +523,6 @@ class ModelScanner:
                 
                 # Resort cache
                 await self._cache.resort()
-                
-                # Save updated cache to disk
-                await self._save_cache_to_disk()
                 
             logger.info(f"{self.model_type.capitalize()} Scanner: Cache reconciliation completed in {time.time() - start_time:.2f} seconds. Added {total_added}, removed {total_removed} models.")
         except Exception as e:
@@ -1007,7 +775,7 @@ class ModelScanner:
             logger.error(f"Error processing {file_path}: {e}")
 
     async def add_model_to_cache(self, metadata_dict: Dict, folder: str = '') -> bool:
-        """Add a model to the cache and save to disk
+        """Add a model to the cache
         
         Args:
             metadata_dict: The model metadata dictionary
@@ -1036,9 +804,6 @@ class ModelScanner:
             
             # Update the hash index
             self._hash_index.add_entry(metadata_dict['sha256'], metadata_dict['file_path'])
-                
-            # Save to disk
-            await self._save_cache_to_disk()
             return True
         except Exception as e:
             logger.error(f"Error adding model to cache: {e}")
@@ -1178,9 +943,6 @@ class ModelScanner:
         
         await cache.resort()
         
-        # Save the updated cache
-        await self._save_cache_to_disk()
-        
         return True
         
     def has_hash(self, sha256: str) -> bool:
@@ -1274,11 +1036,7 @@ class ModelScanner:
         if self._cache is None:
             return False
 
-        updated = await self._cache.update_preview_url(file_path, preview_url, preview_nsfw_level)
-        if updated:
-            # Save updated cache to disk
-            await self._save_cache_to_disk()
-        return updated
+        return await self._cache.update_preview_url(file_path, preview_url, preview_nsfw_level)
 
     async def bulk_delete_models(self, file_paths: List[str]) -> Dict:
         """Delete multiple models and update cache in a batch operation
@@ -1409,9 +1167,6 @@ class ModelScanner:
             
             # Resort cache
             await self._cache.resort()
-            
-            # Save updated cache to disk
-            await self._save_cache_to_disk()
             
             return True
             
