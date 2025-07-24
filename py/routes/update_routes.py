@@ -1,11 +1,13 @@
 import os
+import subprocess
 import aiohttp
 import logging
 import toml
-import subprocess
+import git
 from datetime import datetime
 from aiohttp import web
-from typing import Dict, Any, List
+from typing import Dict, List
+
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,7 @@ class UpdateRoutes:
         """Register update check routes"""
         app.router.add_get('/api/check-updates', UpdateRoutes.check_updates)
         app.router.add_get('/api/version-info', UpdateRoutes.get_version_info)
+        app.router.add_post('/api/perform-update', UpdateRoutes.perform_update)
     
     @staticmethod
     async def check_updates(request):
@@ -25,6 +28,8 @@ class UpdateRoutes:
         Returns update status and version information
         """
         try:
+            nightly = request.query.get('nightly', 'false').lower() == 'true'
+            
             # Read local version from pyproject.toml
             local_version = UpdateRoutes._get_local_version()
             
@@ -32,13 +37,21 @@ class UpdateRoutes:
             git_info = UpdateRoutes._get_git_info()
 
             # Fetch remote version from GitHub
-            remote_version, changelog = await UpdateRoutes._get_remote_version()
+            if nightly:
+                remote_version, changelog = await UpdateRoutes._get_nightly_version()
+            else:
+                remote_version, changelog = await UpdateRoutes._get_remote_version()
             
             # Compare versions
-            update_available = UpdateRoutes._compare_versions(
-                local_version.replace('v', ''), 
-                remote_version.replace('v', '')
-            )
+            if nightly:
+                # For nightly, compare commit hashes
+                update_available = UpdateRoutes._compare_nightly_versions(git_info, remote_version)
+            else:
+                # For stable, compare semantic versions
+                update_available = UpdateRoutes._compare_versions(
+                    local_version.replace('v', ''), 
+                    remote_version.replace('v', '')
+                )
             
             return web.json_response({
                 'success': True,
@@ -46,7 +59,8 @@ class UpdateRoutes:
                 'latest_version': remote_version,
                 'update_available': update_available,
                 'changelog': changelog,
-                'git_info': git_info
+                'git_info': git_info,
+                'nightly': nightly
             })
             
         except Exception as e:
@@ -55,7 +69,7 @@ class UpdateRoutes:
                 'success': False,
                 'error': str(e)
             })
-    
+        
     @staticmethod
     async def get_version_info(request):
         """
@@ -83,6 +97,168 @@ class UpdateRoutes:
                 'success': False,
                 'error': str(e)
             })
+    
+    @staticmethod
+    async def perform_update(request):
+        """
+        Perform Git-based update to latest release tag or main branch
+        """
+        try:
+            # Parse request body
+            body = await request.json() if request.has_body else {}
+            nightly = body.get('nightly', False)
+            
+            # Get current plugin directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            plugin_root = os.path.dirname(os.path.dirname(current_dir))
+            
+            # Backup settings.json if it exists
+            settings_path = os.path.join(plugin_root, 'settings.json')
+            settings_backup = None
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r', encoding='utf-8') as f:
+                    settings_backup = f.read()
+                logger.info("Backed up settings.json")
+            
+            # Perform Git update
+            success, new_version = await UpdateRoutes._perform_git_update(plugin_root, nightly)
+            
+            # Restore settings.json if we backed it up
+            if settings_backup and success:
+                with open(settings_path, 'w', encoding='utf-8') as f:
+                    f.write(settings_backup)
+                logger.info("Restored settings.json")
+            
+            if success:
+                return web.json_response({
+                    'success': True,
+                    'message': f'Successfully updated to {new_version}',
+                    'new_version': new_version
+                })
+            else:
+                return web.json_response({
+                    'success': False,
+                    'error': 'Failed to complete Git update'
+                })
+                
+        except Exception as e:
+            logger.error(f"Failed to perform update: {e}", exc_info=True)
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            })
+    
+    @staticmethod
+    async def _get_nightly_version() -> tuple[str, List[str]]:
+        """
+        Fetch latest commit from main branch
+        """
+        repo_owner = "willmiao"
+        repo_name = "ComfyUI-Lora-Manager"
+        
+        # Use GitHub API to fetch the latest commit from main branch
+        github_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits/main"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(github_url, headers={'Accept': 'application/vnd.github+json'}) as response:
+                    if response.status != 200:
+                        logger.warning(f"Failed to fetch GitHub commit: {response.status}")
+                        return "main", []
+                    
+                    data = await response.json()
+                    commit_sha = data.get('sha', '')[:7]  # Short hash
+                    commit_message = data.get('commit', {}).get('message', '')
+                    
+                    # Format as "main-{short_hash}"
+                    version = f"main-{commit_sha}"
+                    
+                    # Use commit message as changelog
+                    changelog = [commit_message] if commit_message else []
+                    
+                    return version, changelog
+        
+        except Exception as e:
+            logger.error(f"Error fetching nightly version: {e}", exc_info=True)
+            return "main", []
+    
+    @staticmethod
+    def _compare_nightly_versions(local_git_info: Dict[str, str], remote_version: str) -> bool:
+        """
+        Compare local commit hash with remote main branch
+        """
+        try:
+            local_hash = local_git_info.get('short_hash', 'unknown')
+            if local_hash == 'unknown':
+                return True  # Assume update available if we can't get local hash
+            
+            # Extract remote hash from version string (format: "main-{hash}")
+            if '-' in remote_version:
+                remote_hash = remote_version.split('-')[-1]
+                return local_hash != remote_hash
+            
+            return True  # Default to update available
+            
+        except Exception as e:
+            logger.error(f"Error comparing nightly versions: {e}")
+            return False
+    
+    @staticmethod
+    async def _perform_git_update(plugin_root: str, nightly: bool = False) -> tuple[bool, str]:
+        """
+        Perform Git-based update using GitPython
+        
+        Args:
+            plugin_root: Path to the plugin root directory
+            nightly: Whether to update to main branch or latest release
+            
+        Returns:
+            tuple: (success, new_version)
+        """
+        try:
+            # Open the Git repository
+            repo = git.Repo(plugin_root)
+            
+            # Fetch latest changes
+            origin = repo.remotes.origin
+            origin.fetch()
+            
+            if nightly:
+                # Switch to main branch and pull latest
+                main_branch = 'main'
+                if main_branch not in [branch.name for branch in repo.branches]:
+                    # Create local main branch if it doesn't exist
+                    repo.create_head(main_branch, origin.refs.main)
+                
+                repo.heads[main_branch].checkout()
+                origin.pull(main_branch)
+                
+                # Get new commit hash
+                new_version = f"main-{repo.head.commit.hexsha[:7]}"
+                
+            else:
+                # Get latest release tag
+                tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
+                if not tags:
+                    logger.error("No tags found in repository")
+                    return False, ""
+                
+                latest_tag = tags[0]
+                
+                # Checkout to latest tag
+                repo.git.checkout(latest_tag.name)
+                
+                new_version = latest_tag.name
+            
+            logger.info(f"Successfully updated to {new_version}")
+            return True, new_version
+            
+        except git.exc.GitError as e:
+            logger.error(f"Git error during update: {e}")
+            return False, ""
+        except Exception as e:
+            logger.error(f"Error during Git update: {e}")
+            return False, ""
     
     @staticmethod
     def _get_local_version() -> str:

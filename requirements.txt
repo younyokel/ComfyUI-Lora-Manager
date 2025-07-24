@@ -11,3 +11,4 @@ numpy
 natsort
 msgpack
 pyyaml
+GitPython

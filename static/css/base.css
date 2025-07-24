@@ -50,8 +50,8 @@ html, body {
     --lora-border: oklch(90% 0.02 256 / 0.15);
     --lora-text: oklch(95% 0.02 256);
     --lora-error: oklch(75% 0.32 29);
-    --lora-warning: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h)); /* Modified to be used with oklch() */
-    --lora-success: oklch(var(--lora-success-l) var(--lora-success-c) var(--lora-success-h)); /* New green success color */
+    --lora-warning: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
+    --lora-success: oklch(var(--lora-success-l) var(--lora-success-c) var(--lora-success-h));
     
     /* Spacing Scale */
     --space-1: calc(8px * 1);
