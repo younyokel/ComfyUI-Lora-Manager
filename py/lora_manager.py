@@ -32,7 +32,22 @@ class LoraManager:
 
         # Configure aiohttp access logger to be less verbose
         logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
-        logging.getLogger("asyncio").setLevel(logging.WARNING)
+
+        # Add specific suppression for connection reset errors
+        class ConnectionResetFilter(logging.Filter):
+            def filter(self, record):
+                # Filter out connection reset errors that are not critical
+                if "ConnectionResetError" in str(record.getMessage()):
+                    return False
+                if "_call_connection_lost" in str(record.getMessage()):
+                    return False
+                if "WinError 10054" in str(record.getMessage()):
+                    return False
+                return True
+
+        # Apply the filter to asyncio logger
+        asyncio_logger = logging.getLogger("asyncio")
+        asyncio_logger.addFilter(ConnectionResetFilter())
 
         added_targets = set()  # Track already added target paths
         
@@ -141,10 +156,6 @@ class LoraManager:
     async def _initialize_services(cls):
         """Initialize all services using the ServiceRegistry"""
         try:
-            # Ensure aiohttp access logger is configured with reduced verbosity
-            logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
-            logging.getLogger("asyncio").setLevel(logging.WARNING)
-            
             # Initialize CivitaiClient first to ensure it's ready for other services
             await ServiceRegistry.get_civitai_client()
 
