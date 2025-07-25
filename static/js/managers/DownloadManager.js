@@ -155,8 +155,6 @@ export class DownloadManager {
                     </div>
                 `;
             }
-
-            console.log(earlyAccessBadge);
             
             // Status badge for local models
             const localStatus = existsLocally ? 

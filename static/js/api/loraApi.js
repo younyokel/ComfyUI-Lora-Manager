@@ -12,7 +12,7 @@ export const replacePreview = (filePath) => loraApiClient.replaceModelPreview(fi
 export const saveModelMetadata = (filePath, data) => loraApiClient.saveModelMetadata(filePath, data);
 export const refreshLoras = (fullRebuild = false) => loraApiClient.refreshModels(fullRebuild);
 export const refreshSingleLoraMetadata = (filePath) => loraApiClient.refreshSingleModelMetadata(filePath);
-export const fetchCivitai = (resetAndReloadFunction) => loraApiClient.fetchCivitaiMetadata(resetAndReloadFunction);
+export const fetchCivitai = () => loraApiClient.fetchCivitaiMetadata();
 
 // Pagination functions
 export const fetchLorasPage = (page = 1, pageSize = 100) => loraApiClient.fetchModelsPage(page, pageSize);
@@ -23,7 +23,7 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
 }
 
 export async function resetAndReload(updateFolders = false) {
-    return loraApiClient.resetAndReloadWithVirtualScroll(updateFolders);
+    return loraApiClient.loadMoreWithVirtualScroll(true, updateFolders);
 }
 
 // LoRA-specific functions that don't have common equivalents
