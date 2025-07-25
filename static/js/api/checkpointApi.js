@@ -12,7 +12,7 @@ export const replacePreview = (filePath) => checkpointApiClient.replaceModelPrev
 export const saveModelMetadata = (filePath, data) => checkpointApiClient.saveModelMetadata(filePath, data);
 export const refreshCheckpoints = (fullRebuild = false) => checkpointApiClient.refreshModels(fullRebuild);
 export const refreshSingleCheckpointMetadata = (filePath) => checkpointApiClient.refreshSingleModelMetadata(filePath);
-export const fetchCivitai = (resetAndReloadFunction) => checkpointApiClient.fetchCivitaiMetadata(resetAndReloadFunction);
+export const fetchCivitai = () => checkpointApiClient.fetchCivitaiMetadata();
 
 // Pagination functions
 export const fetchCheckpointsPage = (page = 1, pageSize = 50) => checkpointApiClient.fetchModelsPage(page, pageSize);
@@ -23,7 +23,7 @@ export async function loadMoreCheckpoints(resetPage = false, updateFolders = fal
 }
 
 export async function resetAndReload(updateFolders = false) {
-    return checkpointApiClient.resetAndReloadWithVirtualScroll(updateFolders);
+    return checkpointApiClient.loadMoreWithVirtualScroll(true, updateFolders);
 }
 
 // Checkpoint-specific functions

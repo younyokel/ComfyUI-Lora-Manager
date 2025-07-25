@@ -43,7 +43,6 @@ export async function confirmDelete() {
 export function closeDeleteModal() {
     modalManager.closeModal('deleteModal');
     pendingDeletePath = null;
-    pendingModelType = null;
 }
 
 // Functions for the exclude modal
@@ -67,7 +66,6 @@ export function showExcludeModal(filePath) {
 export function closeExcludeModal() {
     modalManager.closeModal('excludeModal');
     pendingExcludePath = null;
-    pendingExcludeModelType = null;
 }
 
 export async function confirmExclude() {

@@ -1,4 +1,4 @@
-import { state } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { resetAndReload } from '../api/loraApi.js';
 import { getStorageItem, setStorageItem } from './storageHelpers.js';
 import { NODE_TYPES, NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
@@ -626,7 +626,8 @@ export function updateFolderTags(folders) {
   if (!folderTagsContainer) return;
 
   // Keep track of currently selected folder
-  const currentFolder = this.pageState.activeFolder;
+  const pageState = getCurrentPageState();
+  const currentFolder = pageState.activeFolder;
 
   // Create HTML for folder tags
   const tagsHTML = folders.map(folder => {
