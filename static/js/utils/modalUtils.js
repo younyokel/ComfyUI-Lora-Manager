@@ -9,7 +9,7 @@ let pendingExcludePath = null;
 export function showDeleteModal(filePath) {
     pendingDeletePath = filePath;
     
-    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const card = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
     const modelName = card ? card.dataset.name : filePath.split('/').pop();
     const modal = modalManager.getModal('deleteModal').element;
     const modelInfo = modal.querySelector('.delete-model-info');
@@ -49,7 +49,7 @@ export function closeDeleteModal() {
 export function showExcludeModal(filePath) {
     pendingExcludePath = filePath;
     
-    const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const card = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
     const modelName = card ? card.dataset.name : filePath.split('/').pop();
     const modal = modalManager.getModal('excludeModal').element;
     const modelInfo = modal.querySelector('.exclude-model-info');

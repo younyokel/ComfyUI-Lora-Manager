@@ -73,12 +73,12 @@
 }
 
 /* Style for selected cards */
-.lora-card.selected {
+.model-card.selected {
     box-shadow: 0 0 0 2px var(--lora-accent);
     position: relative;
 }
 
-.lora-card.selected::after {
+.model-card.selected::after {
     content: "✓";
     position: absolute;
     top: 10px;

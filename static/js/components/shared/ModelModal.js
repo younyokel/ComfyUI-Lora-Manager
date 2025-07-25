@@ -380,7 +380,7 @@ function setupLoraSpecificFields(filePath) {
         
         if (!key || !value) return;
 
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        const loraCard = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
         const currentPresets = parsePresets(loraCard?.dataset.usage_tips);
         
         currentPresets[key] = parseFloat(value);

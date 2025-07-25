@@ -195,7 +195,7 @@
 }
 
 /* Make cards in duplicate groups have consistent width */
-.card-group-container .lora-card {
+.card-group-container .model-card {
     flex: 0 0 auto;
     width: 240px;
     margin: 0;
@@ -241,26 +241,26 @@
 }
 
 /* Duplicate card styling */
-.lora-card.duplicate {
+.model-card.duplicate {
     position: relative;
     transition: all 0.2s ease;
 }
 
-.lora-card.duplicate:hover {
+.model-card.duplicate:hover {
     border-color: var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h);
 }
 
-.lora-card.duplicate.latest {
+.model-card.duplicate.latest {
     border-style: solid;
     border-color: oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
 }
 
-.lora-card.duplicate-selected {
+.model-card.duplicate-selected {
     border: 2px solid oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h));
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
 }
 
-.lora-card .selector-checkbox {
+.model-card .selector-checkbox {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -271,7 +271,7 @@
 }
 
 /* Latest indicator */
-.lora-card.duplicate.latest::after {
+.model-card.duplicate.latest::after {
     content: "Latest";
     position: absolute;
     top: 10px;
@@ -365,13 +365,13 @@
 }
 
 /* Hash Mismatch Styling */
-.lora-card.duplicate.hash-mismatch {
+.model-card.duplicate.hash-mismatch {
     border: 2px dashed oklch(var(--lora-warning-l) var(--lora-warning-c) var(--lora-warning-h));
     opacity: 0.85;
     position: relative;
 }
 
-.lora-card.duplicate.hash-mismatch::before {
+.model-card.duplicate.hash-mismatch::before {
     content: "";
     position: absolute;
     top: 0;
@@ -389,7 +389,7 @@
     pointer-events: none;
 }
 
-.lora-card.duplicate.hash-mismatch .card-preview {
+.model-card.duplicate.hash-mismatch .card-preview {
     filter: grayscale(20%);
 }
 
@@ -407,7 +407,7 @@
 }
 
 /* Disabled checkbox style */
-.lora-card.duplicate.hash-mismatch .selector-checkbox {
+.model-card.duplicate.hash-mismatch .selector-checkbox {
     opacity: 0.5;
     cursor: not-allowed;
 }

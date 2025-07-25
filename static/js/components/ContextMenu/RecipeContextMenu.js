@@ -7,7 +7,7 @@ import { state } from '../../state/index.js';
 
 export class RecipeContextMenu extends BaseContextMenu {
     constructor() {
-        super('recipeContextMenu', '.lora-card');
+        super('recipeContextMenu', '.model-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
         this.modelType = 'recipe';
         

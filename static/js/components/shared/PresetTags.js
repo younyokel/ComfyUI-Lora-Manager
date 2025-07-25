@@ -52,7 +52,7 @@ window.removePreset = async function(key) {
             .querySelector('.file-path').textContent + 
             document.querySelector('#modelModal .modal-content')
             .querySelector('#file-name').textContent + '.safetensors';
-    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const loraCard = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
     const currentPresets = parsePresets(loraCard.dataset.usage_tips);
     
     delete currentPresets[key];

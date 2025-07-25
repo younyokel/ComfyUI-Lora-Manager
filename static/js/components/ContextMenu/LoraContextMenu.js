@@ -6,7 +6,7 @@ import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
 
 export class LoraContextMenu extends BaseContextMenu {
     constructor() {
-        super('loraContextMenu', '.lora-card');
+        super('loraContextMenu', '.model-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
         this.modelType = 'lora';
         this.resetAndReload = resetAndReload;

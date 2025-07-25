@@ -105,7 +105,7 @@ export class BulkManager {
             // TODO: fix this, no DOM manipulation should be done here
             // Force a lightweight refresh of the cards to ensure proper display
             // This is less disruptive than a full resetAndReload()
-            document.querySelectorAll('.lora-card').forEach(card => {
+            document.querySelectorAll('.model-card').forEach(card => {
                 // Re-apply normal display mode to all card actions
                 const actions = card.querySelectorAll('.card-actions, .card-button');
                 actions.forEach(action => action.style.display = 'flex');
@@ -114,7 +114,7 @@ export class BulkManager {
     }
 
     clearSelection() {
-        document.querySelectorAll('.lora-card.selected').forEach(card => {
+        document.querySelectorAll('.model-card.selected').forEach(card => {
             card.classList.remove('selected');
         });
         state.selectedLoras.clear();
@@ -190,7 +190,7 @@ export class BulkManager {
     applySelectionState() {
         if (!state.bulkMode) return;
         
-        document.querySelectorAll('.lora-card').forEach(card => {
+        document.querySelectorAll('.model-card').forEach(card => {
             const filepath = card.dataset.filepath;
             if (state.selectedLoras.has(filepath)) {
                 card.classList.add('selected');
@@ -502,7 +502,7 @@ export class BulkManager {
     
     deselectItem(filepath) {
         // Find and deselect the corresponding card if it's in the DOM
-        const card = document.querySelector(`.lora-card[data-filepath="${filepath}"]`);
+        const card = document.querySelector(`.model-card[data-filepath="${filepath}"]`);
         if (card) {
             card.classList.remove('selected');
         }

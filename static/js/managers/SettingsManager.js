@@ -734,7 +734,7 @@ export class SettingsManager {
     applyFrontendSettings() {
         // Apply blur setting to existing content
         const blurSetting = state.global.settings.blurMatureContent;
-        document.querySelectorAll('.lora-card[data-nsfw="true"] .card-image').forEach(img => {
+        document.querySelectorAll('.model-card[data-nsfw="true"] .card-image').forEach(img => {
             if (blurSetting) {
                 img.classList.add('nsfw-blur');
             } else {

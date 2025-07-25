@@ -6,7 +6,7 @@ import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
 
 export class EmbeddingContextMenu extends BaseContextMenu {
     constructor() {
-        super('embeddingContextMenu', '.embedding-card');
+        super('embeddingContextMenu', '.model-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
         this.modelType = 'embedding';
         this.resetAndReload = resetAndReload;

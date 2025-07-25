@@ -6,7 +6,7 @@ import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {
-        super('checkpointContextMenu', '.lora-card');
+        super('checkpointContextMenu', '.model-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
         this.modelType = 'checkpoint';
         this.resetAndReload = resetAndReload;

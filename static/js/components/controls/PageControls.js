@@ -242,7 +242,7 @@ export class PageControls {
      * @param {string} folderPath - Folder path to filter by
      */
     filterByFolder(folderPath) {
-        const cardSelector = this.pageType === 'loras' ? '.lora-card' : '.checkpoint-card';
+        const cardSelector = this.pageType === 'loras' ? '.model-card' : '.checkpoint-card';
         document.querySelectorAll(cardSelector).forEach(card => {
             card.style.display = card.dataset.folder === folderPath ? '' : 'none';
         });
@@ -374,7 +374,7 @@ export class PageControls {
     openCivitai(modelName) {
         // Get card selector based on page type
         const cardSelector = this.pageType === 'loras' 
-            ? `.lora-card[data-name="${modelName}"]`
+            ? `.model-card[data-name="${modelName}"]`
             : `.checkpoint-card[data-name="${modelName}"]`;
             
         const card = document.querySelector(cardSelector);

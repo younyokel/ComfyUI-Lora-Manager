@@ -28,10 +28,8 @@ export function setupModelCardEventDelegation(modelType) {
 // Event delegation handler for all model card events
 function handleModelCardEvent_internal(event, modelType) {
     // Find the closest card element
-    const card = event.target.closest('.lora-card');
+    const card = event.target.closest('.model-card');
     if (!card) return;
-
-    const apiClient = getModelApiClient();
     
     // Handle specific elements within the card
     if (event.target.closest('.toggle-blur-btn')) {
@@ -80,7 +78,7 @@ function handleModelCardEvent_internal(event, modelType) {
     
     if (event.target.closest('.fa-image')) {
         event.stopPropagation();
-        apiClient.replaceModelPreview(card.dataset.filepath);
+        getModelApiClient().replaceModelPreview(card.dataset.filepath);
         return;
     }
     
@@ -137,7 +135,7 @@ async function toggleFavorite(card) {
     const newFavoriteState = !isFavorite;
     
     try {
-        await apiClient.saveModelMetadata(card.dataset.filepath, { 
+        await getModelApiClient().saveModelMetadata(card.dataset.filepath, { 
             favorite: newFavoriteState 
         });
 
@@ -364,7 +362,7 @@ function showExampleAccessModal(card, modelType) {
 
 export function createModelCard(model, modelType) {
     const card = document.createElement('div');
-    card.className = 'lora-card';  // Reuse the same class for styling
+    card.className = 'model-card';  // Reuse the same class for styling
     card.dataset.sha256 = model.sha256;
     card.dataset.filepath = model.file_path;
     card.dataset.name = model.model_name;
@@ -518,7 +516,7 @@ export function updateCardsForBulkMode(isBulkMode) {
     document.body.classList.toggle('bulk-mode', isBulkMode);
     
     // Get all lora cards - this can now be from the DOM or through the virtual scroller
-    const loraCards = document.querySelectorAll('.lora-card');
+    const loraCards = document.querySelectorAll('.model-card');
     
     loraCards.forEach(card => {
         // Get all action containers for this card

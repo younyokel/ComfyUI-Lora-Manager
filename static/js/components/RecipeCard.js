@@ -17,7 +17,7 @@ class RecipeCard {
     
     createCardElement() {
         const card = document.createElement('div');
-        card.className = 'lora-card';
+        card.className = 'model-card';
         card.dataset.filepath = this.recipe.file_path;
         card.dataset.title = this.recipe.title;
         card.dataset.nsfwLevel = this.recipe.preview_nsfw_level || 0;

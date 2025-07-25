@@ -330,7 +330,7 @@ export class ModelDuplicatesManager {
     renderModelCard(model, groupHash) {
         // Create basic card structure
         const card = document.createElement('div');
-        card.className = 'lora-card duplicate';
+        card.className = 'model-card duplicate';
         card.dataset.hash = model.sha256;
         card.dataset.filePath = model.file_path;
         
@@ -549,7 +549,7 @@ export class ModelDuplicatesManager {
         checkboxes.forEach(checkbox => {
             checkbox.checked = !allSelected;
             const filePath = checkbox.dataset.filePath;
-            const card = checkbox.closest('.lora-card');
+            const card = checkbox.closest('.model-card');
             
             if (!allSelected) {
                 this.selectedForDeletion.add(filePath);

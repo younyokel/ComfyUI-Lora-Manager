@@ -168,13 +168,13 @@ function updateThemeToggleIcons(theme) {
 }
 
 function filterByFolder(folderPath) {
-    document.querySelectorAll('.lora-card').forEach(card => {
+    document.querySelectorAll('.model-card').forEach(card => {
         card.style.display = card.dataset.folder === folderPath ? '' : 'none';
     });
 }
 
 export function openCivitai(filePath) {
-    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const loraCard = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
     if (!loraCard) return;
     
     const metaData = JSON.parse(loraCard.dataset.meta);
