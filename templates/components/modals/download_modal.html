@@ -1,0 +1,62 @@
+<!-- Unified Download Modal for all model types -->
+<div id="downloadModal" class="modal">
+    <div class="modal-content">
+        <button class="close" id="closeDownloadModal">&times;</button>
+        <h2 id="downloadModalTitle">Download Model from URL</h2>
+        
+        <!-- Step 1: URL Input -->
+        <div class="download-step" id="urlStep">
+            <div class="input-group">
+                <label for="modelUrl" id="modelUrlLabel">Civitai URL:</label>
+                <input type="text" id="modelUrl" placeholder="https://civitai.com/models/..." />
+                <div class="error-message" id="urlError"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="primary-btn" id="nextFromUrl">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Version Selection -->
+        <div class="download-step" id="versionStep" style="display: none;">
+            <div class="version-list" id="versionList">
+                <!-- Versions will be inserted here dynamically -->
+            </div>
+            <div class="modal-actions">
+                <button class="secondary-btn" id="backToUrlBtn">Back</button>
+                <button class="primary-btn" id="nextFromVersion">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Location Selection -->
+        <div class="download-step" id="locationStep" style="display: none;">
+            <div class="location-selection">
+                <!-- Path preview -->
+                <div class="path-preview">
+                    <label>Download Location Preview:</label>
+                    <div class="path-display" id="targetPathDisplay">
+                        <span class="path-text">Select a root directory</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="modelRoot" id="modelRootLabel">Select Model Root:</label>
+                    <select id="modelRoot"></select>
+                </div>
+                <div class="input-group">
+                    <label>Target Folder:</label>
+                    <div class="folder-browser" id="folderBrowser">
+                        <!-- Folders will be loaded dynamically -->
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="newFolder">New Folder (optional):</label>
+                    <input type="text" id="newFolder" placeholder="Enter folder name" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary-btn" id="backToVersionsBtn">Back</button>
+                <button class="primary-btn" id="startDownloadBtn">Download</button>
+            </div>
+        </div>
+    </div>
+</div>

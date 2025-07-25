@@ -1,0 +1,36 @@
+<!-- Move Model Modal -->
+<div id="moveModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="moveModalTitle">Move Model</h2>
+            <span class="close" onclick="modalManager.closeModal('moveModal')">&times;</span>
+        </div>
+        <div class="location-selection">
+            <div class="path-preview">
+                <label>Target Location Preview:</label>
+                <div class="path-display" id="moveTargetPathDisplay">
+                    <span class="path-text">Select a LoRA root directory</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Select LoRA Root:</label>
+                <select id="moveLoraRoot"></select>
+            </div>
+            <div class="input-group">
+                <label>Target Folder:</label>
+                <div class="folder-browser" id="moveFolderBrowser">
+                    <!-- Folders will be loaded dynamically -->
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="moveNewFolder">New Folder (optional):</label>
+                <input type="text" id="moveNewFolder" placeholder="Enter folder name" />
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="modalManager.closeModal('moveModal')">Cancel</button>
+            <button class="primary-btn" onclick="moveManager.moveModel()">Move</button>
+        </div>
+    </div>
+</div>

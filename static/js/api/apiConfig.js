@@ -103,13 +103,12 @@ export const MODEL_SPECIFIC_ENDPOINTS = {
         moveBulk: `/api/${MODEL_TYPES.LORA}/move_models_bulk`,
         getTriggerWordsPost: `/api/${MODEL_TYPES.LORA}/get_trigger_words`,
         civitaiModelByVersion: `/api/${MODEL_TYPES.LORA}/civitai/model/version`,
-        civitaiModelByHash: `/api/${MODEL_TYPES.LORA}/civitai/model/hash`
+        civitaiModelByHash: `/api/${MODEL_TYPES.LORA}/civitai/model/hash`,
     },
     [MODEL_TYPES.CHECKPOINT]: {
-        info: `/api/${MODEL_TYPES.CHECKPOINT}/info`
+        info: `/api/${MODEL_TYPES.CHECKPOINT}/info`,
     },
     [MODEL_TYPES.EMBEDDING]: {
-        // Future embedding-specific endpoints
     }
 };
 

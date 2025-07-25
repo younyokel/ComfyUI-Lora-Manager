@@ -582,6 +582,86 @@ class ModelApiClient {
     }
 
     /**
+     * Fetch Civitai model versions
+     */
+    async fetchCivitaiVersions(modelId) {
+        try {
+            const response = await fetch(`${this.apiConfig.endpoints.civitaiVersions}/${modelId}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
+                    throw new Error(`This model is not a ${this.apiConfig.config.displayName}. Please switch to the appropriate page to download this model type.`);
+                }
+                throw new Error('Failed to fetch model versions');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching Civitai versions:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetch model roots
+     */
+    async fetchModelRoots() {
+        try {
+            const response = await fetch(this.apiConfig.endpoints.roots);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${this.apiConfig.config.displayName} roots`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching model roots:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetch model folders
+     */
+    async fetchModelFolders() {
+        try {
+            const response = await fetch(this.apiConfig.endpoints.folders);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${this.apiConfig.config.displayName} folders`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching model folders:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Download a model
+     */
+    async downloadModel(modelId, versionId, modelRoot, relativePath, downloadId) {
+        try {
+            const response = await fetch(DOWNLOAD_ENDPOINTS.download, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model_id: modelId,
+                    model_version_id: versionId,
+                    model_root: modelRoot,
+                    relative_path: relativePath,
+                    download_id: downloadId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(await response.text());
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error downloading model:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Build query parameters for API requests
      */
     _buildQueryParams(baseParams, pageState) {

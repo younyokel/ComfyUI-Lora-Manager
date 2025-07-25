@@ -2,7 +2,6 @@ import { appCore } from './core.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
 import { loadMoreCheckpoints } from './api/checkpointApi.js';
-import { CheckpointDownloadManager } from './managers/CheckpointDownloadManager.js';
 import { CheckpointContextMenu } from './components/ContextMenu/index.js';
 import { ModelDuplicatesManager } from './components/ModelDuplicatesManager.js';
 import { MODEL_TYPES } from './api/apiConfig.js';
@@ -12,9 +11,6 @@ class CheckpointsPageManager {
     constructor() {
         // Initialize page controls
         this.pageControls = createPageControls(MODEL_TYPES.CHECKPOINT);
-        
-        // Initialize checkpoint download manager
-        window.checkpointDownloadManager = new CheckpointDownloadManager();
         
         // Initialize the ModelDuplicatesManager
         this.duplicatesManager = new ModelDuplicatesManager(this, MODEL_TYPES.CHECKPOINT);

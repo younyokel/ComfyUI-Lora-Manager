@@ -3,6 +3,7 @@ import { PageControls } from './PageControls.js';
 import { loadMoreLoras, fetchCivitai, resetAndReload, refreshLoras } from '../../api/loraApi.js';
 import { getSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
 import { createAlphabetBar } from '../alphabet/index.js';
+import { downloadManager } from '../../managers/DownloadManager.js';
 
 /**
  * LorasControls class - Extends PageControls for LoRA-specific functionality
@@ -46,11 +47,7 @@ export class LorasControls extends PageControls {
             },
             
             showDownloadModal: () => {
-                if (window.downloadManager) {
-                    window.downloadManager.showDownloadModal();
-                } else {
-                    console.error('Download manager not available');
-                }
+                downloadManager.showDownloadModal();
             },
             
             toggleBulkMode: () => {

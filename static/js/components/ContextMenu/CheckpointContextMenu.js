@@ -3,7 +3,7 @@ import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { resetAndReload } from '../../api/checkpointApi.js';
 import { getModelApiClient } from '../../api/baseModelApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
-import { showExcludeModal } from '../../utils/modalUtils.js';
+import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {
@@ -42,10 +42,7 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 apiClient.replaceModelPreview(this.currentCard.dataset.filepath);
                 break;
             case 'delete':
-                // Delete checkpoint
-                if (this.currentCard.querySelector('.fa-trash')) {
-                    this.currentCard.querySelector('.fa-trash').click();
-                }
+                showDeleteModal(this.currentCard.dataset.filepath);
                 break;
             case 'copyname':
                 // Copy checkpoint name
