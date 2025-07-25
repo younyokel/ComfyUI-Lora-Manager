@@ -1,6 +1,5 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
-import { loadMoreLoras } from './api/loraApi.js';
 import { updateCardsForBulkMode } from './components/LoraCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { moveManager } from './managers/MoveManager.js';
@@ -30,7 +29,6 @@ class LoraPageManager {
     _exposeRequiredGlobalFunctions() {
         // Only expose what's still needed globally
         // Most functionality is now handled by the PageControls component
-        window.loadMoreLoras = loadMoreLoras;
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
         window.confirmExclude = confirmExclude;

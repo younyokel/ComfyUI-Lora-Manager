@@ -26,7 +26,7 @@ export const MODEL_CONFIG = {
     [MODEL_TYPES.CHECKPOINT]: {
         displayName: 'Checkpoint',
         singularName: 'checkpoint',
-        defaultPageSize: 50,
+        defaultPageSize: 100,
         supportsLetterFilter: false,
         supportsBulkOperations: true,
         supportsMove: false,

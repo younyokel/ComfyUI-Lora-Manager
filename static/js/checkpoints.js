@@ -1,7 +1,6 @@
 import { appCore } from './core.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
-import { loadMoreCheckpoints } from './api/checkpointApi.js';
 import { CheckpointContextMenu } from './components/ContextMenu/index.js';
 import { ModelDuplicatesManager } from './components/ModelDuplicatesManager.js';
 import { MODEL_TYPES } from './api/apiConfig.js';
@@ -25,11 +24,6 @@ class CheckpointsPageManager {
         window.closeDeleteModal = closeDeleteModal;
         window.confirmExclude = confirmExclude;
         window.closeExcludeModal = closeExcludeModal;
-        
-        // Add loadCheckpoints function to window for FilterManager compatibility
-        window.checkpointManager = {
-            loadCheckpoints: (reset) => loadMoreCheckpoints(reset)
-        };
         
         // Expose duplicates manager
         window.modelDuplicatesManager = this.duplicatesManager;

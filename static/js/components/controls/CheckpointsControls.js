@@ -1,7 +1,6 @@
 // CheckpointsControls.js - Specific implementation for the Checkpoints page
 import { PageControls } from './PageControls.js';
-import { loadMoreCheckpoints, refreshCheckpoints, fetchCivitai } from '../../api/checkpointApi.js';
-import { resetAndReload } from '../../api/baseModelApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
 import { downloadManager } from '../../managers/DownloadManager.js';
 
@@ -24,7 +23,7 @@ export class CheckpointsControls extends PageControls {
         const checkpointsAPI = {
             // Core API functions
             loadMoreModels: async (resetPage = false, updateFolders = false) => {
-                return await loadMoreCheckpoints(resetPage, updateFolders);
+                return await getModelApiClient().loadMoreWithVirtualScroll(resetPage, updateFolders);
             },
             
             resetAndReload: async (updateFolders = false) => {
@@ -32,12 +31,12 @@ export class CheckpointsControls extends PageControls {
             },
             
             refreshModels: async (fullRebuild = false) => {
-                return await refreshCheckpoints(fullRebuild);
+                return await getModelApiClient().refreshModels(fullRebuild);
             },
             
             // Add fetch from Civitai functionality for checkpoints
             fetchFromCivitai: async () => {
-                return await fetchCivitai();
+                return await getModelApiClient().fetchCivitaiMetadata();
             },
             
             // Add show download modal functionality
