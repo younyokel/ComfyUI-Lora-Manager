@@ -1,11 +1,13 @@
 <div class="controls">
-    <div class="folder-tags-container">
-        <div class="folder-tags">
-            {% for folder in folders %}
-            <div class="tag" data-folder="{{ folder }}">{{ folder }}</div>
-            {% endfor %}
+    {% if folders|length > 1 %}
+        <div class="folder-tags-container">
+            <div class="folder-tags">
+                {% for folder in folders %}
+                <div class="tag" data-folder="{{ folder }}">{{ folder }}</div>
+                {% endfor %}
+            </div>
         </div>
-    </div>
+    {% endif %}
     
     <div class="actions">
         <div class="action-buttons">

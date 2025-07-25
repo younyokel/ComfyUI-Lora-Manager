@@ -4,7 +4,7 @@ import asyncio
 from collections import OrderedDict
 import uuid
 from typing import Dict
-from ..utils.models import LoraMetadata, CheckpointMetadata
+from ..utils.models import LoraMetadata, CheckpointMetadata, EmbeddingMetadata
 from ..utils.constants import CARD_PREVIEW_WIDTH, VALID_LORA_TYPES, CIVITAI_MODEL_TAGS
 from ..utils.exif_utils import ExifUtils
 from ..utils.metadata_manager import MetadataManager
@@ -204,6 +204,8 @@ class DownloadManager:
                 model_type = 'checkpoint'
             elif model_type_from_info in VALID_LORA_TYPES:
                 model_type = 'lora'
+            elif model_type_from_info == 'textualinversion':
+                model_type = 'embedding'
             else:
                 return {'success': False, 'error': f'Model type "{model_type_from_info}" is not supported for download'}
             
@@ -222,6 +224,11 @@ class DownloadManager:
                     checkpoint_scanner = await self._get_checkpoint_scanner()
                     if await checkpoint_scanner.check_model_version_exists(version_model_id, version_id):
                         return {'success': False, 'error': 'Model version already exists in checkpoint library'}
+                elif model_type == 'embedding':
+                    # Embeddings are not checked in scanners, but we can still check if it exists
+                    embedding_scanner = await ServiceRegistry.get_embedding_scanner()
+                    if await embedding_scanner.check_model_version_exists(version_model_id, version_id):
+                        return {'success': False, 'error': 'Model version already exists in embedding library'}
             
             # Handle use_default_paths
             if use_default_paths:
@@ -231,10 +238,15 @@ class DownloadManager:
                     if not default_path:
                         return {'success': False, 'error': 'Default checkpoint root path not set in settings'}
                     save_dir = default_path
-                else:  # model_type == 'lora'
+                elif model_type == 'lora':
                     default_path = settings.get('default_lora_root')
                     if not default_path:
                         return {'success': False, 'error': 'Default lora root path not set in settings'}
+                    save_dir = default_path
+                elif model_type == 'embedding':
+                    default_path = settings.get('default_embedding_root')
+                    if not default_path:
+                        return {'success': False, 'error': 'Default embedding root path not set in settings'}
                     save_dir = default_path
                     
                 # Calculate relative path using template
@@ -282,9 +294,12 @@ class DownloadManager:
             if model_type == "checkpoint":
                 metadata = CheckpointMetadata.from_civitai_info(version_info, file_info, save_path)
                 logger.info(f"Creating CheckpointMetadata for {file_name}")
-            else:
+            elif model_type == "lora":
                 metadata = LoraMetadata.from_civitai_info(version_info, file_info, save_path)
                 logger.info(f"Creating LoraMetadata for {file_name}")
+            elif model_type == "embedding":
+                metadata = EmbeddingMetadata.from_civitai_info(version_info, file_info, save_path)
+                logger.info(f"Creating EmbeddingMetadata for {file_name}")
             
             # 6. Start download process
             result = await self._execute_download(
@@ -447,9 +462,12 @@ class DownloadManager:
             if model_type == "checkpoint":
                 scanner = await self._get_checkpoint_scanner()
                 logger.info(f"Updating checkpoint cache for {save_path}")
-            else:
+            elif model_type == "lora":
                 scanner = await self._get_lora_scanner()
                 logger.info(f"Updating lora cache for {save_path}")
+            elif model_type == "embedding":
+                scanner = await ServiceRegistry.get_embedding_scanner()
+                logger.info(f"Updating embedding cache for {save_path}")
                 
             # Convert metadata to dictionary
             metadata_dict = metadata.to_dict()
