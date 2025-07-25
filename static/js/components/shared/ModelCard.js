@@ -153,7 +153,7 @@ async function toggleFavorite(card) {
 }
 
 function handleSendToWorkflow(card, replaceMode, modelType) {
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
@@ -165,15 +165,18 @@ function handleSendToWorkflow(card, replaceMode, modelType) {
 }
 
 function handleCopyAction(card, modelType) {
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
         copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
-    } else {
+    } else if (modelType === 'checkpoints') {
         // Checkpoint copy functionality - copy checkpoint name
         const checkpointName = card.dataset.file_name;
         copyToClipboard(checkpointName, 'Checkpoint name copied');
+    } else if (modelType === 'embeddings') {
+        const embeddingName = card.dataset.file_name;
+        copyToClipboard(embeddingName, 'Embedding name copied');
     }
 }
 
@@ -216,7 +219,7 @@ function handleCardClick(card, modelType) {
 
 function showModelModalFromCard(card, modelType) {
     // Get the appropriate preview versions map
-    const previewVersionsKey = modelType === 'lora' ? 'loras' : 'checkpoints';
+    const previewVersionsKey = modelType;
     const previewVersions = state.pages[previewVersionsKey]?.previewVersions || new Map();
     const version = previewVersions.get(card.dataset.filepath);
     const previewUrl = card.dataset.preview_url || '/loras_static/images/no-preview.png';
@@ -371,11 +374,11 @@ export function createModelCard(model, modelType) {
     card.dataset.file_size = model.file_size;
     card.dataset.from_civitai = model.from_civitai;
     card.dataset.notes = model.notes || '';
-    card.dataset.base_model = model.base_model || (modelType === 'checkpoint' ? 'Unknown' : '');
+    card.dataset.base_model = model.base_model || 'Unknown';
     card.dataset.favorite = model.favorite ? 'true' : 'false';
 
     // LoRA specific data
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         card.dataset.usage_tips = model.usage_tips;
     }
 
@@ -404,12 +407,12 @@ export function createModelCard(model, modelType) {
     }
 
     // Apply selection state if in bulk mode and this card is in the selected set (LoRA only)
-    if (modelType === 'lora' && state.bulkMode && state.selectedLoras.has(model.file_path)) {
+    if (modelType === 'loras' && state.bulkMode && state.selectedLoras.has(model.file_path)) {
         card.classList.add('selected');
     }
 
     // Get the appropriate preview versions map
-    const previewVersionsKey = modelType === 'lora' ? 'loras' : 'checkpoints';
+    const previewVersionsKey = modelType;
     const previewVersions = state.pages[previewVersionsKey]?.previewVersions || new Map();
     const version = previewVersions.get(model.file_path);
     const previewUrl = model.preview_url || '/loras_static/images/no-preview.png';
@@ -434,8 +437,8 @@ export function createModelCard(model, modelType) {
     const isFavorite = model.favorite === true;
 
     // Generate action icons based on model type
-    const actionIcons = modelType === 'lora' ? 
-        `<i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
+    const actionIcons = `
+        <i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
            title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
         </i>
         <i class="fas fa-globe" 
@@ -447,19 +450,6 @@ export function createModelCard(model, modelType) {
         </i>
         <i class="fas fa-copy" 
            title="Copy LoRA Syntax">
-        </i>` :
-        `<i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
-           title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
-        </i>
-        <i class="fas fa-globe" 
-           title="${model.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
-           ${!model.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
-        </i>
-        <i class="fas fa-paper-plane" 
-           title="Send to workflow - feature to be implemented">
-        </i>
-        <i class="fas fa-copy" 
-           title="Copy Checkpoint Name">
         </i>`;
 
     card.innerHTML = `

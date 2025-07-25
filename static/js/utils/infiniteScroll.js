@@ -6,9 +6,7 @@ import { showToast } from './uiHelpers.js';
 
 // Function to dynamically import the appropriate card creator based on page type
 async function getCardCreator(pageType) {
-    if (pageType === 'loras') {
-        return (model) => createModelCard(model, 'lora');
-    } else if (pageType === 'recipes') {
+    if (pageType === 'recipes') {
         // Import the RecipeCard module
         const { RecipeCard } = await import('../components/RecipeCard.js');
         
@@ -21,12 +19,11 @@ async function getCardCreator(pageType) {
             });
             return recipeCard.element;
         };
-    } else if (pageType === 'checkpoints') {
-        return (model) => createModelCard(model, 'checkpoint');
-    } else if (pageType === 'embeddings') {
-        return (model) => createModelCard(model, 'embedding');
     }
-    return null;
+
+    // For other page types, use the shared ModelCard creator
+    return (model) => createModelCard(model, pageType);
+
 }
 
 // Function to get the appropriate data fetcher based on page type
@@ -63,14 +60,8 @@ export async function initializeInfiniteScroll(pageType = 'loras') {
     // Use virtual scrolling for all page types
     await initializeVirtualScroll(pageType);
     
-    // Setup event delegation for lora cards if on the loras page
-    if (pageType === 'loras') {
-        setupModelCardEventDelegation('lora');
-    } else if (pageType === 'checkpoints') {
-        setupModelCardEventDelegation('checkpoint');
-    } else if (pageType === 'embeddings') {
-        setupModelCardEventDelegation('embedding');
-    }
+    // Setup event delegation for model cards based on page type
+    setupModelCardEventDelegation(pageType);
 }
 
 async function initializeVirtualScroll(pageType) {

@@ -112,7 +112,7 @@ export function renderShowcaseContent(images, exampleFiles = [], startExpanded =
         </div>` : '';
     
     return `
-        <div class="scroll-indicator" onclick="toggleShowcase(this)">
+        <div class="scroll-indicator">
             <i class="fas fa-chevron-${startExpanded ? 'up' : 'down'}"></i>
             <span>Scroll or click to ${startExpanded ? 'hide' : 'show'} ${filteredImages.length} examples</span>
         </div>
@@ -479,6 +479,16 @@ export function initShowcaseContent(carousel) {
     initMetadataPanelHandlers(carousel);
     initMediaControlHandlers(carousel);
     positionAllMediaControls(carousel);
+
+    // Bind scroll-indicator click to toggleShowcase
+    const scrollIndicator = carousel.previousElementSibling;
+    if (scrollIndicator && scrollIndicator.classList.contains('scroll-indicator')) {
+        // Remove previous click listeners to avoid duplicates
+        scrollIndicator.onclick = null;
+        scrollIndicator.removeEventListener('click', scrollIndicator._toggleShowcaseHandler);
+        scrollIndicator._toggleShowcaseHandler = () => toggleShowcase(scrollIndicator);
+        scrollIndicator.addEventListener('click', scrollIndicator._toggleShowcaseHandler);
+    }
     
     // Add window resize handler
     const resizeHandler = () => positionAllMediaControls(carousel);
