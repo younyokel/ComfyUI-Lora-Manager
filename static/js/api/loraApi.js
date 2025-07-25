@@ -22,10 +22,6 @@ export async function loadMoreLoras(resetPage = false, updateFolders = false) {
     return loraApiClient.loadMoreWithVirtualScroll(resetPage, updateFolders);
 }
 
-export async function resetAndReload(updateFolders = false) {
-    return loraApiClient.loadMoreWithVirtualScroll(true, updateFolders);
-}
-
 // LoRA-specific functions that don't have common equivalents
 export async function fetchModelDescription(modelId, filePath) {
     try {

@@ -22,10 +22,6 @@ export async function loadMoreCheckpoints(resetPage = false, updateFolders = fal
     return checkpointApiClient.loadMoreWithVirtualScroll(resetPage, updateFolders);
 }
 
-export async function resetAndReload(updateFolders = false) {
-    return checkpointApiClient.loadMoreWithVirtualScroll(true, updateFolders);
-}
-
 // Checkpoint-specific functions
 export async function getCheckpointInfo(name) {
     try {

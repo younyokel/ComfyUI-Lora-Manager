@@ -1,7 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
-import { getModelApiClient } from '../api/baseModelApi.js';
+import { getModelApiClient, resetAndReload } from '../api/baseModelApi.js';
 import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 
 export class DownloadManager {
@@ -416,15 +416,7 @@ export class DownloadManager {
                 }
             });
 
-            // Trigger reload with folder update - use dynamic import based on model type
-            const modelType = this.apiClient.modelType;
-            if (modelType === 'loras') {
-                const { resetAndReload } = await import('../api/loraApi.js');
-                await resetAndReload(true);
-            } else if (modelType === 'checkpoints') {
-                const { resetAndReload } = await import('../api/checkpointApi.js');
-                await resetAndReload(true);
-            }
+            await resetAndReload(true);
 
         } catch (error) {
             showToast(error.message, 'error');

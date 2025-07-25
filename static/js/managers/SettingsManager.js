@@ -1,7 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
-import { resetAndReload } from '../api/loraApi.js';
+import { resetAndReload } from '../api/baseModelApi.js';
 import { setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 import { DOWNLOAD_PATH_TEMPLATES, MAPPABLE_BASE_MODELS } from '../utils/constants.js';
 
@@ -664,7 +664,7 @@ export class SettingsManager {
             await window.recipeManager.loadRecipes();
         } else if (this.currentPage === 'checkpoints') {
             // Reload the checkpoints without updating folders
-            await window.checkpointsManager.loadCheckpoints();
+            await resetAndReload(false);
         }
     }
 

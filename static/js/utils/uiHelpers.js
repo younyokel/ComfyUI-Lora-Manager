@@ -1,7 +1,6 @@
-import { state, getCurrentPageState } from '../state/index.js';
-import { resetAndReload } from '../api/loraApi.js';
+import { getCurrentPageState } from '../state/index.js';
 import { getStorageItem, setStorageItem } from './storageHelpers.js';
-import { NODE_TYPES, NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
+import { NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
 
 /**
  * Utility function to copy text to clipboard with fallback for older browsers
@@ -166,25 +165,6 @@ function updateThemeToggleIcons(theme) {
     
     // Add the appropriate class based on current theme
     themeToggle.classList.add(`theme-${theme}`);
-}
-
-export function toggleFolder(tag) {
-    const tagElement = (tag instanceof HTMLElement) ? tag : this;
-    const folder = tagElement.dataset.folder;
-    const wasActive = tagElement.classList.contains('active');
-    
-    document.querySelectorAll('.folder-tags .tag').forEach(t => {
-        t.classList.remove('active');
-    });
-    
-    if (!wasActive) {
-        tagElement.classList.add('active');
-        state.activeFolder = folder;
-    } else {
-        state.activeFolder = null;
-    }
-    
-    resetAndReload();
 }
 
 function filterByFolder(folderPath) {

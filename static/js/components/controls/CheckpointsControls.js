@@ -1,6 +1,7 @@
 // CheckpointsControls.js - Specific implementation for the Checkpoints page
 import { PageControls } from './PageControls.js';
-import { loadMoreCheckpoints, resetAndReload, refreshCheckpoints, fetchCivitai } from '../../api/checkpointApi.js';
+import { loadMoreCheckpoints, refreshCheckpoints, fetchCivitai } from '../../api/checkpointApi.js';
+import { resetAndReload } from '../../api/baseModelApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
 import { downloadManager } from '../../managers/DownloadManager.js';
 

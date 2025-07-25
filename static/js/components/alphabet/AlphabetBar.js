@@ -1,7 +1,7 @@
 // AlphabetBar.js - Component for alphabet filtering
 import { getCurrentPageState } from '../../state/index.js';
 import { getStorageItem, setStorageItem } from '../../utils/storageHelpers.js';
-import { resetAndReload } from '../../api/loraApi.js';
+import { resetAndReload } from '../../api/baseModelApi.js';
 
 /**
  * AlphabetBar class - Handles the alphabet filtering UI and interactions

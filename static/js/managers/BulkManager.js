@@ -102,6 +102,7 @@ export class BulkManager {
         if (!state.bulkMode) {
             this.clearSelection();
             
+            // TODO: fix this, no DOM manipulation should be done here
             // Force a lightweight refresh of the cards to ensure proper display
             // This is less disruptive than a full resetAndReload()
             document.querySelectorAll('.lora-card').forEach(card => {

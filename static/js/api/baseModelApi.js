@@ -755,3 +755,7 @@ export function getModelApiClient() {
     _singletonClient.setModelType(state.currentPageType);
     return _singletonClient;
 }
+
+export async function resetAndReload(updateFolders = false) {
+    return getModelApiClient().loadMoreWithVirtualScroll(true, updateFolders);
+}

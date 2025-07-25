@@ -2,8 +2,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { formatDate } from '../utils/formatters.js';
-import { resetAndReload as resetAndReloadLoras } from '../api/loraApi.js';
-import { resetAndReload as resetAndReloadCheckpoints } from '../api/checkpointApi.js';
+import { resetAndReload} from '../api/baseModelApi.js';
 import { LoadingManager } from '../managers/LoadingManager.js';
 
 export class ModelDuplicatesManager {
@@ -622,12 +621,7 @@ export class ModelDuplicatesManager {
             
             // If models were successfully deleted
             if (data.total_deleted > 0) {
-                // Reload model data with updated folders
-                if (this.modelType === 'loras') {
-                    await resetAndReloadLoras(true);
-                } else {
-                    await resetAndReloadCheckpoints(true);
-                }
+                await resetAndReload(true);
                 
                 // Check if there are still duplicates
                 try {
