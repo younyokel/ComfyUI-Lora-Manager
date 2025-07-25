@@ -1,8 +1,7 @@
-import { showToast } from '../utils/uiHelpers.js';
+import { showToast, updateFolderTags } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { modalManager } from './ModalManager.js';
 import { getStorageItem } from '../utils/storageHelpers.js';
-import { updateFolderTags } from '../api/baseModelApi.js';
 
 class MoveManager {
     constructor() {
@@ -219,7 +218,7 @@ class MoveManager {
             return;
         }
 
-        const response = await fetch('/api/loras/move_model', {
+        const response = await fetch('/api/move_model', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -257,7 +256,7 @@ class MoveManager {
             return;
         }
 
-        const response = await fetch('/api/loras/move_models_bulk', {
+        const response = await fetch('/api/move_models_bulk', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

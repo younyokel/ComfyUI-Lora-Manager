@@ -1038,6 +1038,7 @@ class ModelRouteUtils:
             return web.json_response({
                 'success': True,
                 'new_file_path': new_file_path,
+                'new_preview_path': config.get_preview_static_url(new_preview),
                 'renamed_files': renamed_files,
                 'reload_required': False
             })

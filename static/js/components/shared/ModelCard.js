@@ -4,8 +4,7 @@ import { showModelModal } from './ModelModal.js';
 import { bulkManager } from '../../managers/BulkManager.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
-import { replacePreview, saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
-import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 import { showDeleteModal } from '../../utils/modalUtils.js';
 
 // Add global event delegation handlers
@@ -31,6 +30,8 @@ function handleModelCardEvent_internal(event, modelType) {
     // Find the closest card element
     const card = event.target.closest('.lora-card');
     if (!card) return;
+
+    const apiClient = getModelApiClient();
     
     // Handle specific elements within the card
     if (event.target.closest('.toggle-blur-btn')) {
@@ -73,13 +74,13 @@ function handleModelCardEvent_internal(event, modelType) {
     
     if (event.target.closest('.fa-trash')) {
         event.stopPropagation();
-        showDeleteModal(card.dataset.filepath, modelType);
+        showDeleteModal(card.dataset.filepath);
         return;
     }
     
     if (event.target.closest('.fa-image')) {
         event.stopPropagation();
-        handleReplacePreview(card.dataset.filepath, modelType);
+        apiClient.replaceModelPreview(card.dataset.filepath);
         return;
     }
     
@@ -136,9 +137,7 @@ async function toggleFavorite(card, modelType) {
     const newFavoriteState = !isFavorite;
     
     try {
-        // Use the appropriate save function based on model type
-        const saveFunction = modelType === 'lora' ? saveLoraMetadata : saveCheckpointMetadata;
-        await saveFunction(card.dataset.filepath, { 
+        await apiClient.saveModelMetadata(card.dataset.filepath, { 
             favorite: newFavoriteState 
         });
 
@@ -179,15 +178,7 @@ function handleCopyAction(card, modelType) {
 }
 
 function handleReplacePreview(filePath, modelType) {
-    if (modelType === 'lora') {
-        replacePreview(filePath);
-    } else {
-        if (window.replaceCheckpointPreview) {
-            window.replaceCheckpointPreview(filePath);
-        } else {
-            apiReplaceCheckpointPreview(filePath);
-        }
-    }
+    apiClient.replaceModelPreview(filePath);
 }
 
 async function handleExampleImagesAccess(card, modelType) {

@@ -1,15 +1,13 @@
 import { modalManager } from '../managers/ModalManager.js';
-import { excludeLora, deleteModel as deleteLora } from '../api/loraApi.js';
-import { excludeCheckpoint, deleteCheckpoint } from '../api/checkpointApi.js';
+import { getModelApiClient } from '../api/baseModelApi.js';
+
+const apiClient = getModelApiClient();
 
 let pendingDeletePath = null;
-let pendingModelType = null;
 let pendingExcludePath = null;
-let pendingExcludeModelType = null;
 
-export function showDeleteModal(filePath, modelType = 'lora') {
+export function showDeleteModal(filePath) {
     pendingDeletePath = filePath;
-    pendingModelType = modelType;
     
     const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
     const modelName = card ? card.dataset.name : filePath.split('/').pop();
@@ -29,12 +27,7 @@ export async function confirmDelete() {
     if (!pendingDeletePath) return;
     
     try {
-        // Use appropriate delete function based on model type
-        if (pendingModelType === 'checkpoint') {
-            await deleteCheckpoint(pendingDeletePath);
-        } else {
-            await deleteLora(pendingDeletePath);
-        }
+        await apiClient.deleteModel(pendingDeletePath);
         
         closeDeleteModal();
 
@@ -54,9 +47,8 @@ export function closeDeleteModal() {
 }
 
 // Functions for the exclude modal
-export function showExcludeModal(filePath, modelType = 'lora') {
+export function showExcludeModal(filePath) {
     pendingExcludePath = filePath;
-    pendingExcludeModelType = modelType;
     
     const card = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
     const modelName = card ? card.dataset.name : filePath.split('/').pop();
@@ -82,12 +74,7 @@ export async function confirmExclude() {
     if (!pendingExcludePath) return;
     
     try {
-        // Use appropriate exclude function based on model type
-        if (pendingExcludeModelType === 'checkpoint') {
-            await excludeCheckpoint(pendingExcludePath);
-        } else {
-            await excludeLora(pendingExcludePath);
-        }
+        await apiClient.excludeModel(pendingExcludePath);
         
         closeExcludeModal();
 

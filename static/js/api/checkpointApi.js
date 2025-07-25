@@ -1,165 +1,43 @@
-import {
-    fetchModelsPage,
-    resetAndReloadWithVirtualScroll,
-    loadMoreWithVirtualScroll,
-    refreshModels as baseRefreshModels,
-    deleteModel as baseDeleteModel,
-    replaceModelPreview,
-    fetchCivitaiMetadata,
-    refreshSingleModelMetadata,
-    excludeModel as baseExcludeModel
-} from './baseModelApi.js';
-import { state } from '../state/index.js';
+import { createModelApiClient } from './baseModelApi.js';
+import { MODEL_TYPES } from './apiConfig.js';
 
-/**
- * Fetch checkpoints with pagination for virtual scrolling
- * @param {number} page - Page number to fetch
- * @param {number} pageSize - Number of items per page
- * @returns {Promise<Object>} Object containing items, total count, and pagination info
- */
-export async function fetchCheckpointsPage(page = 1, pageSize = 100) {
-    return fetchModelsPage({
-        modelType: 'checkpoint',
-        page,
-        pageSize,
-        endpoint: '/api/checkpoints'
-    });
-}
+// Create Checkpoint-specific API client
+const checkpointApiClient = createModelApiClient(MODEL_TYPES.CHECKPOINT);
 
-/**
- * Load more checkpoints with pagination - updated to work with VirtualScroller
- * @param {boolean} resetPage - Whether to reset to the first page
- * @param {boolean} updateFolders - Whether to update folder tags
- * @returns {Promise<void>}
- */
+// Export all common operations using the unified client
+export const deleteModel = (filePath) => checkpointApiClient.deleteModel(filePath);
+export const excludeCheckpoint = (filePath) => checkpointApiClient.excludeModel(filePath);
+export const renameCheckpointFile = (filePath, newFileName) => checkpointApiClient.renameModelFile(filePath, newFileName);
+export const replacePreview = (filePath) => checkpointApiClient.replaceModelPreview(filePath);
+export const saveModelMetadata = (filePath, data) => checkpointApiClient.saveModelMetadata(filePath, data);
+export const refreshCheckpoints = (fullRebuild = false) => checkpointApiClient.refreshModels(fullRebuild);
+export const refreshSingleCheckpointMetadata = (filePath) => checkpointApiClient.refreshSingleModelMetadata(filePath);
+export const fetchCivitai = (resetAndReloadFunction) => checkpointApiClient.fetchCivitaiMetadata(resetAndReloadFunction);
+
+// Pagination functions
+export const fetchCheckpointsPage = (page = 1, pageSize = 50) => checkpointApiClient.fetchModelsPage(page, pageSize);
+
+// Virtual scrolling operations
 export async function loadMoreCheckpoints(resetPage = false, updateFolders = false) {
-    return loadMoreWithVirtualScroll({
-        modelType: 'checkpoint',
-        resetPage,
-        updateFolders,
-        fetchPageFunction: fetchCheckpointsPage
-    });
+    return checkpointApiClient.loadMoreWithVirtualScroll(resetPage, updateFolders);
 }
 
-// Reset and reload checkpoints
 export async function resetAndReload(updateFolders = false) {
-    return resetAndReloadWithVirtualScroll({
-        modelType: 'checkpoint',
-        updateFolders,
-        fetchPageFunction: fetchCheckpointsPage
-    });
+    return checkpointApiClient.resetAndReloadWithVirtualScroll(updateFolders);
 }
 
-// Refresh checkpoints
-export async function refreshCheckpoints(fullRebuild = false) {
-    return baseRefreshModels({
-        modelType: 'checkpoint',
-        scanEndpoint: '/api/checkpoints/scan',
-        resetAndReloadFunction: resetAndReload,
-        fullRebuild: fullRebuild
-    });
-}
-
-// Delete a checkpoint
-export function deleteCheckpoint(filePath) {
-    return baseDeleteModel(filePath, 'checkpoint');
-}
-
-// Replace checkpoint preview
-export function replaceCheckpointPreview(filePath) {
-    return replaceModelPreview(filePath, 'checkpoint');
-}
-
-// Fetch metadata from Civitai for checkpoints
-export async function fetchCivitai() {
-    return fetchCivitaiMetadata({
-        modelType: 'checkpoint',
-        fetchEndpoint: '/api/checkpoints/fetch-all-civitai',
-        resetAndReloadFunction: resetAndReload
-    });
-}
-
-// Refresh single checkpoint metadata
-export async function refreshSingleCheckpointMetadata(filePath) {
-    await refreshSingleModelMetadata(filePath, 'checkpoint');
-}
-
-/**
- * Save model metadata to the server
- * @param {string} filePath - Path to the model file
- * @param {Object} data - Metadata to save
- * @returns {Promise} - Promise that resolves with the server response
- */
-export async function saveModelMetadata(filePath, data) {
+// Checkpoint-specific functions
+export async function getCheckpointInfo(name) {
     try {
-        // Show loading indicator
-        state.loadingManager.showSimpleLoading('Saving metadata...');
-        
-        const response = await fetch('/api/checkpoints/save-metadata', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                file_path: filePath,
-                ...data
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to save metadata');
-        }
-
-        // Update the virtual scroller with the new metadata
-        state.virtualScroller.updateSingleItem(filePath, data);
-        
-        return response.json();
-    } finally {
-        // Always hide the loading indicator when done
-        state.loadingManager.hide();
-    }
-}
-
-/**
- * Exclude a checkpoint model from being shown in the UI
- * @param {string} filePath - File path of the checkpoint to exclude
- * @returns {Promise<boolean>} Promise resolving to success status
- */
-export function excludeCheckpoint(filePath) {
-    return baseExcludeModel(filePath, 'checkpoint');
-}
-
-/**
- * Rename a checkpoint file
- * @param {string} filePath - Current file path
- * @param {string} newFileName - New file name (without path)
- * @returns {Promise<Object>} - Promise that resolves with the server response
- */
-export async function renameCheckpointFile(filePath, newFileName) {
-    try {
-        // Show loading indicator
-        state.loadingManager.showSimpleLoading('Renaming checkpoint file...');
-        
-        const response = await fetch('/api/checkpoints/rename', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                file_path: filePath,
-                new_file_name: newFileName
-            })
-        });
+        const response = await fetch(`${checkpointApiClient.apiConfig.endpoints.specific.info}/${encodeURIComponent(name)}`);
         
         if (!response.ok) {
-            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            throw new Error(`Failed to fetch checkpoint info: ${response.statusText}`);
         }
         
         return await response.json();
     } catch (error) {
-        console.error('Error renaming checkpoint file:', error);
+        console.error('Error fetching checkpoint info:', error);
         throw error;
-    } finally {
-        state.loadingManager.hide();
     }
 }
