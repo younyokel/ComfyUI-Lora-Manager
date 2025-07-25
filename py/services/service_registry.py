@@ -36,6 +36,18 @@ class ServiceRegistry:
         return cls._services.get(name)
     
     @classmethod
+    def get_service_sync(cls, name: str) -> Optional[Any]:
+        """Synchronously get a service instance by name
+
+        Args:
+            name: Service name identifier
+
+        Returns:
+            Service instance or None if not found
+        """
+        return cls._services.get(name)
+    
+    @classmethod
     def _get_lock(cls, name: str) -> asyncio.Lock:
         """Get or create a lock for a service
         
