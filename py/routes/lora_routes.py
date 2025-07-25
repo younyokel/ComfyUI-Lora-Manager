@@ -345,7 +345,7 @@ class LoraRoutes(BaseModelRoutes):
             success = await self.service.scanner.move_model(file_path, target_path)
             
             if success:
-                return web.json_response({'success': True})
+                return web.json_response({'success': True, 'new_file_path': target_file_path})
             else:
                 return web.Response(text='Failed to move model', status=500)
                 

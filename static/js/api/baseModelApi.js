@@ -515,7 +515,7 @@ class ModelApiClient {
 
         // Return new file path if move succeeded
         if (result.success) {
-            return targetPath;
+            return result.new_file_path;
         }
         return null;
     }
