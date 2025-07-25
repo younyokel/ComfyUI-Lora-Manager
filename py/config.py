@@ -24,7 +24,9 @@ class Config:
         self.loras_roots = self._init_lora_paths()
         self.checkpoints_roots = None
         self.unet_roots = None
+        self.embeddings_roots = None
         self.base_models_roots = self._init_checkpoint_paths()
+        self.embeddings_roots = self._init_embedding_paths()
         # Scan symbolic links during initialization
         self._scan_symbolic_links()
         
@@ -48,6 +50,7 @@ class Config:
                 'loras': self.loras_roots,
                 'checkpoints': self.checkpoints_roots,
                 'unet': self.unet_roots,
+                'embeddings': self.embeddings_roots,
             }
             
             # Add default roots if there's only one item and key doesn't exist
@@ -83,11 +86,14 @@ class Config:
             return False
 
     def _scan_symbolic_links(self):
-        """Scan all symbolic links in LoRA and Checkpoint root directories"""
+        """Scan all symbolic links in LoRA, Checkpoint, and Embedding root directories"""
         for root in self.loras_roots:
             self._scan_directory_links(root)
         
         for root in self.base_models_roots:
+            self._scan_directory_links(root)
+            
+        for root in self.embeddings_roots:
             self._scan_directory_links(root)
 
     def _scan_directory_links(self, root: str):
@@ -221,6 +227,36 @@ class Config:
             return all_paths
         except Exception as e:
             logger.warning(f"Error initializing checkpoint paths: {e}")
+            return []
+
+    def _init_embedding_paths(self) -> List[str]:
+        """Initialize and validate embedding paths from ComfyUI settings"""
+        try:
+            raw_paths = folder_paths.get_folder_paths("embeddings")
+            
+            # Normalize and resolve symlinks, store mapping from resolved -> original
+            path_map = {}
+            for path in raw_paths:
+                if os.path.exists(path):
+                    real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                    path_map[real_path] = path_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
+            
+            # Now sort and use only the deduplicated real paths
+            unique_paths = sorted(path_map.values(), key=lambda p: p.lower())
+            logger.info("Found embedding roots:" + ("\n - " + "\n - ".join(unique_paths) if unique_paths else "[]"))
+            
+            if not unique_paths:
+                logger.warning("No valid embeddings folders found in ComfyUI configuration")
+                return []
+            
+            for original_path in unique_paths:
+                real_path = os.path.normpath(os.path.realpath(original_path)).replace(os.sep, '/')
+                if real_path != original_path:
+                    self.add_path_mapping(original_path, real_path)
+            
+            return unique_paths
+        except Exception as e:
+            logger.warning(f"Error initializing embedding paths: {e}")
             return []
 
     def get_preview_static_url(self, preview_path: str) -> str:

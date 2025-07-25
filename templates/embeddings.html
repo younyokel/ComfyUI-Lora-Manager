@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Checkpoints Manager{% endblock %}
-{% block page_id %}checkpoints{% endblock %}
+{% block title %}Embeddings Manager{% endblock %}
+{% block page_id %}embeddings{% endblock %}
 
 {% block preload %}
-<link rel="preload" href="/loras_static/js/checkpoints.js" as="script" crossorigin="anonymous">
+<link rel="preload" href="/loras_static/js/embeddings.js" as="script" crossorigin="anonymous">
 {% endblock %}
 
-{% block init_title %}Initializing Checkpoints Manager{% endblock %}
-{% block init_message %}Scanning and building checkpoints cache. This may take a few moments...{% endblock %}
-{% block init_check_url %}/api/checkpoints?page=1&page_size=1{% endblock %}
+{% block init_title %}Initializing Embeddings Manager{% endblock %}
+{% block init_message %}Scanning and building embeddings cache. This may take a few moments...{% endblock %}
+{% block init_check_url %}/api/embeddings?page=1&page_size=1{% endblock %}
 
 {% block additional_components %}
 
-<div id="checkpointContextMenu" class="context-menu" style="display: none;">
+<div id="embeddingContextMenu" class="context-menu" style="display: none;">
     <div class="context-menu-item" data-action="refresh-metadata"><i class="fas fa-sync"></i> Refresh Civitai Data</div>
     <div class="context-menu-item" data-action="relink-civitai"><i class="fas fa-link"></i> Re-link to Civitai</div>
     <div class="context-menu-item" data-action="copyname"><i class="fas fa-copy"></i> Copy Model Filename</div>
@@ -51,12 +51,12 @@
         </div>
     </div>
     
-    <!-- Checkpoint cards container -->
+    <!-- Embedding cards container -->
     <div class="card-grid" id="modelGrid">
         <!-- Cards will be dynamically inserted here -->
     </div>
 {% endblock %}
 
 {% block main_script %}
-<script type="module" src="/loras_static/js/checkpoints.js"></script>
+<script type="module" src="/loras_static/js/embeddings.js"></script>
 {% endblock %}

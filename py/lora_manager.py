@@ -94,21 +94,45 @@ class LoraManager:
             config.add_route_mapping(real_root, preview_path)
             added_targets.add(real_root)
         
+        # Add static routes for each embedding root
+        for idx, root in enumerate(config.embeddings_roots, start=1):
+            preview_path = f'/embeddings_static/root{idx}/preview'
+            
+            real_root = root
+            if root in config._path_mappings.values():
+                for target, link in config._path_mappings.items():
+                    if link == root:
+                        real_root = target
+                        break
+            # Add static route for original path
+            app.router.add_static(preview_path, real_root)
+            logger.info(f"Added static route {preview_path} -> {real_root}")
+            
+            # Record route mapping
+            config.add_route_mapping(real_root, preview_path)
+            added_targets.add(real_root)
+        
         # Add static routes for symlink target paths
         link_idx = {
             'lora': 1,
-            'checkpoint': 1
+            'checkpoint': 1,
+            'embedding': 1
         }
         
         for target_path, link_path in config._path_mappings.items():
             if target_path not in added_targets:
-                # Determine if this is a checkpoint or lora link based on path
+                # Determine if this is a checkpoint, lora, or embedding link based on path
                 is_checkpoint = any(cp_root in link_path for cp_root in config.base_models_roots)
                 is_checkpoint = is_checkpoint or any(cp_root in target_path for cp_root in config.base_models_roots)
+                is_embedding = any(emb_root in link_path for emb_root in config.embeddings_roots)
+                is_embedding = is_embedding or any(emb_root in target_path for emb_root in config.embeddings_roots)
                 
                 if is_checkpoint:
                     route_path = f'/checkpoints_static/link_{link_idx["checkpoint"]}/preview'
                     link_idx["checkpoint"] += 1
+                elif is_embedding:
+                    route_path = f'/embeddings_static/link_{link_idx["embedding"]}/preview'
+                    link_idx["embedding"] += 1
                 else:
                     route_path = f'/loras_static/link_{link_idx["lora"]}/preview'
                     link_idx["lora"] += 1
@@ -168,6 +192,7 @@ class LoraManager:
             # Initialize scanners in background
             lora_scanner = await ServiceRegistry.get_lora_scanner()
             checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+            embedding_scanner = await ServiceRegistry.get_embedding_scanner()
             
             # Initialize recipe scanner if needed
             recipe_scanner = await ServiceRegistry.get_recipe_scanner()
@@ -175,6 +200,7 @@ class LoraManager:
             # Create low-priority initialization tasks
             asyncio.create_task(lora_scanner.initialize_in_background(), name='lora_cache_init')
             asyncio.create_task(checkpoint_scanner.initialize_in_background(), name='checkpoint_cache_init')
+            asyncio.create_task(embedding_scanner.initialize_in_background(), name='embedding_cache_init')
             asyncio.create_task(recipe_scanner.initialize_in_background(), name='recipe_cache_init')
 
             await ExampleImagesMigration.check_and_run_migrations()
