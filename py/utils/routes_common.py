@@ -551,8 +551,6 @@ class ModelRouteUtils:
             
             # Add to excluded models list
             scanner._excluded_models.append(file_path)
-
-            await scanner._save_cache_to_disk()
             
             return web.json_response({
                 'success': True,

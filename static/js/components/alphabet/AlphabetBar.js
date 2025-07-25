@@ -227,7 +227,7 @@ export class AlphabetBar {
         this.updateToggleIndicator();
         
         // Trigger a reload with the new filter
-        resetAndReload(true);
+        resetAndReload(false);
     }
     
     /**
