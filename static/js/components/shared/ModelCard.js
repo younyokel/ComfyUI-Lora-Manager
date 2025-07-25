@@ -48,7 +48,7 @@ function handleModelCardEvent_internal(event, modelType) {
     
     if (event.target.closest('.fa-star')) {
         event.stopPropagation();
-        toggleFavorite(card, modelType);
+        toggleFavorite(card);
         return;
     }
     
@@ -131,7 +131,7 @@ function showBlurredContent(card) {
     }
 }
 
-async function toggleFavorite(card, modelType) {
+async function toggleFavorite(card) {
     const starIcon = card.querySelector('.fa-star');
     const isFavorite = starIcon.classList.contains('fas');
     const newFavoriteState = !isFavorite;

@@ -1,14 +1,13 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { VirtualScroller } from './VirtualScroller.js';
-import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
-import { createCheckpointCard, setupCheckpointCardEventDelegation } from '../components/CheckpointCard.js';
+import { createModelCard, setupModelCardEventDelegation } from '../components/shared/ModelCard.js';
 import { getModelApiClient } from '../api/baseModelApi.js';
 import { showToast } from './uiHelpers.js';
 
 // Function to dynamically import the appropriate card creator based on page type
 async function getCardCreator(pageType) {
     if (pageType === 'loras') {
-        return createLoraCard;
+        return (model) => createModelCard(model, 'lora');
     } else if (pageType === 'recipes') {
         // Import the RecipeCard module
         const { RecipeCard } = await import('../components/RecipeCard.js');
@@ -23,7 +22,9 @@ async function getCardCreator(pageType) {
             return recipeCard.element;
         };
     } else if (pageType === 'checkpoints') {
-        return createCheckpointCard;
+        return (model) => createModelCard(model, 'checkpoint');
+    } else if (pageType === 'embeddings') {
+        return (model) => createModelCard(model, 'embedding');
     }
     return null;
 }
@@ -64,9 +65,11 @@ export async function initializeInfiniteScroll(pageType = 'loras') {
     
     // Setup event delegation for lora cards if on the loras page
     if (pageType === 'loras') {
-        setupLoraCardEventDelegation();
+        setupModelCardEventDelegation('lora');
     } else if (pageType === 'checkpoints') {
-        setupCheckpointCardEventDelegation();
+        setupModelCardEventDelegation('checkpoint');
+    } else if (pageType === 'embeddings') {
+        setupModelCardEventDelegation('embedding');
     }
 }
 

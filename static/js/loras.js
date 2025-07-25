@@ -1,6 +1,6 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
-import { updateCardsForBulkMode } from './components/LoraCard.js';
+import { updateCardsForBulkMode } from './components/shared/ModelCard.js';
 import { bulkManager } from './managers/BulkManager.js';
 import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';

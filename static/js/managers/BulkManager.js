@@ -1,6 +1,6 @@
 import { state } from '../state/index.js';
 import { showToast, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpers.js';
-import { updateCardsForBulkMode } from '../components/LoraCard.js';
+import { updateCardsForBulkMode } from '../components/shared/ModelCard.js';
 import { modalManager } from './ModalManager.js';
 
 export class BulkManager {
