@@ -199,35 +199,6 @@ class LoraRoutes(BaseModelRoutes):
                 'error': str(e)
             }, status=500)
     
-    # Override get_models to add LoRA-specific response data
-    async def get_models(self, request: web.Request) -> web.Response:
-        """Get paginated LoRA data with LoRA-specific fields"""
-        try:
-            # Parse common query parameters
-            params = self._parse_common_params(request)
-            
-            # Get data from service
-            result = await self.service.get_paginated_data(**params)
-            
-            # Get all available folders from cache for LoRA-specific response
-            cache = await self.service.scanner.get_cached_data()
-            
-            # Format response items with LoRA-specific structure
-            formatted_result = {
-                'items': [await self.service.format_response(item) for item in result['items']],
-                'folders': cache.folders,  # LoRA-specific: include folders in response
-                'total': result['total'],
-                'page': result['page'],
-                'page_size': result['page_size'],
-                'total_pages': result['total_pages']
-            }
-            
-            return web.json_response(formatted_result)
-            
-        except Exception as e:
-            logger.error(f"Error in get_loras: {e}", exc_info=True)
-            return web.json_response({"error": str(e)}, status=500)
-    
     # CivitAI integration methods
     async def get_civitai_versions_lora(self, request: web.Request) -> web.Response:
         """Get available versions for a Civitai LoRA model with local availability info"""
