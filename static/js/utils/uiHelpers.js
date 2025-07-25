@@ -1,7 +1,6 @@
-import { state } from '../state/index.js';
-import { resetAndReload } from '../api/loraApi.js';
+import { getCurrentPageState } from '../state/index.js';
 import { getStorageItem, setStorageItem } from './storageHelpers.js';
-import { NODE_TYPES, NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
+import { NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
 
 /**
  * Utility function to copy text to clipboard with fallback for older browsers
@@ -168,33 +167,14 @@ function updateThemeToggleIcons(theme) {
     themeToggle.classList.add(`theme-${theme}`);
 }
 
-export function toggleFolder(tag) {
-    const tagElement = (tag instanceof HTMLElement) ? tag : this;
-    const folder = tagElement.dataset.folder;
-    const wasActive = tagElement.classList.contains('active');
-    
-    document.querySelectorAll('.folder-tags .tag').forEach(t => {
-        t.classList.remove('active');
-    });
-    
-    if (!wasActive) {
-        tagElement.classList.add('active');
-        state.activeFolder = folder;
-    } else {
-        state.activeFolder = null;
-    }
-    
-    resetAndReload();
-}
-
 function filterByFolder(folderPath) {
-    document.querySelectorAll('.lora-card').forEach(card => {
+    document.querySelectorAll('.model-card').forEach(card => {
         card.style.display = card.dataset.folder === folderPath ? '' : 'none';
     });
 }
 
 export function openCivitai(filePath) {
-    const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+    const loraCard = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
     if (!loraCard) return;
     
     const metaData = JSON.parse(loraCard.dataset.meta);
@@ -614,5 +594,33 @@ export async function openExampleImagesFolder(modelHash) {
     console.error('Failed to open example images folder:', error);
     showToast('Failed to open example images folder', 'error');
     return false;
+  }
+}
+
+/**
+     * Update the folder tags display with new folder list
+     * @param {Array} folders - List of folder names
+     */
+export function updateFolderTags(folders) {
+  const folderTagsContainer = document.querySelector('.folder-tags');
+  if (!folderTagsContainer) return;
+
+  // Keep track of currently selected folder
+  const pageState = getCurrentPageState();
+  const currentFolder = pageState.activeFolder;
+
+  // Create HTML for folder tags
+  const tagsHTML = folders.map(folder => {
+      const isActive = folder === currentFolder;
+      return `<div class="tag ${isActive ? 'active' : ''}" data-folder="${folder}">${folder}</div>`;
+  }).join('');
+
+  // Update the container
+  folderTagsContainer.innerHTML = tagsHTML;
+
+  // Scroll active folder into view (no need to reattach click handlers)
+  const activeTag = folderTagsContainer.querySelector(`.tag[data-folder="${currentFolder}"]`);
+  if (activeTag) {
+      activeTag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }

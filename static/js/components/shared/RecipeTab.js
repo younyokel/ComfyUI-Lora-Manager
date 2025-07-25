@@ -96,7 +96,7 @@ function renderRecipes(tabElement, recipes, loraName, loraHash) {
         
         // Create card element matching the structure in recipes.html
         const card = document.createElement('div');
-        card.className = 'lora-card';
+        card.className = 'model-card';
         card.dataset.filePath = recipe.file_path || '';
         card.dataset.title = recipe.title || '';
         card.dataset.created = recipe.created_date || '';

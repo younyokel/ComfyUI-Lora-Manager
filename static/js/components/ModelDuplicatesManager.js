@@ -2,8 +2,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { formatDate } from '../utils/formatters.js';
-import { resetAndReload as resetAndReloadLoras } from '../api/loraApi.js';
-import { resetAndReload as resetAndReloadCheckpoints } from '../api/checkpointApi.js';
+import { resetAndReload} from '../api/baseModelApi.js';
 import { LoadingManager } from '../managers/LoadingManager.js';
 
 export class ModelDuplicatesManager {
@@ -331,7 +330,7 @@ export class ModelDuplicatesManager {
     renderModelCard(model, groupHash) {
         // Create basic card structure
         const card = document.createElement('div');
-        card.className = 'lora-card duplicate';
+        card.className = 'model-card duplicate';
         card.dataset.hash = model.sha256;
         card.dataset.filePath = model.file_path;
         
@@ -550,7 +549,7 @@ export class ModelDuplicatesManager {
         checkboxes.forEach(checkbox => {
             checkbox.checked = !allSelected;
             const filePath = checkbox.dataset.filePath;
-            const card = checkbox.closest('.lora-card');
+            const card = checkbox.closest('.model-card');
             
             if (!allSelected) {
                 this.selectedForDeletion.add(filePath);
@@ -622,12 +621,7 @@ export class ModelDuplicatesManager {
             
             // If models were successfully deleted
             if (data.total_deleted > 0) {
-                // Reload model data with updated folders
-                if (this.modelType === 'loras') {
-                    await resetAndReloadLoras(true);
-                } else {
-                    await resetAndReloadCheckpoints(true);
-                }
+                await resetAndReload(true);
                 
                 // Check if there are still duplicates
                 try {

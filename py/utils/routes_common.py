@@ -329,8 +329,6 @@ class ModelRouteUtils:
             # Update hash index if available
             if hasattr(scanner, '_hash_index') and scanner._hash_index:
                 scanner._hash_index.remove_by_path(file_path)
-
-            await scanner._save_cache_to_disk()
             
             return web.json_response({
                 'success': True,
@@ -553,8 +551,6 @@ class ModelRouteUtils:
             
             # Add to excluded models list
             scanner._excluded_models.append(file_path)
-
-            await scanner._save_cache_to_disk()
             
             return web.json_response({
                 'success': True,
@@ -1038,6 +1034,7 @@ class ModelRouteUtils:
             return web.json_response({
                 'success': True,
                 'new_file_path': new_file_path,
+                'new_preview_path': config.get_preview_static_url(new_preview),
                 'renamed_files': renamed_files,
                 'reload_required': False
             })

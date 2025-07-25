@@ -1,16 +1,18 @@
 // Create the new hierarchical state structure
 import { getStorageItem, getMapFromStorage } from '../utils/storageHelpers.js';
+import { MODEL_TYPES } from '../api/apiConfig.js';
 
 // Load settings from localStorage or use defaults
 const savedSettings = getStorageItem('settings', {
     blurMatureContent: true,
     show_only_sfw: false,
-    cardInfoDisplay: 'always' // Add default value for card info display
+    cardInfoDisplay: 'always'
 });
 
-// Load preview versions from localStorage
+// Load preview versions from localStorage for each model type
 const loraPreviewVersions = getMapFromStorage('lora_preview_versions');
 const checkpointPreviewVersions = getMapFromStorage('checkpoint_preview_versions');
+const embeddingPreviewVersions = getMapFromStorage('embedding_preview_versions');
 
 export const state = {
     // Global state
@@ -22,13 +24,13 @@ export const state = {
     
     // Page-specific states
     pages: {
-        loras: {
+        [MODEL_TYPES.LORA]: {
             currentPage: 1,
             isLoading: false,
             hasMore: true,
             sortBy: 'name',
             activeFolder: null,
-            activeLetterFilter: null, // New property for letter filtering
+            activeLetterFilter: null,
             previewVersions: loraPreviewVersions,
             searchManager: null,
             searchOptions: {
@@ -67,10 +69,10 @@ export const state = {
             },
             pageSize: 20,
             showFavoritesOnly: false,
-            duplicatesMode: false, // Add flag for duplicates mode
+            duplicatesMode: false,
         },
         
-        checkpoints: {
+        [MODEL_TYPES.CHECKPOINT]: {
             currentPage: 1,
             isLoading: false,
             hasMore: true,
@@ -89,11 +91,34 @@ export const state = {
             },
             showFavoritesOnly: false,
             duplicatesMode: false,
+        },
+        
+        [MODEL_TYPES.EMBEDDING]: {
+            currentPage: 1,
+            isLoading: false,
+            hasMore: true,
+            sortBy: 'name',
+            activeFolder: null,
+            activeLetterFilter: null,
+            previewVersions: embeddingPreviewVersions,
+            searchManager: null,
+            searchOptions: {
+                filename: true,
+                modelname: true,
+                tags: false,
+                recursive: false
+            },
+            filters: {
+                baseModel: [],
+                tags: []
+            },
+            showFavoritesOnly: false,
+            duplicatesMode: false,
         }
     },
     
-    // Current active page
-    currentPageType: 'loras',
+    // Current active page - use MODEL_TYPES constants
+    currentPageType: MODEL_TYPES.LORA,
     
     // Backward compatibility - proxy properties
     get currentPage() { return this.pages[this.currentPageType].currentPage; },

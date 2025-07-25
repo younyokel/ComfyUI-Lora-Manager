@@ -4,7 +4,6 @@
  */
 import { appCore } from '../core.js';
 import { getSessionItem, setSessionItem } from '../utils/storageHelpers.js';
-import { state, getCurrentPageState } from '../state/index.js';
 
 class InitializationManager {
     constructor() {

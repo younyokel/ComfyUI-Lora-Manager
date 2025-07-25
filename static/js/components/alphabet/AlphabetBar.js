@@ -1,7 +1,7 @@
 // AlphabetBar.js - Component for alphabet filtering
-import { getCurrentPageState, setCurrentPageType } from '../../state/index.js';
+import { getCurrentPageState } from '../../state/index.js';
 import { getStorageItem, setStorageItem } from '../../utils/storageHelpers.js';
-import { resetAndReload } from '../../api/loraApi.js';
+import { resetAndReload } from '../../api/baseModelApi.js';
 
 /**
  * AlphabetBar class - Handles the alphabet filtering UI and interactions
@@ -227,7 +227,7 @@ export class AlphabetBar {
         this.updateToggleIndicator();
         
         // Trigger a reload with the new filter
-        resetAndReload(true);
+        resetAndReload(false);
     }
     
     /**

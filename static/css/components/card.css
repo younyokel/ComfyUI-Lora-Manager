@@ -14,7 +14,7 @@
     box-sizing: border-box; /* Include padding in width calculation */
 }
 
-.lora-card {
+.model-card {
     background: var(--lora-surface);
     border: 1px solid var(--lora-border);
     border-radius: var(--border-radius-base);
@@ -30,12 +30,12 @@
     overflow: hidden;
 }
 
-.lora-card:hover {
+.model-card:hover {
     transform: translateY(-2px);
     background: oklch(100% 0 0 / 0.6);
 }
 
-.lora-card:focus-visible {
+.model-card:focus-visible {
     outline: 2px solid var(--lora-accent);
     outline-offset: 2px;
 }
@@ -47,7 +47,7 @@
         grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
     }
     
-    .lora-card {
+    .model-card {
         max-width: 270px;
     }
 }
@@ -59,7 +59,7 @@
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
     
-    .lora-card {
+    .model-card {
         max-width: 280px;
     }
 }
@@ -70,7 +70,7 @@
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     }
     
-    .lora-card {
+    .model-card {
         max-width: 240px;
     }
 }
@@ -259,8 +259,8 @@
     transition: opacity 0.2s ease;
 }
 
-.hover-reveal .lora-card:hover .card-header,
-.hover-reveal .lora-card:hover .card-footer {
+.hover-reveal .model-card:hover .card-header,
+.hover-reveal .model-card:hover .card-footer {
     opacity: 1;
 }
 
@@ -345,7 +345,7 @@
         grid-template-columns: minmax(260px, 1fr); /* Adjusted minimum size for mobile */
     }
     
-    .lora-card {
+    .model-card {
         max-width: 100%; /* Allow cards to fill available space on mobile */
     }
 }
@@ -425,8 +425,8 @@
 }
 
 /* Prevent text selection on cards and interactive elements */
-.lora-card,
-.lora-card *,
+.model-card,
+.model-card *,
 .card-actions,
 .card-actions i,
 .toggle-blur-btn,
@@ -510,7 +510,7 @@
     }
 }
 
-/* Add after the existing .lora-card:hover styles */
+/* Add after the existing .model-card:hover styles */
 
 @keyframes update-pulse {
     0% { box-shadow: 0 0 0 0 var(--lora-accent-transparent); }
@@ -523,7 +523,7 @@
     --lora-accent-transparent: oklch(var(--lora-accent-l) var(--lora-accent-c) var(--lora-accent-h) / 0.6);
   }
   
-  .lora-card.updated {
+  .model-card.updated {
     animation: update-pulse 1.2s ease-out;
   }
   

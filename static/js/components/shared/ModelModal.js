@@ -6,15 +6,14 @@ import {
     scrollToTop,
     loadExampleImages
 } from './showcase/ShowcaseView.js';
-import { setupTabSwitching, loadModelDescription } from './ModelDescription.js';
+import { setupTabSwitching } from './ModelDescription.js';
 import { 
     setupModelNameEditing, 
     setupBaseModelEditing, 
     setupFileNameEditing
 } from './ModelMetadata.js';
 import { setupTagEditMode } from './ModelTags.js';
-import { saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
-import { saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';
@@ -30,21 +29,29 @@ export function showModelModal(model, modelType) {
     const modalTitle = model.model_name;
     
     // Prepare LoRA specific data
-    const escapedWords = modelType === 'lora' && model.civitai?.trainedWords?.length ? 
+    const escapedWords = (modelType === 'loras' || modelType === 'embeddings') && model.civitai?.trainedWords?.length ? 
         model.civitai.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
     
     // Generate model type specific content
-    const typeSpecificContent = modelType === 'lora' ? renderLoraSpecificContent(model, escapedWords) : '';
+    // const typeSpecificContent = modelType === 'loras' ? renderLoraSpecificContent(model, escapedWords) : '';
+    let typeSpecificContent;
+    if (modelType === 'loras') {
+        typeSpecificContent = renderLoraSpecificContent(model, escapedWords);
+    } else if (modelType === 'embeddings') {
+        typeSpecificContent = renderEmbeddingSpecificContent(model, escapedWords);
+    } else {
+        typeSpecificContent = '';
+    }
     
     // Generate tabs based on model type
-    const tabsContent = modelType === 'lora' ? 
+    const tabsContent = modelType === 'loras' ? 
         `<button class="tab-btn active" data-tab="showcase">Examples</button>
          <button class="tab-btn" data-tab="description">Model Description</button>
          <button class="tab-btn" data-tab="recipes">Recipes</button>` :
         `<button class="tab-btn active" data-tab="showcase">Examples</button>
          <button class="tab-btn" data-tab="description">Model Description</button>`;
     
-    const tabPanesContent = modelType === 'lora' ? 
+    const tabPanesContent = modelType === 'loras' ? 
         `<div id="showcase-tab" class="tab-pane active">
             <div class="example-images-loading">
                 <i class="fas fa-spinner fa-spin"></i> Loading example images...
@@ -144,7 +151,7 @@ export function showModelModal(model, modelType) {
                             <div class="base-wrapper">
                                 <label>Base Model</label>
                                 <div class="base-model-display">
-                                    <span class="base-model-content">${model.base_model || (modelType === 'checkpoint' ? 'Unknown' : 'N/A')}</span>
+                                    <span class="base-model-content">${model.base_model || 'Unknown'}</span>
                                     <button class="edit-base-model-btn" title="Edit base model">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
@@ -207,16 +214,13 @@ export function showModelModal(model, modelType) {
     setupEventHandlers(model.file_path);
     
     // LoRA specific setup
-    if (modelType === 'lora') {
+    if (modelType === 'loras' || modelType === 'embeddings') {
         setupTriggerWordsEditMode();
         
-        // Load recipes for this LoRA
-        loadRecipesForLora(model.model_name, model.sha256);
-    }
-    
-    // If we have a model ID but no description, fetch it
-    if (model.civitai?.modelId && !model.modelDescription) {
-        loadModelDescription(model.civitai.modelId, model.file_path);
+        if (modelType == 'loras') {
+            // Load recipes for this LoRA
+            loadRecipesForLora(model.model_name, model.sha256);
+        }
     }
     
     // Load example images asynchronously - merge regular and custom images
@@ -250,6 +254,10 @@ function renderLoraSpecificContent(lora, escapedWords) {
         </div>
         ${renderTriggerWords(escapedWords, lora.file_path)}
     `;
+}
+
+function renderEmbeddingSpecificContent(embedding, escapedWords) {
+    return `${renderTriggerWords(escapedWords, embedding.file_path)}`;
 }
 
 /**
@@ -298,7 +306,7 @@ function setupEventHandlers(filePath) {
 /**
  * Set up editable fields (notes and usage tips) in the model modal
  * @param {string} filePath - The full file path of the model
- * @param {string} modelType - Type of model ('lora' or 'checkpoint')
+ * @param {string} modelType - Type of model ('loras' or 'checkpoints' or 'embeddings')
  */
 function setupEditableFields(filePath, modelType) {
     const editableFields = document.querySelectorAll('.editable-field [contenteditable]');
@@ -329,13 +337,13 @@ function setupEditableFields(filePath, modelType) {
                     return;
                 }
                 e.preventDefault();
-                await saveNotes(filePath, modelType);
+                await saveNotes(filePath);
             }
         });
     }
 
     // LoRA specific field setup
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         setupLoraSpecificFields(filePath);
     }
 }
@@ -372,15 +380,13 @@ function setupLoraSpecificFields(filePath) {
         
         if (!key || !value) return;
 
-        const loraCard = document.querySelector(`.lora-card[data-filepath="${filePath}"]`);
+        const loraCard = document.querySelector(`.model-card[data-filepath="${filePath}"]`);
         const currentPresets = parsePresets(loraCard?.dataset.usage_tips);
         
         currentPresets[key] = parseFloat(value);
         const newPresetsJson = JSON.stringify(currentPresets);
 
-        await saveLoraMetadata(filePath, { 
-            usage_tips: newPresetsJson
-        });
+        await getModelApiClient().saveModelMetadata(filePath, { usage_tips: newPresetsJson });
 
         presetTags.innerHTML = renderPresetTags(currentPresets);
         
@@ -401,13 +407,11 @@ function setupLoraSpecificFields(filePath) {
 /**
  * Save model notes
  * @param {string} filePath - Path to the model file
- * @param {string} modelType - Type of model ('lora' or 'checkpoint')
  */
-async function saveNotes(filePath, modelType) {
+async function saveNotes(filePath) {
     const content = document.querySelector('.notes-content').textContent;
     try {
-        const saveFunction = modelType === 'lora' ? saveLoraMetadata : saveCheckpointMetadata;
-        await saveFunction(filePath, { notes: content });
+        await getModelApiClient().saveModelMetadata(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {
@@ -423,34 +427,3 @@ const modelModal = {
 };
 
 export { modelModal };
-
-// Define global functions for use in HTML
-window.toggleShowcase = function(element) {
-    toggleShowcase(element);
-};
-
-window.scrollToTopModel = function(button) {
-    scrollToTop(button);
-};
-
-// Legacy global functions for backward compatibility
-window.scrollToTopLora = function(button) {
-    scrollToTop(button);
-};
-
-window.scrollToTopCheckpoint = function(button) {
-    scrollToTop(button);
-};
-
-window.saveModelNotes = function(filePath, modelType) {
-    saveNotes(filePath, modelType);
-};
-
-// Legacy functions
-window.saveLoraNotes = function(filePath) {
-    saveNotes(filePath, 'lora');
-};
-
-window.saveCheckpointNotes = function(filePath) {
-    saveNotes(filePath, 'checkpoint');
-};

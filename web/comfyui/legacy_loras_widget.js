@@ -147,7 +147,7 @@ export function addLorasWidget(node, name, opts, callback) {
         this.currentLora = loraName;
         
         // 获取预览URL
-        const response = await api.fetchApi(`/lora-preview-url?name=${encodeURIComponent(loraName)}`, {
+        const response = await api.fetchApi(`/loras/preview-url?name=${encodeURIComponent(loraName)}`, {
           method: 'GET'
         });
 
@@ -472,7 +472,7 @@ export function addLorasWidget(node, name, opts, callback) {
         
         try {
           // Get Civitai URL from API
-          const response = await api.fetchApi(`/lora-civitai-url?name=${encodeURIComponent(loraName)}`, {
+          const response = await api.fetchApi(`/loras/civitai-url?name=${encodeURIComponent(loraName)}`, {
             method: 'GET'
           });
           

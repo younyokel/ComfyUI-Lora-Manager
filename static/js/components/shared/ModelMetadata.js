@@ -4,9 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { state } from '../../state/index.js';
-import { saveModelMetadata as saveLoraMetadata, renameLoraFile } from '../../api/loraApi.js';
-import { saveModelMetadata as saveCheckpointMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 
 /**
  * Set up model name editing functionality
@@ -114,9 +112,7 @@ export function setupModelNameEditing(filePath) {
             // Get the file path from the dataset
             const filePath = this.dataset.filePath;
             
-            const saveFunction = state.currentPageType === 'checkpoints' ? saveCheckpointMetadata : saveLoraMetadata;
-            
-            await saveFunction(filePath, { model_name: newModelName });
+            await getModelApiClient().saveModelMetadata(filePath, { model_name: newModelName });
             
             showToast('Model name updated successfully', 'success');
         } catch (error) {
@@ -295,9 +291,7 @@ async function saveBaseModel(filePath, originalValue) {
     }
     
     try {
-        const saveFunction = state.currentPageType === 'checkpoints' ? saveCheckpointMetadata : saveLoraMetadata;
-        
-        await saveFunction(filePath, { base_model: newBaseModel });
+        await getModelApiClient().saveModelMetadata(filePath, { base_model: newBaseModel });
         
         showToast('Base model updated successfully', 'success');
     } catch (error) {
@@ -417,29 +411,7 @@ export function setupFileNameEditing(filePath) {
             // Get the file path from the dataset
             const filePath = this.dataset.filePath;
             
-            let result;
-            
-            if (state.currentPageType === 'checkpoints') {
-                result = await renameCheckpointFile(filePath, newFileName);
-            } else {
-                // Use LoRA rename function
-                result = await renameLoraFile(filePath, newFileName);
-            }
-            
-            if (result.success) {
-                showToast('File name updated successfully', 'success');
-                
-                // Update virtual scroller if available (mainly for LoRAs)
-                if (state.virtualScroller && typeof state.virtualScroller.updateSingleItem === 'function') {
-                    const newFilePath = filePath.replace(originalValue, newFileName);
-                    state.virtualScroller.updateSingleItem(filePath, { 
-                        file_name: newFileName, 
-                        file_path: newFilePath 
-                    });
-                }
-            } else {
-                throw new Error(result.error || 'Unknown error');
-            }
+            await getModelApiClient().renameModelFile(filePath, newFileName);
         } catch (error) {
             console.error('Error renaming file:', error);
             this.textContent = originalValue; // Restore original file name

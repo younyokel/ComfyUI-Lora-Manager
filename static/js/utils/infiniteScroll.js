@@ -1,16 +1,12 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { VirtualScroller } from './VirtualScroller.js';
-import { createLoraCard, setupLoraCardEventDelegation } from '../components/LoraCard.js';
-import { createCheckpointCard, setupCheckpointCardEventDelegation } from '../components/CheckpointCard.js';
-import { fetchLorasPage } from '../api/loraApi.js';
-import { fetchCheckpointsPage } from '../api/checkpointApi.js';
+import { createModelCard, setupModelCardEventDelegation } from '../components/shared/ModelCard.js';
+import { getModelApiClient } from '../api/baseModelApi.js';
 import { showToast } from './uiHelpers.js';
 
 // Function to dynamically import the appropriate card creator based on page type
 async function getCardCreator(pageType) {
-    if (pageType === 'loras') {
-        return createLoraCard;
-    } else if (pageType === 'recipes') {
+    if (pageType === 'recipes') {
         // Import the RecipeCard module
         const { RecipeCard } = await import('../components/RecipeCard.js');
         
@@ -23,22 +19,21 @@ async function getCardCreator(pageType) {
             });
             return recipeCard.element;
         };
-    } else if (pageType === 'checkpoints') {
-        return createCheckpointCard;
     }
-    return null;
+
+    // For other page types, use the shared ModelCard creator
+    return (model) => createModelCard(model, pageType);
+
 }
 
 // Function to get the appropriate data fetcher based on page type
 async function getDataFetcher(pageType) {
-    if (pageType === 'loras') {
-        return fetchLorasPage;
+    if (pageType === 'loras' || pageType === 'embeddings' || pageType === 'checkpoints') {
+        return (page = 1, pageSize = 100) => getModelApiClient().fetchModelsPage(page, pageSize);
     } else if (pageType === 'recipes') {
         // Import the recipeApi module and use the fetchRecipesPage function
         const { fetchRecipesPage } = await import('../api/recipeApi.js');
         return fetchRecipesPage;
-    } else if (pageType === 'checkpoints') {
-        return fetchCheckpointsPage;
     }
     return null;
 }
@@ -65,12 +60,8 @@ export async function initializeInfiniteScroll(pageType = 'loras') {
     // Use virtual scrolling for all page types
     await initializeVirtualScroll(pageType);
     
-    // Setup event delegation for lora cards if on the loras page
-    if (pageType === 'loras') {
-        setupLoraCardEventDelegation();
-    } else if (pageType === 'checkpoints') {
-        setupCheckpointCardEventDelegation();
-    }
+    // Setup event delegation for model cards based on page type
+    setupModelCardEventDelegation(pageType);
 }
 
 async function initializeVirtualScroll(pageType) {

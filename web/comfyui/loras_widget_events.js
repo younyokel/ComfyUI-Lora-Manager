@@ -265,7 +265,7 @@ export function createContextMenu(x, y, loraName, widget, previewTooltip, render
       
       try {
         // Get Civitai URL from API
-        const response = await api.fetchApi(`/lora-civitai-url?name=${encodeURIComponent(loraName)}`, {
+        const response = await api.fetchApi(`/loras/civitai-url?name=${encodeURIComponent(loraName)}`, {
           method: 'GET'
         });
         

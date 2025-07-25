@@ -45,21 +45,21 @@ class LoraRoutes(BaseModelRoutes):
         app.router.add_get(f'/api/{prefix}/letter-counts', self.get_letter_counts)
         app.router.add_get(f'/api/{prefix}/get-notes', self.get_lora_notes)
         app.router.add_get(f'/api/{prefix}/get-trigger-words', self.get_lora_trigger_words)
-        app.router.add_get(f'/api/lora-preview-url', self.get_lora_preview_url)
-        app.router.add_get(f'/api/lora-civitai-url', self.get_lora_civitai_url)
-        app.router.add_get(f'/api/lora-model-description', self.get_lora_model_description)
+        app.router.add_get(f'/api/{prefix}/preview-url', self.get_lora_preview_url)
+        app.router.add_get(f'/api/{prefix}/civitai-url', self.get_lora_civitai_url)
+        app.router.add_get(f'/api/{prefix}/model-description', self.get_lora_model_description)
         
         # LoRA-specific management routes
-        app.router.add_post(f'/api/move_model', self.move_model)
-        app.router.add_post(f'/api/move_models_bulk', self.move_models_bulk)
+        app.router.add_post(f'/api/{prefix}/move_model', self.move_model)
+        app.router.add_post(f'/api/{prefix}/move_models_bulk', self.move_models_bulk)
         
         # CivitAI integration with LoRA-specific validation
         app.router.add_get(f'/api/{prefix}/civitai/versions/{{model_id}}', self.get_civitai_versions_lora)
-        app.router.add_get(f'/api/civitai/model/version/{{modelVersionId}}', self.get_civitai_model_by_version)
-        app.router.add_get(f'/api/civitai/model/hash/{{hash}}', self.get_civitai_model_by_hash)
+        app.router.add_get(f'/api/{prefix}/civitai/model/version/{{modelVersionId}}', self.get_civitai_model_by_version)
+        app.router.add_get(f'/api/{prefix}/civitai/model/hash/{{hash}}', self.get_civitai_model_by_hash)
         
         # ComfyUI integration
-        app.router.add_post(f'/loramanager/get_trigger_words', self.get_trigger_words)
+        app.router.add_post(f'/api/{prefix}/get_trigger_words', self.get_trigger_words)
     
     def _parse_specific_params(self, request: web.Request) -> Dict:
         """Parse LoRA-specific parameters"""
@@ -199,35 +199,6 @@ class LoraRoutes(BaseModelRoutes):
                 'error': str(e)
             }, status=500)
     
-    # Override get_models to add LoRA-specific response data
-    async def get_models(self, request: web.Request) -> web.Response:
-        """Get paginated LoRA data with LoRA-specific fields"""
-        try:
-            # Parse common query parameters
-            params = self._parse_common_params(request)
-            
-            # Get data from service
-            result = await self.service.get_paginated_data(**params)
-            
-            # Get all available folders from cache for LoRA-specific response
-            cache = await self.service.scanner.get_cached_data()
-            
-            # Format response items with LoRA-specific structure
-            formatted_result = {
-                'items': [await self.service.format_response(item) for item in result['items']],
-                'folders': cache.folders,  # LoRA-specific: include folders in response
-                'total': result['total'],
-                'page': result['page'],
-                'page_size': result['page_size'],
-                'total_pages': result['total_pages']
-            }
-            
-            return web.json_response(formatted_result)
-            
-        except Exception as e:
-            logger.error(f"Error in get_loras: {e}", exc_info=True)
-            return web.json_response({"error": str(e)}, status=500)
-    
     # CivitAI integration methods
     async def get_civitai_versions_lora(self, request: web.Request) -> web.Response:
         """Get available versions for a Civitai LoRA model with local availability info"""
@@ -345,7 +316,7 @@ class LoraRoutes(BaseModelRoutes):
             success = await self.service.scanner.move_model(file_path, target_path)
             
             if success:
-                return web.json_response({'success': True})
+                return web.json_response({'success': True, 'new_file_path': target_file_path})
             else:
                 return web.Response(text='Failed to move model', status=500)
                 

@@ -1,60 +1,111 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
-import { state } from '../state/index.js';
-import { resetAndReload } from '../api/loraApi.js';
-import { getStorageItem } from '../utils/storageHelpers.js';
+import { getModelApiClient, resetAndReload } from '../api/baseModelApi.js';
+import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
+
 export class DownloadManager {
     constructor() {
         this.currentVersion = null;
         this.versions = [];
         this.modelInfo = null;
-        this.modelVersionId = null; // Add new property for initial version ID
+        this.modelVersionId = null;
+        this.modelId = null;
         
-        // Add initialization check
         this.initialized = false;
         this.selectedFolder = '';
+        this.apiClient = null;
 
-        // Add LoadingManager instance
         this.loadingManager = new LoadingManager();
-        this.folderClickHandler = null;  // Add this line
+        this.folderClickHandler = null;
         this.updateTargetPath = this.updateTargetPath.bind(this);
+        
+        // Bound methods for event handling
+        this.handleValidateAndFetchVersions = this.validateAndFetchVersions.bind(this);
+        this.handleProceedToLocation = this.proceedToLocation.bind(this);
+        this.handleStartDownload = this.startDownload.bind(this);
+        this.handleBackToUrl = this.backToUrl.bind(this);
+        this.handleBackToVersions = this.backToVersions.bind(this);
+        this.handleCloseModal = this.closeModal.bind(this);
     }
 
     showDownloadModal() {
-        console.log('Showing download modal...'); // Add debug log
+        console.log('Showing unified download modal...');
+        
+        // Get API client for current page type
+        this.apiClient = getModelApiClient();
+        const config = this.apiClient.apiConfig.config;
+        
         if (!this.initialized) {
-            // Check if modal exists
             const modal = document.getElementById('downloadModal');
             if (!modal) {
-                console.error('Download modal element not found');
+                console.error('Unified download modal element not found');
                 return;
             }
+            this.initializeEventHandlers();
             this.initialized = true;
         }
         
+        // Update modal title and labels based on model type
+        this.updateModalLabels();
+        
         modalManager.showModal('downloadModal', null, () => {
-            // Cleanup handler when modal closes
             this.cleanupFolderBrowser();
         });
         this.resetSteps();
         
         // Auto-focus on the URL input
         setTimeout(() => {
-            const urlInput = document.getElementById('loraUrl');
+            const urlInput = document.getElementById('modelUrl');
             if (urlInput) {
                 urlInput.focus();
             }
-        }, 100); // Small delay to ensure the modal is fully displayed
+        }, 100);
+    }
+
+    initializeEventHandlers() {
+        // Button event handlers
+        document.getElementById('nextFromUrl').addEventListener('click', this.handleValidateAndFetchVersions);
+        document.getElementById('nextFromVersion').addEventListener('click', this.handleProceedToLocation);
+        document.getElementById('startDownloadBtn').addEventListener('click', this.handleStartDownload);
+        document.getElementById('backToUrlBtn').addEventListener('click', this.handleBackToUrl);
+        document.getElementById('backToVersionsBtn').addEventListener('click', this.handleBackToVersions);
+        document.getElementById('closeDownloadModal').addEventListener('click', this.handleCloseModal);
+    }
+
+    updateModalLabels() {
+        const config = this.apiClient.apiConfig.config;
+        
+        // Update modal title
+        document.getElementById('downloadModalTitle').textContent = `Download ${config.displayName} from URL`;
+        
+        // Update URL label
+        document.getElementById('modelUrlLabel').textContent = 'Civitai URL:';
+        
+        // Update root selection label
+        document.getElementById('modelRootLabel').textContent = `Select ${config.displayName} Root:`;
+        
+        // Update path preview labels
+        const pathLabels = document.querySelectorAll('.path-preview label');
+        pathLabels.forEach(label => {
+            if (label.textContent.includes('Location Preview')) {
+                label.textContent = 'Download Location Preview:';
+            }
+        });
+        
+        // Update initial path text
+        const pathText = document.querySelector('#targetPathDisplay .path-text');
+        if (pathText) {
+            pathText.textContent = `Select a ${config.displayName} root directory`;
+        }
     }
 
     resetSteps() {
         document.querySelectorAll('.download-step').forEach(step => step.style.display = 'none');
         document.getElementById('urlStep').style.display = 'block';
-        document.getElementById('loraUrl').value = '';
+        document.getElementById('modelUrl').value = '';
         document.getElementById('urlError').textContent = '';
         
-        // Clear new folder input
         const newFolderInput = document.getElementById('newFolder');
         if (newFolderInput) {
             newFolderInput.value = '';
@@ -66,7 +117,6 @@ export class DownloadManager {
         this.modelId = null;
         this.modelVersionId = null;
         
-        // Clear selected folder and remove selection from UI
         this.selectedFolder = '';
         const folderBrowser = document.getElementById('folderBrowser');
         if (folderBrowser) {
@@ -76,7 +126,7 @@ export class DownloadManager {
     }
 
     async validateAndFetchVersions() {
-        const url = document.getElementById('loraUrl').value.trim();
+        const url = document.getElementById('modelUrl').value.trim();
         const errorElement = document.getElementById('urlError');
         
         try {
@@ -87,16 +137,8 @@ export class DownloadManager {
                 throw new Error('Invalid Civitai URL format');
             }
 
-            const response = await fetch(`/api/loras/civitai/versions/${this.modelId}`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                if (errorData && errorData.error && errorData.error.includes('Model type mismatch')) {
-                    throw new Error('This model is not a LoRA. Please switch to the Checkpoints page to download checkpoint models.');
-                }
-                throw new Error('Failed to fetch model versions');
-            }
+            this.versions = await this.apiClient.fetchCivitaiVersions(this.modelId);
             
-            this.versions = await response.json();
             if (!this.versions.length) {
                 throw new Error('No versions available for this model');
             }
@@ -134,19 +176,14 @@ export class DownloadManager {
             const firstImage = version.images?.find(img => !img.url.endsWith('.mp4'));
             const thumbnailUrl = firstImage ? firstImage.url : '/loras_static/images/no-preview.png';
             
-            // Use version-level size or fallback to first file
             const fileSize = version.modelSizeKB ? 
                 (version.modelSizeKB / 1024).toFixed(2) : 
                 (version.files[0]?.sizeKB / 1024).toFixed(2);
             
-            // Use version-level existsLocally flag
             const existsLocally = version.existsLocally;
             const localPath = version.localPath;
-            
-            // Check if this is an early access version
             const isEarlyAccess = version.availability === 'EarlyAccess';
             
-            // Create early access badge if needed
             let earlyAccessBadge = '';
             if (isEarlyAccess) {
                 earlyAccessBadge = `
@@ -155,10 +192,7 @@ export class DownloadManager {
                     </div>
                 `;
             }
-
-            console.log(earlyAccessBadge);
             
-            // Status badge for local models
             const localStatus = existsLocally ? 
                 `<div class="local-badge">
                     <i class="fas fa-check"></i> In Library
@@ -169,7 +203,7 @@ export class DownloadManager {
                 <div class="version-item ${this.currentVersion?.id === version.id ? 'selected' : ''} 
                      ${existsLocally ? 'exists-locally' : ''} 
                      ${isEarlyAccess ? 'is-early-access' : ''}"
-                     onclick="downloadManager.selectVersion('${version.id}')">
+                     data-version-id="${version.id}">
                     <div class="version-thumbnail">
                         <img src="${thumbnailUrl}" alt="Version preview">
                     </div>
@@ -191,12 +225,19 @@ export class DownloadManager {
             `;
         }).join('');
         
+        // Add click handlers for version selection
+        versionList.addEventListener('click', (event) => {
+            const versionItem = event.target.closest('.version-item');
+            if (versionItem) {
+                this.selectVersion(versionItem.dataset.versionId);
+            }
+        });
+        
         // Auto-select the version if there's only one
         if (this.versions.length === 1 && !this.currentVersion) {
             this.selectVersion(this.versions[0].id.toString());
         }
         
-        // Update Next button state based on initial selection
         this.updateNextButtonState();
     }
 
@@ -204,23 +245,15 @@ export class DownloadManager {
         this.currentVersion = this.versions.find(v => v.id.toString() === versionId.toString());
         if (!this.currentVersion) return;
 
-        // Remove the toast notification - it's redundant with the visual indicator
-        // const existsLocally = this.currentVersion.files[0]?.existsLocally;
-        // if (existsLocally) {
-        //     showToast('This version already exists in your library', 'info');
-        // }
-
         document.querySelectorAll('.version-item').forEach(item => {
-            item.classList.toggle('selected', item.querySelector('h3').textContent === this.currentVersion.name);
+            item.classList.toggle('selected', item.dataset.versionId === versionId);
         });
         
-        // Update Next button state after selection
         this.updateNextButtonState();
     }
     
-    // Update this method to use version-level existsLocally
     updateNextButtonState() {
-        const nextButton = document.querySelector('#versionStep .primary-btn');
+        const nextButton = document.getElementById('nextFromVersion');
         if (!nextButton) return;
         
         const existsLocally = this.currentVersion?.existsLocally;
@@ -242,7 +275,6 @@ export class DownloadManager {
             return;
         }
         
-        // Double-check if the version exists locally
         const existsLocally = this.currentVersion.existsLocally;
         if (existsLocally) {
             showToast('This version already exists in your library', 'info');
@@ -253,39 +285,30 @@ export class DownloadManager {
         document.getElementById('locationStep').style.display = 'block';
         
         try {
-            // Fetch LoRA roots
-            const rootsResponse = await fetch('/api/loras/roots');
-            if (!rootsResponse.ok) {
-                throw new Error('Failed to fetch LoRA roots');
-            }
+            const config = this.apiClient.apiConfig.config;
             
-            const rootsData = await rootsResponse.json();
-            const loraRoot = document.getElementById('loraRoot');
-            loraRoot.innerHTML = rootsData.roots.map(root => 
+            // Fetch model roots
+            const rootsData = await this.apiClient.fetchModelRoots();
+            const modelRoot = document.getElementById('modelRoot');
+            modelRoot.innerHTML = rootsData.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
 
-            // Set default lora root if available
-            const defaultRoot = getStorageItem('settings', {}).default_loras_root;
+            // Set default root if available
+            const defaultRootKey = `default_${this.apiClient.modelType}_root`;
+            const defaultRoot = getStorageItem('settings', {})[defaultRootKey];
             if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
-                loraRoot.value = defaultRoot;
+                modelRoot.value = defaultRoot;
             }
 
-            // Fetch folders dynamically
-            const foldersResponse = await fetch('/api/loras/folders');
-            if (!foldersResponse.ok) {
-                throw new Error('Failed to fetch folders');
-            }
-            
-            const foldersData = await foldersResponse.json();
+            // Fetch folders
+            const foldersData = await this.apiClient.fetchModelFolders();
             const folderBrowser = document.getElementById('folderBrowser');
             
-            // Update folder browser with dynamic content
             folderBrowser.innerHTML = foldersData.folders.map(folder => 
                 `<div class="folder-item" data-folder="${folder}">${folder}</div>`
             ).join('');
 
-            // Initialize folder browser after loading roots and folders
             this.initializeFolderBrowser();
         } catch (error) {
             showToast(error.message, 'error');
@@ -302,12 +325,17 @@ export class DownloadManager {
         document.getElementById('versionStep').style.display = 'block';
     }
 
+    closeModal() {
+        modalManager.closeModal('downloadModal');
+    }
+
     async startDownload() {
-        const loraRoot = document.getElementById('loraRoot').value;
+        const modelRoot = document.getElementById('modelRoot').value;
         const newFolder = document.getElementById('newFolder').value.trim();
+        const config = this.apiClient.apiConfig.config;
         
-        if (!loraRoot) {
-            showToast('Please select a LoRA root directory', 'error');
+        if (!modelRoot) {
+            showToast(`Please select a ${config.displayName} root directory`, 'error');
             return;
         }
 
@@ -322,38 +350,32 @@ export class DownloadManager {
         }
 
         try {
-            // Show enhanced loading with progress details
             const updateProgress = this.loadingManager.showDownloadProgress(1);
             updateProgress(0, 0, this.currentVersion.name);
 
-            // Generate a unique ID for this download
             const downloadId = Date.now().toString();
             
-            // Setup WebSocket for progress updates - use download-specific endpoint
+            // Setup WebSocket for progress updates
             const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/download-progress?id=${downloadId}`);
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 
-                // Handle download ID confirmation
                 if (data.type === 'download_id') {
                     console.log(`Connected to download progress with ID: ${data.download_id}`);
                     return;
                 }
                 
-                // Only process progress updates for our download
                 if (data.status === 'progress' && data.download_id === downloadId) {
-                    // Update progress display with current progress
                     updateProgress(data.progress, 0, this.currentVersion.name);
                     
-                    // Add more detailed status messages based on progress
                     if (data.progress < 3) {
                         this.loadingManager.setStatus(`Preparing download...`);
                     } else if (data.progress === 3) {
                         this.loadingManager.setStatus(`Downloaded preview image`);
                     } else if (data.progress > 3 && data.progress < 100) {
-                        this.loadingManager.setStatus(`Downloading LoRA file`);
+                        this.loadingManager.setStatus(`Downloading ${config.singularName} file`);
                     } else {
                         this.loadingManager.setStatus(`Finalizing download...`);
                     }
@@ -362,35 +384,39 @@ export class DownloadManager {
             
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                // Continue with download even if WebSocket fails
             };
 
-            // Start download with our download ID
-            const response = await fetch('/api/download-model', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model_id: this.modelId,
-                    model_version_id: this.currentVersion.id,
-                    model_root: loraRoot,
-                    relative_path: targetFolder,
-                    download_id: downloadId
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(await response.text());
-            }
+            // Start download
+            await this.apiClient.downloadModel(
+                this.modelId,
+                this.currentVersion.id,
+                modelRoot,
+                targetFolder,
+                downloadId
+            );
 
             showToast('Download completed successfully', 'success');
             modalManager.closeModal('downloadModal');
             
-            // Close WebSocket after download completes
             ws.close();
             
-            // Update state and trigger reload with folder update
-            state.activeFolder = targetFolder;
-            await resetAndReload(true); // Pass true to update folders
+            // Update state and trigger reload
+            const pageState = this.apiClient.getPageState();
+            pageState.activeFolder = targetFolder;
+            
+            // Save the active folder preference
+            setStorageItem(`${this.apiClient.modelType}_activeFolder`, targetFolder);
+            
+            // Update UI folder selection
+            document.querySelectorAll('.folder-tags .tag').forEach(tag => {
+                const isActive = tag.dataset.folder === targetFolder;
+                tag.classList.toggle('active', isActive);
+                if (isActive && !tag.parentNode.classList.contains('collapsed')) {
+                    tag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+
+            await resetAndReload(true);
 
         } catch (error) {
             showToast(error.message, 'error');
@@ -399,15 +425,12 @@ export class DownloadManager {
         }
     }
 
-    // Add new method to handle folder selection
     initializeFolderBrowser() {
         const folderBrowser = document.getElementById('folderBrowser');
         if (!folderBrowser) return;
 
-        // Cleanup existing handler if any
         this.cleanupFolderBrowser();
 
-        // Create new handler
         this.folderClickHandler = (event) => {
             const folderItem = event.target.closest('.folder-item');
             if (!folderItem) return;
@@ -422,21 +445,17 @@ export class DownloadManager {
                 this.selectedFolder = folderItem.dataset.folder;
             }
             
-            // Update path display after folder selection
             this.updateTargetPath();
         };
 
-        // Add the new handler
         folderBrowser.addEventListener('click', this.folderClickHandler);
         
-        // Add event listeners for path updates
-        const loraRoot = document.getElementById('loraRoot');
+        const modelRoot = document.getElementById('modelRoot');
         const newFolder = document.getElementById('newFolder');
         
-        loraRoot.addEventListener('change', this.updateTargetPath);
+        modelRoot.addEventListener('change', this.updateTargetPath);
         newFolder.addEventListener('input', this.updateTargetPath);
         
-        // Update initial path
         this.updateTargetPath();
     }
 
@@ -449,23 +468,22 @@ export class DownloadManager {
             }
         }
         
-        // Remove path update listeners
-        const loraRoot = document.getElementById('loraRoot');
+        const modelRoot = document.getElementById('modelRoot');
         const newFolder = document.getElementById('newFolder');
         
-        loraRoot.removeEventListener('change', this.updateTargetPath);
-        newFolder.removeEventListener('input', this.updateTargetPath);
+        if (modelRoot) modelRoot.removeEventListener('change', this.updateTargetPath);
+        if (newFolder) newFolder.removeEventListener('input', this.updateTargetPath);
     }
     
-    // Add new method to update target path
     updateTargetPath() {
         const pathDisplay = document.getElementById('targetPathDisplay');
-        const loraRoot = document.getElementById('loraRoot').value;
+        const modelRoot = document.getElementById('modelRoot').value;
         const newFolder = document.getElementById('newFolder').value.trim();
+        const config = this.apiClient.apiConfig.config;
         
-        let fullPath = loraRoot || 'Select a LoRA root directory';
+        let fullPath = modelRoot || `Select a ${config.displayName} root directory`;
         
-        if (loraRoot) {
+        if (modelRoot) {
             if (this.selectedFolder) {
                 fullPath += '/' + this.selectedFolder;
             }
@@ -477,3 +495,6 @@ export class DownloadManager {
         pathDisplay.innerHTML = `<span class="path-text">${fullPath}</span>`;
     }
 }
+
+// Create global instance
+export const downloadManager = new DownloadManager();

@@ -632,9 +632,10 @@ class MiscRoutes:
                     'error': 'Parameter modelId must be an integer'
                 }, status=400)
             
-            # Get both lora and checkpoint scanners
+            # Get all scanners
             lora_scanner = await ServiceRegistry.get_lora_scanner()
             checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+            embedding_scanner = await ServiceRegistry.get_embedding_scanner()
             
             # If modelVersionId is provided, check for specific version
             if model_version_id_str:
@@ -646,18 +647,19 @@ class MiscRoutes:
                         'error': 'Parameter modelVersionId must be an integer'
                     }, status=400)
                 
-                # Check if the specific version exists in either scanner
+                # Check lora scanner first
                 exists = False
                 model_type = None
-                
-                # Check lora scanner first
+
                 if await lora_scanner.check_model_version_exists(model_id, model_version_id):
                     exists = True
                     model_type = 'lora'
-                # If not found in lora, check checkpoint scanner
                 elif checkpoint_scanner and await checkpoint_scanner.check_model_version_exists(model_id, model_version_id):
                     exists = True
                     model_type = 'checkpoint'
+                elif embedding_scanner and await embedding_scanner.check_model_version_exists(model_id, model_version_id):
+                    exists = True
+                    model_type = 'embedding'
                 
                 return web.json_response({
                     'success': True,
@@ -667,25 +669,29 @@ class MiscRoutes:
             
             # If modelVersionId is not provided, return all version IDs for the model
             else:
-                # Get versions from lora scanner first
                 lora_versions = await lora_scanner.get_model_versions_by_id(model_id)
                 checkpoint_versions = []
-                
-                # Only check checkpoint scanner if no lora versions found
+                embedding_versions = []
+
+                # 优先lora，其次checkpoint，最后embedding
                 if not lora_versions:
                     checkpoint_versions = await checkpoint_scanner.get_model_versions_by_id(model_id)
-                
-                # Determine model type and combine results
+                if not lora_versions and not checkpoint_versions:
+                    embedding_versions = await embedding_scanner.get_model_versions_by_id(model_id)
+
                 model_type = None
                 versions = []
-                
+
                 if lora_versions:
                     model_type = 'lora'
                     versions = lora_versions
                 elif checkpoint_versions:
                     model_type = 'checkpoint'
                     versions = checkpoint_versions
-                
+                elif embedding_versions:
+                    model_type = 'embedding'
+                    versions = embedding_versions
+
                 return web.json_response({
                     'success': True,
                     'modelId': model_id,

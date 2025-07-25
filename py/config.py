@@ -17,15 +17,17 @@ class Config:
     def __init__(self):
         self.templates_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
         self.static_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
-        # 路径映射字典, target to link mapping
+        # Path mapping dictionary, target to link mapping
         self._path_mappings = {}
-        # 静态路由映射字典, target to route mapping
+        # Static route mapping dictionary, target to route mapping
         self._route_mappings = {}
         self.loras_roots = self._init_lora_paths()
         self.checkpoints_roots = None
         self.unet_roots = None
+        self.embeddings_roots = None
         self.base_models_roots = self._init_checkpoint_paths()
-        # 在初始化时扫描符号链接
+        self.embeddings_roots = self._init_embedding_paths()
+        # Scan symbolic links during initialization
         self._scan_symbolic_links()
         
         if not standalone_mode:
@@ -48,6 +50,7 @@ class Config:
                 'loras': self.loras_roots,
                 'checkpoints': self.checkpoints_roots,
                 'unet': self.unet_roots,
+                'embeddings': self.embeddings_roots,
             }
             
             # Add default roots if there's only one item and key doesn't exist
@@ -83,15 +86,18 @@ class Config:
             return False
 
     def _scan_symbolic_links(self):
-        """扫描所有 LoRA 和 Checkpoint 根目录中的符号链接"""
+        """Scan all symbolic links in LoRA, Checkpoint, and Embedding root directories"""
         for root in self.loras_roots:
             self._scan_directory_links(root)
         
         for root in self.base_models_roots:
             self._scan_directory_links(root)
+            
+        for root in self.embeddings_roots:
+            self._scan_directory_links(root)
 
     def _scan_directory_links(self, root: str):
-        """递归扫描目录中的符号链接"""
+        """Recursively scan symbolic links in a directory"""
         try:
             with os.scandir(root) as it:
                 for entry in it:
@@ -106,40 +112,40 @@ class Config:
             logger.error(f"Error scanning links in {root}: {e}")
 
     def add_path_mapping(self, link_path: str, target_path: str):
-        """添加符号链接路径映射
-        target_path: 实际目标路径
-        link_path: 符号链接路径
+        """Add a symbolic link path mapping
+        target_path: actual target path
+        link_path: symbolic link path
         """
         normalized_link = os.path.normpath(link_path).replace(os.sep, '/')
         normalized_target = os.path.normpath(target_path).replace(os.sep, '/')
-        # 保持原有的映射关系：目标路径 -> 链接路径
+        # Keep the original mapping: target path -> link path
         self._path_mappings[normalized_target] = normalized_link
         logger.info(f"Added path mapping: {normalized_target} -> {normalized_link}")
 
     def add_route_mapping(self, path: str, route: str):
-        """添加静态路由映射"""
+        """Add a static route mapping"""
         normalized_path = os.path.normpath(path).replace(os.sep, '/')
         self._route_mappings[normalized_path] = route
         # logger.info(f"Added route mapping: {normalized_path} -> {route}")
 
     def map_path_to_link(self, path: str) -> str:
-        """将目标路径映射回符号链接路径"""
+        """Map a target path back to its symbolic link path"""
         normalized_path = os.path.normpath(path).replace(os.sep, '/')
-        # 检查路径是否包含在任何映射的目标路径中
+        # Check if the path is contained in any mapped target path
         for target_path, link_path in self._path_mappings.items():
             if normalized_path.startswith(target_path):
-                # 如果路径以目标路径开头，则替换为链接路径
+                # If the path starts with the target path, replace with link path
                 mapped_path = normalized_path.replace(target_path, link_path, 1)
                 return mapped_path
         return path
     
     def map_link_to_path(self, link_path: str) -> str:
-        """将符号链接路径映射回实际路径"""
+        """Map a symbolic link path back to the actual path"""
         normalized_link = os.path.normpath(link_path).replace(os.sep, '/')
-        # 检查路径是否包含在任何映射的目标路径中
+        # Check if the path is contained in any mapped target path
         for target_path, link_path in self._path_mappings.items():
             if normalized_link.startswith(target_path):
-                # 如果路径以目标路径开头，则替换为实际路径
+                # If the path starts with the target path, replace with actual path
                 mapped_path = normalized_link.replace(target_path, link_path, 1)
                 return mapped_path
         return link_path
@@ -221,6 +227,36 @@ class Config:
             return all_paths
         except Exception as e:
             logger.warning(f"Error initializing checkpoint paths: {e}")
+            return []
+
+    def _init_embedding_paths(self) -> List[str]:
+        """Initialize and validate embedding paths from ComfyUI settings"""
+        try:
+            raw_paths = folder_paths.get_folder_paths("embeddings")
+            
+            # Normalize and resolve symlinks, store mapping from resolved -> original
+            path_map = {}
+            for path in raw_paths:
+                if os.path.exists(path):
+                    real_path = os.path.normpath(os.path.realpath(path)).replace(os.sep, '/')
+                    path_map[real_path] = path_map.get(real_path, path.replace(os.sep, "/"))  # preserve first seen
+            
+            # Now sort and use only the deduplicated real paths
+            unique_paths = sorted(path_map.values(), key=lambda p: p.lower())
+            logger.info("Found embedding roots:" + ("\n - " + "\n - ".join(unique_paths) if unique_paths else "[]"))
+            
+            if not unique_paths:
+                logger.warning("No valid embeddings folders found in ComfyUI configuration")
+                return []
+            
+            for original_path in unique_paths:
+                real_path = os.path.normpath(os.path.realpath(original_path)).replace(os.sep, '/')
+                if real_path != original_path:
+                    self.add_path_mapping(original_path, real_path)
+            
+            return unique_paths
+        except Exception as e:
+            logger.warning(f"Error initializing embedding paths: {e}")
             return []
 
     def get_preview_static_url(self, preview_path: str) -> str:

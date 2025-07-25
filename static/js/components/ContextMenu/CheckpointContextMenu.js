@@ -1,12 +1,12 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
-import { refreshSingleCheckpointMetadata, saveModelMetadata, replaceCheckpointPreview, resetAndReload } from '../../api/checkpointApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
 import { showToast } from '../../utils/uiHelpers.js';
-import { showExcludeModal } from '../../utils/modalUtils.js';
+import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {
-        super('checkpointContextMenu', '.lora-card');
+        super('checkpointContextMenu', '.model-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
         this.modelType = 'checkpoint';
         this.resetAndReload = resetAndReload;
@@ -19,7 +19,7 @@ export class CheckpointContextMenu extends BaseContextMenu {
     
     // Implementation needed by the mixin
     async saveModelMetadata(filePath, data) {
-        return saveModelMetadata(filePath, data);
+        return getModelApiClient().saveModelMetadata(filePath, data);
     }
     
     handleMenuAction(action) {
@@ -27,6 +27,8 @@ export class CheckpointContextMenu extends BaseContextMenu {
         if (ModelContextMenuMixin.handleCommonMenuActions.call(this, action)) {
             return;
         }
+
+        const apiClient = getModelApiClient();
 
         // Otherwise handle checkpoint-specific actions
         switch(action) {
@@ -36,13 +38,10 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 break;
             case 'replace-preview':
                 // Add new action for replacing preview images
-                replaceCheckpointPreview(this.currentCard.dataset.filepath);
+                apiClient.replaceModelPreview(this.currentCard.dataset.filepath);
                 break;
             case 'delete':
-                // Delete checkpoint
-                if (this.currentCard.querySelector('.fa-trash')) {
-                    this.currentCard.querySelector('.fa-trash').click();
-                }
+                showDeleteModal(this.currentCard.dataset.filepath);
                 break;
             case 'copyname':
                 // Copy checkpoint name
@@ -52,14 +51,14 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 break;
             case 'refresh-metadata':
                 // Refresh metadata from CivitAI
-                refreshSingleCheckpointMetadata(this.currentCard.dataset.filepath);
+                apiClient.refreshSingleModelMetadata(this.currentCard.dataset.filepath);
                 break;
             case 'move':
                 // Move to folder (placeholder)
                 showToast('Move to folder feature coming soon', 'info');
                 break;
             case 'exclude':
-                showExcludeModal(this.currentCard.dataset.filepath, 'checkpoint');
+                showExcludeModal(this.currentCard.dataset.filepath);
                 break;
         }
     }

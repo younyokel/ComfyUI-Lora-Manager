@@ -1,22 +1,18 @@
 import { appCore } from './core.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
 import { createPageControls } from './components/controls/index.js';
-import { loadMoreCheckpoints } from './api/checkpointApi.js';
-import { CheckpointDownloadManager } from './managers/CheckpointDownloadManager.js';
 import { CheckpointContextMenu } from './components/ContextMenu/index.js';
 import { ModelDuplicatesManager } from './components/ModelDuplicatesManager.js';
+import { MODEL_TYPES } from './api/apiConfig.js';
 
 // Initialize the Checkpoints page
 class CheckpointsPageManager {
     constructor() {
         // Initialize page controls
-        this.pageControls = createPageControls('checkpoints');
-        
-        // Initialize checkpoint download manager
-        window.checkpointDownloadManager = new CheckpointDownloadManager();
+        this.pageControls = createPageControls(MODEL_TYPES.CHECKPOINT);
         
         // Initialize the ModelDuplicatesManager
-        this.duplicatesManager = new ModelDuplicatesManager(this, 'checkpoints');
+        this.duplicatesManager = new ModelDuplicatesManager(this, MODEL_TYPES.CHECKPOINT);
         
         // Expose only necessary functions to global scope
         this._exposeRequiredGlobalFunctions();
@@ -28,11 +24,6 @@ class CheckpointsPageManager {
         window.closeDeleteModal = closeDeleteModal;
         window.confirmExclude = confirmExclude;
         window.closeExcludeModal = closeExcludeModal;
-        
-        // Add loadCheckpoints function to window for FilterManager compatibility
-        window.checkpointManager = {
-            loadCheckpoints: (reset) => loadMoreCheckpoints(reset)
-        };
         
         // Expose duplicates manager
         window.modelDuplicatesManager = this.duplicatesManager;

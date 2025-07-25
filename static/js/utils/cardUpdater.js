@@ -9,7 +9,7 @@
  */
 export function updateRecipeCard(recipeId, updates) {
     // Find the card with matching recipe ID
-    const recipeCard = document.querySelector(`.lora-card[data-id="${recipeId}"]`);
+    const recipeCard = document.querySelector(`.model-card[data-id="${recipeId}"]`);
     if (!recipeCard) return;
 
     // Get the recipe card component instance

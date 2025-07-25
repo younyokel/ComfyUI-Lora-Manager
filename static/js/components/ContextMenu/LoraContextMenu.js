@@ -1,12 +1,12 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
-import { refreshSingleLoraMetadata, saveModelMetadata, replacePreview, resetAndReload } from '../../api/loraApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
 import { copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
 
 export class LoraContextMenu extends BaseContextMenu {
     constructor() {
-        super('loraContextMenu', '.lora-card');
+        super('loraContextMenu', '.model-card');
         this.nsfwSelector = document.getElementById('nsfwLevelSelector');
         this.modelType = 'lora';
         this.resetAndReload = resetAndReload;
@@ -19,7 +19,7 @@ export class LoraContextMenu extends BaseContextMenu {
 
     // Use the saveModelMetadata implementation from loraApi
     async saveModelMetadata(filePath, data) {
-        return saveModelMetadata(filePath, data);
+        return getModelApiClient().saveModelMetadata(filePath, data);
     }
 
     handleMenuAction(action, menuItem) {
@@ -48,7 +48,7 @@ export class LoraContextMenu extends BaseContextMenu {
                 break;
             case 'replace-preview':
                 // Add a new action for replacing preview images
-                replacePreview(this.currentCard.dataset.filepath);
+                getModelApiClient().replaceModelPreview(this.currentCard.dataset.filepath);
                 break;
             case 'delete':
                 // Call showDeleteModal directly instead of clicking the trash button
@@ -58,7 +58,7 @@ export class LoraContextMenu extends BaseContextMenu {
                 moveManager.showMoveModal(this.currentCard.dataset.filepath);
                 break;
             case 'refresh-metadata':
-                refreshSingleLoraMetadata(this.currentCard.dataset.filepath);
+                getModelApiClient().refreshSingleModelMetadata(this.currentCard.dataset.filepath);
                 break;
             case 'exclude':
                 showExcludeModal(this.currentCard.dataset.filepath);

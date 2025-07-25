@@ -4,7 +4,7 @@
  * Moved to shared directory for consistency
  */
 import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
-import { saveModelMetadata } from '../../api/loraApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 
 /**
  * Fetch trained words for a model
@@ -610,7 +610,7 @@ async function saveTriggerWords() {
     
     try {
         // Special format for updating nested civitai.trainedWords
-        await saveModelMetadata(filePath, {
+        await getModelApiClient().saveModelMetadata(filePath, {
             civitai: { trainedWords: words }
         });
         

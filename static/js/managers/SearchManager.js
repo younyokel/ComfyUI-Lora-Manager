@@ -1,5 +1,6 @@
 import { updatePanelPositions } from "../utils/uiHelpers.js";
 import { getCurrentPageState } from "../state/index.js";
+import { getModelApiClient } from "../api/baseModelApi.js";
 import { setStorageItem, getStorageItem } from "../utils/storageHelpers.js";
 /**
  * SearchManager - Handles search functionality across different pages
@@ -312,7 +313,7 @@ export class SearchManager {
             loraName: options.loraName || false,
             loraModel: options.loraModel || false
           };
-        } else if (this.currentPage === 'loras') {
+        } else if (this.currentPage === 'loras' || this.currentPage === 'embeddings') {
           pageState.searchOptions = {
             filename: options.filename || false,
             modelname: options.modelname || false,
@@ -332,15 +333,9 @@ export class SearchManager {
       // Call the appropriate manager's load method based on page type
       if (this.currentPage === 'recipes' && window.recipeManager) {
         window.recipeManager.loadRecipes(true); // true to reset pagination
-      } else if (this.currentPage === 'loras' && window.loadMoreLoras) {
-        // Reset loras page and reload
-        if (pageState) {
-          pageState.currentPage = 1;
-          pageState.hasMore = true;
-        }
-        window.loadMoreLoras(true); // true to reset pagination
-      } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
-        window.checkpointManager.loadCheckpoints(true); // true to reset pagination
+      } else if (this.currentPage === 'loras' || this.currentPage === 'embeddings' || this.currentPage === 'checkpoints') {
+        // For models page, reset the page and reload
+        getModelApiClient().loadMoreWithVirtualScroll(true, false);
       }
     }
   }

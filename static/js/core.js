@@ -68,7 +68,7 @@ export class AppCore {
         const pageType = this.getPageType();
         
         // Initialize virtual scroll for pages that need it
-        if (['loras', 'recipes', 'checkpoints'].includes(pageType)) {
+        if (['loras', 'recipes', 'checkpoints', 'embeddings'].includes(pageType)) {
             initializeInfiniteScroll(pageType);
         }
         

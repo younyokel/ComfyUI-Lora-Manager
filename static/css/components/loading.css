@@ -109,7 +109,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .lora-card,
+    .model-card,
     .progress-bar,
     .current-item-bar {
         transition: none;

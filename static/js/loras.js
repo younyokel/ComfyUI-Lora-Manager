@@ -1,9 +1,7 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
-import { loadMoreLoras } from './api/loraApi.js';
-import { updateCardsForBulkMode } from './components/LoraCard.js';
+import { updateCardsForBulkMode } from './components/shared/ModelCard.js';
 import { bulkManager } from './managers/BulkManager.js';
-import { DownloadManager } from './managers/DownloadManager.js';
 import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
@@ -16,9 +14,6 @@ class LoraPageManager {
         // Add bulk mode to state
         state.bulkMode = false;
         state.selectedLoras = new Set();
-        
-        // Initialize managers
-        this.downloadManager = new DownloadManager();
         
         // Initialize page controls
         this.pageControls = createPageControls('loras');
@@ -34,12 +29,10 @@ class LoraPageManager {
     _exposeRequiredGlobalFunctions() {
         // Only expose what's still needed globally
         // Most functionality is now handled by the PageControls component
-        window.loadMoreLoras = loadMoreLoras;
         window.confirmDelete = confirmDelete;
         window.closeDeleteModal = closeDeleteModal;
         window.confirmExclude = confirmExclude;
         window.closeExcludeModal = closeExcludeModal;
-        window.downloadManager = this.downloadManager;
         window.moveManager = moveManager;
         
         // Bulk operations

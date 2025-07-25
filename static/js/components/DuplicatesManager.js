@@ -243,7 +243,7 @@ export class DuplicatesManager {
         checkboxes.forEach(checkbox => {
             checkbox.checked = !allSelected;
             const recipeId = checkbox.dataset.recipeId;
-            const card = checkbox.closest('.lora-card');
+            const card = checkbox.closest('.model-card');
             
             if (!allSelected) {
                 this.selectedForDeletion.add(recipeId);
@@ -268,7 +268,7 @@ export class DuplicatesManager {
         checkboxes.forEach(checkbox => {
             checkbox.checked = true;
             this.selectedForDeletion.add(checkbox.dataset.recipeId);
-            checkbox.closest('.lora-card').classList.add('duplicate-selected');
+            checkbox.closest('.model-card').classList.add('duplicate-selected');
         });
         
         // Update the button text
@@ -299,7 +299,7 @@ export class DuplicatesManager {
             if (checkbox) {
                 checkbox.checked = true;
                 this.selectedForDeletion.add(recipeId);
-                checkbox.closest('.lora-card').classList.add('duplicate-selected');
+                checkbox.closest('.model-card').classList.add('duplicate-selected');
             }
         }
         
@@ -310,7 +310,7 @@ export class DuplicatesManager {
         if (latestCheckbox) {
             latestCheckbox.checked = false;
             this.selectedForDeletion.delete(latestId);
-            latestCheckbox.closest('.lora-card').classList.remove('duplicate-selected');
+            latestCheckbox.closest('.model-card').classList.remove('duplicate-selected');
         }
         
         this.updateSelectedCount();

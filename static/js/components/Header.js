@@ -26,6 +26,7 @@ export class HeaderManager {
       const path = window.location.pathname;
       if (path.includes('/loras/recipes')) return 'recipes';
       if (path.includes('/checkpoints')) return 'checkpoints';
+      if (path.includes('/embeddings')) return 'embeddings';
       if (path.includes('/statistics')) return 'statistics';
       if (path.includes('/loras')) return 'loras';
       return 'unknown';

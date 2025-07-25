@@ -1,8 +1,7 @@
 import { BASE_MODEL_CLASSES } from '../utils/constants.js';
 import { getCurrentPageState } from '../state/index.js';
 import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
-import { loadMoreLoras } from '../api/loraApi.js';
-import { loadMoreCheckpoints } from '../api/checkpointApi.js';
+import { getModelApiClient } from '../api/baseModelApi.js';
 import { removeStorageItem, setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 
 export class FilterManager {
@@ -73,6 +72,8 @@ export class FilterManager {
                 tagsEndpoint = '/api/recipes/top-tags?limit=20';
             } else if (this.currentPage === 'checkpoints') {
                 tagsEndpoint = '/api/checkpoints/top-tags?limit=20';
+            } else if (this.currentPage === 'embeddings') {
+                tagsEndpoint = '/api/embeddings/top-tags?limit=20';
             }
 
             const response = await fetch(tagsEndpoint);
@@ -148,6 +149,8 @@ export class FilterManager {
             apiEndpoint = '/api/recipes/base-models';
         } else if (this.currentPage === 'checkpoints') {
             apiEndpoint = '/api/checkpoints/base-models';
+        } else if (this.currentPage === 'embeddings') {
+            apiEndpoint = '/api/embeddings/base-models';
         } else {
             return;
         }
@@ -161,11 +164,7 @@ export class FilterManager {
                     
                     data.base_models.forEach(model => {
                         const tag = document.createElement('div');
-                        // Add base model classes only for the loras page
-                        const baseModelClass = (this.currentPage === 'loras' && BASE_MODEL_CLASSES[model.name]) 
-                            ? BASE_MODEL_CLASSES[model.name] 
-                            : '';
-                        tag.className = `filter-tag base-model-tag ${baseModelClass}`;
+                        tag.className = `filter-tag base-model-tag`;
                         tag.dataset.baseModel = model.name;
                         tag.innerHTML = `${model.name} <span class="tag-count">${model.count}</span>`;
                         
@@ -281,11 +280,9 @@ export class FilterManager {
         // Call the appropriate manager's load method based on page type
         if (this.currentPage === 'recipes' && window.recipeManager) {
             await window.recipeManager.loadRecipes(true);
-        } else if (this.currentPage === 'loras') {
-            // For loras page, reset the page and reload
-            await loadMoreLoras(true, true);
-        } else if (this.currentPage === 'checkpoints' && window.checkpointManager) {
-            await loadMoreCheckpoints(true);
+        } else if (this.currentPage === 'loras' || this.currentPage === 'embeddings' || this.currentPage === 'checkpoints') {
+            // For models page, reset the page and reload
+            await getModelApiClient().loadMoreWithVirtualScroll(true, false);
         }
         
         // Update filter button to show active state
@@ -339,10 +336,8 @@ export class FilterManager {
         // Reload data using the appropriate method for the current page
         if (this.currentPage === 'recipes' && window.recipeManager) {
             await window.recipeManager.loadRecipes(true);
-        } else if (this.currentPage === 'loras') {
-            await loadMoreLoras(true, true);
-        } else if (this.currentPage === 'checkpoints') {
-            await loadMoreCheckpoints(true);
+        } else if (this.currentPage === 'loras' || this.currentPage === 'checkpoints' || this.currentPage === 'embeddings') {
+            await getModelApiClient().loadMoreWithVirtualScroll(true, true);
         }
         
         showToast(`Filters cleared`, 'info');

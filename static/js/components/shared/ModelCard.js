@@ -4,8 +4,7 @@ import { showModelModal } from './ModelModal.js';
 import { bulkManager } from '../../managers/BulkManager.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
-import { replacePreview, saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
-import { replaceCheckpointPreview as apiReplaceCheckpointPreview, saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 import { showDeleteModal } from '../../utils/modalUtils.js';
 
 // Add global event delegation handlers
@@ -29,7 +28,7 @@ export function setupModelCardEventDelegation(modelType) {
 // Event delegation handler for all model card events
 function handleModelCardEvent_internal(event, modelType) {
     // Find the closest card element
-    const card = event.target.closest('.lora-card');
+    const card = event.target.closest('.model-card');
     if (!card) return;
     
     // Handle specific elements within the card
@@ -47,7 +46,7 @@ function handleModelCardEvent_internal(event, modelType) {
     
     if (event.target.closest('.fa-star')) {
         event.stopPropagation();
-        toggleFavorite(card, modelType);
+        toggleFavorite(card);
         return;
     }
     
@@ -73,13 +72,13 @@ function handleModelCardEvent_internal(event, modelType) {
     
     if (event.target.closest('.fa-trash')) {
         event.stopPropagation();
-        showDeleteModal(card.dataset.filepath, modelType);
+        showDeleteModal(card.dataset.filepath);
         return;
     }
     
     if (event.target.closest('.fa-image')) {
         event.stopPropagation();
-        handleReplacePreview(card.dataset.filepath, modelType);
+        getModelApiClient().replaceModelPreview(card.dataset.filepath);
         return;
     }
     
@@ -130,15 +129,13 @@ function showBlurredContent(card) {
     }
 }
 
-async function toggleFavorite(card, modelType) {
+async function toggleFavorite(card) {
     const starIcon = card.querySelector('.fa-star');
     const isFavorite = starIcon.classList.contains('fas');
     const newFavoriteState = !isFavorite;
     
     try {
-        // Use the appropriate save function based on model type
-        const saveFunction = modelType === 'lora' ? saveLoraMetadata : saveCheckpointMetadata;
-        await saveFunction(card.dataset.filepath, { 
+        await getModelApiClient().saveModelMetadata(card.dataset.filepath, { 
             favorite: newFavoriteState 
         });
 
@@ -154,7 +151,7 @@ async function toggleFavorite(card, modelType) {
 }
 
 function handleSendToWorkflow(card, replaceMode, modelType) {
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
@@ -166,28 +163,23 @@ function handleSendToWorkflow(card, replaceMode, modelType) {
 }
 
 function handleCopyAction(card, modelType) {
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
         copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
-    } else {
+    } else if (modelType === 'checkpoints') {
         // Checkpoint copy functionality - copy checkpoint name
         const checkpointName = card.dataset.file_name;
         copyToClipboard(checkpointName, 'Checkpoint name copied');
+    } else if (modelType === 'embeddings') {
+        const embeddingName = card.dataset.file_name;
+        copyToClipboard(embeddingName, 'Embedding name copied');
     }
 }
 
 function handleReplacePreview(filePath, modelType) {
-    if (modelType === 'lora') {
-        replacePreview(filePath);
-    } else {
-        if (window.replaceCheckpointPreview) {
-            window.replaceCheckpointPreview(filePath);
-        } else {
-            apiReplaceCheckpointPreview(filePath);
-        }
-    }
+    apiClient.replaceModelPreview(filePath);
 }
 
 async function handleExampleImagesAccess(card, modelType) {
@@ -225,7 +217,7 @@ function handleCardClick(card, modelType) {
 
 function showModelModalFromCard(card, modelType) {
     // Get the appropriate preview versions map
-    const previewVersionsKey = modelType === 'lora' ? 'loras' : 'checkpoints';
+    const previewVersionsKey = modelType;
     const previewVersions = state.pages[previewVersionsKey]?.previewVersions || new Map();
     const version = previewVersions.get(card.dataset.filepath);
     const previewUrl = card.dataset.preview_url || '/loras_static/images/no-preview.png';
@@ -370,7 +362,7 @@ function showExampleAccessModal(card, modelType) {
 
 export function createModelCard(model, modelType) {
     const card = document.createElement('div');
-    card.className = 'lora-card';  // Reuse the same class for styling
+    card.className = 'model-card';  // Reuse the same class for styling
     card.dataset.sha256 = model.sha256;
     card.dataset.filepath = model.file_path;
     card.dataset.name = model.model_name;
@@ -380,11 +372,11 @@ export function createModelCard(model, modelType) {
     card.dataset.file_size = model.file_size;
     card.dataset.from_civitai = model.from_civitai;
     card.dataset.notes = model.notes || '';
-    card.dataset.base_model = model.base_model || (modelType === 'checkpoint' ? 'Unknown' : '');
+    card.dataset.base_model = model.base_model || 'Unknown';
     card.dataset.favorite = model.favorite ? 'true' : 'false';
 
     // LoRA specific data
-    if (modelType === 'lora') {
+    if (modelType === 'loras') {
         card.dataset.usage_tips = model.usage_tips;
     }
 
@@ -413,12 +405,12 @@ export function createModelCard(model, modelType) {
     }
 
     // Apply selection state if in bulk mode and this card is in the selected set (LoRA only)
-    if (modelType === 'lora' && state.bulkMode && state.selectedLoras.has(model.file_path)) {
+    if (modelType === 'loras' && state.bulkMode && state.selectedLoras.has(model.file_path)) {
         card.classList.add('selected');
     }
 
     // Get the appropriate preview versions map
-    const previewVersionsKey = modelType === 'lora' ? 'loras' : 'checkpoints';
+    const previewVersionsKey = modelType;
     const previewVersions = state.pages[previewVersionsKey]?.previewVersions || new Map();
     const version = previewVersions.get(model.file_path);
     const previewUrl = model.preview_url || '/loras_static/images/no-preview.png';
@@ -443,8 +435,8 @@ export function createModelCard(model, modelType) {
     const isFavorite = model.favorite === true;
 
     // Generate action icons based on model type
-    const actionIcons = modelType === 'lora' ? 
-        `<i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
+    const actionIcons = `
+        <i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
            title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
         </i>
         <i class="fas fa-globe" 
@@ -456,19 +448,6 @@ export function createModelCard(model, modelType) {
         </i>
         <i class="fas fa-copy" 
            title="Copy LoRA Syntax">
-        </i>` :
-        `<i class="${isFavorite ? 'fas fa-star favorite-active' : 'far fa-star'}" 
-           title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
-        </i>
-        <i class="fas fa-globe" 
-           title="${model.from_civitai ? 'View on Civitai' : 'Not available from Civitai'}"
-           ${!model.from_civitai ? 'style="opacity: 0.5; cursor: not-allowed"' : ''}>
-        </i>
-        <i class="fas fa-paper-plane" 
-           title="Send to workflow - feature to be implemented">
-        </i>
-        <i class="fas fa-copy" 
-           title="Copy Checkpoint Name">
         </i>`;
 
     card.innerHTML = `
@@ -537,7 +516,7 @@ export function updateCardsForBulkMode(isBulkMode) {
     document.body.classList.toggle('bulk-mode', isBulkMode);
     
     // Get all lora cards - this can now be from the DOM or through the virtual scroller
-    const loraCards = document.querySelectorAll('.lora-card');
+    const loraCards = document.querySelectorAll('.model-card');
     
     loraCards.forEach(card => {
         // Get all action containers for this card

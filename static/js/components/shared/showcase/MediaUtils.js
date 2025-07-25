@@ -5,7 +5,7 @@
  */
 import { showToast, copyToClipboard } from '../../../utils/uiHelpers.js';
 import { state } from '../../../state/index.js';
-import { uploadPreview } from '../../../api/baseModelApi.js';
+import { getModelApiClient } from '../../../api/baseModelApi.js';
 
 /**
  * Try to load local image first, fall back to remote if local fails
@@ -515,6 +515,7 @@ function initSetPreviewHandlers(container) {
                 
                 // Get local file path if available
                 const useLocalFile = mediaElement.dataset.localSrc && !mediaElement.dataset.localSrc.includes('undefined');
+                const apiClient = getModelApiClient();
                 
                 if (useLocalFile) {
                     // We have a local file, use it directly
@@ -523,7 +524,7 @@ function initSetPreviewHandlers(container) {
                     const file = new File([blob], 'preview.jpg', { type: blob.type });
                     
                     // Use the existing baseModelApi uploadPreview method with nsfw level
-                    await uploadPreview(modelFilePath, file, modelType, nsfwLevel);
+                    await apiClient.uploadPreview(modelFilePath, file, modelType, nsfwLevel);
                 } else {
                     // We need to download the remote file first
                     const response = await fetch(mediaElement.src);
@@ -531,7 +532,7 @@ function initSetPreviewHandlers(container) {
                     const file = new File([blob], 'preview.jpg', { type: blob.type });
                     
                     // Use the existing baseModelApi uploadPreview method with nsfw level
-                    await uploadPreview(modelFilePath, file, modelType, nsfwLevel);
+                    await apiClient.uploadPreview(modelFilePath, file, modelType, nsfwLevel);
                 }
             } catch (error) {
                 console.error('Error setting preview:', error);

@@ -1,8 +1,9 @@
 // LorasControls.js - Specific implementation for the LoRAs page
 import { PageControls } from './PageControls.js';
-import { loadMoreLoras, fetchCivitai, resetAndReload, refreshLoras } from '../../api/loraApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
 import { getSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
 import { createAlphabetBar } from '../alphabet/index.js';
+import { downloadManager } from '../../managers/DownloadManager.js';
 
 /**
  * LorasControls class - Extends PageControls for LoRA-specific functionality
@@ -29,7 +30,7 @@ export class LorasControls extends PageControls {
         const lorasAPI = {
             // Core API functions
             loadMoreModels: async (resetPage = false, updateFolders = false) => {
-                return await loadMoreLoras(resetPage, updateFolders);
+                return await getModelApiClient().loadMoreWithVirtualScroll(resetPage, updateFolders);
             },
             
             resetAndReload: async (updateFolders = false) => {
@@ -37,20 +38,16 @@ export class LorasControls extends PageControls {
             },
             
             refreshModels: async (fullRebuild = false) => {
-                return await refreshLoras(fullRebuild);
+                return await getModelApiClient().refreshModels(fullRebuild);
             },
             
             // LoRA-specific API functions
             fetchFromCivitai: async () => {
-                return await fetchCivitai();
+                return await getModelApiClient().fetchCivitaiMetadata();
             },
             
             showDownloadModal: () => {
-                if (window.downloadManager) {
-                    window.downloadManager.showDownloadModal();
-                } else {
-                    console.error('Download manager not available');
-                }
+                downloadManager.showDownloadModal();
             },
             
             toggleBulkMode: () => {

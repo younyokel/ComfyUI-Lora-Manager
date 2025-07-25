@@ -1,0 +1,278 @@
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content settings-modal">
+        <button class="close" onclick="modalManager.closeModal('settingsModal')">&times;</button>
+        <h2>Settings</h2>
+        <div class="settings-form">
+            <div class="setting-item api-key-item">
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <label for="civitaiApiKey">Civitai API Key:</label>
+                    </div>
+                    <div class="setting-control">
+                        <div class="api-key-input">
+                            <input type="password" 
+                                id="civitaiApiKey" 
+                                placeholder="Enter your Civitai API key"
+                                value="{{ settings.get('civitai_api_key', '') }}"
+                                onblur="settingsManager.saveInputSetting('civitaiApiKey', 'civitai_api_key')"
+                                onkeydown="if(event.key === 'Enter') { this.blur(); }" />
+                            <button class="toggle-visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-help">
+                    Used for authentication when downloading models from Civitai
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h3>Content Filtering</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="blurMatureContent">Blur NSFW Content</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="blurMatureContent" checked 
+                                       onchange="settingsManager.saveToggleSetting('blurMatureContent', 'blur_mature_content')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Blur mature (NSFW) content preview images
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="showOnlySFW">Show Only SFW Results</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="showOnlySFW" value="{{ settings.get('show_only_sfw', False) }}" {% if settings.get('show_only_sfw', False) %}checked{% endif %}
+                                       onchange="settingsManager.saveToggleSetting('showOnlySFW', 'show_only_sfw')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Filter out all NSFW content when browsing and searching
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Video Settings Section -->
+            <div class="settings-section">
+                <h3>Video Settings</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="autoplayOnHover">Autoplay Videos on Hover</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoplayOnHover" 
+                                       onchange="settingsManager.saveToggleSetting('autoplayOnHover', 'autoplay_on_hover')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Only play video previews when hovering over them
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Folder Settings Section -->
+            <div class="settings-section">
+                <h3>Folder Settings</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="defaultLoraRoot">Default LoRA Root</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="defaultLoraRoot" onchange="settingsManager.saveSelectSetting('defaultLoraRoot', 'default_lora_root')">
+                                <option value="">No Default</option>
+                                <!-- Options will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Set the default LoRA root directory for downloads, imports and moves
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="defaultCheckpointRoot">Default Checkpoint Root</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="defaultCheckpointRoot" onchange="settingsManager.saveSelectSetting('defaultCheckpointRoot', 'default_checkpoint_root')">
+                                <option value="">No Default</option>
+                                <!-- Options will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Set the default checkpoint root directory for downloads, imports and moves
+                    </div>
+                </div>
+            </div>
+
+            <!-- Default Path Customization Section -->
+            <div class="settings-section">
+                <h3>Default Path Customization</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="downloadPathTemplate">Download Path Template</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="downloadPathTemplate" onchange="settingsManager.saveSelectSetting('downloadPathTemplate', 'download_path_template')">
+                                <option value="">Flat Structure</option>
+                                <option value="{base_model}">By Base Model</option>
+                                <option value="{first_tag}">By First Tag</option>
+                                <option value="{base_model}/{first_tag}">Base Model + First Tag</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Configure path structure for default download locations
+                        <ul class="list-description">
+                            <li><strong>Flat:</strong> All models in root folder</li>
+                            <li><strong>Base Model:</strong> Organized by model type (e.g., Flux.1 D, SDXL)</li>
+                            <li><strong>First Tag:</strong> Organized by primary tag (e.g., style, character)</li>
+                            <li><strong>Base Model + Tag:</strong> Two-level organization for better structure</li>
+                        </ul>
+                    </div>
+                    <div id="pathTemplatePreview" class="template-preview"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label>Base Model Path Mappings</label>
+                        </div>
+                        <div class="setting-control">
+                            <button type="button" class="add-mapping-btn" onclick="settingsManager.addMappingRow()">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Mapping</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Customize folder names for specific base models (e.g., "Flux.1 D" → "flux")
+                    </div>
+                    <div class="mappings-container">
+                        <div id="baseModelMappingsContainer">
+                            <!-- Mapping rows will be added dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Layout Settings Section -->
+            <div class="settings-section">
+                <h3>Layout Settings</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="displayDensity">Display Density</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="displayDensity" onchange="settingsManager.saveSelectSetting('displayDensity', 'display_density')">
+                                <option value="default">Default</option>
+                                <option value="medium">Medium</option>
+                                <option value="compact">Compact</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Choose how many cards to display per row:
+                        <ul class="list-description">
+                            <li><strong>Default:</strong> 5 (1080p), 6 (2K), 8 (4K)</li>
+                            <li><strong>Medium:</strong> 6 (1080p), 7 (2K), 9 (4K)</li>
+                            <li><strong>Compact:</strong> 7 (1080p), 8 (2K), 10 (4K)</li>
+                        </ul>
+                        <span class="warning-text">Warning: Higher densities may cause performance issues on systems with limited resources.</span>
+                    </div>
+                </div>
+                
+                <!-- Add Card Info Display setting -->
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="cardInfoDisplay">Card Info Display</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="cardInfoDisplay" onchange="settingsManager.saveSelectSetting('cardInfoDisplay', 'card_info_display')">
+                                <option value="always">Always Visible</option>
+                                <option value="hover">Reveal on Hover</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Choose when to display model information and action buttons:
+                        <ul class="list-description">
+                            <li><strong>Always Visible:</strong> Headers and footers are always visible</li>
+                            <li><strong>Reveal on Hover:</strong> Headers and footers only appear when hovering over a card</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Example Images Settings Section -->
+            <div class="settings-section">
+                <h3>Example Images</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="exampleImagesPath">Download Location <i class="fas fa-sync-alt restart-required-icon" title="Requires restart"></i></label>
+                        </div>
+                        <div class="setting-control path-control">
+                            <input type="text" id="exampleImagesPath" placeholder="Enter folder path for example images" />
+                            <button id="exampleImagesDownloadBtn" class="primary-btn">
+                                <i class="fas fa-download"></i> <span id="exampleDownloadBtnText">Download</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Enter the folder path where example images from Civitai will be saved
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="optimizeExampleImages">Optimize Downloaded Images</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="optimizeExampleImages" checked 
+                                       onchange="settingsManager.saveToggleSetting('optimizeExampleImages', 'optimize_example_images')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Optimize example images to reduce file size and improve loading speed (metadata will be preserved)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -13,10 +13,6 @@
 {% block init_message %}Scanning and building LoRA cache. This may take a few minutes...{% endblock %}
 {% block init_check_url %}/api/loras?page=1&page_size=1{% endblock %}
 
-{% block additional_components %}
-{% include 'components/lora_modals.html' %}
-{% endblock %}
-
 {% block content %}
     {% include 'components/controls.html' %}
     {% include 'components/alphabet_bar.html' %}
