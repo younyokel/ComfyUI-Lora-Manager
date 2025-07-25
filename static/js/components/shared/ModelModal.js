@@ -13,8 +13,7 @@ import {
     setupFileNameEditing
 } from './ModelMetadata.js';
 import { setupTagEditMode } from './ModelTags.js';
-import { saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
-import { saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';
@@ -378,9 +377,7 @@ function setupLoraSpecificFields(filePath) {
         currentPresets[key] = parseFloat(value);
         const newPresetsJson = JSON.stringify(currentPresets);
 
-        await saveLoraMetadata(filePath, { 
-            usage_tips: newPresetsJson
-        });
+        await getModelApiClient().saveModelMetadata(filePath, { usage_tips: newPresetsJson });
 
         presetTags.innerHTML = renderPresetTags(currentPresets);
         
@@ -406,8 +403,7 @@ function setupLoraSpecificFields(filePath) {
 async function saveNotes(filePath, modelType) {
     const content = document.querySelector('.notes-content').textContent;
     try {
-        const saveFunction = modelType === 'lora' ? saveLoraMetadata : saveCheckpointMetadata;
-        await saveFunction(filePath, { notes: content });
+        await getModelApiClient().saveModelMetadata(filePath, { notes: content });
 
         showToast('Notes saved successfully', 'success');
     } catch (error) {

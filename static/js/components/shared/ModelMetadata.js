@@ -4,9 +4,6 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { state } from '../../state/index.js';
-import { saveModelMetadata as saveLoraMetadata, renameLoraFile } from '../../api/loraApi.js';
-import { saveModelMetadata as saveCheckpointMetadata, renameCheckpointFile } from '../../api/checkpointApi.js';
 import { getModelApiClient } from '../../api/baseModelApi.js';
 
 /**

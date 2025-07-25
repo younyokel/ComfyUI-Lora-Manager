@@ -2,7 +2,7 @@
  * PresetTags.js
  * Handles LoRA model preset parameter tags - Shared version
  */
-import { saveModelMetadata } from '../../api/loraApi.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 
 /**
  * Parse preset parameters
@@ -58,7 +58,7 @@ window.removePreset = async function(key) {
     delete currentPresets[key];
     const newPresetsJson = JSON.stringify(currentPresets);
 
-    await saveModelMetadata(filePath, { 
+    await getModelApiClient().saveModelMetadata(filePath, { 
         usage_tips: newPresetsJson 
     });
     

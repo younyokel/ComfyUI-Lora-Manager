@@ -3,9 +3,7 @@
  * Module for handling model tag editing functionality - 共享版本
  */
 import { showToast } from '../../utils/uiHelpers.js';
-import { saveModelMetadata as saveLoraMetadata } from '../../api/loraApi.js';
-import { saveModelMetadata as saveCheckpointMetadata } from '../../api/checkpointApi.js';
-import { state } from '../../state/index.js';
+import { getModelApiClient } from '../../api/baseModelApi.js';
 
 // Preset tag suggestions
 const PRESET_TAGS = [
@@ -165,10 +163,8 @@ async function saveTags() {
     }
     
     try {
-        const saveFunction = state.currentPageType === 'checkpoints' ? saveCheckpointMetadata : saveLoraMetadata;
-        
         // Save tags metadata
-        await saveFunction(filePath, { tags: tags });
+        await getModelApiClient().saveModelMetadata(filePath, { tags: tags });
         
         // Set flag to skip restoring original tags when exiting edit mode
         editBtn.dataset.skipRestore = "true";

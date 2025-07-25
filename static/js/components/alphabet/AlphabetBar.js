@@ -1,5 +1,5 @@
 // AlphabetBar.js - Component for alphabet filtering
-import { getCurrentPageState, setCurrentPageType } from '../../state/index.js';
+import { getCurrentPageState } from '../../state/index.js';
 import { getStorageItem, setStorageItem } from '../../utils/storageHelpers.js';
 import { resetAndReload } from '../../api/loraApi.js';
 
