@@ -206,6 +206,20 @@ class MetadataManager:
                     model_type="checkpoint",
                     from_civitai=True
                 )
+            elif model_class.__name__ == "EmbeddingMetadata":
+                metadata = model_class(
+                    file_name=base_name,
+                    model_name=base_name,
+                    file_path=normalize_path(file_path),
+                    size=os.path.getsize(real_path),
+                    modified=datetime.now().timestamp(),
+                    sha256=sha256,
+                    base_model="Unknown",
+                    preview_url=normalize_path(preview_url),
+                    tags=[],
+                    modelDescription="",
+                    from_civitai=True
+                )
             else:  # Default to LoraMetadata
                 metadata = model_class(
                     file_name=base_name,

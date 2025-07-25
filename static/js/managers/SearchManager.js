@@ -313,7 +313,7 @@ export class SearchManager {
             loraName: options.loraName || false,
             loraModel: options.loraModel || false
           };
-        } else if (this.currentPage === 'loras') {
+        } else if (this.currentPage === 'loras' || this.currentPage === 'embeddings') {
           pageState.searchOptions = {
             filename: options.filename || false,
             modelname: options.modelname || false,

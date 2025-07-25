@@ -279,23 +279,50 @@ class StandaloneLoraManager(LoraManager):
             # Record route mapping
             config.add_route_mapping(real_root, preview_path)
             added_targets.add(os.path.normpath(real_root))
+
+        # Add static routes for each embedding root
+        for idx, root in enumerate(getattr(config, "embeddings_roots", []), start=1):
+            if not os.path.exists(root):
+                logger.warning(f"Embedding root path does not exist: {root}")
+                continue
+
+            preview_path = f'/embeddings_static/root{idx}/preview'
+
+            real_root = root
+            for target, link in config._path_mappings.items():
+                if os.path.normpath(link) == os.path.normpath(root):
+                    real_root = target
+                    break
+
+            display_root = real_root.replace('\\', '/')
+            app.router.add_static(preview_path, real_root)
+            logger.info(f"Added static route {preview_path} -> {display_root}")
+
+            config.add_route_mapping(real_root, preview_path)
+            added_targets.add(os.path.normpath(real_root))
         
         # Add static routes for symlink target paths that aren't already covered
         link_idx = {
             'lora': 1,
-            'checkpoint': 1
+            'checkpoint': 1,
+            'embedding': 1
         }
         
         for target_path, link_path in config._path_mappings.items():
             norm_target = os.path.normpath(target_path)
             if norm_target not in added_targets:
-                # Determine if this is a checkpoint or lora link based on path
+                # Determine if this is a checkpoint, lora, or embedding link based on path
                 is_checkpoint = any(os.path.normpath(cp_root) in os.path.normpath(link_path) for cp_root in config.base_models_roots)
                 is_checkpoint = is_checkpoint or any(os.path.normpath(cp_root) in norm_target for cp_root in config.base_models_roots)
-                
+                is_embedding = any(os.path.normpath(emb_root) in os.path.normpath(link_path) for emb_root in getattr(config, "embeddings_roots", []))
+                is_embedding = is_embedding or any(os.path.normpath(emb_root) in norm_target for emb_root in getattr(config, "embeddings_roots", []))
+
                 if is_checkpoint:
                     route_path = f'/checkpoints_static/link_{link_idx["checkpoint"]}/preview'
                     link_idx["checkpoint"] += 1
+                elif is_embedding:
+                    route_path = f'/embeddings_static/link_{link_idx["embedding"]}/preview'
+                    link_idx["embedding"] += 1
                 else:
                     route_path = f'/loras_static/link_{link_idx["lora"]}/preview'
                     link_idx["lora"] += 1

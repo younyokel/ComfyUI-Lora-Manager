@@ -16,8 +16,11 @@
       <a href="/checkpoints" class="nav-item" id="checkpointsNavItem">
         <i class="fas fa-check-circle"></i> Checkpoints
       </a>
+      <a href="/embeddings" class="nav-item" id="embeddingsNavItem">
+        <i class="fas fa-code"></i> Embeddings
+      </a>
       <a href="/statistics" class="nav-item" id="statisticsNavItem">
-        <i class="fas fa-chart-bar"></i> Statistics
+        <i class="fas fa-chart-bar"></i> Stats
       </a>
     </nav>
     
@@ -83,6 +86,10 @@
       <div class="search-option-tag active" data-option="filename">Filename</div>
       <div class="search-option-tag active" data-option="modelname">Checkpoint Name</div>
       <div class="search-option-tag active" data-option="tags">Tags</div>
+      {% elif request.path == '/embeddings' %}
+      <div class="search-option-tag active" data-option="filename">Filename</div>
+      <div class="search-option-tag active" data-option="modelname">Embedding Name</div>
+      <div class="search-option-tag active" data-option="tags">Tags</div>
       {% else %}
       <!-- Default options for LoRAs page -->
       <div class="search-option-tag active" data-option="filename">Filename</div>
@@ -147,6 +154,8 @@
         searchInput.placeholder = 'Search recipes...';
       } else if (currentPath === '/checkpoints') {
         searchInput.placeholder = 'Search checkpoints...';
+      } else if (currentPath === '/embeddings') {
+        searchInput.placeholder = 'Search embeddings...';
       } else {
         searchInput.placeholder = 'Search...';
       }
@@ -156,6 +165,7 @@
     const lorasNavItem = document.getElementById('lorasNavItem');
     const recipesNavItem = document.getElementById('recipesNavItem');
     const checkpointsNavItem = document.getElementById('checkpointsNavItem');
+    const embeddingsNavItem = document.getElementById('embeddingsNavItem');
     const statisticsNavItem = document.getElementById('statisticsNavItem');
     
     if (currentPath === '/loras') {
@@ -164,6 +174,8 @@
       recipesNavItem.classList.add('active');
     } else if (currentPath === '/checkpoints') {
       checkpointsNavItem.classList.add('active');
+    } else if (currentPath === '/embeddings') {
+      embeddingsNavItem.classList.add('active');
     } else if (currentPath === '/statistics') {
       statisticsNavItem.classList.add('active');
     }

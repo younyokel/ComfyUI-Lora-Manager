@@ -33,7 +33,15 @@ export function showModelModal(model, modelType) {
         model.civitai.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
     
     // Generate model type specific content
-    const typeSpecificContent = modelType === 'loras' ? renderLoraSpecificContent(model, escapedWords) : '';
+    // const typeSpecificContent = modelType === 'loras' ? renderLoraSpecificContent(model, escapedWords) : '';
+    let typeSpecificContent;
+    if (modelType === 'loras') {
+        typeSpecificContent = renderLoraSpecificContent(model, escapedWords);
+    } else if (modelType === 'embeddings') {
+        typeSpecificContent = renderEmbeddingSpecificContent(model, escapedWords);
+    } else {
+        typeSpecificContent = '';
+    }
     
     // Generate tabs based on model type
     const tabsContent = modelType === 'loras' ? 
@@ -246,6 +254,10 @@ function renderLoraSpecificContent(lora, escapedWords) {
         </div>
         ${renderTriggerWords(escapedWords, lora.file_path)}
     `;
+}
+
+function renderEmbeddingSpecificContent(embedding, escapedWords) {
+    return `${renderTriggerWords(escapedWords, embedding.file_path)}`;
 }
 
 /**

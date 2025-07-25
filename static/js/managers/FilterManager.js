@@ -72,6 +72,8 @@ export class FilterManager {
                 tagsEndpoint = '/api/recipes/top-tags?limit=20';
             } else if (this.currentPage === 'checkpoints') {
                 tagsEndpoint = '/api/checkpoints/top-tags?limit=20';
+            } else if (this.currentPage === 'embeddings') {
+                tagsEndpoint = '/api/embeddings/top-tags?limit=20';
             }
 
             const response = await fetch(tagsEndpoint);
@@ -147,6 +149,8 @@ export class FilterManager {
             apiEndpoint = '/api/recipes/base-models';
         } else if (this.currentPage === 'checkpoints') {
             apiEndpoint = '/api/checkpoints/base-models';
+        } else if (this.currentPage === 'embeddings') {
+            apiEndpoint = '/api/embeddings/base-models';
         } else {
             return;
         }
@@ -160,11 +164,7 @@ export class FilterManager {
                     
                     data.base_models.forEach(model => {
                         const tag = document.createElement('div');
-                        // Add base model classes only for the loras page
-                        const baseModelClass = (this.currentPage === 'loras' && BASE_MODEL_CLASSES[model.name]) 
-                            ? BASE_MODEL_CLASSES[model.name] 
-                            : '';
-                        tag.className = `filter-tag base-model-tag ${baseModelClass}`;
+                        tag.className = `filter-tag base-model-tag`;
                         tag.dataset.baseModel = model.name;
                         tag.innerHTML = `${model.name} <span class="tag-count">${model.count}</span>`;
                         
