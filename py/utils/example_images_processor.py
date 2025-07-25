@@ -251,12 +251,13 @@ class ExampleImagesProcessor:
             # Find the model and get current metadata
             lora_scanner = await ServiceRegistry.get_lora_scanner()
             checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+            embedding_scanner = await ServiceRegistry.get_embedding_scanner()
             
             model_data = None
             scanner = None
             
             # Check both scanners to find the model
-            for scan_obj in [lora_scanner, checkpoint_scanner]:
+            for scan_obj in [lora_scanner, checkpoint_scanner, embedding_scanner]:
                 cache = await scan_obj.get_cached_data()
                 for item in cache.raw_data:
                     if item.get('sha256') == model_hash:
@@ -384,12 +385,13 @@ class ExampleImagesProcessor:
             # Find the model and get current metadata
             lora_scanner = await ServiceRegistry.get_lora_scanner()
             checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+            embedding_scanner = await ServiceRegistry.get_embedding_scanner()
             
             model_data = None
             scanner = None
             
             # Check both scanners to find the model
-            for scan_obj in [lora_scanner, checkpoint_scanner]:
+            for scan_obj in [lora_scanner, checkpoint_scanner, embedding_scanner]:
                 if scan_obj.has_hash(model_hash):
                     cache = await scan_obj.get_cached_data()
                     for item in cache.raw_data:

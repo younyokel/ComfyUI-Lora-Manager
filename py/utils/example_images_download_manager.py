@@ -214,6 +214,10 @@ class DownloadManager:
             if 'checkpoint' in model_types:
                 checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
                 scanners.append(('checkpoint', checkpoint_scanner))
+
+            if 'embedding' in model_types:
+                embedding_scanner = await ServiceRegistry.get_embedding_scanner()
+                scanners.append(('embedding', embedding_scanner))
             
             # Get all models
             all_models = []

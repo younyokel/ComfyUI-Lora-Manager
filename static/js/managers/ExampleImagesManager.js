@@ -241,7 +241,7 @@ class ExampleImagesManager {
                 body: JSON.stringify({
                     output_dir: outputDir,
                     optimize: optimize,
-                    model_types: ['lora', 'checkpoint']
+                    model_types: ['lora', 'checkpoint', 'embedding'] // Example types, adjust as needed
                 })
             });
             

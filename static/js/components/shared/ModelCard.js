@@ -1,6 +1,7 @@
 import { showToast, openCivitai, copyToClipboard, sendLoraToWorkflow, openExampleImagesFolder } from '../../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../../state/index.js';
 import { showModelModal } from './ModelModal.js';
+import { toggleShowcase } from './showcase/ShowcaseView.js';
 import { bulkManager } from '../../managers/BulkManager.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
@@ -281,7 +282,7 @@ function showExampleAccessModal(card, modelType) {
                 if (settingsModal) {
                     modalManager.showModal('settingsModal');
                     setTimeout(() => {
-                        const exampleSection = settingsModal.querySelector('.settings-section:nth-child(5)');
+                        const exampleSection = settingsModal.querySelector('.settings-section:nth-child(7)');
                         if (exampleSection) {
                             exampleSection.scrollIntoView({ behavior: 'smooth' });
                         }
@@ -344,7 +345,7 @@ function showExampleAccessModal(card, modelType) {
                         if (carousel && carousel.classList.contains('collapsed')) {
                             const scrollIndicator = showcaseTab.querySelector('.scroll-indicator');
                             if (scrollIndicator) {
-                                scrollIndicator.click();
+                                toggleShowcase(scrollIndicator);
                             }
                         }
 
