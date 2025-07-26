@@ -16,7 +16,7 @@ One-click Integration:
 ## 📺 Tutorial: One-Click LoRA Integration
 Watch this quick tutorial to learn how to use the new one-click LoRA integration feature:
 
-[![One-Click LoRA Integration Tutorial](https://img.youtube.com/vi/hvKw31YpE-U/0.jpg)](https://youtu.be/hvKw31YpE-U)
+[![One-Click LoRA Integration Tutorial](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/video-thumbnails/getting-started.jpg)](https://youtu.be/hvKw31YpE-U)
 
 ## 🌐 Browser Extension
 Enhance your Civitai browsing experience with our companion browser extension! See which models you already have, download new ones with a single click, and manage your downloads efficiently.
