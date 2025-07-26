@@ -10,9 +10,6 @@ A comprehensive toolset that streamlines organizing, downloading, and applying L
 
 ![Interface Preview](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/screenshot.png)
 
-One-click Integration:
-![One-Click Integration](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/static/images/one-click-send.jpg)
-
 ## 📺 Tutorial: One-Click LoRA Integration
 Watch this quick tutorial to learn how to use the new one-click LoRA integration feature:
 
