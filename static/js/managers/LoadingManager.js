@@ -145,6 +145,28 @@ export class LoadingManager {
         }
     }
 
+    // Enhanced progress display without callback pattern
+    showEnhancedProgress(message = 'Processing...') {
+        this.show(message, 0);
+        
+        // Return update functions
+        return {
+            updateProgress: (percent, currentItem = '', statusMessage = '') => {
+                this.setProgress(percent);   
+                if (statusMessage) {
+                    this.setStatus(statusMessage);
+                }
+            },
+            
+            complete: async (completionMessage = 'Complete') => {
+                this.setProgress(100);
+                this.setStatus(completionMessage);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                this.hide();
+            }
+        };
+    }
+
     showSimpleLoading(message = 'Loading...') {
         this.overlay.style.display = 'flex';
         this.progressBar.style.display = 'none';
@@ -154,4 +176,4 @@ export class LoadingManager {
     restoreProgressBar() {
         this.progressBar.style.display = 'block';
     }
-} 
+}

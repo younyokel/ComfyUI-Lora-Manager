@@ -478,6 +478,104 @@ class ModelApiClient {
     }
 
     /**
+     * Fetch CivitAI metadata for multiple models with progress tracking
+     */
+    async refreshBulkModelMetadata(filePaths) {
+        if (!filePaths || filePaths.length === 0) {
+            throw new Error('No file paths provided');
+        }
+
+        const totalItems = filePaths.length;
+        let processedCount = 0;
+        let successCount = 0;
+        let failedItems = [];
+
+        const progressController = state.loadingManager.showEnhancedProgress('Starting metadata refresh...');
+
+        try {
+            // Process files sequentially to avoid overwhelming the API
+            for (let i = 0; i < filePaths.length; i++) {
+                const filePath = filePaths[i];
+                const fileName = filePath.split('/').pop();
+                
+                try {
+                    const overallProgress = Math.floor((i / totalItems) * 100);
+                    progressController.updateProgress(
+                        overallProgress, 
+                        fileName, 
+                        `Processing ${i + 1}/${totalItems}: ${fileName}`
+                    );
+                    
+                    const response = await fetch(this.apiConfig.endpoints.fetchCivitai, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (data.metadata && state.virtualScroller) {
+                            state.virtualScroller.updateSingleItem(filePath, data.metadata);
+                        }
+                        successCount++;
+                    } else {
+                        throw new Error(data.error || 'Failed to refresh metadata');
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error refreshing metadata for ${fileName}:`, error);
+                    failedItems.push({ filePath, fileName, error: error.message });
+                }
+                
+                processedCount++;
+            }
+
+            // Show completion message
+            let completionMessage;
+            if (successCount === totalItems) {
+                completionMessage = `Successfully refreshed all ${successCount} ${this.apiConfig.config.displayName}s`;
+                showToast(completionMessage, 'success');
+            } else if (successCount > 0) {
+                completionMessage = `Refreshed ${successCount} of ${totalItems} ${this.apiConfig.config.displayName}s`;
+                showToast(completionMessage, 'warning');
+                
+                if (failedItems.length > 0) {
+                    const failureMessage = failedItems.length <= 3 
+                        ? failedItems.map(item => `${item.fileName}: ${item.error}`).join('\n')
+                        : failedItems.slice(0, 3).map(item => `${item.fileName}: ${item.error}`).join('\n') + 
+                          `\n(and ${failedItems.length - 3} more)`;
+                    showToast(`Failed refreshes:\n${failureMessage}`, 'warning', 6000);
+                }
+            } else {
+                completionMessage = `Failed to refresh metadata for any ${this.apiConfig.config.displayName}s`;
+                showToast(completionMessage, 'error');
+            }
+
+            await progressController.complete(completionMessage);
+
+            return {
+                success: successCount > 0,
+                total: totalItems,
+                processed: processedCount,
+                successful: successCount,
+                failed: failedItems.length,
+                errors: failedItems
+            };
+
+        } catch (error) {
+            console.error('Error in bulk metadata refresh:', error);
+            showToast(`Failed to refresh metadata: ${error.message}`, 'error');
+            await progressController.complete('Operation failed');
+            throw error;
+        }
+    }
+
+    /**
      * Move a single model to target path
      * @returns {string|null} - The new file path if moved, null if not moved
      */

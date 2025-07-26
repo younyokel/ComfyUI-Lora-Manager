@@ -2,6 +2,7 @@ import { state } from '../state/index.js';
 import { showToast, copyToClipboard, sendLoraToWorkflow } from '../utils/uiHelpers.js';
 import { updateCardsForBulkMode } from '../components/shared/ModelCard.js';
 import { modalManager } from './ModalManager.js';
+import { getModelApiClient } from '../api/baseModelApi.js';
 
 export class BulkManager {
     constructor() {
@@ -558,6 +559,55 @@ export class BulkManager {
         // Update thumbnail strip if visible
         if (this.isStripVisible) {
             this.updateThumbnailStrip();
+        }
+    }
+
+    // Add method to refresh metadata for all selected models
+    async refreshAllMetadata() {
+        if (state.selectedLoras.size === 0) {
+            showToast('No models selected', 'warning');
+            return;
+        }
+        
+        try {
+            // Get the API client for the current model type
+            const apiClient = getModelApiClient();
+            
+            // Convert Set to Array for processing
+            const filePaths = Array.from(state.selectedLoras);
+            
+            // Call the bulk refresh method
+            const result = await apiClient.refreshBulkModelMetadata(filePaths);
+            
+            if (result.success) {
+                // Update the metadata cache for successfully refreshed items
+                for (const filepath of state.selectedLoras) {
+                    const metadata = state.loraMetadataCache.get(filepath);
+                    if (metadata) {
+                        // Find the corresponding card to get updated data
+                        const card = document.querySelector(`.model-card[data-filepath="${filepath}"]`);
+                        if (card) {
+                            state.loraMetadataCache.set(filepath, {
+                                ...metadata,
+                                fileName: card.dataset.file_name,
+                                usageTips: card.dataset.usage_tips,
+                                previewUrl: this.getCardPreviewUrl(card),
+                                isVideo: this.isCardPreviewVideo(card),
+                                modelName: card.dataset.name
+                            });
+                        }
+                    }
+                }
+                
+                // Update thumbnail strip if visible
+                if (this.isStripVisible) {
+                    this.updateThumbnailStrip();
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error during bulk metadata refresh:', error);
+            showToast('Failed to refresh metadata', 'error');
         }
     }
 }
