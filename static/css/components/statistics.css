@@ -56,6 +56,24 @@
     color: var(--lora-error);
 }
 
+/* Update color scheme to include embeddings */
+:root {
+    --embedding-color: oklch(68% 0.28 120); /* Green for embeddings */
+}
+
+/* Update metric cards and chart colors to support embeddings */
+.metric-card.embedding .metric-icon {
+    color: var(--embedding-color);
+}
+
+.model-item.embedding {
+    border-left: 3px solid var(--embedding-color);
+}
+
+.model-item.embedding:hover {
+    border-color: var(--embedding-color);
+}
+
 /* Dashboard Content */
 .dashboard-content {
     background: var(--card-bg);

@@ -20,6 +20,7 @@ class StatsRoutes:
     def __init__(self):
         self.lora_scanner = None
         self.checkpoint_scanner = None
+        self.embedding_scanner = None
         self.usage_stats = None
         self.template_env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(config.templates_path),
@@ -30,6 +31,7 @@ class StatsRoutes:
         """Initialize services from ServiceRegistry"""
         self.lora_scanner = await ServiceRegistry.get_lora_scanner()
         self.checkpoint_scanner = await ServiceRegistry.get_checkpoint_scanner()
+        self.embedding_scanner = await ServiceRegistry.get_embedding_scanner()
         self.usage_stats = UsageStats()
 
     async def handle_stats_page(self, request: web.Request) -> web.Response:
@@ -49,7 +51,12 @@ class StatsRoutes:
                 (hasattr(self.checkpoint_scanner, '_is_initializing') and self.checkpoint_scanner._is_initializing)
             )
             
-            is_initializing = lora_initializing or checkpoint_initializing
+            embedding_initializing = (
+                self.embedding_scanner._cache is None or
+                (hasattr(self.embedding_scanner, 'is_initializing') and self.embedding_scanner.is_initializing())
+            )
+            
+            is_initializing = lora_initializing or checkpoint_initializing or embedding_initializing
 
             template = self.template_env.get_template('statistics.html')
             rendered = template.render(
@@ -85,21 +92,29 @@ class StatsRoutes:
             checkpoint_count = len(checkpoint_cache.raw_data)
             checkpoint_size = sum(cp.get('size', 0) for cp in checkpoint_cache.raw_data)
             
+            # Get Embedding statistics
+            embedding_cache = await self.embedding_scanner.get_cached_data()
+            embedding_count = len(embedding_cache.raw_data)
+            embedding_size = sum(emb.get('size', 0) for emb in embedding_cache.raw_data)
+            
             # Get usage statistics
             usage_data = await self.usage_stats.get_stats()
             
             return web.json_response({
                 'success': True,
                 'data': {
-                    'total_models': lora_count + checkpoint_count,
+                    'total_models': lora_count + checkpoint_count + embedding_count,
                     'lora_count': lora_count,
                     'checkpoint_count': checkpoint_count,
-                    'total_size': lora_size + checkpoint_size,
+                    'embedding_count': embedding_count,
+                    'total_size': lora_size + checkpoint_size + embedding_size,
                     'lora_size': lora_size,
                     'checkpoint_size': checkpoint_size,
+                    'embedding_size': embedding_size,
                     'total_generations': usage_data.get('total_executions', 0),
                     'unused_loras': self._count_unused_models(lora_cache.raw_data, usage_data.get('loras', {})),
-                    'unused_checkpoints': self._count_unused_models(checkpoint_cache.raw_data, usage_data.get('checkpoints', {}))
+                    'unused_checkpoints': self._count_unused_models(checkpoint_cache.raw_data, usage_data.get('checkpoints', {})),
+                    'unused_embeddings': self._count_unused_models(embedding_cache.raw_data, usage_data.get('embeddings', {}))
                 }
             })
             
@@ -121,14 +136,17 @@ class StatsRoutes:
             # Get model data for enrichment
             lora_cache = await self.lora_scanner.get_cached_data()
             checkpoint_cache = await self.checkpoint_scanner.get_cached_data()
+            embedding_cache = await self.embedding_scanner.get_cached_data()
             
             # Create hash to model mapping
             lora_map = {lora['sha256']: lora for lora in lora_cache.raw_data}
             checkpoint_map = {cp['sha256']: cp for cp in checkpoint_cache.raw_data}
+            embedding_map = {emb['sha256']: emb for emb in embedding_cache.raw_data}
             
             # Prepare top used models
             top_loras = self._get_top_used_models(usage_data.get('loras', {}), lora_map, 10)
             top_checkpoints = self._get_top_used_models(usage_data.get('checkpoints', {}), checkpoint_map, 10)
+            top_embeddings = self._get_top_used_models(usage_data.get('embeddings', {}), embedding_map, 10)
             
             # Prepare usage timeline (last 30 days)
             timeline = self._get_usage_timeline(usage_data, 30)
@@ -138,6 +156,7 @@ class StatsRoutes:
                 'data': {
                     'top_loras': top_loras,
                     'top_checkpoints': top_checkpoints,
+                    'top_embeddings': top_embeddings,
                     'usage_timeline': timeline,
                     'total_executions': usage_data.get('total_executions', 0)
                 }
@@ -158,16 +177,19 @@ class StatsRoutes:
             # Get model data
             lora_cache = await self.lora_scanner.get_cached_data()
             checkpoint_cache = await self.checkpoint_scanner.get_cached_data()
+            embedding_cache = await self.embedding_scanner.get_cached_data()
             
             # Count by base model
             lora_base_models = Counter(lora.get('base_model', 'Unknown') for lora in lora_cache.raw_data)
             checkpoint_base_models = Counter(cp.get('base_model', 'Unknown') for cp in checkpoint_cache.raw_data)
+            embedding_base_models = Counter(emb.get('base_model', 'Unknown') for emb in embedding_cache.raw_data)
             
             return web.json_response({
                 'success': True,
                 'data': {
                     'loras': dict(lora_base_models),
-                    'checkpoints': dict(checkpoint_base_models)
+                    'checkpoints': dict(checkpoint_base_models),
+                    'embeddings': dict(embedding_base_models)
                 }
             })
             
@@ -186,6 +208,7 @@ class StatsRoutes:
             # Get model data
             lora_cache = await self.lora_scanner.get_cached_data()
             checkpoint_cache = await self.checkpoint_scanner.get_cached_data()
+            embedding_cache = await self.embedding_scanner.get_cached_data()
             
             # Count tag frequencies
             all_tags = []
@@ -193,6 +216,8 @@ class StatsRoutes:
                 all_tags.extend(lora.get('tags', []))
             for cp in checkpoint_cache.raw_data:
                 all_tags.extend(cp.get('tags', []))
+            for emb in embedding_cache.raw_data:
+                all_tags.extend(emb.get('tags', []))
             
             tag_counts = Counter(all_tags)
             
@@ -225,6 +250,7 @@ class StatsRoutes:
             # Get model data
             lora_cache = await self.lora_scanner.get_cached_data()
             checkpoint_cache = await self.checkpoint_scanner.get_cached_data()
+            embedding_cache = await self.embedding_scanner.get_cached_data()
             
             # Create models with usage data
             lora_storage = []
@@ -255,15 +281,31 @@ class StatsRoutes:
                     'base_model': cp.get('base_model', 'Unknown')
                 })
             
+            embedding_storage = []
+            for emb in embedding_cache.raw_data:
+                usage_count = 0
+                if emb['sha256'] in usage_data.get('embeddings', {}):
+                    usage_count = usage_data['embeddings'][emb['sha256']].get('total', 0)
+                
+                embedding_storage.append({
+                    'name': emb['model_name'],
+                    'size': emb.get('size', 0),
+                    'usage_count': usage_count,
+                    'folder': emb.get('folder', ''),
+                    'base_model': emb.get('base_model', 'Unknown')
+                })
+            
             # Sort by size
             lora_storage.sort(key=lambda x: x['size'], reverse=True)
             checkpoint_storage.sort(key=lambda x: x['size'], reverse=True)
+            embedding_storage.sort(key=lambda x: x['size'], reverse=True)
             
             return web.json_response({
                 'success': True,
                 'data': {
                     'loras': lora_storage[:20],  # Top 20 by size
-                    'checkpoints': checkpoint_storage[:20]
+                    'checkpoints': checkpoint_storage[:20],
+                    'embeddings': embedding_storage[:20]
                 }
             })
             
@@ -285,15 +327,18 @@ class StatsRoutes:
             # Get model data
             lora_cache = await self.lora_scanner.get_cached_data()
             checkpoint_cache = await self.checkpoint_scanner.get_cached_data()
+            embedding_cache = await self.embedding_scanner.get_cached_data()
             
             insights = []
             
             # Calculate unused models
             unused_loras = self._count_unused_models(lora_cache.raw_data, usage_data.get('loras', {}))
             unused_checkpoints = self._count_unused_models(checkpoint_cache.raw_data, usage_data.get('checkpoints', {}))
+            unused_embeddings = self._count_unused_models(embedding_cache.raw_data, usage_data.get('embeddings', {}))
             
             total_loras = len(lora_cache.raw_data)
             total_checkpoints = len(checkpoint_cache.raw_data)
+            total_embeddings = len(embedding_cache.raw_data)
             
             if total_loras > 0:
                 unused_lora_percent = (unused_loras / total_loras) * 100
@@ -315,9 +360,20 @@ class StatsRoutes:
                         'suggestion': 'Review and consider removing checkpoints you no longer need.'
                     })
             
+            if total_embeddings > 0:
+                unused_embedding_percent = (unused_embeddings / total_embeddings) * 100
+                if unused_embedding_percent > 50:
+                    insights.append({
+                        'type': 'warning',
+                        'title': 'High Number of Unused Embeddings',
+                        'description': f'{unused_embedding_percent:.1f}% of your embeddings ({unused_embeddings}/{total_embeddings}) have never been used.',
+                        'suggestion': 'Consider organizing or archiving unused embeddings to optimize your collection.'
+                    })
+            
             # Storage insights
             total_size = sum(lora.get('size', 0) for lora in lora_cache.raw_data) + \
-                        sum(cp.get('size', 0) for cp in checkpoint_cache.raw_data)
+                        sum(cp.get('size', 0) for cp in checkpoint_cache.raw_data) + \
+                        sum(emb.get('size', 0) for emb in embedding_cache.raw_data)
             
             if total_size > 100 * 1024 * 1024 * 1024:  # 100GB
                 insights.append({
@@ -390,6 +446,7 @@ class StatsRoutes:
             
             lora_usage = 0
             checkpoint_usage = 0
+            embedding_usage = 0
             
             # Count usage for this date
             for model_usage in usage_data.get('loras', {}).values():
@@ -400,11 +457,16 @@ class StatsRoutes:
                 if isinstance(model_usage, dict) and 'history' in model_usage:
                     checkpoint_usage += model_usage['history'].get(date_str, 0)
             
+            for model_usage in usage_data.get('embeddings', {}).values():
+                if isinstance(model_usage, dict) and 'history' in model_usage:
+                    embedding_usage += model_usage['history'].get(date_str, 0)
+            
             timeline.append({
                 'date': date_str,
                 'lora_usage': lora_usage,
                 'checkpoint_usage': checkpoint_usage,
-                'total_usage': lora_usage + checkpoint_usage
+                'embedding_usage': embedding_usage,
+                'total_usage': lora_usage + checkpoint_usage + embedding_usage
             })
         
         return list(reversed(timeline))  # Oldest to newest
