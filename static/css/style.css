@@ -6,6 +6,7 @@
 
 /* Import Components */
 @import 'components/header.css';
+@import 'components/banner.css';
 @import 'components/card.css';
 @import 'components/modal/_base.css';
 @import 'components/modal/delete-modal.css';

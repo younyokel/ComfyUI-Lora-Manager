@@ -141,7 +141,8 @@ export function migrateStorageItems() {
         'recipes_search_prefs',
         'checkpoints_search_prefs',
         'show_update_notifications',
-        'last_update_check'
+        'last_update_check',
+        'dismissed_banners'
     ];
     
     // Migrate each known key

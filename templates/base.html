@@ -82,6 +82,11 @@
         </button>
 
         <div class="container">
+            <!-- Banner component -->
+            <div id="banner-container" class="banner-container" style="display: none;">
+                <!-- Banners will be dynamically inserted here -->
+            </div>
+
             {% if is_initializing %}
                 <!-- Show initialization component when initializing -->
                 {% include 'components/initialization.html' %}
