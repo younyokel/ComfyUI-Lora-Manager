@@ -34,6 +34,14 @@ Enhance your Civitai browsing experience with our companion browser extension! S
 
 ## Release Notes
 
+### v0.8.22
+* **Embeddings Management** - Added Embeddings page for comprehensive embedding model management.
+* **Advanced Sorting Options** - Introduced flexible sorting controls, allowing sorting by name, added date, or file size in both ascending and descending order.
+* **Custom Download Path Templates & Base Model Mapping** - Implemented UI settings for configuring download path templates and base model path mappings, allowing customized model organization and storage location when downloading models via LM Civitai Extension.
+* **LM Civitai Extension Enhancements** - Improved concurrent download performance and stability, with new support for canceling active downloads directly from the extension interface.
+* **Update Feature** - Added update functionality, allowing users to update LoRA Manager to the latest release version directly from the LoRA Manager UI.
+* **Bulk Operations: Refresh All** - Added bulk refresh functionality, allowing users to update Civitai metadata across multiple LoRAs.
+
 ### v0.8.20
 * **LM Civitai Extension** - Released [browser extension through Chrome Web Store](https://chromewebstore.google.com/detail/lm-civitai-extension/capigligggeijgmocnaflanlbghnamgm?utm_source=item-share-cb) that works seamlessly with LoRA Manager to enhance Civitai browsing experience, showing which models are already in your local library, enabling one-click downloads, and providing queue and parallel download support
 * **Enhanced Lora Loader** - Added support for nunchaku, improving convenience when working with ComfyUI-nunchaku workflows, plus new template workflows for quick onboarding
