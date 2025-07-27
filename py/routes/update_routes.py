@@ -4,6 +4,9 @@ import aiohttp
 import logging
 import toml
 import git
+import zipfile
+import shutil
+import tempfile
 from datetime import datetime
 from aiohttp import web
 from typing import Dict, List
@@ -101,34 +104,36 @@ class UpdateRoutes:
     @staticmethod
     async def perform_update(request):
         """
-        Perform Git-based update to latest release tag or main branch
+        Perform Git-based update to latest release tag or main branch.
+        If .git is missing, fallback to ZIP download.
         """
         try:
-            # Parse request body
             body = await request.json() if request.has_body else {}
             nightly = body.get('nightly', False)
-            
-            # Get current plugin directory
+
             current_dir = os.path.dirname(os.path.abspath(__file__))
             plugin_root = os.path.dirname(os.path.dirname(current_dir))
-            
-            # Backup settings.json if it exists
+
             settings_path = os.path.join(plugin_root, 'settings.json')
             settings_backup = None
             if os.path.exists(settings_path):
                 with open(settings_path, 'r', encoding='utf-8') as f:
                     settings_backup = f.read()
                 logger.info("Backed up settings.json")
-            
-            # Perform Git update
-            success, new_version = await UpdateRoutes._perform_git_update(plugin_root, nightly)
-            
-            # Restore settings.json if we backed it up
+
+            git_folder = os.path.join(plugin_root, '.git')
+            if os.path.exists(git_folder):
+                # Git update
+                success, new_version = await UpdateRoutes._perform_git_update(plugin_root, nightly)
+            else:
+                # Fallback: Download ZIP and replace files
+                success, new_version = await UpdateRoutes._download_and_replace_zip(plugin_root)
+
             if settings_backup and success:
                 with open(settings_path, 'w', encoding='utf-8') as f:
                     f.write(settings_backup)
                 logger.info("Restored settings.json")
-            
+
             if success:
                 return web.json_response({
                     'success': True,
@@ -138,15 +143,86 @@ class UpdateRoutes:
             else:
                 return web.json_response({
                     'success': False,
-                    'error': 'Failed to complete Git update'
+                    'error': 'Failed to complete update'
                 })
-                
+
         except Exception as e:
             logger.error(f"Failed to perform update: {e}", exc_info=True)
             return web.json_response({
                 'success': False,
                 'error': str(e)
             })
+
+    @staticmethod
+    async def _download_and_replace_zip(plugin_root: str) -> tuple[bool, str]:
+        """
+        Download latest release ZIP from GitHub and replace plugin files.
+        Skips settings.json.
+        """
+        repo_owner = "willmiao"
+        repo_name = "ComfyUI-Lora-Manager"
+        github_api = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(github_api) as resp:
+                    if resp.status != 200:
+                        logger.error(f"Failed to fetch release info: {resp.status}")
+                        return False, ""
+                    data = await resp.json()
+                    zip_url = data.get("zipball_url")
+                    version = data.get("tag_name", "unknown")
+
+                # Download ZIP
+                async with session.get(zip_url) as zip_resp:
+                    if zip_resp.status != 200:
+                        logger.error(f"Failed to download ZIP: {zip_resp.status}")
+                        return False, ""
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_zip:
+                        tmp_zip.write(await zip_resp.read())
+                        zip_path = tmp_zip.name
+
+                UpdateRoutes._clean_plugin_folder(plugin_root, skip_files=['settings.json'])
+
+                # Extract ZIP to temp dir
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(tmp_dir)
+                    # Find extracted folder (GitHub ZIP contains a root folder)
+                    extracted_root = next(os.scandir(tmp_dir)).path
+
+                    # Copy files, skipping settings.json
+                    for item in os.listdir(extracted_root):
+                        src = os.path.join(extracted_root, item)
+                        dst = os.path.join(plugin_root, item)
+                        if os.path.isdir(src):
+                            # Remove old folder, then copy
+                            if os.path.exists(dst):
+                                shutil.rmtree(dst)
+                            shutil.copytree(src, dst, ignore=shutil.ignore_patterns('settings.json'))
+                        else:
+                            if item == 'settings.json':
+                                continue
+                            shutil.copy2(src, dst)
+
+                os.remove(zip_path)
+                logger.info(f"Updated plugin via ZIP to {version}")
+                return True, version
+
+        except Exception as e:
+            logger.error(f"ZIP update failed: {e}", exc_info=True)
+            return False, ""
+        
+    def _clean_plugin_folder(plugin_root, skip_files=None):
+        skip_files = skip_files or []
+        for item in os.listdir(plugin_root):
+            if item in skip_files:
+                continue
+            path = os.path.join(plugin_root, item)
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
     
     @staticmethod
     async def _get_nightly_version() -> tuple[str, List[str]]:
