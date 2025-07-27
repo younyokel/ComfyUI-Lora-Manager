@@ -128,6 +128,23 @@
                         Set the default checkpoint root directory for downloads, imports and moves
                     </div>
                 </div>
+
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="defaultEmbeddingRoot">Default Embedding Root</label>
+                        </div>
+                        <div class="setting-control select-control">
+                            <select id="defaultEmbeddingRoot" onchange="settingsManager.saveSelectSetting('defaultEmbeddingRoot', 'default_embedding_root')">
+                                <option value="">No Default</option>
+                                <!-- Options will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Set the default embedding root directory for downloads, imports and moves
+                    </div>
+                </div>
             </div>
 
             <!-- Default Path Customization Section -->

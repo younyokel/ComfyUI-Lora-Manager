@@ -67,6 +67,11 @@ export class SettingsManager {
         if (state.global.settings.base_model_path_mappings === undefined) {
             state.global.settings.base_model_path_mappings = {};
         }
+
+        // Set default for defaultEmbeddingRoot if undefined
+        if (state.global.settings.default_embedding_root === undefined) {
+            state.global.settings.default_embedding_root = '';
+        }
     }
 
     initialize() {
@@ -151,6 +156,9 @@ export class SettingsManager {
         
         // Load default checkpoint root
         await this.loadCheckpointRoots();
+
+        // Load default embedding root
+        await this.loadEmbeddingRoots();
         
         // Backend settings are loaded from the template directly
     }
@@ -230,6 +238,45 @@ export class SettingsManager {
         } catch (error) {
             console.error('Error loading checkpoint roots:', error);
             showToast('Failed to load checkpoint roots: ' + error.message, 'error');
+        }
+    }
+
+    async loadEmbeddingRoots() {
+        try {
+            const defaultEmbeddingRootSelect = document.getElementById('defaultEmbeddingRoot');
+            if (!defaultEmbeddingRootSelect) return;
+
+            // Fetch embedding roots
+            const response = await fetch('/api/embeddings/roots');
+            if (!response.ok) {
+                throw new Error('Failed to fetch embedding roots');
+            }
+
+            const data = await response.json();
+            if (!data.roots || data.roots.length === 0) {
+                throw new Error('No embedding roots found');
+            }
+
+            // Clear existing options except the first one (No Default)
+            const noDefaultOption = defaultEmbeddingRootSelect.querySelector('option[value=""]');
+            defaultEmbeddingRootSelect.innerHTML = '';
+            defaultEmbeddingRootSelect.appendChild(noDefaultOption);
+
+            // Add options for each root
+            data.roots.forEach(root => {
+                const option = document.createElement('option');
+                option.value = root;
+                option.textContent = root;
+                defaultEmbeddingRootSelect.appendChild(option);
+            });
+
+            // Set selected value from settings
+            const defaultRoot = state.global.settings.default_embedding_root || '';
+            defaultEmbeddingRootSelect.value = defaultRoot;
+
+        } catch (error) {
+            console.error('Error loading embedding roots:', error);
+            showToast('Failed to load embedding roots: ' + error.message, 'error');
         }
     }
 
@@ -508,6 +555,8 @@ export class SettingsManager {
             state.global.settings.default_loras_root = value;
         } else if (settingKey === 'default_checkpoint_root') {
             state.global.settings.default_checkpoint_root = value;
+        } else if (settingKey === 'default_embedding_root') {
+            state.global.settings.default_embedding_root = value;
         } else if (settingKey === 'display_density') {
             state.global.settings.displayDensity = value;
             
@@ -528,7 +577,7 @@ export class SettingsManager {
         
         try {
             // For backend settings, make API call
-            if (settingKey === 'default_lora_root' || settingKey === 'default_checkpoint_root' || settingKey === 'download_path_template') {
+            if (settingKey === 'default_lora_root' || settingKey === 'default_checkpoint_root' || settingKey === 'default_embedding_root' || settingKey === 'download_path_template') {
                 const payload = {};
                 payload[settingKey] = value;
                 
