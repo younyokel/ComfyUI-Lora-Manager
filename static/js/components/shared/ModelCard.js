@@ -454,7 +454,7 @@ export function createModelCard(model, modelType) {
     card.innerHTML = `
         <div class="card-preview ${shouldBlur ? 'blurred' : ''}">
             ${isVideo ? 
-                `<video ${videoAttrs}>
+                `<video ${videoAttrs} style="pointer-events: none;">
                     <source src="${versionedPreviewUrl}" type="video/mp4">
                 </video>` :
                 `<img src="${versionedPreviewUrl}" alt="${model.model_name}">`
