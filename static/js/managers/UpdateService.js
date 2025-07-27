@@ -358,9 +358,10 @@ export class UpdateService {
                     <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
                     Successfully updated to ${newVersion}!
                     <br><br>
-                    <small style="opacity: 0.8;">
-                        Please restart ComfyUI to complete the update process.
-                    </small>
+                    <div style="opacity: 0.95; color: var(--lora-error); font-size: 1em;">
+                        Please restart ComfyUI or LoRA Manager to apply update.<br>
+                        Make sure to reload your browser for both LoRA Manager and ComfyUI.
+                    </div>
                 </div>
             `;
         }
@@ -370,10 +371,10 @@ export class UpdateService {
         this.updateAvailable = false;
         
         // Refresh the modal content
-        setTimeout(() => {
-            this.updateModalContent();
-            this.showUpdateProgress(false);
-        }, 2000);
+        // setTimeout(() => {
+        //     this.updateModalContent();
+        //     this.showUpdateProgress(false);
+        // }, 2000);
     }
     
     // Simple markdown parser for changelog items
