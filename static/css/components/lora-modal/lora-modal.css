@@ -183,7 +183,11 @@
     outline: none;
 }
 
-.edit-file-name-btn {
+/* 合并编辑按钮样式 */
+.edit-model-name-btn,
+.edit-file-name-btn,
+.edit-base-model-btn,
+.edit-model-description-btn {
     background: transparent;
     border: none;
     color: var(--text-color);
@@ -195,17 +199,28 @@
     margin-left: var(--space-1);
 }
 
+.edit-model-name-btn.visible,
 .edit-file-name-btn.visible,
-.file-name-wrapper:hover .edit-file-name-btn {
+.edit-base-model-btn.visible,
+.edit-model-description-btn.visible,
+.model-name-header:hover .edit-model-name-btn,
+.file-name-wrapper:hover .edit-file-name-btn,
+.base-model-display:hover .edit-base-model-btn,
+.model-name-header:hover .edit-model-description-btn {
     opacity: 0.5;
 }
 
-.edit-file-name-btn:hover {
+.edit-model-name-btn:hover,
+.edit-file-name-btn:hover,
+.edit-base-model-btn:hover,
+.edit-model-description-btn:hover {
     opacity: 0.8 !important;
     background: rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="dark"] .edit-file-name-btn:hover {
+[data-theme="dark"] .edit-model-name-btn:hover,
+[data-theme="dark"] .edit-file-name-btn:hover,
+[data-theme="dark"] .edit-base-model-btn:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
@@ -232,32 +247,6 @@
     border: 1px solid transparent;
     color: var(--text-color);
     flex: 1;
-}
-
-.edit-base-model-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-color);
-    opacity: 0;
-    cursor: pointer;
-    padding: 2px 5px;
-    border-radius: var(--border-radius-xs);
-    transition: all 0.2s ease;
-    margin-left: var(--space-1);
-}
-
-.edit-base-model-btn.visible,
-.base-model-display:hover .edit-base-model-btn {
-    opacity: 0.5;
-}
-
-.edit-base-model-btn:hover {
-    opacity: 0.8 !important;
-    background: rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="dark"] .edit-base-model-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
 }
 
 .base-model-selector {
@@ -314,32 +303,6 @@
 .model-name-content:focus {
     border: 1px solid var(--lora-accent);
     background: var(--bg-color);
-}
-
-.edit-model-name-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-color);
-    opacity: 0;
-    cursor: pointer;
-    padding: 2px 5px;
-    border-radius: var(--border-radius-xs);
-    transition: all 0.2s ease;
-    margin-left: var(--space-1);
-}
-
-.edit-model-name-btn.visible,
-.model-name-header:hover .edit-model-name-btn {
-    opacity: 0.5;
-}
-
-.edit-model-name-btn:hover {
-    opacity: 0.8 !important;
-    background: rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="dark"] .edit-model-name-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Tab System Styling */

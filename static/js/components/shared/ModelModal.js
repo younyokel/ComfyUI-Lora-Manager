@@ -6,7 +6,7 @@ import {
     scrollToTop,
     loadExampleImages
 } from './showcase/ShowcaseView.js';
-import { setupTabSwitching } from './ModelDescription.js';
+import { setupTabSwitching, setupModelDescriptionEditing } from './ModelDescription.js';
 import { 
     setupModelNameEditing, 
     setupBaseModelEditing, 
@@ -33,7 +33,6 @@ export function showModelModal(model, modelType) {
         model.civitai.trainedWords.map(word => word.replace(/'/g, '\\\'')) : [];
     
     // Generate model type specific content
-    // const typeSpecificContent = modelType === 'loras' ? renderLoraSpecificContent(model, escapedWords) : '';
     let typeSpecificContent;
     if (modelType === 'loras') {
         typeSpecificContent = renderLoraSpecificContent(model, escapedWords);
@@ -211,6 +210,7 @@ export function showModelModal(model, modelType) {
     setupModelNameEditing(model.file_path);
     setupBaseModelEditing(model.file_path);
     setupFileNameEditing(model.file_path);
+    setupModelDescriptionEditing(model.file_path, model.modelDescription || '');
     setupEventHandlers(model.file_path);
     
     // LoRA specific setup
