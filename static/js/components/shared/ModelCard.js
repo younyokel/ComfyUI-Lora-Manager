@@ -482,6 +482,7 @@ export function createModelCard(model, modelType) {
             <div class="card-footer">
                 <div class="model-info">
                     <span class="model-name">${model.model_name}</span>
+                    ${model.civitai?.name ? `<span class="version-name">${model.civitai.name}</span>` : ''}
                 </div>
                 <div class="card-actions">
                     <i class="fas fa-folder-open" 
