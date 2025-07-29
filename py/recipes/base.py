@@ -119,10 +119,10 @@ class RecipeMetadataParser(ABC):
                     # Check if exists locally
                     if recipe_scanner and lora_entry['hash']:
                         lora_scanner = recipe_scanner._lora_scanner
-                        exists_locally = lora_scanner.has_lora_hash(lora_entry['hash'])
+                        exists_locally = lora_scanner.has_hash(lora_entry['hash'])
                         if exists_locally:
                             try:
-                                local_path = lora_scanner.get_lora_path_by_hash(lora_entry['hash'])
+                                local_path = lora_scanner.get_path_by_hash(lora_entry['hash'])
                                 lora_entry['existsLocally'] = True
                                 lora_entry['localPath'] = local_path
                                 lora_entry['file_name'] = os.path.splitext(os.path.basename(local_path))[0]

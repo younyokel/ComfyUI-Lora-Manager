@@ -55,7 +55,7 @@ class RecipeFormatParser(RecipeMetadataParser):
                 # Check if this LoRA exists locally by SHA256 hash
                 if lora.get('hash') and recipe_scanner:
                     lora_scanner = recipe_scanner._lora_scanner
-                    exists_locally = lora_scanner.has_lora_hash(lora['hash'])
+                    exists_locally = lora_scanner.has_hash(lora['hash'])
                     if exists_locally:
                         lora_cache = await lora_scanner.get_cached_data()
                         lora_item = next((item for item in lora_cache.raw_data if item['sha256'].lower() == lora['hash'].lower()), None)

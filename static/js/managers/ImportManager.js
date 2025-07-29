@@ -1,7 +1,5 @@
 import { modalManager } from './ModalManager.js';
-import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
-import { getStorageItem } from '../utils/storageHelpers.js';
 import { ImportStepManager } from './import/ImportStepManager.js';
 import { ImageProcessor } from './import/ImageProcessor.js';
 import { RecipeDataManager } from './import/RecipeDataManager.js';
@@ -86,8 +84,8 @@ export class ImportManager {
         const uploadError = document.getElementById('uploadError');
         if (uploadError) uploadError.textContent = '';
         
-        const urlError = document.getElementById('urlError');
-        if (urlError) urlError.textContent = '';
+        const importUrlError = document.getElementById('importUrlError');
+        if (importUrlError) importUrlError.textContent = '';
         
         const recipeName = document.getElementById('recipeName');
         if (recipeName) recipeName.value = '';
@@ -167,10 +165,10 @@ export class ImportManager {
         
         // Clear error messages
         const uploadError = document.getElementById('uploadError');
-        const urlError = document.getElementById('urlError');
+        const importUrlError = document.getElementById('importUrlError');
         
         if (uploadError) uploadError.textContent = '';
-        if (urlError) urlError.textContent = '';
+        if (importUrlError) importUrlError.textContent = '';
     }
 
     handleImageUpload(event) {
@@ -224,8 +222,8 @@ export class ImportManager {
         const uploadError = document.getElementById('uploadError');
         if (uploadError) uploadError.textContent = '';
         
-        const urlError = document.getElementById('urlError');
-        if (urlError) urlError.textContent = '';
+        const importUrlError = document.getElementById('importUrlError');
+        if (importUrlError) importUrlError.textContent = '';
     }
 
     backToDetails() {

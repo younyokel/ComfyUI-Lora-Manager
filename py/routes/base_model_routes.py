@@ -408,7 +408,7 @@ class BaseModelRoutes(ABC):
                         group["models"].append(await self.service.format_response(model))
                 
                 # Find the model from the main index too
-                hash_val = self.service.scanner._hash_index.get_hash_by_filename(filename)
+                hash_val = self.service.scanner.get_hash_by_filename(filename)
                 if hash_val:
                     main_path = self.service.get_path_by_hash(hash_val)
                     if main_path and main_path not in paths:

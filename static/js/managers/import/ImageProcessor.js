@@ -27,7 +27,7 @@ export class ImageProcessor {
 
     async handleUrlInput() {
         const urlInput = document.getElementById('imageUrlInput');
-        const errorElement = document.getElementById('urlError');
+        const errorElement = document.getElementById('importUrlError');
         const input = urlInput.value.trim();
         
         // Validate input
