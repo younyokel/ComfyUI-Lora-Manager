@@ -367,7 +367,7 @@ class UpdateRoutes:
         
         git_info = {
             'commit_hash': 'unknown',
-            'short_hash': 'unknown',
+            'short_hash': 'stable',
             'branch': 'unknown',
             'commit_date': 'unknown'
         }
