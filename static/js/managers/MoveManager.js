@@ -90,7 +90,7 @@ class MoveManager {
             ).join('');
 
             // Set default lora root if available
-            const defaultRoot = getStorageItem('settings', {}).default_loras_root;
+            const defaultRoot = getStorageItem('settings', {}).default_lora_root;
             if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
                 this.loraRootSelect.value = defaultRoot;
             }

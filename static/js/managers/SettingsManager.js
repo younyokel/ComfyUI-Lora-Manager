@@ -15,29 +15,39 @@ export class SettingsManager {
         
         // Ensure settings are loaded from localStorage
         this.loadSettingsFromStorage();
-        
+
+        // Sync settings to backend if needed
+        this.syncSettingsToBackendIfNeeded();
+
         this.initialize();
     }
 
     loadSettingsFromStorage() {
         // Get saved settings from localStorage
         const savedSettings = getStorageItem('settings');
-        
+
+        // Migrate legacy default_loras_root to default_lora_root if present
+        if (savedSettings && savedSettings.default_loras_root && !savedSettings.default_lora_root) {
+            savedSettings.default_lora_root = savedSettings.default_loras_root;
+            delete savedSettings.default_loras_root;
+            setStorageItem('settings', savedSettings);
+        }
+
         // Apply saved settings to state if available
         if (savedSettings) {
             state.global.settings = { ...state.global.settings, ...savedSettings };
         }
-        
+
         // Initialize default values for new settings if they don't exist
         if (state.global.settings.compactMode === undefined) {
             state.global.settings.compactMode = false;
         }
-        
+
         // Set default for optimizeExampleImages if undefined
         if (state.global.settings.optimizeExampleImages === undefined) {
             state.global.settings.optimizeExampleImages = true;
         }
-        
+
         // Set default for cardInfoDisplay if undefined
         if (state.global.settings.cardInfoDisplay === undefined) {
             state.global.settings.cardInfoDisplay = 'always';
@@ -71,6 +81,50 @@ export class SettingsManager {
         // Set default for defaultEmbeddingRoot if undefined
         if (state.global.settings.default_embedding_root === undefined) {
             state.global.settings.default_embedding_root = '';
+        }
+    }
+
+    async syncSettingsToBackendIfNeeded() {
+        // Get local settings from storage
+        const localSettings = getStorageItem('settings') || {};
+
+        // Fields that need to be synced to backend
+        const fieldsToSync = [
+            'civitai_api_key',
+            'default_lora_root',
+            'default_checkpoint_root',
+            'default_embedding_root',
+            'base_model_path_mappings',
+            'download_path_template'
+        ];
+
+        // Build payload for syncing
+        const payload = {};
+
+        fieldsToSync.forEach(key => {
+            if (localSettings[key] !== undefined) {
+                if (key === 'base_model_path_mappings') {
+                    payload[key] = JSON.stringify(localSettings[key]);
+                } else {
+                    payload[key] = localSettings[key];
+                }
+            }
+        });
+
+        // Only send request if there is something to sync
+        if (Object.keys(payload).length > 0) {
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                // Log success to console
+                console.log('Settings synced to backend');
+            } catch (e) {
+                // Log error to console
+                console.error('Failed to sync settings to backend:', e);
+            }
         }
     }
 
@@ -159,8 +213,6 @@ export class SettingsManager {
 
         // Load default embedding root
         await this.loadEmbeddingRoots();
-        
-        // Backend settings are loaded from the template directly
     }
 
     async loadLoraRoots() {
@@ -193,7 +245,7 @@ export class SettingsManager {
             });
             
             // Set selected value from settings
-            const defaultRoot = state.global.settings.default_loras_root || '';
+            const defaultRoot = state.global.settings.default_lora_root || '';
             defaultLoraRootSelect.value = defaultRoot;
             
         } catch (error) {
@@ -507,7 +559,7 @@ export class SettingsManager {
         
         try {
             // For backend settings, make API call
-            if (['show_only_sfw', 'blur_mature_content', 'autoplay_on_hover', 'optimize_example_images', 'use_centralized_examples'].includes(settingKey)) {
+            if (['show_only_sfw'].includes(settingKey)) {
                 const payload = {};
                 payload[settingKey] = value;
                 
@@ -552,7 +604,7 @@ export class SettingsManager {
         
         // Update frontend state
         if (settingKey === 'default_lora_root') {
-            state.global.settings.default_loras_root = value;
+            state.global.settings.default_lora_root = value;
         } else if (settingKey === 'default_checkpoint_root') {
             state.global.settings.default_checkpoint_root = value;
         } else if (settingKey === 'default_embedding_root') {
@@ -632,10 +684,7 @@ export class SettingsManager {
             // Update state
             state.global.settings[settingKey] = value;
             
-            // Save to localStorage if appropriate
-            if (!settingKey.includes('api_key')) { // Don't store API keys in localStorage for security
-                setStorageItem('settings', state.global.settings);
-            }
+            setStorageItem('settings', state.global.settings);
             
             // For backend settings, make API call
             const payload = {};
@@ -714,69 +763,6 @@ export class SettingsManager {
         } else if (this.currentPage === 'checkpoints') {
             // Reload the checkpoints without updating folders
             await resetAndReload(false);
-        }
-    }
-
-    async saveSettings() {
-        // Get frontend settings from UI
-        const blurMatureContent = document.getElementById('blurMatureContent').checked;
-        const showOnlySFW = document.getElementById('showOnlySFW').checked;
-        const defaultLoraRoot = document.getElementById('defaultLoraRoot').value;
-        const defaultCheckpointRoot = document.getElementById('defaultCheckpointRoot').value;
-        const autoplayOnHover = document.getElementById('autoplayOnHover').checked;
-        const optimizeExampleImages = document.getElementById('optimizeExampleImages').checked;
-        
-        // Get backend settings
-        const apiKey = document.getElementById('civitaiApiKey').value;
-        
-        // Update frontend state and save to localStorage
-        state.global.settings.blurMatureContent = blurMatureContent;
-        state.global.settings.show_only_sfw = showOnlySFW;
-        state.global.settings.default_loras_root = defaultLoraRoot;
-        state.global.settings.default_checkpoint_root = defaultCheckpointRoot;
-        state.global.settings.autoplayOnHover = autoplayOnHover;
-        state.global.settings.optimizeExampleImages = optimizeExampleImages;
-        
-        // Save settings to localStorage
-        setStorageItem('settings', state.global.settings);
-        
-        try {
-            // Save backend settings via API
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    civitai_api_key: apiKey,
-                    show_only_sfw: showOnlySFW,
-                    optimize_example_images: optimizeExampleImages,
-                    default_checkpoint_root: defaultCheckpointRoot
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to save settings');
-            }
-
-            showToast('Settings saved successfully', 'success');
-            modalManager.closeModal('settingsModal');
-            
-            // Apply frontend settings immediately
-            this.applyFrontendSettings();
-            
-            if (this.currentPage === 'loras') {
-                // Reload the loras without updating folders
-                await resetAndReload(false);
-            } else if (this.currentPage === 'recipes') {
-                // Reload the recipes without updating folders
-                await window.recipeManager.loadRecipes();
-            } else if (this.currentPage === 'checkpoints') {
-                // Reload the checkpoints without updating folders
-                await window.checkpointsManager.loadCheckpoints();
-            }
-        } catch (error) {
-            showToast('Failed to save settings: ' + error.message, 'error');
         }
     }
 

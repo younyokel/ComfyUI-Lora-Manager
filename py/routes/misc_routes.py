@@ -167,6 +167,9 @@ class MiscRoutes:
             
             # Validate and update settings
             for key, value in data.items():
+                if value == settings.get(key):
+                    # No change, skip
+                    continue
                 # Special handling for example_images_path - verify path exists
                 if key == 'example_images_path' and value:
                     if not os.path.exists(value):
