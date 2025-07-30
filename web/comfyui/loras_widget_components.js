@@ -78,6 +78,87 @@ export function createArrowButton(direction, onClick) {
   return button;
 }
 
+// Function to create drag handle
+export function createDragHandle() {
+  const handle = document.createElement("div");
+  handle.className = "comfy-lora-drag-handle";
+  handle.innerHTML = "≡";
+  handle.title = "Drag to reorder LoRA";
+  
+  Object.assign(handle.style, {
+    width: "16px",
+    height: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "grab",
+    userSelect: "none",
+    fontSize: "14px",
+    color: "rgba(226, 232, 240, 0.6)",
+    transition: "all 0.2s ease",
+    marginRight: "8px",
+    flexShrink: "0"
+  });
+  
+  // Add hover effect
+  handle.onmouseenter = () => {
+    handle.style.color = "rgba(226, 232, 240, 0.9)";
+    handle.style.transform = "scale(1.1)";
+  };
+  
+  handle.onmouseleave = () => {
+    handle.style.color = "rgba(226, 232, 240, 0.6)";
+    handle.style.transform = "scale(1)";
+  };
+  
+  // Change cursor when dragging
+  handle.onmousedown = () => {
+    handle.style.cursor = "grabbing";
+  };
+  
+  return handle;
+}
+
+// Function to create drop indicator
+export function createDropIndicator() {
+  const indicator = document.createElement("div");
+  indicator.className = "comfy-lora-drop-indicator";
+  
+  Object.assign(indicator.style, {
+    position: "absolute",
+    left: "0",
+    right: "0",
+    height: "3px",
+    backgroundColor: "rgba(66, 153, 225, 0.9)",
+    borderRadius: "2px",
+    opacity: "0",
+    transition: "opacity 0.2s ease",
+    boxShadow: "0 0 6px rgba(66, 153, 225, 0.8)",
+    zIndex: "10",
+    pointerEvents: "none"
+  });
+  
+  return indicator;
+}
+
+// Function to update entry selection state
+export function updateEntrySelection(entryEl, isSelected) {
+  const baseColor = entryEl.dataset.active === 'true' ? 
+    "rgba(45, 55, 72, 0.7)" : "rgba(35, 40, 50, 0.5)";
+  const selectedColor = entryEl.dataset.active === 'true' ? 
+    "rgba(66, 153, 225, 0.3)" : "rgba(66, 153, 225, 0.2)";
+  
+  if (isSelected) {
+    entryEl.style.backgroundColor = selectedColor;
+    entryEl.style.border = "1px solid rgba(66, 153, 225, 0.6)";
+    entryEl.style.boxShadow = "0 0 0 1px rgba(66, 153, 225, 0.3)";
+  } else {
+    entryEl.style.backgroundColor = baseColor;
+    entryEl.style.border = "1px solid transparent";
+    entryEl.style.boxShadow = "none";
+  }
+}
+
 // Function to create menu item
 export function createMenuItem(text, icon, onClick) {
   const menuItem = document.createElement('div');

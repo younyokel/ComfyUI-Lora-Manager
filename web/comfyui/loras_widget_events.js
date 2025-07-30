@@ -1,6 +1,7 @@
 import { api } from "../../scripts/api.js";
-import { createMenuItem } from "./loras_widget_components.js";
-import { parseLoraValue, formatLoraValue, syncClipStrengthIfCollapsed, saveRecipeDirectly, copyToClipboard, showToast } from "./loras_widget_utils.js";
+import { app } from "../../scripts/app.js";
+import { createMenuItem, createDropIndicator } from "./loras_widget_components.js";
+import { parseLoraValue, formatLoraValue, syncClipStrengthIfCollapsed, saveRecipeDirectly, copyToClipboard, showToast, moveLoraByDirection, getDropTargetIndex } from "./loras_widget_utils.js";
 
 // Function to handle strength adjustment via dragging
 export function handleStrengthDrag(name, initialStrength, initialX, event, widget, isClipStrength = false) {
@@ -227,6 +228,223 @@ export function initHeaderDrag(headerEl, widget, renderFunction) {
   });
 }
 
+// Function to initialize drag-and-drop for reordering
+export function initReorderDrag(dragHandle, loraName, widget, renderFunction) {
+  let isDragging = false;
+  let draggedElement = null;
+  let dropIndicator = null;
+  let container = null;
+  let scale = 1;
+  
+  dragHandle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    isDragging = true;
+    draggedElement = dragHandle.closest('.comfy-lora-entry');
+    container = draggedElement.parentElement;
+    
+    // Add dragging class and visual feedback
+    draggedElement.classList.add('comfy-lora-dragging');
+    draggedElement.style.opacity = '0.5';
+    draggedElement.style.transform = 'scale(0.98)';
+    
+    // Create single drop indicator with absolute positioning
+    dropIndicator = createDropIndicator();
+    
+    // Make container relatively positioned for absolute indicator
+    const originalPosition = container.style.position;
+    container.style.position = 'relative';
+    container.appendChild(dropIndicator);
+    
+    // Store original position for cleanup
+    container._originalPosition = originalPosition;
+    
+    // Add global cursor style
+    document.body.style.cursor = 'grabbing';
+
+    // Store workflow scale for accurate positioning
+    scale = app.canvas.ds.scale;
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging || !draggedElement || !dropIndicator) return;
+    
+    const targetIndex = getDropTargetIndex(container, e.clientY);
+    const entries = container.querySelectorAll('.comfy-lora-entry, .comfy-lora-clip-entry');
+    
+    if (targetIndex === 0) {
+      // Show at top
+      const firstEntry = entries[0];
+      if (firstEntry) {
+        const rect = firstEntry.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        dropIndicator.style.top = `${(rect.top - containerRect.top - 2) / scale}px`;
+        dropIndicator.style.opacity = '1';
+      }
+    } else if (targetIndex < entries.length) {
+      // Show between entries
+      const targetEntry = entries[targetIndex];
+      if (targetEntry) {
+        const rect = targetEntry.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        dropIndicator.style.top = `${(rect.top - containerRect.top - 2) / scale}px`;
+        dropIndicator.style.opacity = '1';
+      }
+    } else {
+      // Show at bottom
+      const lastEntry = entries[entries.length - 1];
+      if (lastEntry) {
+        const rect = lastEntry.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        dropIndicator.style.top = `${(rect.bottom - containerRect.top + 2) / scale}px`;
+        dropIndicator.style.opacity = '1';
+      }
+    }
+  });
+  
+  document.addEventListener('mouseup', (e) => {
+    if (!isDragging || !draggedElement) return;
+    
+    const targetIndex = getDropTargetIndex(container, e.clientY);
+    
+    // Get current LoRA data
+    const lorasData = parseLoraValue(widget.value);
+    const currentIndex = lorasData.findIndex(l => l.name === loraName);
+    
+    if (currentIndex !== -1 && currentIndex !== targetIndex) {
+      // Calculate actual target index (excluding clip entries from count)
+      const loraEntries = container.querySelectorAll('.comfy-lora-entry');
+      let actualTargetIndex = targetIndex;
+      
+      // Adjust target index if it's beyond the number of actual LoRA entries
+      if (actualTargetIndex > loraEntries.length) {
+        actualTargetIndex = loraEntries.length;
+      }
+      
+      // Move the LoRA
+      const newLoras = [...lorasData];
+      const [moved] = newLoras.splice(currentIndex, 1);
+      newLoras.splice(actualTargetIndex > currentIndex ? actualTargetIndex - 1 : actualTargetIndex, 0, moved);
+      
+      widget.value = formatLoraValue(newLoras);
+      
+      if (widget.callback) {
+        widget.callback(widget.value);
+      }
+      
+      // Re-render
+      if (renderFunction) {
+        renderFunction(widget.value, widget);
+      }
+    }
+    
+    // Cleanup
+    isDragging = false;
+    if (draggedElement) {
+      draggedElement.classList.remove('comfy-lora-dragging');
+      draggedElement.style.opacity = '';
+      draggedElement.style.transform = '';
+      draggedElement = null;
+    }
+    
+    if (dropIndicator && container) {
+      container.removeChild(dropIndicator);
+      // Restore original position
+      container.style.position = container._originalPosition || '';
+      delete container._originalPosition;
+      dropIndicator = null;
+    }
+    
+    // Reset cursor
+    document.body.style.cursor = '';
+    container = null;
+  });
+}
+
+// Function to handle keyboard navigation
+export function handleKeyboardNavigation(event, selectedLora, widget, renderFunction, selectLora) {
+  if (!selectedLora) return false;
+  
+  const lorasData = parseLoraValue(widget.value);
+  let handled = false;
+  
+  // Check for Ctrl/Cmd modifier for reordering
+  if (event.ctrlKey || event.metaKey) {
+    switch (event.key) {
+      case 'ArrowUp':
+        event.preventDefault();
+        const newLorasUp = moveLoraByDirection(lorasData, selectedLora, 'up');
+        widget.value = formatLoraValue(newLorasUp);
+        if (widget.callback) widget.callback(widget.value);
+        if (renderFunction) renderFunction(widget.value, widget);
+        handled = true;
+        break;
+        
+      case 'ArrowDown':
+        event.preventDefault();
+        const newLorasDown = moveLoraByDirection(lorasData, selectedLora, 'down');
+        widget.value = formatLoraValue(newLorasDown);
+        if (widget.callback) widget.callback(widget.value);
+        if (renderFunction) renderFunction(widget.value, widget);
+        handled = true;
+        break;
+        
+      case 'Home':
+        event.preventDefault();
+        const newLorasTop = moveLoraByDirection(lorasData, selectedLora, 'top');
+        widget.value = formatLoraValue(newLorasTop);
+        if (widget.callback) widget.callback(widget.value);
+        if (renderFunction) renderFunction(widget.value, widget);
+        handled = true;
+        break;
+        
+      case 'End':
+        event.preventDefault();
+        const newLorasBottom = moveLoraByDirection(lorasData, selectedLora, 'bottom');
+        widget.value = formatLoraValue(newLorasBottom);
+        if (widget.callback) widget.callback(widget.value);
+        if (renderFunction) renderFunction(widget.value, widget);
+        handled = true;
+        break;
+    }
+  } else {
+    // Normal navigation without Ctrl/Cmd
+    switch (event.key) {
+      case 'ArrowUp':
+        event.preventDefault();
+        const currentIndex = lorasData.findIndex(l => l.name === selectedLora);
+        if (currentIndex > 0) {
+          selectLora(lorasData[currentIndex - 1].name);
+        }
+        handled = true;
+        break;
+        
+      case 'ArrowDown':
+        event.preventDefault();
+        const currentIndexDown = lorasData.findIndex(l => l.name === selectedLora);
+        if (currentIndexDown < lorasData.length - 1) {
+          selectLora(lorasData[currentIndexDown + 1].name);
+        }
+        handled = true;
+        break;
+        
+      case 'Delete':
+      case 'Backspace':
+        event.preventDefault();
+        const filtered = lorasData.filter(l => l.name !== selectedLora);
+        widget.value = formatLoraValue(filtered);
+        if (widget.callback) widget.callback(widget.value);
+        if (renderFunction) renderFunction(widget.value, widget);
+        selectLora(null); // Clear selection
+        handled = true;
+        break;
+    }
+  }
+  
+  return handled;
+}
+
 // Function to create context menu
 export function createContextMenu(x, y, loraName, widget, previewTooltip, renderFunction) {
   // Hide preview tooltip first
@@ -398,6 +616,94 @@ export function createContextMenu(x, y, loraName, widget, previewTooltip, render
     }
   );
 
+  // Move Up option with arrow up icon
+  const moveUpOption = createMenuItem(
+    'Move Up',
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"></path></svg>',
+    () => {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+      
+      const lorasData = parseLoraValue(widget.value);
+      const newLoras = moveLoraByDirection(lorasData, loraName, 'up');
+      widget.value = formatLoraValue(newLoras);
+      
+      if (widget.callback) {
+        widget.callback(widget.value);
+      }
+      
+      if (renderFunction) {
+        renderFunction(widget.value, widget);
+      }
+    }
+  );
+
+  // Move Down option with arrow down icon
+  const moveDownOption = createMenuItem(
+    'Move Down',
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg>',
+    () => {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+      
+      const lorasData = parseLoraValue(widget.value);
+      const newLoras = moveLoraByDirection(lorasData, loraName, 'down');
+      widget.value = formatLoraValue(newLoras);
+      
+      if (widget.callback) {
+        widget.callback(widget.value);
+      }
+      
+      if (renderFunction) {
+        renderFunction(widget.value, widget);
+      }
+    }
+  );
+
+  // Move to Top option with chevrons up icon
+  const moveTopOption = createMenuItem(
+    'Move to Top',
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 11l-5-5-5 5M17 18l-5-5-5 5"></path></svg>',
+    () => {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+      
+      const lorasData = parseLoraValue(widget.value);
+      const newLoras = moveLoraByDirection(lorasData, loraName, 'top');
+      widget.value = formatLoraValue(newLoras);
+      
+      if (widget.callback) {
+        widget.callback(widget.value);
+      }
+      
+      if (renderFunction) {
+        renderFunction(widget.value, widget);
+      }
+    }
+  );
+
+  // Move to Bottom option with chevrons down icon
+  const moveBottomOption = createMenuItem(
+    'Move to Bottom',
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"></path></svg>',
+    () => {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+      
+      const lorasData = parseLoraValue(widget.value);
+      const newLoras = moveLoraByDirection(lorasData, loraName, 'bottom');
+      widget.value = formatLoraValue(newLoras);
+      
+      if (widget.callback) {
+        widget.callback(widget.value);
+      }
+      
+      if (renderFunction) {
+        renderFunction(widget.value, widget);
+      }
+    }
+  );
+
   // Add separator
   const separator1 = document.createElement('div');
   Object.assign(separator1.style, {
@@ -412,9 +718,21 @@ export function createContextMenu(x, y, loraName, widget, previewTooltip, render
     borderTop: '1px solid rgba(255, 255, 255, 0.1)',
   });
 
+  // Add separator for order options
+  const orderSeparator = document.createElement('div');
+  Object.assign(orderSeparator.style, {
+    margin: '4px 0',
+    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+  });
+
   menu.appendChild(viewOnCivitaiOption);
   menu.appendChild(deleteOption);
   menu.appendChild(separator1);
+  menu.appendChild(moveUpOption);
+  menu.appendChild(moveDownOption);
+  menu.appendChild(moveTopOption);
+  menu.appendChild(moveBottomOption);
+  menu.appendChild(orderSeparator);
   menu.appendChild(copyNotesOption);
   menu.appendChild(copyTriggerWordsOption);
   menu.appendChild(separator2);

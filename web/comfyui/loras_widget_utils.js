@@ -3,7 +3,7 @@ import { app } from "../../scripts/app.js";
 // Fixed sizes for component calculations
 export const LORA_ENTRY_HEIGHT = 40; // Height of a single lora entry
 export const CLIP_ENTRY_HEIGHT = 40; // Height of a clip entry
-export const HEADER_HEIGHT = 40; // Height of the header section
+export const HEADER_HEIGHT = 32; // Height of the header section
 export const CONTAINER_PADDING = 12; // Top and bottom padding
 export const EMPTY_CONTAINER_HEIGHT = 100; // Height when no loras are present
 
@@ -163,4 +163,72 @@ export function showToast(message, type = 'info') {
             alert(message);
         }
     }
+}
+
+/**
+ * Move a LoRA to a new position in the array
+ * @param {Array} loras - Array of LoRA objects
+ * @param {number} fromIndex - Current index of the LoRA
+ * @param {number} toIndex - Target index for the LoRA
+ * @returns {Array} - New array with LoRA moved
+ */
+export function moveLoraInArray(loras, fromIndex, toIndex) {
+  const newLoras = [...loras];
+  const [removed] = newLoras.splice(fromIndex, 1);
+  newLoras.splice(toIndex, 0, removed);
+  return newLoras;
+}
+
+/**
+ * Move a LoRA by name to a specific position
+ * @param {Array} loras - Array of LoRA objects
+ * @param {string} loraName - Name of the LoRA to move
+ * @param {string} direction - 'up', 'down', 'top', 'bottom'
+ * @returns {Array} - New array with LoRA moved
+ */
+export function moveLoraByDirection(loras, loraName, direction) {
+  const currentIndex = loras.findIndex(l => l.name === loraName);
+  if (currentIndex === -1) return loras;
+  
+  let newIndex;
+  switch (direction) {
+    case 'up':
+      newIndex = Math.max(0, currentIndex - 1);
+      break;
+    case 'down':
+      newIndex = Math.min(loras.length - 1, currentIndex + 1);
+      break;
+    case 'top':
+      newIndex = 0;
+      break;
+    case 'bottom':
+      newIndex = loras.length - 1;
+      break;
+    default:
+      return loras;
+  }
+  
+  if (newIndex === currentIndex) return loras;
+  return moveLoraInArray(loras, currentIndex, newIndex);
+}
+
+/**
+ * Get the drop target index based on mouse position
+ * @param {HTMLElement} container - The container element
+ * @param {number} clientY - Mouse Y position
+ * @returns {number} - Target index for dropping
+ */
+export function getDropTargetIndex(container, clientY) {
+  const entries = container.querySelectorAll('.comfy-lora-entry');
+  let targetIndex = entries.length;
+  
+  for (let i = 0; i < entries.length; i++) {
+    const rect = entries[i].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) {
+      targetIndex = i;
+      break;
+    }
+  }
+  
+  return targetIndex;
 }

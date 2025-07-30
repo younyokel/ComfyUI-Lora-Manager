@@ -4,38 +4,10 @@ import {
     getActiveLorasFromNode,
     collectActiveLorasFromChain,
     updateConnectedTriggerWords,
-    chainCallback
+    chainCallback,
+    mergeLoras
 } from "./utils.js";
 import { addLorasWidget } from "./loras_widget.js";
-
-function mergeLoras(lorasText, lorasArr) {
-    const result = [];
-    let match;
-
-    // Reset pattern index before using
-    LORA_PATTERN.lastIndex = 0;
-    
-    // Parse text input and create initial entries
-    while ((match = LORA_PATTERN.exec(lorasText)) !== null) {
-        const name = match[1];
-        const modelStrength = Number(match[2]);
-        // Extract clip strength if provided, otherwise use model strength
-        const clipStrength = match[3] ? Number(match[3]) : modelStrength;
-        
-        // Find if this lora exists in the array data
-        const existingLora = lorasArr.find(l => l.name === name);
-        
-        result.push({
-            name: name,
-            // Use existing strength if available, otherwise use input strength
-            strength: existingLora ? existingLora.strength : modelStrength,
-            active: existingLora ? existingLora.active : true,
-            clipStrength: existingLora ? existingLora.clipStrength : clipStrength,
-        });
-    }
-
-    return result;
-}
 
 app.registerExtension({
     name: "LoraManager.LoraStacker",

@@ -1,5 +1,4 @@
-import { app } from "../../scripts/app.js";
-import { createToggle, createArrowButton, PreviewTooltip } from "./loras_widget_components.js";
+import { createToggle, createArrowButton, PreviewTooltip, createDragHandle, updateEntrySelection } from "./loras_widget_components.js";
 import { 
   parseLoraValue, 
   formatLoraValue, 
@@ -11,7 +10,7 @@ import {
   CONTAINER_PADDING, 
   EMPTY_CONTAINER_HEIGHT 
 } from "./loras_widget_utils.js";
-import { initDrag, createContextMenu, initHeaderDrag } from "./loras_widget_events.js";
+import { initDrag, createContextMenu, initHeaderDrag, initReorderDrag, handleKeyboardNavigation } from "./loras_widget_events.js";
 
 export function addLorasWidget(node, name, opts, callback) {
   // Create container for loras
@@ -41,6 +40,30 @@ export function addLorasWidget(node, name, opts, callback) {
 
   // Create preview tooltip instance
   const previewTooltip = new PreviewTooltip();
+  
+  // Selection state - only one LoRA can be selected at a time
+  let selectedLora = null;
+  
+  // Function to select a LoRA
+  const selectLora = (loraName) => {
+    selectedLora = loraName;
+    // Update visual feedback for all entries
+    container.querySelectorAll('.comfy-lora-entry').forEach(entry => {
+      const entryLoraName = entry.dataset.loraName;
+      updateEntrySelection(entry, entryLoraName === selectedLora);
+    });
+  };
+  
+  // Add keyboard event listener to container
+  container.addEventListener('keydown', (e) => {
+    if (handleKeyboardNavigation(e, selectedLora, widget, renderLoras, selectLora)) {
+      e.stopPropagation();
+    }
+  });
+  
+  // Make container focusable for keyboard events
+  container.tabIndex = 0;
+  container.style.outline = 'none';
   
   // Function to render loras from data
   const renderLoras = (value, widget) => {
@@ -185,6 +208,26 @@ export function addLorasWidget(node, name, opts, callback) {
         marginBottom: "4px",
       });
 
+      // Store lora name and active state in dataset for selection
+      loraEl.dataset.loraName = name;
+      loraEl.dataset.active = active;
+
+      // Add click handler for selection
+      loraEl.addEventListener('click', (e) => {
+        // Skip if clicking on interactive elements
+        if (e.target.closest('.comfy-lora-toggle') || 
+            e.target.closest('input') || 
+            e.target.closest('.comfy-lora-arrow') ||
+            e.target.closest('.comfy-lora-drag-handle')) {
+          return;
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        selectLora(name);
+        container.focus(); // Focus container for keyboard events
+      });
+
       // Add double-click handler to toggle clip entry
       loraEl.addEventListener('dblclick', (e) => {
         // Skip if clicking on toggle or strength control areas
@@ -219,6 +262,12 @@ export function addLorasWidget(node, name, opts, callback) {
           renderLoras(widget.value, widget);
         }
       });
+
+      // Create drag handle for reordering
+      const dragHandle = createDragHandle();
+      
+      // Initialize reorder drag functionality
+      initReorderDrag(dragHandle, name, widget, renderLoras);
 
       // Create toggle for this lora
       const toggle = createToggle(active, (newActive) => {
@@ -416,6 +465,7 @@ export function addLorasWidget(node, name, opts, callback) {
         minWidth: "0", // Allow shrinking
       });
       
+      leftSection.appendChild(dragHandle); // Add drag handle first
       leftSection.appendChild(toggle);
       leftSection.appendChild(nameEl);
       
@@ -423,6 +473,9 @@ export function addLorasWidget(node, name, opts, callback) {
       loraEl.appendChild(strengthControl);
 
       container.appendChild(loraEl);
+
+      // Update selection state
+      updateEntrySelection(loraEl, name === selectedLora);
 
       // If expanded, show the clip entry
       if (isExpanded) {
@@ -443,6 +496,10 @@ export function addLorasWidget(node, name, opts, callback) {
           marginLeft: "10px",
           marginTop: "-2px"
         });
+
+        // Store the same lora name in clip entry dataset
+        clipEl.dataset.loraName = name;
+        clipEl.dataset.active = active;
 
         // Create clip name display
         const clipNameEl = document.createElement("div");
@@ -601,7 +658,7 @@ export function addLorasWidget(node, name, opts, callback) {
     });
     
     // Calculate height based on number of loras and fixed sizes
-    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (Math.min(totalVisibleEntries, 10) * LORA_ENTRY_HEIGHT);
+    const calculatedHeight = CONTAINER_PADDING + HEADER_HEIGHT + (Math.min(totalVisibleEntries, 12) * LORA_ENTRY_HEIGHT);
     updateWidgetHeight(container, calculatedHeight, defaultHeight, node);
   };
 
@@ -685,6 +742,8 @@ export function addLorasWidget(node, name, opts, callback) {
   widget.onRemove = () => {
     container.remove(); 
     previewTooltip.cleanup();
+    // Remove keyboard event listener
+    container.removeEventListener('keydown', handleKeyboardNavigation);
   };
 
   return { minWidth: 400, minHeight: defaultHeight, widget };
