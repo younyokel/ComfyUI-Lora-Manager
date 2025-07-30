@@ -9,6 +9,7 @@ class SettingsManager:
     def __init__(self):
         self.settings_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'settings.json')
         self.settings = self._load_settings()
+        self._auto_set_default_roots()
         self._check_environment_variables()
 
     def _load_settings(self) -> Dict[str, Any]:
@@ -20,6 +21,28 @@ class SettingsManager:
             except Exception as e:
                 logger.error(f"Error loading settings: {e}")
         return self._get_default_settings()
+
+    def _auto_set_default_roots(self):
+        """Auto set default root paths if only one folder is present and default is empty."""
+        folder_paths = self.settings.get('folder_paths', {})
+        updated = False
+        # loras
+        loras = folder_paths.get('loras', [])
+        if isinstance(loras, list) and len(loras) == 1 and not self.settings.get('default_lora_root'):
+            self.settings['default_lora_root'] = loras[0]
+            updated = True
+        # checkpoints
+        checkpoints = folder_paths.get('checkpoints', [])
+        if isinstance(checkpoints, list) and len(checkpoints) == 1 and not self.settings.get('default_checkpoint_root'):
+            self.settings['default_checkpoint_root'] = checkpoints[0]
+            updated = True
+        # embeddings
+        embeddings = folder_paths.get('embeddings', [])
+        if isinstance(embeddings, list) and len(embeddings) == 1 and not self.settings.get('default_embedding_root'):
+            self.settings['default_embedding_root'] = embeddings[0]
+            updated = True
+        if updated:
+            self._save_settings()
 
     def _check_environment_variables(self) -> None:
         """Check for environment variables and update settings if needed"""

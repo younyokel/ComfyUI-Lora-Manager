@@ -59,6 +59,9 @@ class Config:
             
             if self.checkpoints_roots and len(self.checkpoints_roots) == 1 and "default_checkpoint_root" not in settings:
                 settings["default_checkpoint_root"] = self.checkpoints_roots[0]
+
+            if self.embeddings_roots and len(self.embeddings_roots) == 1 and "default_embedding_root" not in settings:
+                settings["default_embedding_root"] = self.embeddings_roots[0]
             
             # Save settings
             with open(settings_path, 'w', encoding='utf-8') as f:
