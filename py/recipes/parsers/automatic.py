@@ -181,13 +181,30 @@ class AutomaticMetadataParser(RecipeMetadataParser):
             # First use Civitai resources if available (more reliable source)
             if metadata.get("civitai_resources"):
                 for resource in metadata.get("civitai_resources", []):
+                    # --- Added: Parse 'air' field if present ---
+                    air = resource.get("air")
+                    if air:
+                        # Format: urn:air:sdxl:lora:civitai:1221007@1375651
+                        # Or: urn:air:sdxl:checkpoint:civitai:623891@2019115
+                        air_pattern = r"urn:air:[^:]+:(?P<type>[^:]+):civitai:(?P<modelId>\d+)@(?P<modelVersionId>\d+)"
+                        air_match = re.match(air_pattern, air)
+                        if air_match:
+                            air_type = air_match.group("type")
+                            air_modelId = int(air_match.group("modelId"))
+                            air_modelVersionId = int(air_match.group("modelVersionId"))
+                            # checkpoint/lycoris/lora/hypernet
+                            resource["type"] = air_type
+                            resource["modelId"] = air_modelId
+                            resource["modelVersionId"] = air_modelVersionId
+                    # --- End added ---
+
                     if resource.get("type") in ["lora", "lycoris", "hypernet"] and resource.get("modelVersionId"):
                         # Initialize lora entry
                         lora_entry = {
                             'id': resource.get("modelVersionId", 0),
                             'modelId': resource.get("modelId", 0),
                             'name': resource.get("modelName", "Unknown LoRA"),
-                            'version': resource.get("modelVersionName", ""),
+                            'version': resource.get("modelVersionName", resource.get("versionName", "")),
                             'type': resource.get("type", "lora"),
                             'weight': round(float(resource.get("weight", 1.0)), 2),
                             'existsLocally': False,
