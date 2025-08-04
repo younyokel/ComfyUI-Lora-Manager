@@ -73,6 +73,7 @@ const addWidgetMenuRight = (menuRight) => {
         tooltip: 'Launch Lora Manager (Shift+Click to open in new window)',
         includeIcon: true,
         svgMarkup: getLoraManagerIcon(),
+        onClickHandler: onClick
     });
 
     buttonGroup.appendChild(loraManagerButton);
@@ -89,16 +90,23 @@ const addWidgetMenu = (menu) => {
         text: 'Lora Manager',
         tooltip: 'Launch Lora Manager (Shift+Click to open in new window)',
         includeIcon: false,
+        onClickHandler: onClick
     });
 
     resetViewButton.insertAdjacentElement('afterend', loraManagerButton);
 };
 
 const addWidget = (selector, callback) => {
+    const element = document.querySelector(selector);
+    if (element) {
+        callback(element);
+        return;
+    }
+    
     const observer = new MutationObserver((mutations, obs) => {
-        const element = document.querySelector(selector);
-        if (element) {
-            callback(element);
+        const foundElement = document.querySelector(selector);
+        if (foundElement) {
+            callback(foundElement);
             obs.disconnect();
         }
     });
@@ -109,45 +117,6 @@ const addWidget = (selector, callback) => {
 const initializeWidgets = () => {
     addWidget('.comfyui-menu-right', addWidgetMenuRight);
     addWidget('.comfy-menu', addWidgetMenu);
-};
-
-// Fetch version info from the API
-const fetchVersionInfo = async () => {
-    try {
-        const response = await fetch('/api/version-info');
-        const data = await response.json();
-        
-        if (data.success) {
-            return data.version;
-        }
-        return '';
-    } catch (error) {
-        console.error('Error fetching version info:', error);
-        return '';
-    }
-};
-
-// Register about badge with version info
-const registerAboutBadge = async () => {
-    let version = await fetchVersionInfo();
-    const label = version ? `LoRA-Manager v${version}` : 'LoRA-Manager';
-    
-    app.registerExtension({
-        name: 'LoraManager.AboutBadge',
-        aboutPageBadges: [
-            {
-                label: label,
-                url: 'https://github.com/willmiao/ComfyUI-Lora-Manager',
-                icon: 'pi pi-tags'
-            }
-        ]
-    });
-};
-
-// Initialize everything
-const initialize = () => {
-    initializeWidgets();
-    registerAboutBadge();
 };
 
 const getLoraManagerIcon = () => {
@@ -190,4 +159,4 @@ const getLoraManagerIcon = () => {
     `;
 };
 
-initialize();
+initializeWidgets();
