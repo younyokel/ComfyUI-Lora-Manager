@@ -364,65 +364,28 @@ class UpdateRoutes:
         """Get Git repository information"""
         current_dir = os.path.dirname(os.path.abspath(__file__))
         plugin_root = os.path.dirname(os.path.dirname(current_dir))
-        
+
         git_info = {
             'commit_hash': 'unknown',
             'short_hash': 'stable',
             'branch': 'unknown',
             'commit_date': 'unknown'
         }
-        
+
         try:
             # Check if we're in a git repository
             if not os.path.exists(os.path.join(plugin_root, '.git')):
                 return git_info
-                
-            # Get current commit hash
-            result = subprocess.run(
-                ['git', 'rev-parse', 'HEAD'],
-                cwd=plugin_root,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
-            )
-            if result.returncode == 0:
-                git_info['commit_hash'] = result.stdout.strip()
-                git_info['short_hash'] = git_info['commit_hash'][:7]
-            
-            # Get current branch name
-            result = subprocess.run(
-                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
-                cwd=plugin_root,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
-            )
-            if result.returncode == 0:
-                git_info['branch'] = result.stdout.strip()
-            
-            # Get commit date
-            result = subprocess.run(
-                ['git', 'show', '-s', '--format=%ci', 'HEAD'],
-                cwd=plugin_root,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
-            )
-            if result.returncode == 0:
-                commit_date = result.stdout.strip()
-                # Format the date nicely if possible
-                try:
-                    date_obj = datetime.strptime(commit_date, '%Y-%m-%d %H:%M:%S %z')
-                    git_info['commit_date'] = date_obj.strftime('%Y-%m-%d')
-                except:
-                    git_info['commit_date'] = commit_date
-                    
+
+            repo = git.Repo(plugin_root)
+            commit = repo.head.commit
+            git_info['commit_hash'] = commit.hexsha
+            git_info['short_hash'] = commit.hexsha[:7]
+            git_info['branch'] = repo.active_branch.name if not repo.head.is_detached else 'detached'
+            git_info['commit_date'] = commit.committed_datetime.strftime('%Y-%m-%d')
         except Exception as e:
             logger.warning(f"Error getting git info: {e}")
-            
+
         return git_info
     
     @staticmethod
