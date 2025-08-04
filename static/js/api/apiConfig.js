@@ -109,6 +109,8 @@ export const MODEL_SPECIFIC_ENDPOINTS = {
     },
     [MODEL_TYPES.CHECKPOINT]: {
         info: `/api/${MODEL_TYPES.CHECKPOINT}/info`,
+        checkpoints_roots: `/api/${MODEL_TYPES.CHECKPOINT}/checkpoints_roots`,
+        unet_roots: `/api/${MODEL_TYPES.CHECKPOINT}/unet_roots`,
     },
     [MODEL_TYPES.EMBEDDING]: {
     }

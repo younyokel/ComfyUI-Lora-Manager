@@ -28,4 +28,40 @@ export class CheckpointApiClient extends BaseModelApiClient {
             throw error;
         }
     }
+
+    /**
+     * Get checkpoint roots
+     */
+    async getCheckpointsRoots() {
+        try {
+            const response = await fetch(this.apiConfig.endpoints.specific.checkpoints_roots, {
+                method: 'GET'
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch checkpoints roots');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching checkpoints roots:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get unet roots
+     */
+    async getUnetRoots() {
+        try {
+            const response = await fetch(this.apiConfig.endpoints.specific.unet_roots, {
+                method: 'GET'
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch unet roots');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching unet roots:', error);
+            throw error;
+        }
+    }
 }
