@@ -43,7 +43,15 @@ class ExampleImagesFileManager:
             
             # Construct folder path for this model
             model_folder = os.path.join(example_images_path, model_hash)
-            
+            model_folder = os.path.abspath(model_folder)  # Get absolute path
+
+            # Path validation: ensure model_folder is under example_images_path
+            if not model_folder.startswith(os.path.abspath(example_images_path)):
+                return web.json_response({
+                    'success': False,
+                    'error': 'Invalid model folder path'
+                }, status=400)
+
             # Check if folder exists
             if not os.path.exists(model_folder):
                 return web.json_response({
