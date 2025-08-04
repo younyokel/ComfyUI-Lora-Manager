@@ -1,4 +1,3 @@
-import { BASE_MODEL_CLASSES } from '../utils/constants.js';
 import { getCurrentPageState } from '../state/index.js';
 import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
 import { getModelApiClient } from '../api/baseModelApi.js';
@@ -67,14 +66,7 @@ export class FilterManager {
             tagsContainer.innerHTML = '<div class="tags-loading">Loading tags...</div>';
             
             // Determine the API endpoint based on the page type
-            let tagsEndpoint = '/api/loras/top-tags?limit=20';
-            if (this.currentPage === 'recipes') {
-                tagsEndpoint = '/api/recipes/top-tags?limit=20';
-            } else if (this.currentPage === 'checkpoints') {
-                tagsEndpoint = '/api/checkpoints/top-tags?limit=20';
-            } else if (this.currentPage === 'embeddings') {
-                tagsEndpoint = '/api/embeddings/top-tags?limit=20';
-            }
+            const tagsEndpoint = `/api/${this.currentPage}/top-tags?limit=20`;
 
             const response = await fetch(tagsEndpoint);
             if (!response.ok) throw new Error('Failed to fetch tags');
@@ -141,19 +133,8 @@ export class FilterManager {
         const baseModelTagsContainer = document.getElementById('baseModelTags');
         if (!baseModelTagsContainer) return;
         
-        // Set the appropriate API endpoint based on current page
-        let apiEndpoint = '';
-        if (this.currentPage === 'loras') {
-            apiEndpoint = '/api/loras/base-models';
-        } else if (this.currentPage === 'recipes') {
-            apiEndpoint = '/api/recipes/base-models';
-        } else if (this.currentPage === 'checkpoints') {
-            apiEndpoint = '/api/checkpoints/base-models';
-        } else if (this.currentPage === 'embeddings') {
-            apiEndpoint = '/api/embeddings/base-models';
-        } else {
-            return;
-        }
+        // Set the API endpoint based on current page
+        const apiEndpoint = `/api/${this.currentPage}/base-models`;
         
         // Fetch base models
         fetch(apiEndpoint)
