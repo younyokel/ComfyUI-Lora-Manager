@@ -5,6 +5,7 @@ import { toggleShowcase } from './showcase/ShowcaseView.js';
 import { bulkManager } from '../../managers/BulkManager.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
+import { MODEL_TYPES } from '../../api/apiConfig.js';
 import { getModelApiClient } from '../../api/modelApiFactory.js';
 import { showDeleteModal } from '../../utils/modalUtils.js';
 
@@ -152,7 +153,7 @@ async function toggleFavorite(card) {
 }
 
 function handleSendToWorkflow(card, replaceMode, modelType) {
-    if (modelType === 'loras') {
+    if (modelType === MODEL_TYPES.LORA) {
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
@@ -164,16 +165,16 @@ function handleSendToWorkflow(card, replaceMode, modelType) {
 }
 
 function handleCopyAction(card, modelType) {
-    if (modelType === 'loras') {
+    if (modelType === MODEL_TYPES.LORA) {
         const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
         const strength = usageTips.strength || 1;
         const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
         copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
-    } else if (modelType === 'checkpoints') {
+    } else if (modelType === MODEL_TYPES.CHECKPOINT) {
         // Checkpoint copy functionality - copy checkpoint name
         const checkpointName = card.dataset.file_name;
         copyToClipboard(checkpointName, 'Checkpoint name copied');
-    } else if (modelType === 'embeddings') {
+    } else if (modelType === MODEL_TYPES.EMBEDDING) {
         const embeddingName = card.dataset.file_name;
         copyToClipboard(embeddingName, 'Embedding name copied');
     }
@@ -377,8 +378,13 @@ export function createModelCard(model, modelType) {
     card.dataset.favorite = model.favorite ? 'true' : 'false';
 
     // LoRA specific data
-    if (modelType === 'loras') {
+    if (modelType === MODEL_TYPES.LORA) {
         card.dataset.usage_tips = model.usage_tips;
+    }
+
+    // checkpoint specific data
+    if (modelType === MODEL_TYPES.CHECKPOINT) {
+        card.dataset.model_type = model.model_type; // checkpoint or diffusion_model
     }
 
     // Store metadata if available
@@ -406,7 +412,7 @@ export function createModelCard(model, modelType) {
     }
 
     // Apply selection state if in bulk mode and this card is in the selected set (LoRA only)
-    if (modelType === 'loras' && state.bulkMode && state.selectedLoras.has(model.file_path)) {
+    if (modelType === MODEL_TYPES.LORA && state.bulkMode && state.selectedLoras.has(model.file_path)) {
         card.classList.add('selected');
     }
 

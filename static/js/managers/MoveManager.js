@@ -9,99 +9,107 @@ class MoveManager {
         this.currentFilePath = null;
         this.bulkFilePaths = null;
         this.modal = document.getElementById('moveModal');
-        this.loraRootSelect = document.getElementById('moveLoraRoot');
+        this.modelRootSelect = document.getElementById('moveModelRoot');
         this.folderBrowser = document.getElementById('moveFolderBrowser');
         this.newFolderInput = document.getElementById('moveNewFolder');
         this.pathDisplay = document.getElementById('moveTargetPathDisplay');
         this.modalTitle = document.getElementById('moveModalTitle');
+        this.rootLabel = document.getElementById('moveRootLabel');
 
         this.initializeEventListeners();
     }
 
     initializeEventListeners() {
-        // 初始化LoRA根目录选择器
-        this.loraRootSelect.addEventListener('change', () => this.updatePathPreview());
+        // Initialize model root directory selector
+        this.modelRootSelect.addEventListener('change', () => this.updatePathPreview());
 
-        // 文件夹选择事件
+        // Folder selection event
         this.folderBrowser.addEventListener('click', (e) => {
             const folderItem = e.target.closest('.folder-item');
             if (!folderItem) return;
 
-            // 如果点击已选中的文件夹，则取消选择
+            // If clicking already selected folder, deselect it
             if (folderItem.classList.contains('selected')) {
                 folderItem.classList.remove('selected');
             } else {
-                // 取消其他选中状态
+                // Deselect other folders
                 this.folderBrowser.querySelectorAll('.folder-item').forEach(item => {
                     item.classList.remove('selected');
                 });
-                // 设置当前选中状态
+                // Select current folder
                 folderItem.classList.add('selected');
             }
             
             this.updatePathPreview();
         });
 
-        // 新文件夹输入事件
+        // New folder input event
         this.newFolderInput.addEventListener('input', () => this.updatePathPreview());
     }
 
-    async showMoveModal(filePath) {
+    async showMoveModal(filePath, modelType = null) {
         // Reset state
         this.currentFilePath = null;
         this.bulkFilePaths = null;
         
+        const apiClient = getModelApiClient();
+        const currentPageType = state.currentPageType;
+        const modelConfig = apiClient.apiConfig.config;
+        
         // Handle bulk mode
         if (filePath === 'bulk') {
-            const selectedPaths = Array.from(state.selectedLoras);
+            const selectedPaths = Array.from(state.selectedModels);
             if (selectedPaths.length === 0) {
-                showToast('No LoRAs selected', 'warning');
+                showToast('No models selected', 'warning');
                 return;
             }
             this.bulkFilePaths = selectedPaths;
-            this.modalTitle.textContent = `Move ${selectedPaths.length} LoRAs`;
+            this.modalTitle.textContent = `Move ${selectedPaths.length} ${modelConfig.displayName}s`;
         } else {
             // Single file mode
             this.currentFilePath = filePath;
-            this.modalTitle.textContent = "Move Model";
+            this.modalTitle.textContent = `Move ${modelConfig.displayName}`;
         }
         
-        // 清除之前的选择
+        // Update UI labels based on model type
+        this.rootLabel.textContent = `Select ${modelConfig.displayName} Root:`;
+        this.pathDisplay.querySelector('.path-text').textContent = `Select a ${modelConfig.displayName.toLowerCase()} root directory`;
+        
+        // Clear previous selections
         this.folderBrowser.querySelectorAll('.folder-item').forEach(item => {
             item.classList.remove('selected');
         });
         this.newFolderInput.value = '';
 
         try {
-            // Fetch LoRA roots
-            const rootsResponse = await fetch('/api/loras/roots');
-            if (!rootsResponse.ok) {
-                throw new Error('Failed to fetch LoRA roots');
+            // Fetch model roots
+            let rootsData;
+            if (modelType) {
+                // For checkpoints, use the specific API method that considers modelType
+                rootsData = await apiClient.fetchModelRoots(modelType);
+            } else {
+                // For other model types, use the generic method
+                rootsData = await apiClient.fetchModelRoots();
             }
             
-            const rootsData = await rootsResponse.json();
             if (!rootsData.roots || rootsData.roots.length === 0) {
-                throw new Error('No LoRA roots found');
+                throw new Error(`No ${modelConfig.displayName.toLowerCase()} roots found`);
             }
 
-            // 填充LoRA根目录选择器
-            this.loraRootSelect.innerHTML = rootsData.roots.map(root => 
+            // Populate model root selector
+            this.modelRootSelect.innerHTML = rootsData.roots.map(root => 
                 `<option value="${root}">${root}</option>`
             ).join('');
 
-            // Set default lora root if available
-            const defaultRoot = getStorageItem('settings', {}).default_lora_root;
+            // Set default root if available
+            const settingsKey = `default_${currentPageType.slice(0, -1)}_root`; // Remove 's' from plural
+            const defaultRoot = getStorageItem('settings', {})[settingsKey];
             if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
-                this.loraRootSelect.value = defaultRoot;
+                this.modelRootSelect.value = defaultRoot;
             }
 
             // Fetch folders dynamically
-            const foldersResponse = await fetch('/api/loras/folders');
-            if (!foldersResponse.ok) {
-                throw new Error('Failed to fetch folders');
-            }
-            
-            const foldersData = await foldersResponse.json();
+            const foldersData = await apiClient.fetchModelFolders();
             
             // Update folder browser with dynamic content
             this.folderBrowser.innerHTML = foldersData.folders.map(folder => 
@@ -112,13 +120,13 @@ class MoveManager {
             modalManager.showModal('moveModal');
             
         } catch (error) {
-            console.error('Error fetching LoRA roots or folders:', error);
+            console.error(`Error fetching ${modelConfig.displayName.toLowerCase()} roots or folders:`, error);
             showToast(error.message, 'error');
         }
     }
 
     updatePathPreview() {
-        const selectedRoot = this.loraRootSelect.value;
+        const selectedRoot = this.modelRootSelect.value;
         const selectedFolder = this.folderBrowser.querySelector('.folder-item.selected')?.dataset.folder || '';
         const newFolder = this.newFolderInput.value.trim();
 
@@ -134,7 +142,7 @@ class MoveManager {
     }
 
     async moveModel() {
-        const selectedRoot = this.loraRootSelect.value;
+        const selectedRoot = this.modelRootSelect.value;
         const selectedFolder = this.folderBrowser.querySelector('.folder-item.selected')?.dataset.folder || '';
         const newFolder = this.newFolderInput.value.trim();
 
@@ -191,11 +199,8 @@ class MoveManager {
 
             // Refresh folder tags after successful move
             try {
-                const foldersResponse = await fetch('/api/loras/folders');
-                if (foldersResponse.ok) {
-                    const foldersData = await foldersResponse.json();
-                    updateFolderTags(foldersData.folders);
-                }
+                const foldersData = await apiClient.fetchModelFolders();
+                updateFolderTags(foldersData.folders);
             } catch (error) {
                 console.error('Error refreshing folder tags:', error);
             }

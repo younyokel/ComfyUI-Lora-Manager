@@ -555,6 +555,12 @@ export class BaseModelApiClient {
 
     async fetchModelRoots() {
         try {
+            // For checkpoints, use the specific method that considers modelType
+            // if (this.modelType === 'checkpoints') {
+            //     const pageState = this.getPageState();
+            //     return await this.fetchModelRoots(pageState.modelType || 'checkpoint');
+            // }
+            
             const response = await fetch(this.apiConfig.endpoints.roots);
             if (!response.ok) {
                 throw new Error(`Failed to fetch ${this.apiConfig.config.displayName} roots`);

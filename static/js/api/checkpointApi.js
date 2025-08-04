@@ -64,4 +64,30 @@ export class CheckpointApiClient extends BaseModelApiClient {
             throw error;
         }
     }
+
+    /**
+     * Get appropriate roots based on model type
+     */
+    async fetchModelRoots(modelType = 'checkpoint') {
+        try {
+            let response;
+            if (modelType === 'diffusion_model') {
+                response = await fetch(this.apiConfig.endpoints.specific.unet_roots, {
+                    method: 'GET'
+                });
+            } else {
+                response = await fetch(this.apiConfig.endpoints.specific.checkpoints_roots, {
+                    method: 'GET'
+                });
+            }
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${modelType} roots`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching ${modelType} roots:`, error);
+            throw error;
+        }
+    }
 }

@@ -2,7 +2,6 @@ import { appCore } from './core.js';
 import { state } from './state/index.js';
 import { updateCardsForBulkMode } from './components/shared/ModelCard.js';
 import { bulkManager } from './managers/BulkManager.js';
-import { moveManager } from './managers/MoveManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
@@ -33,7 +32,6 @@ class LoraPageManager {
         window.closeDeleteModal = closeDeleteModal;
         window.confirmExclude = confirmExclude;
         window.closeExcludeModal = closeExcludeModal;
-        window.moveManager = moveManager;
         
         // Bulk operations
         window.toggleBulkMode = () => bulkManager.toggleBulkMode();

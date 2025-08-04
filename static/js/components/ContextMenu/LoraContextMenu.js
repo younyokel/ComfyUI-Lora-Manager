@@ -3,6 +3,7 @@ import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
 import { copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
+import { moveManager } from '../../managers/MoveManager.js';
 
 export class LoraContextMenu extends BaseContextMenu {
     constructor() {

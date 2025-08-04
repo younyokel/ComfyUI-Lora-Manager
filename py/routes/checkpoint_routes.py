@@ -111,8 +111,30 @@ class CheckpointRoutes(BaseModelRoutes):
     
     async def get_checkpoints_roots(self, request: web.Request) -> web.Response:
         """Return the list of checkpoint roots from config"""
-        return web.json_response({"checkpoints_roots": config.checkpoints_roots})
+        try:
+            roots = config.checkpoints_roots
+            return web.json_response({
+                "success": True,
+                "roots": roots
+            })
+        except Exception as e:
+            logger.error(f"Error getting checkpoint roots: {e}", exc_info=True)
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
 
     async def get_unet_roots(self, request: web.Request) -> web.Response:
         """Return the list of unet roots from config"""
-        return web.json_response({"unet_roots": config.unet_roots})
+        try:
+            roots = config.unet_roots
+            return web.json_response({
+                "success": True,
+                "roots": roots
+            })
+        except Exception as e:
+            logger.error(f"Error getting unet roots: {e}", exc_info=True)
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)

@@ -1,7 +1,7 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
-import { showToast } from '../../utils/uiHelpers.js';
+import { moveManager } from '../../managers/MoveManager.js';
 import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
 
 export class EmbeddingContextMenu extends BaseContextMenu {
@@ -54,8 +54,7 @@ export class EmbeddingContextMenu extends BaseContextMenu {
                 apiClient.refreshSingleModelMetadata(this.currentCard.dataset.filepath);
                 break;
             case 'move':
-                // Move to folder (placeholder)
-                showToast('Move to folder feature coming soon', 'info');
+                moveManager.showMoveModal(this.currentCard.dataset.filepath);
                 break;
             case 'exclude':
                 showExcludeModal(this.currentCard.dataset.filepath);

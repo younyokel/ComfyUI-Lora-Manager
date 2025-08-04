@@ -1,8 +1,8 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
-import { showToast } from '../../utils/uiHelpers.js';
 import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
+import { moveManager } from '../../managers/MoveManager.js';
 
 export class CheckpointContextMenu extends BaseContextMenu {
     constructor() {
@@ -54,8 +54,7 @@ export class CheckpointContextMenu extends BaseContextMenu {
                 apiClient.refreshSingleModelMetadata(this.currentCard.dataset.filepath);
                 break;
             case 'move':
-                // Move to folder (placeholder)
-                showToast('Move to folder feature coming soon', 'info');
+                moveManager.showMoveModal(this.currentCard.dataset.filepath, this.currentCard.dataset.model_type);
                 break;
             case 'exclude':
                 showExcludeModal(this.currentCard.dataset.filepath);

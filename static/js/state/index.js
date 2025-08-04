@@ -89,6 +89,9 @@ export const state = {
                 baseModel: [],
                 tags: []
             },
+            modelType: 'checkpoint', // 'checkpoint' or 'diffusion_model'
+            bulkMode: false,
+            selectedModels: new Set(),
             showFavoritesOnly: false,
             duplicatesMode: false,
         },
@@ -112,6 +115,8 @@ export const state = {
                 baseModel: [],
                 tags: []
             },
+            bulkMode: false,
+            selectedModels: new Set(),
             showFavoritesOnly: false,
             duplicatesMode: false,
         }
@@ -154,11 +159,42 @@ export const state = {
     get filters() { return this.pages[this.currentPageType].filters; },
     set filters(value) { this.pages[this.currentPageType].filters = value; },
     
-    get bulkMode() { return this.pages.loras.bulkMode; },
-    set bulkMode(value) { this.pages.loras.bulkMode = value; },
+    get bulkMode() { 
+        const currentType = this.currentPageType;
+        if (currentType === MODEL_TYPES.LORA) {
+            return this.pages.loras.bulkMode;
+        } else {
+            return this.pages[currentType].bulkMode;
+        }
+    },
+    set bulkMode(value) { 
+        const currentType = this.currentPageType;
+        if (currentType === MODEL_TYPES.LORA) {
+            this.pages.loras.bulkMode = value;
+        } else {
+            this.pages[currentType].bulkMode = value;
+        }
+    },
     
     get selectedLoras() { return this.pages.loras.selectedLoras; },
     set selectedLoras(value) { this.pages.loras.selectedLoras = value; },
+    
+    get selectedModels() { 
+        const currentType = this.currentPageType;
+        if (currentType === MODEL_TYPES.LORA) {
+            return this.pages.loras.selectedLoras;
+        } else {
+            return this.pages[currentType].selectedModels;
+        }
+    },
+    set selectedModels(value) { 
+        const currentType = this.currentPageType;
+        if (currentType === MODEL_TYPES.LORA) {
+            this.pages.loras.selectedLoras = value;
+        } else {
+            this.pages[currentType].selectedModels = value;
+        }
+    },
     
     get loraMetadataCache() { return this.pages.loras.loraMetadataCache; },
     set loraMetadataCache(value) { this.pages.loras.loraMetadataCache = value; },
