@@ -620,9 +620,56 @@ export function addLorasWidget(node, name, opts, callback) {
           }
         });
 
+        // Add delete button
+        const deleteButton = document.createElement("div");
+        deleteButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>';
+        deleteButton.title = "Delete LoRA";
+
+        Object.assign(deleteButton.style, {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: 'rgba(226, 232, 240, 0.8)', // Matched to arrow buttons
+            backgroundColor: 'transparent',
+            transition: 'all 0.2s ease',
+            marginLeft: '8px',
+            width: '20px',                     // Adjusted size for a better fit
+            height: '20px',
+            borderRadius: '50%',               // Retaining the circular shape
+        });
+
+        // Add hover effect
+        deleteButton.onmouseenter = () => {
+            deleteButton.style.color = 'rgba(255, 255, 255, 1)';
+            deleteButton.style.backgroundColor = 'rgba(239, 68, 68, 0.8)'; // Retaining the red hover
+            deleteButton.style.transform = 'scale(1.2)';                     // Matched to arrow buttons
+        };
+        deleteButton.onmouseleave = () => {
+            deleteButton.style.color = 'rgba(226, 232, 240, 0.8)';
+            deleteButton.style.backgroundColor = 'transparent';
+            deleteButton.style.transform = 'scale(1)';
+        };
+
+        // Add click handler
+        deleteButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const currentLoras = parseLoraValue(widget.value);
+            const updatedLoras = currentLoras.filter(l => l.name !== name);
+            
+            widget.value = formatLoraValue(updatedLoras);
+
+            if (widget.callback) {
+                widget.callback(widget.value);
+            }
+        });
+
         clipStrengthControl.appendChild(clipLeftArrow);
         clipStrengthControl.appendChild(clipStrengthEl);
         clipStrengthControl.appendChild(clipRightArrow);
+        clipStrengthControl.appendChild(deleteButton);
 
         // Assemble clip entry
         const clipLeftSection = document.createElement("div");

@@ -12,7 +12,10 @@ const config = {
     }
 };
 
-const createWidget = ({ className, text, tooltip, includeIcon, svgMarkup }) => {
+let loraManagerTab = null;
+const loraManagerWindowName = 'loraManagerTab';
+
+const createWidget = ({ className, text, tooltip, includeIcon, svgMarkup, onClickHandler }) => {
     const button = document.createElement('button');
     button.className = className;
     button.setAttribute('aria-label', tooltip);
@@ -32,7 +35,7 @@ const createWidget = ({ className, text, tooltip, includeIcon, svgMarkup }) => {
     const textNode = document.createTextNode(text);
     button.appendChild(textNode);
 
-    button.addEventListener('click', onClick);
+    button.addEventListener('click', onClickHandler);
     return button;
 };
 
@@ -46,8 +49,12 @@ const onClick = (e) => {
         const windowFeatures = `width=${width},height=${height},resizable=yes,scrollbars=yes,status=yes`;
         window.open(loraManagerUrl, '_blank', windowFeatures);
     } else {
-        // Default behavior: open in new tab
-        window.open(loraManagerUrl, '_blank');
+        // Default behavior: open in a new tab or focus the existing one
+        if (loraManagerTab && !loraManagerTab.closed) {
+            loraManagerTab.focus();
+        } else {
+            loraManagerTab = window.open(loraManagerUrl, loraManagerWindowName);
+        }
     }
 };
 
