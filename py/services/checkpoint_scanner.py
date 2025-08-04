@@ -21,6 +21,14 @@ class CheckpointScanner(ModelScanner):
             hash_index=ModelHashIndex()
         )
 
+    def adjust_metadata(self, metadata, file_path, root_path):
+        if hasattr(metadata, "model_type"):
+            if root_path in config.checkpoints_roots:
+                metadata.model_type = "checkpoint"
+            elif root_path in config.unet_roots:
+                metadata.model_type = "diffusion_model"
+        return metadata
+
     def get_model_roots(self) -> List[str]:
         """Get checkpoint root directories"""
         return config.base_models_roots

@@ -604,7 +604,10 @@ class ModelScanner:
                 return os.path.dirname(rel_path).replace(os.path.sep, '/')
         return ''
 
-    # Common methods shared between scanners
+    def adjust_metadata(self, metadata, file_path, root_path):
+        """Hook for subclasses: adjust metadata during scanning"""
+        return metadata
+
     async def _process_model_file(self, file_path: str, root_path: str) -> Dict:
         """Process a single model file and return its metadata"""
         metadata = await MetadataManager.load_metadata(file_path, self.model_class)
@@ -657,6 +660,9 @@ class ModelScanner:
             
         if metadata is None:
             metadata = await self._create_default_metadata(file_path)
+        
+        # Hook: allow subclasses to adjust metadata
+        metadata = self.adjust_metadata(metadata, file_path, root_path)
         
         model_data = metadata.to_dict()
         
