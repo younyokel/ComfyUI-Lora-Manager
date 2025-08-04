@@ -1,5 +1,5 @@
 import { modalManager } from '../managers/ModalManager.js';
-import { getModelApiClient } from '../api/baseModelApi.js';
+import { getModelApiClient } from '../api/modelApiFactory.js';
 
 const apiClient = getModelApiClient();
 

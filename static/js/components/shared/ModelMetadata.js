@@ -4,7 +4,7 @@
  */
 import { showToast } from '../../utils/uiHelpers.js';
 import { BASE_MODELS } from '../../utils/constants.js';
-import { getModelApiClient } from '../../api/baseModelApi.js';
+import { getModelApiClient } from '../../api/modelApiFactory.js';
 
 /**
  * Set up model name editing functionality

@@ -2,7 +2,7 @@
 import { showToast } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { formatDate } from '../utils/formatters.js';
-import { resetAndReload} from '../api/baseModelApi.js';
+import { resetAndReload} from '../api/modelApiFactory.js';
 import { LoadingManager } from '../managers/LoadingManager.js';
 
 export class ModelDuplicatesManager {

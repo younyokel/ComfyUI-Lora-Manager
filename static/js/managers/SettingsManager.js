@@ -1,7 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { state } from '../state/index.js';
-import { resetAndReload } from '../api/baseModelApi.js';
+import { resetAndReload } from '../api/modelApiFactory.js';
 import { setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 import { DOWNLOAD_PATH_TEMPLATES, MAPPABLE_BASE_MODELS } from '../utils/constants.js';
 

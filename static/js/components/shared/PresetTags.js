@@ -2,7 +2,7 @@
  * PresetTags.js
  * Handles LoRA model preset parameter tags - Shared version
  */
-import { getModelApiClient } from '../../api/baseModelApi.js';
+import { getModelApiClient } from '../../api/modelApiFactory.js';
 
 /**
  * Parse preset parameters

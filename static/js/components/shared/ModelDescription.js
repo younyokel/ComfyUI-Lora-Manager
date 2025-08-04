@@ -121,7 +121,7 @@ export function setupModelDescriptionEditing(filePath) {
         }
         try {
             // Save to backend
-            const { getModelApiClient } = await import('../../api/baseModelApi.js');
+            const { getModelApiClient } = await import('../../api/modelApiFactory.js');
             await getModelApiClient().saveModelMetadata(filePath, { modelDescription: newValue });
             showToast('Model description updated', 'success');
         } catch (err) {

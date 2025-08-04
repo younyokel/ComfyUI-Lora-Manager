@@ -3,7 +3,7 @@
  * Module for handling model tag editing functionality - 共享版本
  */
 import { showToast } from '../../utils/uiHelpers.js';
-import { getModelApiClient } from '../../api/baseModelApi.js';
+import { getModelApiClient } from '../../api/modelApiFactory.js';
 
 // Preset tag suggestions
 const PRESET_TAGS = [

@@ -8,12 +8,16 @@ import {
     DOWNLOAD_ENDPOINTS,
     WS_ENDPOINTS
 } from './apiConfig.js';
+import { createModelApiClient } from './modelApiFactory.js';
 
 /**
- * Universal API client for all model types
+ * Abstract base class for all model API clients
  */
-class ModelApiClient {
+export class BaseModelApiClient {
     constructor(modelType = null) {
+        if (this.constructor === BaseModelApiClient) {
+            throw new Error("BaseModelApiClient is abstract and cannot be instantiated directly");
+        }
         this.modelType = modelType || getCurrentModelType();
         this.apiConfig = getCompleteApiConfig(this.modelType);
     }
@@ -42,9 +46,6 @@ class ModelApiClient {
         return pageState;
     }
 
-    /**
-     * Fetch models with pagination
-     */
     async fetchModelsPage(page = 1, pageSize = null) {
         const pageState = this.getPageState();
         const actualPageSize = pageSize || pageState.pageSize || this.apiConfig.config.defaultPageSize;
@@ -79,9 +80,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Reset and reload models with virtual scrolling
-     */
     async loadMoreWithVirtualScroll(resetPage = false, updateFolders = false) {
         const pageState = this.getPageState();
         
@@ -93,24 +91,20 @@ class ModelApiClient {
                 pageState.currentPage = 1; // Reset to first page
             }
             
-            // Fetch the current page
             const startTime = performance.now();
             const result = await this.fetchModelsPage(pageState.currentPage, pageState.pageSize);
             const endTime = performance.now();
             console.log(`fetchModelsPage耗时: ${(endTime - startTime).toFixed(2)} ms`);
             
-            // Update the virtual scroller
             state.virtualScroller.refreshWithData(
                 result.items,
                 result.totalItems,
                 result.hasMore
             );
             
-            // Update state
             pageState.hasMore = result.hasMore;
             pageState.currentPage = pageState.currentPage + 1;
             
-            // Update folders if needed
             if (updateFolders && result.folders) {
                 updateFolderTags(result.folders);
             }
@@ -126,9 +120,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Delete a model
-     */
     async deleteModel(filePath) {
         try {
             state.loadingManager.showSimpleLoading(`Deleting ${this.apiConfig.config.singularName}...`);
@@ -163,9 +154,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Exclude a model
-     */
     async excludeModel(filePath) {
         try {
             state.loadingManager.showSimpleLoading(`Excluding ${this.apiConfig.config.singularName}...`);
@@ -200,9 +188,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Rename a model file
-     */
     async renameModelFile(filePath, newFileName) {
         try {
             state.loadingManager.showSimpleLoading(`Renaming ${this.apiConfig.config.singularName} file...`);
@@ -239,9 +224,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Replace model preview
-     */
     replaceModelPreview(filePath) {
         const input = document.createElement('input');
         input.type = 'file';
@@ -257,9 +239,6 @@ class ModelApiClient {
         input.click();
     }
 
-    /**
-     * Upload preview image
-     */
     async uploadPreview(filePath, file, nsfwLevel = 0) {
         try {
             state.loadingManager.showSimpleLoading('Uploading preview...');
@@ -281,7 +260,6 @@ class ModelApiClient {
             const data = await response.json();
             const pageState = this.getPageState();
             
-            // Update the version timestamp
             const timestamp = Date.now();
             if (pageState.previewVersions) {
                 pageState.previewVersions.set(filePath, timestamp);
@@ -305,9 +283,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Save model metadata
-     */
     async saveModelMetadata(filePath, data) {
         try {
             state.loadingManager.showSimpleLoading('Saving metadata...');
@@ -332,9 +307,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Refresh models (scan)
-     */
     async refreshModels(fullRebuild = false) {
         try {
             state.loadingManager.showSimpleLoading(
@@ -360,9 +332,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Fetch CivitAI metadata for single model
-     */
     async refreshSingleModelMetadata(filePath) {
         try {
             state.loadingManager.showSimpleLoading('Refreshing metadata...');
@@ -399,9 +368,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Fetch CivitAI metadata for all models
-     */
     async fetchCivitaiMetadata() {
         let ws = null;
         
@@ -477,9 +443,6 @@ class ModelApiClient {
         });
     }
 
-    /**
-     * Fetch CivitAI metadata for multiple models with progress tracking
-     */
     async refreshBulkModelMetadata(filePaths) {
         if (!filePaths || filePaths.length === 0) {
             throw new Error('No file paths provided');
@@ -493,7 +456,6 @@ class ModelApiClient {
         const progressController = state.loadingManager.showEnhancedProgress('Starting metadata refresh...');
 
         try {
-            // Process files sequentially to avoid overwhelming the API
             for (let i = 0; i < filePaths.length; i++) {
                 const filePath = filePaths[i];
                 const fileName = filePath.split('/').pop();
@@ -535,7 +497,6 @@ class ModelApiClient {
                 processedCount++;
             }
 
-            // Show completion message
             let completionMessage;
             if (successCount === totalItems) {
                 completionMessage = `Successfully refreshed all ${successCount} ${this.apiConfig.config.displayName}s`;
@@ -575,113 +536,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Move a single model to target path
-     * @returns {string|null} - The new file path if moved, null if not moved
-     */
-    async moveSingleModel(filePath, targetPath) {
-        if (filePath.substring(0, filePath.lastIndexOf('/')) === targetPath) {
-            showToast('Model is already in the selected folder', 'info');
-            return null;
-        }
-
-        const response = await fetch(this.apiConfig.endpoints.specific.moveModel, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                file_path: filePath,
-                target_path: targetPath
-            })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            if (result && result.error) {
-                throw new Error(result.error);
-            }
-            throw new Error('Failed to move model');
-        }
-
-        if (result && result.message) {
-            showToast(result.message, 'info');
-        } else {
-            showToast('Model moved successfully', 'success');
-        }
-
-        // Return new file path if move succeeded
-        if (result.success) {
-            return result.new_file_path;
-        }
-        return null;
-    }
-
-    /**
-     * Move multiple models to target path
-     * @returns {Array<string>} - Array of new file paths that were moved successfully
-     */
-    async moveBulkModels(filePaths, targetPath) {
-        const movedPaths = filePaths.filter(path => {
-            return path.substring(0, path.lastIndexOf('/')) !== targetPath;
-        });
-
-        if (movedPaths.length === 0) {
-            showToast('All selected models are already in the target folder', 'info');
-            return [];
-        }
-
-        const response = await fetch(this.apiConfig.endpoints.specific.moveBulk, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                file_paths: movedPaths,
-                target_path: targetPath
-            })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error('Failed to move models');
-        }
-
-        let successFilePaths = [];
-        if (result.success) {
-            if (result.failure_count > 0) {
-                showToast(`Moved ${result.success_count} models, ${result.failure_count} failed`, 'warning');
-                console.log('Move operation results:', result.results);
-                const failedFiles = result.results
-                    .filter(r => !r.success)
-                    .map(r => {
-                        const fileName = r.path.substring(r.path.lastIndexOf('/') + 1);
-                        return `${fileName}: ${r.message}`;
-                    });
-                if (failedFiles.length > 0) {
-                    const failureMessage = failedFiles.length <= 3 
-                        ? failedFiles.join('\n')
-                        : failedFiles.slice(0, 3).join('\n') + `\n(and ${failedFiles.length - 3} more)`;
-                    showToast(`Failed moves:\n${failureMessage}`, 'warning', 6000);
-                }
-            } else {
-                showToast(`Successfully moved ${result.success_count} models`, 'success');
-            }
-            // Collect new file paths for successful moves
-            successFilePaths = result.results
-                .filter(r => r.success)
-                .map(r => r.path);
-        } else {
-            throw new Error(result.message || 'Failed to move models');
-        }
-        return successFilePaths;
-    }
-
-    /**
-     * Fetch Civitai model versions
-     */
     async fetchCivitaiVersions(modelId) {
         try {
             const response = await fetch(`${this.apiConfig.endpoints.civitaiVersions}/${modelId}`);
@@ -699,9 +553,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Fetch model roots
-     */
     async fetchModelRoots() {
         try {
             const response = await fetch(this.apiConfig.endpoints.roots);
@@ -715,9 +566,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Fetch model folders
-     */
     async fetchModelFolders() {
         try {
             const response = await fetch(this.apiConfig.endpoints.folders);
@@ -731,9 +579,6 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Download a model
-     */
     async downloadModel(modelId, versionId, modelRoot, relativePath, downloadId) {
         try {
             const response = await fetch(DOWNLOAD_ENDPOINTS.download, {
@@ -759,13 +604,9 @@ class ModelApiClient {
         }
     }
 
-    /**
-     * Build query parameters for API requests
-     */
     _buildQueryParams(baseParams, pageState) {
         const params = new URLSearchParams(baseParams);
         
-        // Add common parameters
         if (pageState.activeFolder !== null) {
             params.append('folder', pageState.activeFolder);
         }
@@ -774,12 +615,10 @@ class ModelApiClient {
             params.append('favorites_only', 'true');
         }
         
-        // Add letter filter for supported model types
         if (this.apiConfig.config.supportsLetterFilter && pageState.activeLetterFilter) {
             params.append('first_letter', pageState.activeLetterFilter);
         }
 
-        // Add search parameters
         if (pageState.filters?.search) {
             params.append('search', pageState.filters.search);
             params.append('fuzzy', 'true');
@@ -794,7 +633,6 @@ class ModelApiClient {
             }
         }
         
-        // Add filter parameters
         if (pageState.filters) {
             if (pageState.filters.tags && pageState.filters.tags.length > 0) {
                 pageState.filters.tags.forEach(tag => {
@@ -809,17 +647,12 @@ class ModelApiClient {
             }
         }
 
-        // Add model-specific parameters
         this._addModelSpecificParams(params, pageState);
 
         return params;
     }
 
-    /**
-     * Add model-specific parameters to query
-     */
     _addModelSpecificParams(params, pageState) {
-        // Override in specific implementations or handle via configuration
         if (this.modelType === 'loras') {
             const filterLoraHash = getSessionItem('recipe_to_lora_filterLoraHash');
             const filterLoraHashes = getSessionItem('recipe_to_lora_filterLoraHashes');
@@ -837,23 +670,12 @@ class ModelApiClient {
             }
         }
     }
-}
 
-// Export factory functions and utilities
-export function createModelApiClient(modelType = null) {
-    return new ModelApiClient(modelType);
-}
-
-let _singletonClient = null;
-
-export function getModelApiClient() {
-    if (!_singletonClient) {
-        _singletonClient = new ModelApiClient();
+    async moveSingleModel(filePath, targetPath) {
+        throw new Error("moveSingleModel must be implemented by subclass");
     }
-    _singletonClient.setModelType(state.currentPageType);
-    return _singletonClient;
-}
 
-export async function resetAndReload(updateFolders = false) {
-    return getModelApiClient().loadMoreWithVirtualScroll(true, updateFolders);
+    async moveBulkModels(filePaths, targetPath) {
+        throw new Error("moveBulkModels must be implemented by subclass");
+    }
 }

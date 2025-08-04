@@ -4,7 +4,7 @@
  * Moved to shared directory for consistency
  */
 import { showToast, copyToClipboard } from '../../utils/uiHelpers.js';
-import { getModelApiClient } from '../../api/baseModelApi.js';
+import { getModelApiClient } from '../../api/modelApiFactory.js';
 
 /**
  * Fetch trained words for a model

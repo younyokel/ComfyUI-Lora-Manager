@@ -13,7 +13,7 @@ import {
     setupFileNameEditing
 } from './ModelMetadata.js';
 import { setupTagEditMode } from './ModelTags.js';
-import { getModelApiClient } from '../../api/baseModelApi.js';
+import { getModelApiClient } from '../../api/modelApiFactory.js';
 import { renderCompactTags, setupTagTooltip, formatFileSize } from './utils.js';
 import { renderTriggerWords, setupTriggerWordsEditMode } from './TriggerWords.js';
 import { parsePresets, renderPresetTags } from './PresetTags.js';

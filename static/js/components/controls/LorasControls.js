@@ -1,6 +1,6 @@
 // LorasControls.js - Specific implementation for the LoRAs page
 import { PageControls } from './PageControls.js';
-import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
 import { getSessionItem, removeSessionItem } from '../../utils/storageHelpers.js';
 import { createAlphabetBar } from '../alphabet/index.js';
 import { downloadManager } from '../../managers/DownloadManager.js';

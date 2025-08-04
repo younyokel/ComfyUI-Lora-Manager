@@ -1,6 +1,6 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
-import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
 import { showToast } from '../../utils/uiHelpers.js';
 import { showDeleteModal, showExcludeModal } from '../../utils/modalUtils.js';
 

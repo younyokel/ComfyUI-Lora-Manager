@@ -1,6 +1,6 @@
 import { getCurrentPageState } from '../state/index.js';
 import { showToast, updatePanelPositions } from '../utils/uiHelpers.js';
-import { getModelApiClient } from '../api/baseModelApi.js';
+import { getModelApiClient } from '../api/modelApiFactory.js';
 import { removeStorageItem, setStorageItem, getStorageItem } from '../utils/storageHelpers.js';
 
 export class FilterManager {

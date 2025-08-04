@@ -2,7 +2,7 @@ import { showToast, updateFolderTags } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { modalManager } from './ModalManager.js';
 import { getStorageItem } from '../utils/storageHelpers.js';
-import { getModelApiClient } from '../api/baseModelApi.js';
+import { getModelApiClient } from '../api/modelApiFactory.js';
 
 class MoveManager {
     constructor() {

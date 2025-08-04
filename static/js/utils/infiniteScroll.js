@@ -1,7 +1,7 @@
 import { state, getCurrentPageState } from '../state/index.js';
 import { VirtualScroller } from './VirtualScroller.js';
 import { createModelCard, setupModelCardEventDelegation } from '../components/shared/ModelCard.js';
-import { getModelApiClient } from '../api/baseModelApi.js';
+import { getModelApiClient } from '../api/modelApiFactory.js';
 import { showToast } from './uiHelpers.js';
 
 // Function to dynamically import the appropriate card creator based on page type

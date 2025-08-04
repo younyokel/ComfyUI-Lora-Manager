@@ -5,7 +5,7 @@ import { toggleShowcase } from './showcase/ShowcaseView.js';
 import { bulkManager } from '../../managers/BulkManager.js';
 import { modalManager } from '../../managers/ModalManager.js';
 import { NSFW_LEVELS } from '../../utils/constants.js';
-import { getModelApiClient } from '../../api/baseModelApi.js';
+import { getModelApiClient } from '../../api/modelApiFactory.js';
 import { showDeleteModal } from '../../utils/modalUtils.js';
 
 // Add global event delegation handlers

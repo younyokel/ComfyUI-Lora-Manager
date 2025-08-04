@@ -1,6 +1,6 @@
 // EmbeddingsControls.js - Specific implementation for the Embeddings page
 import { PageControls } from './PageControls.js';
-import { getModelApiClient, resetAndReload } from '../../api/baseModelApi.js';
+import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
 import { showToast } from '../../utils/uiHelpers.js';
 import { downloadManager } from '../../managers/DownloadManager.js';
 

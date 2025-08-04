@@ -1,6 +1,6 @@
 import { updatePanelPositions } from "../utils/uiHelpers.js";
 import { getCurrentPageState } from "../state/index.js";
-import { getModelApiClient } from "../api/baseModelApi.js";
+import { getModelApiClient } from "../api/modelApiFactory.js";
 import { setStorageItem, getStorageItem } from "../utils/storageHelpers.js";
 /**
  * SearchManager - Handles search functionality across different pages

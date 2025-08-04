@@ -5,7 +5,7 @@
  */
 import { showToast, copyToClipboard } from '../../../utils/uiHelpers.js';
 import { state } from '../../../state/index.js';
-import { getModelApiClient } from '../../../api/baseModelApi.js';
+import { getModelApiClient } from '../../../api/modelApiFactory.js';
 
 /**
  * Try to load local image first, fall back to remote if local fails

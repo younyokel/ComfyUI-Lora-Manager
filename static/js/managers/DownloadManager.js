@@ -1,7 +1,7 @@
 import { modalManager } from './ModalManager.js';
 import { showToast } from '../utils/uiHelpers.js';
 import { LoadingManager } from './LoadingManager.js';
-import { getModelApiClient, resetAndReload } from '../api/baseModelApi.js';
+import { getModelApiClient, resetAndReload } from '../api/modelApiFactory.js';
 import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 
 export class DownloadManager {
