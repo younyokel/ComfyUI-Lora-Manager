@@ -19,6 +19,18 @@
   height: 100%;
 }
 
+/* Responsive header container for larger screens */
+@media (min-width: 2000px) {
+  .header-container {
+    max-width: 1800px;
+  }
+}
+@media (min-width: 3000px) {
+  .header-container {
+    max-width: 2400px;
+  }
+}
+
 /* Logo and title styling */
 .header-branding {
   display: flex;
