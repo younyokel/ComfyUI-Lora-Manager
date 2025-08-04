@@ -29,7 +29,7 @@ export const MODEL_CONFIG = {
         defaultPageSize: 100,
         supportsLetterFilter: false,
         supportsBulkOperations: true,
-        supportsMove: false,
+        supportsMove: true,
         templateName: 'checkpoints.html'
     },
     [MODEL_TYPES.EMBEDDING]: {
@@ -63,6 +63,10 @@ export function getApiEndpoints(modelType) {
         
         // Bulk operations
         bulkDelete: `/api/${modelType}/bulk-delete`,
+
+        // Move operations (now common for all model types that support move)
+        moveModel: `/api/${modelType}/move_model`,
+        moveBulk: `/api/${modelType}/move_models_bulk`,
         
         // CivitAI integration
         fetchCivitai: `/api/${modelType}/fetch-civitai`,
@@ -99,8 +103,6 @@ export const MODEL_SPECIFIC_ENDPOINTS = {
         previewUrl: `/api/${MODEL_TYPES.LORA}/preview-url`,
         civitaiUrl: `/api/${MODEL_TYPES.LORA}/civitai-url`,
         modelDescription: `/api/${MODEL_TYPES.LORA}/model-description`,
-        moveModel: `/api/${MODEL_TYPES.LORA}/move_model`,
-        moveBulk: `/api/${MODEL_TYPES.LORA}/move_models_bulk`,
         getTriggerWordsPost: `/api/${MODEL_TYPES.LORA}/get_trigger_words`,
         civitaiModelByVersion: `/api/${MODEL_TYPES.LORA}/civitai/model/version`,
         civitaiModelByHash: `/api/${MODEL_TYPES.LORA}/civitai/model/hash`,

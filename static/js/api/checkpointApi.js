@@ -6,22 +6,6 @@ import { showToast } from '../utils/uiHelpers.js';
  */
 export class CheckpointApiClient extends BaseModelApiClient {
     /**
-     * Checkpoints don't support move operations
-     */
-    async moveSingleModel(filePath, targetPath) {
-        showToast('Moving checkpoints is not supported', 'warning');
-        return null;
-    }
-
-    /**
-     * Checkpoints don't support bulk move operations
-     */
-    async moveBulkModels(filePaths, targetPath) {
-        showToast('Moving checkpoints is not supported', 'warning');
-        return [];
-    }
-
-    /**
      * Get checkpoint information
      */
     async getCheckpointInfo(filePath) {

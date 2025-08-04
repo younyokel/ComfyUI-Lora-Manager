@@ -672,10 +672,105 @@ export class BaseModelApiClient {
     }
 
     async moveSingleModel(filePath, targetPath) {
-        throw new Error("moveSingleModel must be implemented by subclass");
+        // Only allow move if supported
+        if (!this.apiConfig.config.supportsMove) {
+            showToast(`Moving ${this.apiConfig.config.displayName}s is not supported`, 'warning');
+            return null;
+        }
+        if (filePath.substring(0, filePath.lastIndexOf('/')) === targetPath) {
+            showToast(`${this.apiConfig.config.displayName} is already in the selected folder`, 'info');
+            return null;
+        }
+
+        const response = await fetch(this.apiConfig.endpoints.moveModel, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_path: filePath,
+                target_path: targetPath
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            if (result && result.error) {
+                throw new Error(result.error);
+            }
+            throw new Error(`Failed to move ${this.apiConfig.config.displayName}`);
+        }
+
+        if (result && result.message) {
+            showToast(result.message, 'info');
+        } else {
+            showToast(`${this.apiConfig.config.displayName} moved successfully`, 'success');
+        }
+
+        if (result.success) {
+            return result.new_file_path;
+        }
+        return null;
     }
 
     async moveBulkModels(filePaths, targetPath) {
-        throw new Error("moveBulkModels must be implemented by subclass");
+        if (!this.apiConfig.config.supportsMove) {
+            showToast(`Moving ${this.apiConfig.config.displayName}s is not supported`, 'warning');
+            return [];
+        }
+        const movedPaths = filePaths.filter(path => {
+            return path.substring(0, path.lastIndexOf('/')) !== targetPath;
+        });
+
+        if (movedPaths.length === 0) {
+            showToast(`All selected ${this.apiConfig.config.displayName}s are already in the target folder`, 'info');
+            return [];
+        }
+
+        const response = await fetch(this.apiConfig.endpoints.moveBulk, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_paths: movedPaths,
+                target_path: targetPath
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(`Failed to move ${this.apiConfig.config.displayName}s`);
+        }
+
+        let successFilePaths = [];
+        if (result.success) {
+            if (result.failure_count > 0) {
+                showToast(`Moved ${result.success_count} ${this.apiConfig.config.displayName}s, ${result.failure_count} failed`, 'warning');
+                console.log('Move operation results:', result.results);
+                const failedFiles = result.results
+                    .filter(r => !r.success)
+                    .map(r => {
+                        const fileName = r.path.substring(r.path.lastIndexOf('/') + 1);
+                        return `${fileName}: ${r.message}`;
+                    });
+                if (failedFiles.length > 0) {
+                    const failureMessage = failedFiles.length <= 3 
+                        ? failedFiles.join('\n')
+                        : failedFiles.slice(0, 3).join('\n') + `\n(and ${failedFiles.length - 3} more)`;
+                    showToast(`Failed moves:\n${failureMessage}`, 'warning', 6000);
+                }
+            } else {
+                showToast(`Successfully moved ${result.success_count} ${this.apiConfig.config.displayName}s`, 'success');
+            }
+            successFilePaths = result.results
+                .filter(r => r.success)
+                .map(r => r.path);
+        } else {
+            throw new Error(result.message || `Failed to move ${this.apiConfig.config.displayName}s`);
+        }
+        return successFilePaths;
     }
 }
