@@ -569,12 +569,12 @@ class ModelScanner:
                     for entry in entries:
                         try:
                             if entry.is_file(follow_symlinks=True) and any(entry.name.endswith(ext) for ext in self.file_extensions):
-                                # Use original path instead of real path
                                 file_path = entry.path.replace(os.sep, "/")
-                                await self._process_single_file(file_path, original_root, models)
+                                result = await self._process_model_file(file_path, original_root)
+                                if result:
+                                    models.append(result)
                                 await asyncio.sleep(0)
                             elif entry.is_dir(follow_symlinks=True):
-                                # For directories, continue scanning with original path
                                 await scan_recursive(entry.path, visited_paths)
                         except Exception as e:
                             logger.error(f"Error processing entry {entry.path}: {e}")
@@ -583,15 +583,6 @@ class ModelScanner:
 
         await scan_recursive(root_path, set())
         return models
-
-    async def _process_single_file(self, file_path: str, root_path: str, models: list):
-        """Process a single file and add to results list"""
-        try:
-            result = await self._process_model_file(file_path, root_path)
-            if result:
-                models.append(result)
-        except Exception as e:
-            logger.error(f"Error processing {file_path}: {e}")
     
     def is_initializing(self) -> bool:
         """Check if the scanner is currently initializing"""
@@ -731,48 +722,6 @@ class ModelScanner:
                     await MetadataManager.save_metadata(file_path, model_data, True)
         except Exception as e:
             logger.error(f"Failed to update metadata from Civitai for {file_path}: {e}")
-
-    async def _scan_directory(self, root_path: str) -> List[Dict]:
-        """Base implementation for directory scanning"""
-        models = []
-        original_root = root_path
-
-        async def scan_recursive(path: str, visited_paths: set):
-            try:
-                real_path = os.path.realpath(path)
-                if real_path in visited_paths:
-                    logger.debug(f"Skipping already visited path: {path}")
-                    return
-                visited_paths.add(real_path)
-                
-                with os.scandir(path) as it:
-                    entries = list(it)
-                    for entry in entries:
-                        try:
-                            if entry.is_file(follow_symlinks=True):
-                                ext = os.path.splitext(entry.name)[1].lower()
-                                if ext in self.file_extensions:
-                                    file_path = entry.path.replace(os.sep, "/")
-                                    await self._process_single_file(file_path, original_root, models)
-                                    await asyncio.sleep(0)
-                            elif entry.is_dir(follow_symlinks=True):
-                                await scan_recursive(entry.path, visited_paths)
-                        except Exception as e:
-                            logger.error(f"Error processing entry {entry.path}: {e}")
-            except Exception as e:
-                logger.error(f"Error scanning {path}: {e}")
-        
-        await scan_recursive(root_path, set())
-        return models
-
-    async def _process_single_file(self, file_path: str, root_path: str, models_list: list):
-        """Process a single file and add to results list"""
-        try:
-            result = await self._process_model_file(file_path, root_path)
-            if result:
-                models_list.append(result)
-        except Exception as e:
-            logger.error(f"Error processing {file_path}: {e}")
 
     async def add_model_to_cache(self, metadata_dict: Dict, folder: str = '') -> bool:
         """Add a model to the cache
