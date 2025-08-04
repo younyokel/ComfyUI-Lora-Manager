@@ -48,6 +48,8 @@ class BaseModelRoutes(ABC):
         app.router.add_post(f'/api/{prefix}/rename', self.rename_model)
         app.router.add_post(f'/api/{prefix}/bulk-delete', self.bulk_delete_models)
         app.router.add_post(f'/api/{prefix}/verify-duplicates', self.verify_duplicates)
+        app.router.add_post(f'/api/{prefix}/move_model', self.move_model)
+        app.router.add_post(f'/api/{prefix}/move_models_bulk', self.move_models_bulk)
         
         # Common query routes
         app.router.add_get(f'/api/{prefix}/top-tags', self.get_top_tags)
@@ -617,3 +619,80 @@ class BaseModelRoutes(ABC):
         return web.json_response({
             "error": "Not implemented in base class"
         }, status=501)
+    
+    # Common model move handlers
+    async def move_model(self, request: web.Request) -> web.Response:
+        """Handle model move request"""
+        try:
+            data = await request.json()
+            file_path = data.get('file_path')
+            target_path = data.get('target_path')
+            if not file_path or not target_path:
+                return web.Response(text='File path and target path are required', status=400)
+            import os
+            source_dir = os.path.dirname(file_path)
+            if os.path.normpath(source_dir) == os.path.normpath(target_path):
+                logger.info(f"Source and target directories are the same: {source_dir}")
+                return web.json_response({'success': True, 'message': 'Source and target directories are the same'})
+            file_name = os.path.basename(file_path)
+            target_file_path = os.path.join(target_path, file_name).replace(os.sep, '/')
+            if os.path.exists(target_file_path):
+                return web.json_response({
+                    'success': False, 
+                    'error': f"Target file already exists: {target_file_path}"
+                }, status=409)
+            success = await self.service.scanner.move_model(file_path, target_path)
+            if success:
+                return web.json_response({'success': True, 'new_file_path': target_file_path})
+            else:
+                return web.Response(text='Failed to move model', status=500)
+        except Exception as e:
+            logger.error(f"Error moving model: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
+
+    async def move_models_bulk(self, request: web.Request) -> web.Response:
+        """Handle bulk model move request"""
+        try:
+            data = await request.json()
+            file_paths = data.get('file_paths', [])
+            target_path = data.get('target_path')
+            if not file_paths or not target_path:
+                return web.Response(text='File paths and target path are required', status=400)
+            results = []
+            import os
+            for file_path in file_paths:
+                source_dir = os.path.dirname(file_path)
+                if os.path.normpath(source_dir) == os.path.normpath(target_path):
+                    results.append({
+                        "path": file_path, 
+                        "success": True, 
+                        "message": "Source and target directories are the same"
+                    })
+                    continue
+                file_name = os.path.basename(file_path)
+                target_file_path = os.path.join(target_path, file_name).replace(os.sep, '/')
+                if os.path.exists(target_file_path):
+                    results.append({
+                        "path": file_path, 
+                        "success": False, 
+                        "message": f"Target file already exists: {target_file_path}"
+                    })
+                    continue
+                success = await self.service.scanner.move_model(file_path, target_path)
+                results.append({
+                    "path": file_path, 
+                    "success": success,
+                    "message": "Success" if success else "Failed to move model"
+                })
+            success_count = sum(1 for r in results if r["success"])
+            failure_count = len(results) - success_count
+            return web.json_response({
+                'success': True,
+                'message': f'Moved {success_count} of {len(file_paths)} models',
+                'results': results,
+                'success_count': success_count,
+                'failure_count': failure_count
+            })
+        except Exception as e:
+            logger.error(f"Error moving models in bulk: {e}", exc_info=True)
+            return web.Response(text=str(e), status=500)
