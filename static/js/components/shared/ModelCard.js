@@ -241,7 +241,7 @@ function showModelModalFromCard(card, modelType) {
         tags: JSON.parse(card.dataset.tags || '[]'),
         modelDescription: card.dataset.modelDescription || '',
         // LoRA specific fields
-        ...(modelType === 'lora' && {
+        ...(modelType === MODEL_TYPES.LORA && {
             usage_tips: card.dataset.usage_tips,
         })
     };
