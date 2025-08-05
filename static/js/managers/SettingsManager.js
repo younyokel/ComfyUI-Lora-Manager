@@ -48,6 +48,11 @@ export class SettingsManager {
             state.global.settings.optimizeExampleImages = true;
         }
 
+        // Set default for autoDownloadExampleImages if undefined
+        if (state.global.settings.autoDownloadExampleImages === undefined) {
+            state.global.settings.autoDownloadExampleImages = true;
+        }
+
         // Set default for cardInfoDisplay if undefined
         if (state.global.settings.cardInfoDisplay === undefined) {
             state.global.settings.cardInfoDisplay = 'always';
@@ -193,6 +198,12 @@ export class SettingsManager {
         const optimizeExampleImagesCheckbox = document.getElementById('optimizeExampleImages');
         if (optimizeExampleImagesCheckbox) {
             optimizeExampleImagesCheckbox.checked = state.global.settings.optimizeExampleImages || false;
+        }
+
+        // Set auto download example images setting
+        const autoDownloadExampleImagesCheckbox = document.getElementById('autoDownloadExampleImages');
+        if (autoDownloadExampleImagesCheckbox) {
+            autoDownloadExampleImagesCheckbox.checked = state.global.settings.autoDownloadExampleImages || false;
         }
 
         // Set download path template setting
@@ -547,6 +558,8 @@ export class SettingsManager {
             state.global.settings.autoplayOnHover = value;
         } else if (settingKey === 'optimize_example_images') {
             state.global.settings.optimizeExampleImages = value;
+        } else if (settingKey === 'auto_download_example_images') {
+            state.global.settings.autoDownloadExampleImages = value;
         } else if (settingKey === 'compact_mode') {
             state.global.settings.compactMode = value;
         } else {
@@ -580,6 +593,15 @@ export class SettingsManager {
             
             // Apply frontend settings immediately
             this.applyFrontendSettings();
+            
+            // Trigger auto download setup/teardown when setting changes
+            if (settingKey === 'auto_download_example_images' && window.exampleImagesManager) {
+                if (value) {
+                    window.exampleImagesManager.setupAutoDownload();
+                } else {
+                    window.exampleImagesManager.clearAutoDownload();
+                }
+            }
             
             if (settingKey === 'show_only_sfw') {
                 this.reloadContent();

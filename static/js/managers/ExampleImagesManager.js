@@ -1,4 +1,5 @@
 import { showToast } from '../utils/uiHelpers.js';
+import { state } from '../state/index.js';
 import { getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
 
 // ExampleImagesManager.js
@@ -13,6 +14,12 @@ class ExampleImagesManager {
         this.pauseButton = null; // Store reference to the pause button
         this.isMigrating = false; // Track migration state separately from downloading
         this.hasShownCompletionToast = false; // Flag to track if completion toast has been shown
+        
+        // Auto download properties
+        this.autoDownloadInterval = null;
+        this.lastAutoDownloadCheck = 0;
+        this.autoDownloadCheckInterval = 10 * 60 * 1000; // 10 minutes in milliseconds
+        this.pageInitTime = Date.now(); // Track when page was initialized
         
         // Initialize download path field and check download status
         this.initializePathOptions();
@@ -48,6 +55,14 @@ class ExampleImagesManager {
         if (collapseBtn) {
             collapseBtn.onclick = () => this.toggleProgressPanel();
         }
+
+        // Setup auto download if enabled
+        if (state.global.settings.autoDownloadExampleImages) {
+            this.setupAutoDownload();
+        }
+
+        // Make this instance globally accessible
+        window.exampleImagesManager = this;
     }
     
     // Initialize event listeners for buttons
@@ -131,6 +146,15 @@ class ExampleImagesManager {
                         }
                     } catch (error) {
                         console.error('Failed to update example images path:', error);
+                    }
+                }
+
+                // Setup or clear auto download based on path availability
+                if (state.global.settings.autoDownloadExampleImages) {
+                    if (hasPath) {
+                        this.setupAutoDownload();
+                    } else {
+                        this.clearAutoDownload();
                     }
                 }
             });
@@ -644,6 +668,121 @@ class ExampleImagesManager {
                 const progressPercent = parseFloat(progressBar.style.width) || 0;
                 this.updateMiniProgress(progressPercent);
             }
+        }
+    }
+
+    setupAutoDownload() {
+        // Only setup if conditions are met
+        if (!this.canAutoDownload()) {
+            return;
+        }
+
+        // Clear any existing interval
+        this.clearAutoDownload();
+
+        // Wait at least 30 seconds after page initialization before first check
+        const timeSinceInit = Date.now() - this.pageInitTime;
+        const initialDelay = Math.max(60000 - timeSinceInit, 5000); // At least 5 seconds, up to 60 seconds
+
+        console.log(`Setting up auto download with initial delay of ${initialDelay}ms`);
+
+        setTimeout(() => {
+            // Do initial check
+            this.performAutoDownloadCheck();
+
+            // Set up recurring interval
+            this.autoDownloadInterval = setInterval(() => {
+                this.performAutoDownloadCheck();
+            }, this.autoDownloadCheckInterval);
+
+        }, initialDelay);
+    }
+
+    clearAutoDownload() {
+        if (this.autoDownloadInterval) {
+            clearInterval(this.autoDownloadInterval);
+            this.autoDownloadInterval = null;
+            console.log('Auto download interval cleared');
+        }
+    }
+
+    canAutoDownload() {
+        // Check if auto download is enabled
+        if (!state.global.settings.autoDownloadExampleImages) {
+            return false;
+        }
+
+        // Check if download path is set
+        const pathInput = document.getElementById('exampleImagesPath');
+        if (!pathInput || !pathInput.value.trim()) {
+            return false;
+        }
+
+        // Check if already downloading
+        if (this.isDownloading) {
+            return false;
+        }
+
+        return true;
+    }
+
+    async performAutoDownloadCheck() {
+        const now = Date.now();
+        
+        // Prevent too frequent checks (minimum 2 minutes between checks)
+        if (now - this.lastAutoDownloadCheck < 2 * 60 * 1000) {
+            console.log('Skipping auto download check - too soon since last check');
+            return;
+        }
+
+        this.lastAutoDownloadCheck = now;
+
+        if (!this.canAutoDownload()) {
+            console.log('Auto download conditions not met, skipping check');
+            return;
+        }
+
+        try {
+            console.log('Performing auto download check...');
+            
+            const outputDir = document.getElementById('exampleImagesPath').value;
+            const optimize = document.getElementById('optimizeExampleImages').checked;
+            
+            const response = await fetch('/api/download-example-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    output_dir: outputDir,
+                    optimize: optimize,
+                    model_types: ['lora', 'checkpoint', 'embedding'],
+                    auto_mode: true // Flag to indicate this is an automatic download
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Only show progress if there are actually items to download
+                if (data.status && data.status.total > 0) {
+                    this.isDownloading = true;
+                    this.isPaused = false;
+                    this.hasShownCompletionToast = false;
+                    this.startTime = new Date();
+                    this.updateUI(data.status);
+                    this.showProgressPanel();
+                    this.startProgressUpdates();
+                    this.updateDownloadButtonText();
+                    console.log(`Auto download started: ${data.status.total} items to process`);
+                } else {
+                    console.log('Auto download check completed - no new items to download');
+                }
+            } else {
+                console.warn('Auto download check failed:', data.error);
+            }
+        } catch (error) {
+            console.error('Auto download check error:', error);
         }
     }
 }

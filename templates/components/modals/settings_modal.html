@@ -275,6 +275,24 @@
                 <div class="setting-item">
                     <div class="setting-row">
                         <div class="setting-info">
+                            <label for="autoDownloadExampleImages">Auto Download Example Images</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoDownloadExampleImages" checked 
+                                       onchange="settingsManager.saveToggleSetting('autoDownloadExampleImages', 'auto_download_example_images')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Automatically download example images for models that don't have them (requires download location to be set)
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
                             <label for="optimizeExampleImages">Optimize Downloaded Images</label>
                         </div>
                         <div class="setting-control">
