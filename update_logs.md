@@ -2,6 +2,52 @@
 
 ---
 
+### v0.8.16
+* **Dramatic Startup Speed Improvement** - Added cache serialization mechanism for significantly faster loading times, especially beneficial for large model collections
+* **Enhanced Refresh Options** - Extended functionality with "Full Rebuild (complete)" option alongside "Quick Refresh (incremental)" to fix potential memory cache issues without requiring application restart
+* **Customizable Display Density** - Replaced compact mode with adjustable display density settings for personalized layout customization
+* **Model Creator Information** - Added creator details to model information panels for better attribution
+* **Improved WebP Support** - Enhanced Save Image node with workflow embedding capability for WebP format images
+* **Direct Example Access** - Added "Open Example Images Folder" button to card interfaces for convenient browsing of downloaded model examples
+* **Enhanced Compatibility** - Full ComfyUI Desktop support for "Send lora or recipe to workflow" functionality
+* **Cache Management** - Added settings to clear existing cache files when needed
+* **Bug Fixes & Stability** - Various improvements for overall reliability and performance
+
+### v0.8.15
+* **Enhanced One-Click Integration** - Replaced copy button with direct send button allowing LoRAs/recipes to be sent directly to your current ComfyUI workflow without needing to paste
+* **Flexible Workflow Integration** - Click to append LoRAs/recipes to existing loader nodes or Shift+click to replace content, with additional right-click menu options for "Send to Workflow (Append)" or "Send to Workflow (Replace)"
+* **Improved LoRA Loader Controls** - Added header drag functionality for proportional strength adjustment of all LoRAs simultaneously (including CLIP strengths when expanded)
+* **Keyboard Navigation Support** - Implemented Page Up/Down for page scrolling, Home key to jump to top, and End key to jump to bottom for faster browsing through large collections
+
+### v0.8.14
+* **Virtualized Scrolling** - Completely rebuilt rendering mechanism for smooth browsing with no lag or freezing, now supporting virtually unlimited model collections with optimized layouts for large displays, improving space utilization and user experience
+* **Compact Display Mode** - Added space-efficient view option that displays more cards per row (7 on 1080p, 8 on 2K, 10 on 4K)
+* **Enhanced LoRA Node Functionality** - Comprehensive improvements to LoRA loader/stacker nodes including real-time trigger word updates (reflecting any change anywhere in the LoRA chain for precise updates) and expanded context menu with "Copy Notes" and "Copy Trigger Words" options for faster workflow
+
+### v0.8.13
+* **Enhanced Recipe Management** - Added "Find duplicates" feature to identify and batch delete duplicate recipes with duplicate detection notifications during imports
+* **Improved Source Tracking** - Source URLs are now saved with recipes imported via URL, allowing users to view original content with one click or manually edit links
+* **Advanced LoRA Control** - Double-click LoRAs in Loader/Stacker nodes to access expanded CLIP strength controls for more precise adjustments of model and CLIP strength separately
+* **Lycoris Model Support** - Added compatibility with Lycoris models for expanded creative options
+* **Bug Fixes & UX Improvements** - Resolved various issues and enhanced overall user experience with numerous optimizations
+
+### v0.8.12
+* **Enhanced Model Discovery** - Added alphabetical navigation bar to LoRAs page for faster browsing through large collections
+* **Optimized Example Images** - Improved download logic to automatically refresh stale metadata before fetching example images
+* **Model Exclusion System** - New right-click option to exclude specific LoRAs or checkpoints from management
+* **Improved Showcase Experience** - Enhanced interaction in LoRA and checkpoint showcase areas for better usability
+
+### v0.8.11
+* **Offline Image Support** - Added functionality to download and save all model example images locally, ensuring access even when offline or if images are removed from CivitAI or the site is down
+* **Resilient Download System** - Implemented pause/resume capability with checkpoint recovery that persists through restarts or unexpected exits
+* **Bug Fixes & Stability** - Resolved various issues to enhance overall reliability and performance
+
+### v0.8.10
+* **Standalone Mode** - Run LoRA Manager independently from ComfyUI for a lightweight experience that works even with other stable diffusion interfaces
+* **Portable Edition** - New one-click portable version for easy startup and updates in standalone mode
+* **Enhanced Metadata Collection** - Added support for SamplerCustomAdvanced node in the metadata collector module
+* **Improved UI Organization** - Optimized Lora Loader node height to display up to 5 LoRAs at once with scrolling capability for larger collections
+
 ### v0.8.9
 * **Favorites System** - New functionality to bookmark your favorite LoRAs and checkpoints for quick access and better organization
 * **Enhanced UI Controls** - Increased model card button sizes for improved usability and easier interaction
