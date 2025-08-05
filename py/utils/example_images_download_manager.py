@@ -91,7 +91,7 @@ class DownloadManager:
                     with open(progress_file, 'r', encoding='utf-8') as f:
                         saved_progress = json.load(f)
                         download_progress['processed_models'] = set(saved_progress.get('processed_models', []))
-                        logger.info(f"Loaded previous progress, {len(download_progress['processed_models'])} models already processed")
+                        logger.debug(f"Loaded previous progress, {len(download_progress['processed_models'])} models already processed")
                 except Exception as e:
                     logger.error(f"Failed to load progress file: {e}")
                     download_progress['processed_models'] = set()
@@ -230,7 +230,7 @@ class DownloadManager:
             
             # Update total count
             download_progress['total'] = len(all_models)
-            logger.info(f"Found {download_progress['total']} models to process")
+            logger.debug(f"Found {download_progress['total']} models to process")
             
             # Process each model
             for i, (scanner_type, model, scanner) in enumerate(all_models):
@@ -250,7 +250,7 @@ class DownloadManager:
             # Mark as completed
             download_progress['status'] = 'completed'
             download_progress['end_time'] = time.time()
-            logger.info(f"Example images download completed: {download_progress['completed']}/{download_progress['total']} models processed")
+            logger.debug(f"Example images download completed: {download_progress['completed']}/{download_progress['total']} models processed")
             
         except Exception as e:
             error_msg = f"Error during example images download: {str(e)}"
@@ -307,7 +307,7 @@ class DownloadManager:
                     logger.debug(f"Skipping already processed model: {model_name}")
                     return False
                 else:
-                    logger.info(f"Model {model_name} marked as processed but folder empty or missing, reprocessing")
+                    logger.debug(f"Model {model_name} marked as processed but folder empty or missing, reprocessing")
             
             # Create model directory
             model_dir = os.path.join(output_dir, model_hash)
