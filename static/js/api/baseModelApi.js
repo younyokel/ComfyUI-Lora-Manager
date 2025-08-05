@@ -779,4 +779,46 @@ export class BaseModelApiClient {
         }
         return successFilePaths;
     }
+
+    async bulkDeleteModels(filePaths) {
+        if (!filePaths || filePaths.length === 0) {
+            throw new Error('No file paths provided');
+        }
+
+        try {
+            state.loadingManager.showSimpleLoading(`Deleting ${this.apiConfig.config.displayName.toLowerCase()}s...`);
+            
+            const response = await fetch(this.apiConfig.endpoints.bulkDelete, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    file_paths: filePaths
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to delete ${this.apiConfig.config.displayName.toLowerCase()}s: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                return {
+                    success: true,
+                    deleted_count: result.deleted_count,
+                    failed_count: result.failed_count || 0,
+                    errors: result.errors || []
+                };
+            } else {
+                throw new Error(result.error || `Failed to delete ${this.apiConfig.config.displayName.toLowerCase()}s`);
+            }
+        } catch (error) {
+            console.error(`Error during bulk delete of ${this.apiConfig.config.displayName.toLowerCase()}s:`, error);
+            throw error;
+        } finally {
+            state.loadingManager.hide();
+        }
+    }
 }

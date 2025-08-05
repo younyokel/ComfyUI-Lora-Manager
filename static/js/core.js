@@ -5,6 +5,8 @@ import { modalManager } from './managers/ModalManager.js';
 import { updateService } from './managers/UpdateService.js';
 import { HeaderManager } from './components/Header.js';
 import { settingsManager } from './managers/SettingsManager.js';
+import { moveManager } from './managers/MoveManager.js';
+import { bulkManager } from './managers/BulkManager.js';
 import { exampleImagesManager } from './managers/ExampleImagesManager.js';
 import { helpManager } from './managers/HelpManager.js';
 import { bannerService } from './managers/BannerService.js';
@@ -33,11 +35,16 @@ export class AppCore {
         window.settingsManager = settingsManager;
         window.exampleImagesManager = exampleImagesManager;
         window.helpManager = helpManager;
+        window.moveManager = moveManager;
+        window.bulkManager = bulkManager;
         
         // Initialize UI components
         window.headerManager = new HeaderManager();
         initTheme();
         initBackToTop();
+
+        // Initialize the bulk manager
+        bulkManager.initialize();
         
         // Initialize the example images manager
         exampleImagesManager.initialize();

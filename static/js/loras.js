@@ -1,7 +1,6 @@
 import { appCore } from './core.js';
 import { state } from './state/index.js';
 import { updateCardsForBulkMode } from './components/shared/ModelCard.js';
-import { bulkManager } from './managers/BulkManager.js';
 import { LoraContextMenu } from './components/ContextMenu/index.js';
 import { createPageControls } from './components/controls/index.js';
 import { confirmDelete, closeDeleteModal, confirmExclude, closeExcludeModal } from './utils/modalUtils.js';
@@ -33,14 +32,6 @@ class LoraPageManager {
         window.confirmExclude = confirmExclude;
         window.closeExcludeModal = closeExcludeModal;
         
-        // Bulk operations
-        window.toggleBulkMode = () => bulkManager.toggleBulkMode();
-        window.clearSelection = () => bulkManager.clearSelection();
-        window.toggleCardSelection = (card) => bulkManager.toggleCardSelection(card);
-        window.copyAllLorasSyntax = () => bulkManager.copyAllLorasSyntax();
-        window.updateSelectedCount = () => bulkManager.updateSelectedCount();
-        window.bulkManager = bulkManager;
-        
         // Expose duplicates manager
         window.modelDuplicatesManager = this.duplicatesManager;
     }
@@ -53,9 +44,6 @@ class LoraPageManager {
         
         // Initialize cards for current bulk mode state (should be false initially)
         updateCardsForBulkMode(state.bulkMode);
-        
-        // Initialize the bulk manager
-        bulkManager.initialize();
         
         // Initialize common page features (virtual scroll)
         appCore.initializePageFeatures();

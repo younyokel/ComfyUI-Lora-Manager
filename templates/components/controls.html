@@ -50,14 +50,11 @@
                     <i class="fas fa-cloud-download-alt"></i> Download
                 </button>
             </div>
-            <!-- Conditional buttons based on page -->
-            {% if request.path == '/loras' %}
             <div class="control-group">
                 <button id="bulkOperationsBtn" data-action="bulk" title="Bulk Operations (Press B)">
                     <i class="fas fa-th-large"></i> <span>Bulk <div class="shortcut-key">B</div></span>
                 </button>
             </div>
-            {% endif %}
             <div class="control-group">
                 <button id="findDuplicatesBtn" data-action="find-duplicates" title="Find duplicate models">
                     <i class="fas fa-clone"></i> Duplicates
@@ -119,22 +116,22 @@
             0 selected <i class="fas fa-caret-down dropdown-caret"></i>
         </span>
         <div class="bulk-operations-actions">
-            <button onclick="bulkManager.sendAllLorasToWorkflow()" title="Send all selected LoRAs to workflow">
+            <button data-action="send-to-workflow" title="Send all selected LoRAs to workflow">
                 <i class="fas fa-arrow-right"></i> Send to Workflow
             </button>
-            <button onclick="bulkManager.copyAllLorasSyntax()" title="Copy all selected LoRAs syntax">
+            <button data-action="copy-all" title="Copy all selected LoRAs syntax">
                 <i class="fas fa-copy"></i> Copy All
             </button>
-            <button onclick="bulkManager.refreshAllMetadata()" title="Refresh CivitAI metadata for selected models">
+            <button data-action="refresh-all" title="Refresh CivitAI metadata for selected models">
                 <i class="fas fa-sync-alt"></i> Refresh All
             </button>
-            <button onclick="moveManager.showMoveModal('bulk')" title="Move selected LoRAs to folder">
+            <button data-action="move-all" title="Move selected models to folder">
                 <i class="fas fa-folder-open"></i> Move All
             </button>
-            <button onclick="bulkManager.showBulkDeleteModal()" title="Delete selected LoRAs" class="danger-btn">
+            <button data-action="delete-all" title="Delete selected models" class="danger-btn">
                 <i class="fas fa-trash"></i> Delete All
             </button>
-            <button onclick="bulkManager.clearSelection()" title="Clear selection">
+            <button data-action="clear" title="Clear selection">
                 <i class="fas fa-times"></i> Clear
             </button>
         </div>

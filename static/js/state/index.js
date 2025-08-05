@@ -92,6 +92,7 @@ export const state = {
             modelType: 'checkpoint', // 'checkpoint' or 'diffusion_model'
             bulkMode: false,
             selectedModels: new Set(),
+            metadataCache: new Map(),
             showFavoritesOnly: false,
             duplicatesMode: false,
         },
@@ -117,6 +118,7 @@ export const state = {
             },
             bulkMode: false,
             selectedModels: new Set(),
+            metadataCache: new Map(),
             showFavoritesOnly: false,
             duplicatesMode: false,
         }

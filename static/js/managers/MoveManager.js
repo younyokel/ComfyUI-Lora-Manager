@@ -1,6 +1,7 @@
 import { showToast, updateFolderTags } from '../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../state/index.js';
 import { modalManager } from './ModalManager.js';
+import { bulkManager } from './BulkManager.js';
 import { getStorageItem } from '../utils/storageHelpers.js';
 import { getModelApiClient } from '../api/modelApiFactory.js';
 
@@ -209,7 +210,7 @@ class MoveManager {
             
             // If we were in bulk mode, exit it after successful move
             if (this.bulkFilePaths && state.bulkMode) {
-                toggleBulkMode();
+                bulkManager.toggleBulkMode();
             }
 
         } catch (error) {
