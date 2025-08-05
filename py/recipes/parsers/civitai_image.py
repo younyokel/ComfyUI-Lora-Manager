@@ -271,6 +271,66 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
                     
                         result["loras"].append(lora_entry)
             
+            # Check for LoRA info in the format "Lora_0 Model hash", "Lora_0 Model name", etc.
+            lora_index = 0
+            while f"Lora_{lora_index} Model hash" in metadata and f"Lora_{lora_index} Model name" in metadata:
+                lora_hash = metadata[f"Lora_{lora_index} Model hash"]
+                lora_name = metadata[f"Lora_{lora_index} Model name"]
+                lora_strength_model = float(metadata.get(f"Lora_{lora_index} Strength model", 1.0))
+                
+                # Skip if we've already added this LoRA by hash
+                if lora_hash and lora_hash in added_loras:
+                    lora_index += 1
+                    continue
+                
+                lora_entry = {
+                    'name': lora_name,
+                    'type': "lora",
+                    'weight': lora_strength_model,
+                    'hash': lora_hash,
+                    'existsLocally': False,
+                    'localPath': None,
+                    'file_name': lora_name,
+                    'thumbnailUrl': '/loras_static/images/no-preview.png',
+                    'baseModel': '',
+                    'size': 0,
+                    'downloadUrl': '',
+                    'isDeleted': False
+                }
+                
+                # Try to get info from Civitai if hash is available
+                if lora_entry['hash'] and civitai_client:
+                    try:
+                        civitai_info = await civitai_client.get_model_by_hash(lora_hash)
+                        
+                        populated_entry = await self.populate_lora_from_civitai(
+                            lora_entry,
+                            civitai_info,
+                            recipe_scanner,
+                            base_model_counts,
+                            lora_hash
+                        )
+                        
+                        if populated_entry is None:
+                            lora_index += 1
+                            continue  # Skip invalid LoRA types
+                            
+                        lora_entry = populated_entry
+                        
+                        # If we have a version ID from Civitai, track it for deduplication
+                        if 'id' in lora_entry and lora_entry['id']:
+                            added_loras[str(lora_entry['id'])] = len(result["loras"])
+                    except Exception as e:
+                        logger.error(f"Error fetching Civitai info for LoRA hash {lora_entry['hash']}: {e}")
+                
+                # Track by hash if we have it
+                if lora_hash:
+                    added_loras[lora_hash] = len(result["loras"])
+                    
+                result["loras"].append(lora_entry)
+                
+                lora_index += 1
+            
             # If base model wasn't found earlier, use the most common one from LoRAs
             if not result["base_model"] and base_model_counts:
                 result["base_model"] = max(base_model_counts.items(), key=lambda x: x[1])[0]
