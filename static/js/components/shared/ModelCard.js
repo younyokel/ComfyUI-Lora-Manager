@@ -1,4 +1,4 @@
-import { showToast, openCivitai, copyToClipboard, sendLoraToWorkflow, openExampleImagesFolder } from '../../utils/uiHelpers.js';
+import { showToast, openCivitai, copyToClipboard, copyLoraSyntax, sendLoraToWorkflow, openExampleImagesFolder } from '../../utils/uiHelpers.js';
 import { state, getCurrentPageState } from '../../state/index.js';
 import { showModelModal } from './ModelModal.js';
 import { toggleShowcase } from './showcase/ShowcaseView.js';
@@ -166,10 +166,7 @@ function handleSendToWorkflow(card, replaceMode, modelType) {
 
 function handleCopyAction(card, modelType) {
     if (modelType === MODEL_TYPES.LORA) {
-        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
-        const strength = usageTips.strength || 1;
-        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
-        copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
+        copyLoraSyntax(card);
     } else if (modelType === MODEL_TYPES.CHECKPOINT) {
         // Checkpoint copy functionality - copy checkpoint name
         const checkpointName = card.dataset.file_name;

@@ -308,6 +308,28 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Misc. Section -->
+            <div class="settings-section">
+                <h3>Misc.</h3>
+                <div class="setting-item">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <label for="includeTriggerWords">Include Trigger Words in LoRA Syntax</label>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="includeTriggerWords" 
+                                       onchange="settingsManager.saveToggleSetting('includeTriggerWords', 'include_trigger_words')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-help">
+                        Include trained trigger words when copying LoRA syntax to clipboard
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

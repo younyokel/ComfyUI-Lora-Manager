@@ -87,6 +87,11 @@ export class SettingsManager {
         if (state.global.settings.default_embedding_root === undefined) {
             state.global.settings.default_embedding_root = '';
         }
+
+        // Set default for includeTriggerWords if undefined
+        if (state.global.settings.includeTriggerWords === undefined) {
+            state.global.settings.includeTriggerWords = false;
+        }
     }
 
     async syncSettingsToBackendIfNeeded() {
@@ -211,6 +216,12 @@ export class SettingsManager {
         if (downloadPathTemplateSelect) {
             downloadPathTemplateSelect.value = state.global.settings.download_path_template || '';
             this.updatePathTemplatePreview();
+        }
+
+        // Set include trigger words setting
+        const includeTriggerWordsCheckbox = document.getElementById('includeTriggerWords');
+        if (includeTriggerWordsCheckbox) {
+            includeTriggerWordsCheckbox.checked = state.global.settings.includeTriggerWords || false;
         }
 
         // Load base model path mappings
@@ -562,6 +573,8 @@ export class SettingsManager {
             state.global.settings.autoDownloadExampleImages = value;
         } else if (settingKey === 'compact_mode') {
             state.global.settings.compactMode = value;
+        } else if (settingKey === 'include_trigger_words') {
+            state.global.settings.includeTriggerWords = value;
         } else {
             // For any other settings that might be added in the future
             state.global.settings[settingKey] = value;
@@ -587,9 +600,9 @@ export class SettingsManager {
                 if (!response.ok) {
                     throw new Error('Failed to save setting');
                 }
-                
-                showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
             }
+                
+            showToast(`Settings updated: ${settingKey.replace(/_/g, ' ')}`, 'success');
             
             // Apply frontend settings immediately
             this.applyFrontendSettings();
@@ -603,7 +616,7 @@ export class SettingsManager {
                 }
             }
             
-            if (settingKey === 'show_only_sfw') {
+            if (settingKey === 'show_only_sfw' || settingKey === 'blur_mature_content') {
                 this.reloadContent();
             }
             
@@ -785,20 +798,13 @@ export class SettingsManager {
         } else if (this.currentPage === 'checkpoints') {
             // Reload the checkpoints without updating folders
             await resetAndReload(false);
+        } else if (this.currentPage === 'embeddings') {
+            // Reload the embeddings without updating folders
+            await resetAndReload(false);
         }
     }
 
     applyFrontendSettings() {
-        // Apply blur setting to existing content
-        const blurSetting = state.global.settings.blurMatureContent;
-        document.querySelectorAll('.model-card[data-nsfw="true"] .card-image').forEach(img => {
-            if (blurSetting) {
-                img.classList.add('nsfw-blur');
-            } else {
-                img.classList.remove('nsfw-blur');
-            }
-        });
-        
         // Apply autoplay setting to existing videos in card previews
         const autoplayOnHover = state.global.settings.autoplayOnHover;
         document.querySelectorAll('.card-preview video').forEach(video => {

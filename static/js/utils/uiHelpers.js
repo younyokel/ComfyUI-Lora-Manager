@@ -1,4 +1,4 @@
-import { getCurrentPageState } from '../state/index.js';
+import { state, getCurrentPageState } from '../state/index.js';
 import { getStorageItem, setStorageItem } from './storageHelpers.js';
 import { NODE_TYPE_ICONS, DEFAULT_NODE_COLOR } from './constants.js';
 
@@ -283,6 +283,76 @@ export function getNSFWLevelName(level) {
     if (level >= 2) return 'PG13';
     if (level >= 1) return 'PG';
     return 'Unknown';
+}
+
+export function copyLoraSyntax(card) {
+  const usageTips = JSON.parse(card.dataset.usage_tips || "{}");
+  const strength = usageTips.strength || 1;
+  const baseSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
+
+  // Check if trigger words should be included
+  const includeTriggerWords = state.global.settings.includeTriggerWords;
+
+  if (!includeTriggerWords) {
+    copyToClipboard(baseSyntax, "LoRA syntax copied to clipboard");
+    return;
+  }
+
+  // Get trigger words from metadata
+  const meta = card.dataset.meta ? JSON.parse(card.dataset.meta) : null;
+  const trainedWords = meta?.trainedWords;
+
+  if (
+    !trainedWords ||
+    !Array.isArray(trainedWords) ||
+    trainedWords.length === 0
+  ) {
+    copyToClipboard(
+      baseSyntax,
+      "LoRA syntax copied to clipboard (no trigger words found)"
+    );
+    return;
+  }
+
+  let finalSyntax = baseSyntax;
+
+  if (trainedWords.length === 1) {
+    // Single group: append trigger words to the same line
+    const triggers = trainedWords[0]
+      .split(",")
+      .map((word) => word.trim())
+      .filter((word) => word);
+    if (triggers.length > 0) {
+      finalSyntax = `${baseSyntax}, ${triggers.join(", ")}`;
+    }
+    copyToClipboard(
+      finalSyntax,
+      "LoRA syntax with trigger words copied to clipboard"
+    );
+  } else {
+    // Multiple groups: format with separators
+    const groups = trainedWords
+      .map((group) => {
+        const triggers = group
+          .split(",")
+          .map((word) => word.trim())
+          .filter((word) => word);
+        return triggers.join(", ");
+      })
+      .filter((group) => group);
+
+    if (groups.length > 0) {
+      // Use separator between all groups except the first
+      finalSyntax = baseSyntax + ", " + groups[0];
+      for (let i = 1; i < groups.length; i++) {
+        finalSyntax += `\n${"-".repeat(17)}\n${groups[i]}`;
+      }
+    }
+    copyToClipboard(
+      finalSyntax,
+      "LoRA syntax with trigger word groups copied to clipboard"
+    );
+  }
 }
 
 /**

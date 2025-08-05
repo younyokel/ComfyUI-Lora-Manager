@@ -1,7 +1,7 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { ModelContextMenuMixin } from './ModelContextMenuMixin.js';
 import { getModelApiClient, resetAndReload } from '../../api/modelApiFactory.js';
-import { copyToClipboard, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
+import { copyLoraSyntax, sendLoraToWorkflow } from '../../utils/uiHelpers.js';
 import { showExcludeModal, showDeleteModal } from '../../utils/modalUtils.js';
 import { moveManager } from '../../managers/MoveManager.js';
 
@@ -37,7 +37,7 @@ export class LoraContextMenu extends BaseContextMenu {
                 break;
             case 'copyname':
                 // Generate and copy LoRA syntax
-                this.copyLoraSyntax();
+                copyLoraSyntax(this.currentCard);
                 break;
             case 'sendappend':
                 // Send LoRA to workflow (append mode)
@@ -65,16 +65,6 @@ export class LoraContextMenu extends BaseContextMenu {
                 showExcludeModal(this.currentCard.dataset.filepath);
                 break;
         }
-    }
-
-    // Specific LoRA methods
-    copyLoraSyntax() {
-        const card = this.currentCard;
-        const usageTips = JSON.parse(card.dataset.usage_tips || '{}');
-        const strength = usageTips.strength || 1;
-        const loraSyntax = `<lora:${card.dataset.file_name}:${strength}>`;
-        
-        copyToClipboard(loraSyntax, 'LoRA syntax copied to clipboard');
     }
 
     sendLoraToWorkflow(replaceMode) {
