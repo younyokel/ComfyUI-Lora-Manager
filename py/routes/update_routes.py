@@ -157,7 +157,7 @@ class UpdateRoutes:
     async def _download_and_replace_zip(plugin_root: str) -> tuple[bool, str]:
         """
         Download latest release ZIP from GitHub and replace plugin files.
-        Skips settings.json.
+        Skips settings.json. Writes extracted file list to .tracking.
         """
         repo_owner = "willmiao"
         repo_name = "ComfyUI-Lora-Manager"
@@ -196,7 +196,6 @@ class UpdateRoutes:
                         src = os.path.join(extracted_root, item)
                         dst = os.path.join(plugin_root, item)
                         if os.path.isdir(src):
-                            # Remove old folder, then copy
                             if os.path.exists(dst):
                                 shutil.rmtree(dst)
                             shutil.copytree(src, dst, ignore=shutil.ignore_patterns('settings.json'))
@@ -204,6 +203,17 @@ class UpdateRoutes:
                             if item == 'settings.json':
                                 continue
                             shutil.copy2(src, dst)
+
+                    # Write .tracking file: list all files under extracted_root, relative to extracted_root
+                    # for ComfyUI Manager to work properly
+                    tracking_info_file = os.path.join(plugin_root, '.tracking')
+                    tracking_files = []
+                    for root, dirs, files in os.walk(extracted_root):
+                        for file in files:
+                            rel_path = os.path.relpath(os.path.join(root, file), extracted_root)
+                            tracking_files.append(rel_path.replace("\\", "/"))
+                    with open(tracking_info_file, "w", encoding='utf-8') as file:
+                        file.write('\n'.join(tracking_files))
 
                 os.remove(zip_path)
                 logger.info(f"Updated plugin via ZIP to {version}")
