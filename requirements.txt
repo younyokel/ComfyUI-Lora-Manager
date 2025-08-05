@@ -1,11 +1,9 @@
 aiohttp
 jinja2
 safetensors
-beautifulsoup4
 piexif
 Pillow
 olefile
-requests
 toml
 numpy
 natsort

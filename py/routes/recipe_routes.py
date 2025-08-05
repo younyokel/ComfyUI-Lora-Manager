@@ -22,7 +22,6 @@ from ..config import config
 # Check if running in standalone mode
 standalone_mode = 'nodes' not in sys.modules
 
-from ..utils.utils import download_civitai_image
 from ..services.service_registry import ServiceRegistry  # Add ServiceRegistry import
 
 # Only import MetadataRegistry in non-standalone mode
@@ -376,16 +375,6 @@ class RecipeRoutes:
                     # Use meta field from image_info as metadata
                     if 'meta' in image_info:
                         metadata = image_info['meta']
-                    
-                else:
-                    # Not a Civitai image URL, use the original download method
-                    temp_path = download_civitai_image(url)
-                    
-                    if not temp_path:
-                        return web.json_response({
-                            "error": "Failed to download image from URL",
-                            "loras": []
-                        }, status=400)
             
             # If metadata wasn't obtained from Civitai API, extract it from the image
             if metadata is None:
@@ -638,21 +627,6 @@ class RecipeRoutes:
                         image = base64.b64decode(image_base64)
                     except Exception as e:
                         return web.json_response({"error": f"Invalid base64 image data: {str(e)}"}, status=400)
-                elif image_url:
-                    # Download image from URL
-                    temp_path = download_civitai_image(image_url)
-                    if not temp_path:
-                        return web.json_response({"error": "Failed to download image from URL"}, status=400)
-                    
-                    # Read the downloaded image
-                    with open(temp_path, 'rb') as f:
-                        image = f.read()
-                    
-                    # Clean up temp file
-                    try:
-                        os.unlink(temp_path)
-                    except:
-                        pass
                 else:
                     return web.json_response({"error": "No image data provided"}, status=400)
             

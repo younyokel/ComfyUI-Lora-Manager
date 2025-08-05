@@ -153,10 +153,6 @@ class CivitaiApiMetadataParser(RecipeMetadataParser):
             # Process civitaiResources array
             if "civitaiResources" in metadata and isinstance(metadata["civitaiResources"], list):
                 for resource in metadata["civitaiResources"]:
-                    # Skip resources that aren't LoRAs or LyCORIS
-                    if resource.get("type") not in ["lora", "lycoris"] and "type" not in resource:
-                        continue
-                        
                     # Get unique identifier for deduplication
                     version_id = str(resource.get("modelVersionId", ""))
                     

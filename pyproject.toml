@@ -7,11 +7,9 @@ dependencies = [
     "aiohttp",
     "jinja2", 
     "safetensors",
-    "beautifulsoup4",
     "piexif",
     "Pillow",
     "olefile", # for getting rid of warning message
-    "requests",
     "toml",
     "natsort",
     "GitPython"
