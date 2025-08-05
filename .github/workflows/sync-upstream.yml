@@ -1,0 +1,55 @@
+# This is a GitHub Action that automatically syncs the fork with the upstream repository.
+# This version is corrected to preserve the workflow file itself.
+
+name: Sync with Upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    env:
+      UPSTREAM_REPO: "https://github.com/willmiao/ComfyUI-Lora-Manager.git"
+      UPSTREAM_BRANCH: "main" 
+      DOWNSTREAM_BRANCH: "main"
+      TARGET_BRANCH: "custom/main"
+
+    steps:
+      # 1. Check out your repository's code.
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }} 
+
+      # 2. Set up Git configuration.
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # 3. Add upstream, fetch, and MERGE changes into your main branch.
+      - name: Sync main branch with Upstream
+        run: |
+          git remote add upstream ${{ env.UPSTREAM_REPO }}
+          git fetch upstream
+
+          git checkout ${{ env.DOWNSTREAM_BRANCH }}
+          
+          # THIS IS THE KEY CHANGE: Use 'merge' instead of 'reset'.
+          # This combines the upstream history with your fork's history,
+          # preserving the .github/workflows file.
+          git merge "upstream/${{ env.UPSTREAM_BRANCH }}" --no-edit
+          
+          git push origin ${{ env.DOWNSTREAM_BRANCH }}
+
+      # 4. Rebase your custom branch on top of the updated main branch.
+      - name: Rebase Target Branch
+        run: |
+          git checkout ${{ env.TARGET_BRANCH }}
+          git rebase ${{ env.DOWNSTREAM_BRANCH }}
+          git push origin ${{ env.TARGET_BRANCH }} --force-with-lease
