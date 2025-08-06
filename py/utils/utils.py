@@ -47,7 +47,7 @@ def get_lora_info(lora_name):
         # No event loop is running, we can use asyncio.run()
         return asyncio.run(_get_lora_info_async())
 
-def fuzzy_match(text: str, pattern: str, threshold: float = 0.7) -> bool:
+def fuzzy_match(text: str, pattern: str, threshold: float = 0.85) -> bool:
         """
         Check if text matches pattern using fuzzy matching.
         Returns True if similarity ratio is above threshold.

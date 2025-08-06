@@ -177,6 +177,7 @@ class BaseModelRoutes(ABC):
             'filename': request.query.get('search_filename', 'true').lower() == 'true',
             'modelname': request.query.get('search_modelname', 'true').lower() == 'true',
             'tags': request.query.get('search_tags', 'false').lower() == 'true',
+            'creator': request.query.get('search_creator', 'false').lower() == 'true',
             'recursive': request.query.get('recursive', 'false').lower() == 'true',
         }
         

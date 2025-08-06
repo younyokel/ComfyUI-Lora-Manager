@@ -318,6 +318,7 @@ export class SearchManager {
             filename: options.filename || false,
             modelname: options.modelname || false,
             tags: options.tags || false,
+            creator: options.creator || false,
             recursive: recursive
           };
         } else if (this.currentPage === 'checkpoints') {
@@ -325,6 +326,7 @@ export class SearchManager {
             filename: options.filename || false,
             modelname: options.modelname || false,
             tags: options.tags || false,
+            creator: options.creator || false,
             recursive: recursive
           };
         }
