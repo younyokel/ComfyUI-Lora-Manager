@@ -8,7 +8,7 @@ import {
     DOWNLOAD_ENDPOINTS,
     WS_ENDPOINTS
 } from './apiConfig.js';
-import { createModelApiClient } from './modelApiFactory.js';
+import { resetAndReload } from './modelApiFactory.js';
 
 /**
  * Abstract base class for all model API clients
@@ -91,10 +91,7 @@ export class BaseModelApiClient {
                 pageState.currentPage = 1; // Reset to first page
             }
             
-            const startTime = performance.now();
             const result = await this.fetchModelsPage(pageState.currentPage, pageState.pageSize);
-            const endTime = performance.now();
-            console.log(`fetchModelsPage耗时: ${(endTime - startTime).toFixed(2)} ms`);
             
             state.virtualScroller.refreshWithData(
                 result.items,
@@ -321,6 +318,8 @@ export class BaseModelApiClient {
             if (!response.ok) {
                 throw new Error(`Failed to refresh ${this.apiConfig.config.displayName}s: ${response.status} ${response.statusText}`);
             }
+
+            resetAndReload(true);
             
             showToast(`${fullRebuild ? 'Full rebuild' : 'Refresh'} complete`, 'success');
         } catch (error) {
