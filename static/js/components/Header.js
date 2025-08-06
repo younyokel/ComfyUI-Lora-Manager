@@ -16,7 +16,9 @@ export class HeaderManager {
       this.filterManager = null;
       
       // Initialize appropriate managers based on current page
-      this.initializeManagers();
+      if (this.currentPage !== 'statistics') {
+        this.initializeManagers();
+      }
       
       // Set up common header functionality
       this.initializeCommonElements();
@@ -37,11 +39,8 @@ export class HeaderManager {
       this.searchManager = new SearchManager({ page: this.currentPage });
       window.searchManager = this.searchManager;
       
-      // Initialize FilterManager for all page types that have filters
-      if (document.getElementById('filterButton')) {
-        this.filterManager = new FilterManager({ page: this.currentPage });
-        window.filterManager = this.filterManager;
-      }
+      this.filterManager = new FilterManager({ page: this.currentPage });
+      window.filterManager = this.filterManager;
     }
     
     initializeCommonElements() {

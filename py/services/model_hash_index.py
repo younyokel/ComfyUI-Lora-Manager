@@ -199,8 +199,6 @@ class ModelHashIndex:
     
     def get_hash_by_filename(self, filename: str) -> Optional[str]:
         """Get hash for a filename without extension"""
-        # Strip extension if present to make the function more flexible
-        filename = os.path.splitext(filename)[0]
         return self._filename_to_hash.get(filename)
     
     def clear(self) -> None:

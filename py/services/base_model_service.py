@@ -199,6 +199,22 @@ class BaseModelService(ABC):
                        for tag in item['tags']):
                     search_results.append(item)
                     continue
+            
+            # Search by creator
+            civitai = item.get('civitai')
+            creator_username = ''
+            if civitai and isinstance(civitai, dict):
+                creator = civitai.get('creator')
+                if creator and isinstance(creator, dict):
+                    creator_username = creator.get('username', '')
+            if search_options.get('creator', False) and creator_username:
+                if fuzzy_search:
+                    if fuzzy_match(creator_username, search):
+                        search_results.append(item)
+                        continue
+                elif search.lower() in creator_username.lower():
+                    search_results.append(item)
+                    continue
         
         return search_results
     

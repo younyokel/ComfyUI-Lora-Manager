@@ -37,6 +37,7 @@ export const state = {
                 filename: true,
                 modelname: true,
                 tags: false,
+                creator: false,
                 recursive: false
             },
             filters: {
@@ -83,6 +84,7 @@ export const state = {
             searchOptions: {
                 filename: true,
                 modelname: true,
+                creator: false,
                 recursive: false
             },
             filters: {
@@ -110,6 +112,7 @@ export const state = {
                 filename: true,
                 modelname: true,
                 tags: false,
+                creator: false,
                 recursive: false
             },
             filters: {

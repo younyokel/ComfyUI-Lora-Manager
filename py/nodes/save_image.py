@@ -1,6 +1,5 @@
 import json
 import os
-import asyncio
 import re
 import numpy as np
 import folder_paths # type: ignore
