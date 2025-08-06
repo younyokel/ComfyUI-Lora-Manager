@@ -7,5 +7,4 @@ olefile
 toml
 numpy
 natsort
-pyyaml
 GitPython
