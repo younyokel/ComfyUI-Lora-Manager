@@ -5,9 +5,6 @@ export function addTagsWidget(node, name, opts, callback) {
   
   // Set initial height
   const defaultHeight = 150;
-  container.style.setProperty('--comfy-widget-min-height', `${defaultHeight}px`);
-  container.style.setProperty('--comfy-widget-max-height', `${defaultHeight * 2}px`);
-  container.style.setProperty('--comfy-widget-height', `${defaultHeight}px`);
   
   Object.assign(container.style, {
     display: "flex",
@@ -199,23 +196,8 @@ export function addTagsWidget(node, name, opts, callback) {
       widgetValue = v;
       renderTags(widgetValue, widget);
     },
-    getMinHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-min-height')) || defaultHeight;
-    },
-    getMaxHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-max-height')) || defaultHeight * 2;
-    },
-    getHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-height')) || defaultHeight;
-    },
     hideOnZoom: true,
-    selectOn: ['click', 'focus'],
-    afterResize: function(node) {
-      // Re-render tags after node resize
-      if (this.value && this.value.length > 0) {
-        renderTags(this.value, this);
-      }
-    }
+    selectOn: ['click', 'focus']
   });
 
   // Set initial value
