@@ -297,7 +297,10 @@ export class DownloadManager {
             // Set default root if available
             const defaultRootKey = `default_${this.apiClient.modelType}_root`;
             const defaultRoot = getStorageItem('settings', {})[defaultRootKey];
+            console.log(`Default root for ${this.apiClient.modelType}:`, defaultRoot);
+            console.log('Available roots:', rootsData.roots);
             if (defaultRoot && rootsData.roots.includes(defaultRoot)) {
+                console.log(`Setting default root: ${defaultRoot}`);
                 modelRoot.value = defaultRoot;
             }
 
