@@ -38,7 +38,7 @@ class BaseModelRoutes(ABC):
             prefix: URL prefix (e.g., 'loras', 'checkpoints')
         """
         # Common model management routes
-        app.router.add_get(f'/api/{prefix}', self.get_models)
+        app.router.add_get(f'/api/{prefix}/list', self.get_models)
         app.router.add_post(f'/api/{prefix}/delete', self.delete_model)
         app.router.add_post(f'/api/{prefix}/exclude', self.exclude_model)
         app.router.add_post(f'/api/{prefix}/fetch-civitai', self.fetch_civitai)
