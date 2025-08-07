@@ -19,9 +19,6 @@ export function addLorasWidget(node, name, opts, callback) {
   
   // Set initial height using CSS variables approach
   const defaultHeight = 200;
-  container.style.setProperty('--comfy-widget-min-height', `${defaultHeight}px`);
-  container.style.setProperty('--comfy-widget-max-height', `${defaultHeight * 2}px`);
-  container.style.setProperty('--comfy-widget-height', `${defaultHeight}px`);
   
   Object.assign(container.style, {
     display: "flex",
@@ -712,23 +709,8 @@ export function addLorasWidget(node, name, opts, callback) {
       widgetValue = updatedValue;
       renderLoras(widgetValue, widget);
     },
-    getMinHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-min-height')) || defaultHeight;
-    },
-    getMaxHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-max-height')) || defaultHeight * 2;
-    },
-    getHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-height')) || defaultHeight;
-    },
     hideOnZoom: true,
-    selectOn: ['click', 'focus'],
-    afterResize: function(node) {
-      // Re-render after node resize
-      if (this.value && this.value.length > 0) {
-        renderLoras(this.value, this);
-      }
-    }
+    selectOn: ['click', 'focus']
   });
 
   widget.value = defaultValue;

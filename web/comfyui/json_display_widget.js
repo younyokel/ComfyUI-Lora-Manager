@@ -5,9 +5,6 @@ export function addJsonDisplayWidget(node, name, opts) {
   
   // Set initial height
   const defaultHeight = 200;
-  container.style.setProperty('--comfy-widget-min-height', `${defaultHeight}px`);
-  container.style.setProperty('--comfy-widget-max-height', `${defaultHeight * 2}px`);
-  container.style.setProperty('--comfy-widget-height', `${defaultHeight}px`);
   
   Object.assign(container.style, {
     display: "block",
@@ -112,16 +109,6 @@ export function addJsonDisplayWidget(node, name, opts) {
     setValue: function(v) {
       widgetValue = v;
       displayJson(widgetValue, widget);
-    },
-    getMinHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-min-height')) || defaultHeight;
-    },
-    getMaxHeight: function() {
-      return parseInt(container.style.getPropertyValue('--comfy-widget-max-height')) || defaultHeight * 2;
-    },
-    getHeight: function() {
-      // Return actual container height to reduce the gap
-      return parseInt(container.style.getPropertyValue('--comfy-widget-height')) || defaultHeight;
     },
     hideOnZoom: true
   });

@@ -156,6 +156,7 @@ app.registerExtension({
 
             // Update input widget callback
             const inputWidget = this.widgets[0];
+            inputWidget.options.getMaxHeight = () => 100;
             this.inputWidget = inputWidget;
             inputWidget.callback = (value) => {
               if (isUpdating) return;
