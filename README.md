@@ -34,6 +34,14 @@ Enhance your Civitai browsing experience with our companion browser extension! S
 
 ## Release Notes
 
+### v0.8.26
+* **Creator Search Option**  
+  - Added ability to search models by creator name, making it easier to find models from specific authors.
+* **Enhanced Node Usability**  
+  - Improved user experience for Lora Loader, Lora Stacker, and WanVideo Lora Select nodes by fixing the maximum height of the text input area. Users can now freely and conveniently adjust the LoRA region within these nodes.
+* **Compatibility Fixes**  
+  - Resolved compatibility issues with ComfyUI and certain custom nodes, including ComfyUI-Custom-Scripts, ensuring smoother integration and operation.
+
 ### v0.8.25
 * **LoRA List Reordering**  
   - Drag & Drop: Easily rearrange LoRA entries using the drag handle.
