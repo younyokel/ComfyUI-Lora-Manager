@@ -763,22 +763,7 @@ class ExampleImagesManager {
             
             const data = await response.json();
             
-            if (data.success) {
-                // Only show progress if there are actually items to download
-                if (data.status && data.status.total > 0) {
-                    this.isDownloading = true;
-                    this.isPaused = false;
-                    this.hasShownCompletionToast = false;
-                    this.startTime = new Date();
-                    this.updateUI(data.status);
-                    this.showProgressPanel();
-                    this.startProgressUpdates();
-                    this.updateDownloadButtonText();
-                    console.log(`Auto download started: ${data.status.total} items to process`);
-                } else {
-                    console.log('Auto download check completed - no new items to download');
-                }
-            } else {
+            if (!data.success) {
                 console.warn('Auto download check failed:', data.error);
             }
         } catch (error) {
