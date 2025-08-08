@@ -102,8 +102,16 @@ export class BaseModelApiClient {
             pageState.hasMore = result.hasMore;
             pageState.currentPage = pageState.currentPage + 1;
             
-            if (updateFolders && result.folders) {
-                updateFolderTags(result.folders);
+            if (updateFolders) {
+                const response = await fetch(this.apiConfig.endpoints.folders);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateFolderTags(data.folders);
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData && errorData.error ? errorData.error : response.statusText;
+                    console.error(`Error getting folders: ${errorMsg}`);
+                }
             }
             
             return result;
