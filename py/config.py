@@ -5,6 +5,7 @@ from typing import List
 import logging
 import sys
 import json
+import urllib.parse
 
 # Check if running in standalone mode
 standalone_mode = 'nodes' not in sys.modules
@@ -275,8 +276,10 @@ class Config:
 
         for path, route in self._route_mappings.items():
             if real_path.startswith(path):
-                relative_path = os.path.relpath(real_path, path)
-                return f'{route}/{relative_path.replace(os.sep, "/")}'
+                relative_path = os.path.relpath(real_path, path).replace(os.sep, '/')
+                safe_parts = [urllib.parse.quote(part) for part in relative_path.split('/')]
+                safe_path = '/'.join(safe_parts)
+                return f'{route}/{safe_path}'
 
         return ""
 
